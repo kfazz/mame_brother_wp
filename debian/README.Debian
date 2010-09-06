@@ -1,0 +1,15 @@
+MAME for Debian
+------------------
+
+MAME(TM) means Multiple Arcade Machine Emulator.
+
+This package only installs the material binary emulator, not the arcade dumps
+known as ROMs or Romsets: MAME is not a game itself and you will have to obtain
+dumps from arcade boards you own.
+
+
+@todo : explain how package installs MAME on the system, how to start, default
+configuration and how to change it.
+
+
+ -- Ludovic Lechapt <ludomatic@gmail.com>, Thu, 08 Feb 2007 16:22:04 +1100

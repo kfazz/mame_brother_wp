@@ -1,15 +1,19 @@
-Source: sdlmame
+Source: mame
 Section: non-free/games
 Priority: optional
 Maintainer: Ludovic Lechapt <ludomatic@gmail.com>
-Build-Depends: debhelper (>= 5), quilt (>= 0.40), po-debconf, libexpat1-dev, libsdl1.2-dev, zlib1g-dev, libxinerama-dev, libgconf2-dev, libgtk2.0-dev
-Standards-Version: 3.7.2
+Build-Depends: debhelper (>= 7), quilt (>= 0.40), po-debconf, libexpat1-dev, libsdl1.2-dev, zlib1g-dev, libxinerama-dev, libgconf2-dev, libgtk2.0-dev
+Standards-Version: 3.7.3
+Vcs-Git: git://git.shaperstudio.com/mamedeb.git
+Vcs-Browser: http://indefero.shaperstudio.com/p/mamedeb/source/tree/master/
 Homepage: http://rbelmont.mameworld.info/?page_id=163
 
+
 Package: mame
-Architecture: i386 amd64 powerpc arm
+Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, wget
-Replaces: sdlmame
+Suggests: mame-tools
+Replaces: sdlmame, mame
 Conflicts: sdlmame, xmame, xmame-common, xmame-gl, xmame-sdl, xmame-svga, xmame-tools, xmame-x
 Description: Multiple Arcade Machine Emulator (MAME)
  MAME is an emulator: it reproduces, more or less faithfully, the behavior of
@@ -24,14 +28,14 @@ Description: Multiple Arcade Machine Emulator (MAME)
  This package provides a specific binary and configuration file for the SDL
  (Simple Direct Media Layer) version of MAME (Multiple Arcade Machine Emulator)
  but without games (ROMs). Remember that you NEED the ROM images to play a game
- because SDLMAME is not a game emulator, just an arcade machine one.
+ because MAME is not a game emulator, just an arcade machine one.
  .
  Original SDLMAME by R. Belmont and O. Galibert
  at http://rbelmont.mameworld.info
  More information on MAME available at http://mame.net/
 
 Package: mame-tools
-Architecture: i386 amd64 powerpc arm
+Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, wget
 Recommends: mame (= ${source:Version})
 Conflicts: xmame-tools
