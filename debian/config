@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -e
+
+# Debconf library
+. /usr/share/debconf/confmodule
+
+db_input high sdlmame/getfreeroms || true
+db_go

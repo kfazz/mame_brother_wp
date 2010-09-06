@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=MAME
+Name[fr]=MAME
+Comment=MAME(tm) arcade emulator
+GenericName=MAME(tm) arcade emulator
+GenericName[fr]=MAME(tm) arcade emulator
+Exec=/usr/games/mame
+Icon=mame.xpm
+Terminal=false
+Type=Application
+Categories=Game;Emulator;
