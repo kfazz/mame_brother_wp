@@ -1,0 +1,219 @@
+This package was debianized by Ludovic Lechapt <ludomatic@gmail.com> on
+Mon, 06 Sep 2010 23:44:19 +1100.
+
+This package resides in non-free section because of restrictions on commercial
+usage.
+
+It was downloaded from http://mamedev.org/release.html
+
+Upstream Authors:
+
+    MAME - Nicola Salmoria and the MAME team
+    SDLMAME - Olivier Galibert and R. Belmont.
+
+Copyright:
+
+    MAME - Copyright (C) 1997-2010, Nicola Salmoria and the MAME team
+    SDLMAME - Copyright (C) Olivier Galibert and R. Belmont.
+
+
+License:
+
+    Redistribution and use of this code or any derivative works are permitted
+    provided that the following conditions are met:
+
+    * Redistributions may not be sold, nor may they be used in a commercial
+      product or activity.
+    * Redistributions that are modified from the original source must include
+      the complete source code, including the source code for all components
+      used by a binary built from the modified sources. However, as a special
+      exception, the source code distributed need not include anything that is
+      normally distributed (in either source or binary form) with the major
+      components (compiler, kernel, and so on) of the operating system on which
+      the executable runs, unless that component itself accompanies the
+      executable.
+    * Redistributions must reproduce the above copyright notice, this list of
+      conditions and the following disclaimer in the documentation and/or other
+      materials provided with the distribution.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+    LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+    CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+    SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+    INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+    CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE.
+
+
+The Debian packaging is (c) 2007-10 Ludovic Lechapt <ludomatic@gmail.com> and is
+licensed under the GPL, see '/usr/share/common-licenses/GPL'.
+
+docs/license.txt
+
+Other files/licenses:
+    src/emu/disound.c: BSD (2 clause)
+    src/emu/devimage.c: BSD (2 clause)
+    src/emu/emualloc.c: BSD (2 clause)
+    src/emu/didisasm.h: BSD (2 clause)
+    src/emu/dimemory.c: BSD (2 clause)
+    src/emu/distate.c: BSD (2 clause)
+    src/emu/emu.h: BSD (2 clause)
+    src/emu/video.c: BSD (2 clause)
+    src/emu/machine.c: BSD (2 clause)
+    src/emu/diimage.h: BSD (2 clause)
+    src/emu/schedule.c: BSD (2 clause)
+    src/emu/emualloc.h: BSD (2 clause)
+    src/emu/dinvram.h: BSD (2 clause)
+    src/emu/devintrf.h: BSD (2 clause)
+    src/emu/devlegcy.c: BSD (2 clause)
+    src/emu/mconfig.h: BSD (2 clause)
+    src/emu/devintrf.c: BSD (2 clause)
+    src/emu/debug/dvtext.h: BSD (2 clause)
+    src/emu/debug/debugvw.h: BSD (2 clause)
+    src/emu/debug/debugcpu.c: BSD (2 clause)
+    src/emu/debug/debugvw.c: BSD (2 clause)
+    src/emu/debug/dvtext.c: BSD (2 clause)
+    src/emu/debug/dvmemory.c: BSD (2 clause)
+    src/emu/debug/dvstate.h: BSD (2 clause)
+    src/emu/debug/dvdisasm.c: BSD (2 clause)
+    src/emu/debug/dvstate.c: BSD (2 clause)
+    src/emu/debug/dvdisasm.h: BSD (2 clause)
+    src/emu/debug/dvmemory.h: BSD (2 clause)
+    src/emu/debug/debugcpu.h: BSD (2 clause)
+    src/emu/devcpu.h: BSD (2 clause)
+    src/emu/disound.h: BSD (2 clause)
+    src/emu/sound/c6280.c: LGPL (v2.1 or later) (with incorrect FSF address)
+    src/emu/schedule.h: BSD (2 clause)
+    src/emu/mconfig.c: BSD (2 clause)
+    src/emu/dimemory.h: BSD (2 clause)
+    src/emu/cpu/i8085/8085dasm.c: GPL (v2 or later) (with incorrect FSF address)
+    src/emu/cpu/z8000/8000dasm.c: GPL (v2 or later) (with incorrect FSF address)
+    src/emu/cpu/z8000/z8000.c: GPL (v2 or later) (with incorrect FSF address)
+    src/emu/cpu/upd7810/upd7810.c: GPL (v2 or later) (with incorrect FSF address)
+    src/emu/cpu/z180/z180.c: GPL (v2 or later) (with incorrect FSF address)
+    src/emu/cpu/z180/z180dasm.c: GPL (v2 or later) (with incorrect FSF address)
+    src/emu/devcpu.c: BSD (2 clause)
+    src/emu/didisasm.c: BSD (2 clause)
+    src/emu/video.h: BSD (2 clause)
+    src/emu/dinvram.c: BSD (2 clause)
+    src/emu/diexec.h: BSD (2 clause)
+    src/emu/diexec.c: BSD (2 clause)
+    src/emu/machine.h: BSD (2 clause)
+    src/emu/diimage.c: BSD (2 clause)
+    src/emu/devlegcy.h: BSD (2 clause)
+    src/emu/distate.h: BSD (2 clause)
+    src/lib/util/huffman.c: BSD (2 clause)
+    src/lib/util/harddisk.c: BSD (2 clause)
+    src/lib/util/cdrom.c: BSD (2 clause)
+    src/lib/util/sha1.h: LGPL (v2.1 or later) (with incorrect FSF address)
+    src/lib/util/huffman.h: BSD (2 clause)
+    src/lib/util/corestr.h: BSD (2 clause)
+    src/lib/util/bitmap.h: BSD (2 clause)
+    src/lib/util/chd.h: BSD (2 clause)
+    src/lib/util/palette.c: BSD (2 clause)
+    src/lib/util/xmlfile.h: BSD (2 clause)
+    src/lib/util/astring.h: BSD (2 clause)
+    src/lib/util/tagmap.h: BSD (2 clause)
+    src/lib/util/imageutl.c: BSD (2 clause)
+    src/lib/util/vbiparse.h: BSD (2 clause)
+    src/lib/util/png.h: BSD (2 clause)
+    src/lib/util/options.c: BSD (2 clause)
+    src/lib/util/jedparse.c: BSD (2 clause)
+    src/lib/util/coreutil.c: BSD (2 clause)
+    src/lib/util/avcomp.h: BSD (2 clause)
+    src/lib/util/aviio.c: BSD (2 clause)
+    src/lib/util/tagmap.c: BSD (2 clause)
+    src/lib/util/chd.c: BSD (2 clause)
+    src/lib/util/corefile.h: BSD (2 clause)
+    src/lib/util/aviio.h: BSD (2 clause)
+    src/lib/util/options.h: BSD (2 clause)
+    src/lib/util/harddisk.h: BSD (2 clause)
+    src/lib/util/bitmap.c: BSD (2 clause)
+    src/lib/util/unzip.c: BSD (2 clause)
+    src/lib/util/jedparse.h: BSD (2 clause)
+    src/lib/util/corestr.c: BSD (2 clause)
+    src/lib/util/pool.h: BSD (2 clause)
+    src/lib/util/png.c: BSD (2 clause)
+    src/lib/util/unicode.h: BSD (2 clause)
+    src/lib/util/coreutil.h: BSD (2 clause)
+    src/lib/util/unicode.c: BSD (2 clause)
+    src/lib/util/md5.h: Public domain
+    src/lib/util/unzip.h: BSD (2 clause)
+    src/lib/util/vbiparse.c: BSD (2 clause)
+    src/lib/util/xmlfile.c: BSD (2 clause)
+    src/lib/util/avcomp.c: BSD (2 clause)
+    src/lib/util/md5.c: Public domain
+    src/lib/util/palette.h: BSD (2 clause)
+    src/lib/util/imageutl.h: BSD (2 clause)
+    src/lib/util/pool.c: BSD (2 clause)
+    src/lib/util/corefile.c: BSD (2 clause)
+    src/lib/util/sha1.c: LGPL (v2.1 or later) (with incorrect FSF address)
+    src/lib/util/astring.c: BSD (2 clause)
+    src/lib/util/cdrom.h: BSD (2 clause)
+    src/osd/sdl/SDL1211_opengl.h: LGPL (v2.1 or later)
+    src/osd/osdcomm.h: BSD (2 clause)
+    src/osd/osdmini/minimisc.c: BSD (2 clause)
+    src/osd/osdmini/minimain.c: BSD (2 clause)
+    src/osd/osdmini/minidir.c: BSD (2 clause)
+    src/osd/osdmini/minifile.c: BSD (2 clause)
+    src/osd/osdmini/minisync.c: BSD (2 clause)
+    src/osd/osdmini/miniwork.c: BSD (2 clause)
+    src/osd/osdmini/minitime.c: BSD (2 clause)
+    src/osd/osdcore.h: BSD (2 clause)
+    src/osd/windows/d3dintf.h: BSD (2 clause)
+    src/osd/windows/winmain.c: BSD (2 clause)
+    src/osd/windows/sound.c: BSD (2 clause)
+    src/osd/windows/vconv.c: BSD (2 clause)
+    src/osd/windows/winmain.h: BSD (2 clause)
+    src/osd/windows/winmisc.c: BSD (2 clause)
+    src/osd/windows/video.c: BSD (2 clause)
+    src/osd/windows/eivc.h: BSD (2 clause)
+    src/osd/windows/winalloc.c: BSD (2 clause)
+    src/osd/windows/winwork.c: BSD (2 clause)
+    src/osd/windows/winutf8.h: BSD (2 clause)
+    src/osd/windows/input.c: BSD (2 clause)
+    src/osd/windows/input.h: BSD (2 clause)
+    src/osd/windows/ledutil.c: BSD (2 clause)
+    src/osd/windows/debugwin.h: BSD (2 clause)
+    src/osd/windows/winfile.c: BSD (2 clause)
+    src/osd/windows/drawgdi.c: BSD (2 clause)
+    src/osd/windows/sound.h: BSD (2 clause)
+    src/osd/windows/winclip.c: BSD (2 clause)
+    src/osd/windows/winutil.h: BSD (2 clause)
+    src/osd/windows/wintime.c: BSD (2 clause)
+    src/osd/windows/debugwin.c: BSD (2 clause)
+    src/osd/windows/drawd3d.c: BSD (2 clause)
+    src/osd/windows/main.c: BSD (2 clause)
+    src/osd/windows/drawnone.c: BSD (2 clause)
+    src/osd/windows/drawdd.c: BSD (2 clause)
+    src/osd/windows/output.h: BSD (2 clause)
+    src/osd/windows/windir.c: BSD (2 clause)
+    src/osd/windows/video.h: BSD (2 clause)
+    src/osd/windows/strconv.c: BSD (2 clause)
+    src/osd/windows/strconv.h: BSD (2 clause)
+    src/osd/windows/winprefix.h: BSD (2 clause)
+    src/osd/windows/winutf8.c: BSD (2 clause)
+    src/osd/windows/window.h: BSD (2 clause)
+    src/osd/windows/d3d8intf.c: BSD (2 clause)
+    src/osd/windows/eivcx86.h: BSD (2 clause)
+    src/osd/windows/d3d9intf.c: BSD (2 clause)
+    src/osd/windows/window.c: BSD (2 clause)
+    src/osd/windows/output.c: BSD (2 clause)
+    src/osd/windows/winutil.c: BSD (2 clause)
+    src/osd/windows/osinline.h: BSD (2 clause)
+    src/osd/windows/winsync.c: BSD (2 clause)
+    src/osd/osdepend.h: BSD (2 clause)
+    src/tools/srcclean.c: BSD (2 clause)
+    src/tools/split.c: BSD (2 clause)
+    src/tools/jedutil.c: BSD (2 clause)
+    src/tools/ldresample.c: BSD (2 clause)
+    src/tools/regrep.c: BSD (2 clause)
+    src/tools/ldverify.c: BSD (2 clause)
+    src/tools/chdman.c: BSD (2 clause)
+    src/tools/src2html.c: BSD (2 clause)
+    src/tools/unidasm.c: BSD (2 clause)
+    src/mame/audio/snes_snd.c: LGPL (v2 or later)

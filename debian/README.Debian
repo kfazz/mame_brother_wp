@@ -32,4 +32,4 @@ can be shown with "mame -showusage".
 MAME utilities like chdman, jedutil, ldresample or ldverify are available on a
 separate extra package mame-tools.
 
- -- Ludovic Lechapt <ludomatic@gmail.com>, Thu, 08 Feb 2007 16:22:04 +1100
+ -- Ludovic Lechapt <ludomatic@gmail.com>, Mon, 06 Sep 2010 23:44:19 +1100

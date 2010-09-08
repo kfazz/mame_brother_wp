@@ -24,8 +24,8 @@ Description: Multiple Arcade Machine Emulator (MAME)
  .
  This package provides MAME binary and configuration files.
  .
- MAME by R. Belmont, O. Galibert and the MAME Team. More information on MAME is
- available at http://mamedev.org and sdl support http://rbelmont.mameworld.info
+ MAME by N. Salmoria and the MAME Team - http://mamedev.org
+ SDL port by R. Belmont and O. Galibert - http://rbelmont.mameworld.info
 
 Package: mame-tools
 Architecture: any
@@ -52,5 +52,5 @@ Description: Tools for Multiple Arcade Machine Emulator (MAME)
  - testkeys (Keyboard code viewer)
  - unidasm (Generic MAME disassembler)
  .
- MAME by R. Belmont, O. Galibert and the MAME Team. More information on MAME is
- available at http://mamedev.org and sdl support http://rbelmont.mameworld.info
+ MAME by N. Salmoria and the MAME Team - http://mamedev.org
+ SDL port by R. Belmont and O. Galibert - http://rbelmont.mameworld.info
