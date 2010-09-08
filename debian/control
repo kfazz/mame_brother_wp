@@ -13,56 +13,44 @@ Package: mame
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, wget
 Suggests: mame-tools
-Replaces: sdlmame, mame
-Conflicts: sdlmame, xmame, xmame-common, xmame-gl, xmame-sdl, xmame-svga, xmame-tools, xmame-x
+Replaces: sdlmame
+Breaks: sdlmame, xmame, xmame-common, xmame-gl, xmame-sdl, xmame-svga, xmame-x
 Description: Multiple Arcade Machine Emulator (MAME)
- MAME is an emulator: it reproduces, more or less faithfully, the behavior of
- several arcade machines. But hardware is useless without software, so an image
- of the ROM which run on that hardware is required. Such ROM, like any other
- commercial software, are copyrighted material and it is therefore illegal to
- use them if you don't own the original arcade machine. Needless to say, ROM
- are not distributed together with MAME. Distribution of MAME together with ROM
- images is a violation of copyright law and should be promptly reported to the
- authors so that appropriate legal action can be taken.
+ MAME is an emulator hardware: it faithfully reproduces the behavior of many
+ arcade machines (it is not a simulation). This program is not a game but can
+ directly, through ROM images, run the complete system of these old arcade
+ machines. These ROMs are mostly subject to copyright and it is therefore
+ illegal to use them if you do not own the arcade machine.
  .
- This package provides a specific binary and configuration file for the SDL
- (Simple Direct Media Layer) version of MAME (Multiple Arcade Machine Emulator)
- but without games (ROMs). Remember that you NEED the ROM images to play a game
- because MAME is not a game emulator, just an arcade machine one.
+ This package provides MAME binary and configuration files.
  .
- Original SDLMAME by R. Belmont and O. Galibert
- at http://rbelmont.mameworld.info
- More information on MAME available at http://mame.net/
+ MAME by R. Belmont, O. Galibert and the MAME Team. More information on MAME is
+ available at http://mamedev.org and sdl support http://rbelmont.mameworld.info
 
 Package: mame-tools
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, wget
 Recommends: mame (= ${source:Version})
-Conflicts: xmame-tools
+Breaks: xmame-tools
 Description: Tools for Multiple Arcade Machine Emulator (MAME)
- MAME is an emulator: it reproduces, more or less faithfully, the behavior of
- several arcade machines. But hardware is useless without software, so an image
- of the ROM which run on that hardware is required. Such ROM, like any other
- commercial software, are copyrighted material and it is therefore illegal to
- use them if you don't own the original arcade machine. Needless to say, ROM
- are not distributed together with MAME. Distribution of MAME together with ROM
- images is a violation of copyright law and should be promptly reported to the
- authors so that appropriate legal action can be taken.
+ MAME is an emulator hardware: it faithfully reproduces the behavior of many
+ arcade machines (it is not a simulation). This program is not a game but can
+ directly, through ROM images, run the complete system of these old arcade
+ machines. These ROMs are mostly subject to copyright and it is therefore
+ illegal to use them if you do not own the arcade machine.
  .
  This package provides tools to be used with MAME :
- - chdman
- - jedutil
- - ldresample
- - ldverify
- - mame
- - regrep
- - romcmp
- - split
- - src2html
- - srcclean
- - testkeys
- - unidasm
+ - chdman (MAME Compressed Hunks of Data CHD manager)
+ - jedutil (binary to/from JEDEC file converter)
+ - ldresample (Laserdisc audio synchronizer and resampler)
+ - ldverify (Laserdisc AVI/CHD verifier)
+ - regrep (Regression test report generator)
+ - romcmp (ROM comparison utility program)
+ - split (Simple file splitter/joiner with hashes)
+ - src2html (MAME source code to HTML converter)
+ - srcclean (Basic source code cleanear)
+ - testkeys (Keyboard code viewer)
+ - unidasm (Generic MAME disassembler)
  .
- Original SDLMAME by R. Belmont and O. Galibert
- at http://rbelmont.mameworld.info
- More information on MAME available at http://mame.net/
+ MAME by R. Belmont, O. Galibert and the MAME Team. More information on MAME is
+ available at http://mamedev.org and sdl support http://rbelmont.mameworld.info
