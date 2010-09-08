@@ -1,15 +1,35 @@
 MAME for Debian
-------------------
+---------------
 
-MAME(TM) means Multiple Arcade Machine Emulator.
+== ABOUT MAME ==
 
+MAME(TM) stands for Multiple Arcade Machine Emulator.
 This package only installs the material binary emulator, not the arcade dumps
 known as ROMs or Romsets: MAME is not a game itself and you will have to obtain
-dumps from arcade boards you own.
+dumps from arcade boards you own. All revelant information can be found on the
+official website http://mamedev.org.
 
+== BINARY FILE ==
 
-@todo : explain how package installs MAME on the system, how to start, default
-configuration and how to change it.
+Complete MAME architecture and executable are located at /usr/share/games/mame/,
+the configuration file /etc/mame.ini is a link to /usr/share/games/mame/mame.ini
 
+== ROMS AND CONFIGURATION ==
+
+If you need to set your own ROMs folder or tweak something like video or cheats
+you can either:
+* update directly the /etc/mame/mame.ini link of /usr/share/games/mame/mame.ini,
+* make your own copy of /etc/mame/mame.ini in your home $HOME/.mame/mame.ini,
+* put your own mame.ini somewhere else and tells mame where to find the folder
+  with the command line "mame -inipath /somewhere/else/".
+Simply add your ROMs path to the "rompath" field with a semicolon as separator.
+You can verify that MAME have read correct options with "mame -showconfig" and
+even create a fresh mame.ini file with "mame -createconfig". Brief MAME usage
+can be shown with "mame -showusage".
+
+== TOOLS ==
+
+MAME utilities like chdman, jedutil, ldresample or ldverify are available on a
+separate extra package mame-tools.
 
  -- Ludovic Lechapt <ludomatic@gmail.com>, Thu, 08 Feb 2007 16:22:04 +1100
