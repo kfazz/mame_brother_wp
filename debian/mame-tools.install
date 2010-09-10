@@ -1,0 +1,11 @@
+chdman      usr/bin/
+jedutil     usr/bin/
+ldresample  usr/bin/
+ldverify    usr/bin/
+regrep      usr/bin/
+romcmp      usr/bin/
+split       usr/bin/
+src2html    usr/bin/
+srcclean    usr/bin/
+testkeys    usr/bin/
+unidasm     usr/bin/

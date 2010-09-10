@@ -1,0 +1,8 @@
+mame        usr/share/games/mame/
+
+keymaps/*   usr/share/games/mame/keymaps/
+
+debian/usr/games/mame  usr/games/
+
+debian/usr/share/pixmaps/mame.xpm           usr/share/pixmaps/
+debian/usr/share/applications/mame.desktop  usr/share/applications/
