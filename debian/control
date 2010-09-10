@@ -6,7 +6,7 @@ Build-Depends: debhelper (>= 7), quilt (>= 0.40), po-debconf, libexpat1-dev, lib
 Standards-Version: 3.7.3
 Vcs-Git: git://git.shaperstudio.com/mamedeb.git
 Vcs-Browser: http://indefero.shaperstudio.com/p/mamedeb/source/tree/master/
-Homepage: http://rbelmont.mameworld.info/?page_id=163
+Homepage: http://mamedev.org
 
 
 Package: mame
