@@ -1,0 +1,127 @@
+#!/bin/bash
+# postinst script for sdlmame
+#
+# see: dh_installdeb(1)
+
+set -e
+
+# summary of how this script can be called:
+#        * <postinst> `configure' <most-recently-configured-version>
+#        * <old-postinst> `abort-upgrade' <new version>
+#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
+#          <new-version>
+#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
+#          <failed-install-package> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+#
+
+
+# Chargement du "confmodule" pour l'interaction utilisateur
+. /usr/share/debconf/confmodule
+
+# Creation du fichier de config par defaut
+INIFILE="/usr/share/games/mame/mame.ini";
+if [ ! -e "$INIFILE" ]; then
+  #echo "Default MAME configuration file '$INIFILE' not found!";
+  #echo "Creating one...";
+  cd /usr/share/games/mame
+  ./mame -createconfig
+  if [ ! -e "$INIFILE" ]; then
+    echo "Error while creating default configuration file. Please create/edit file '$INIFILE' manually." >&2
+  else
+    #echo "Updating default options...";
+    sed -i 's/\(   roms\).*/\1;\/usr\/share\/games\/mame\/roms/' $INIFILE
+    sed -i 's/\(   samples\).*/\1;\/usr\/share\/games\/mame\/samples/' $INIFILE
+    sed -i 's/\(   artwork\).*/\1;\/usr\/share\/games\/mame\/artwork/' $INIFILE
+    sed -i 's/\(   ctrlr\).*/\1;\/usr\/share\/games\/mame\/ctrlr/' $INIFILE
+    sed -i 's/\(   $HOME\/\.mame;\.;ini\).*/\1;\/usr\/share\/games\/mame/' $INIFILE
+    sed -i 's/\(   cheat\).*/\1;\/usr\/share\/games\/mame\/cheat/' $INIFILE
+    sed -i 's/\(   cfg\).*/\1;\/var\/games\/mame\/cfg/' $INIFILE
+    sed -i 's/\(   nvram\).*/\1;\/var\/games\/mame\/nvram/' $INIFILE
+    sed -i 's/\(   memcard\).*/\1;\/var\/games\/mame\/memcard/' $INIFILE
+    sed -i 's/\(   inp\).*/\1;\/var\/games\/mame\/inp/' $INIFILE
+    sed -i 's/\(   sta\).*/\1;\/var\/games\/mame\/sta/' $INIFILE
+    sed -i 's/\(   snap\).*/\1;\/var\/games\/mame\/snap/' $INIFILE
+    sed -i 's/\(   diff\).*/\1;\/var\/games\/mame\/diff/' $INIFILE
+    sed -i 's/\(   comments\).*/\1;\/var\/games\/mame\/comments/' $INIFILE
+  fi
+fi
+
+
+# Verification des droits
+# EFFECTUE PAR dh_fixperms dans le makefile #chown root:root /usr/games/sdlmame
+# EFFECTUE PAR dh_fixperms dans le makefile #chmod 4755 /usr/games/sdlmame
+find /var/games/mame/ -type f -exec chmod o+rwx {} \;
+find /var/games/mame/ -type d -exec chmod o+rw {} \;
+
+
+# Recup des ROMs libres
+case "$1" in
+  preconfigure|configure)
+
+    DESTPATH="/usr/share/games/mame/roms/";
+    FREEROMS=(
+      'Robby Roto (Ballt/Midway)'  'http://www.mamedev.org/roms/robby/robby.zip' \
+      'Gridlee (Videa)'            'http://www.mamedev.org/roms/gridlee/gridlee.zip' \
+      'Alien Arena (Duncan Brown)' 'http://www.mamedev.org/roms/alienar/alienar.zip' \
+      'Teeter Torture (Exidy)'     'http://www.mamedev.org/roms/teetert/teetert.zip' \
+      'Circus (Exidy)'             'http://www.mamedev.org/roms/circus/circus.zip' \
+      'Robot Bowl (Exidy)'         'http://www.mamedev.org/roms/robotbwl/robotbwl.zip' \
+      'Car Polo (Exidy)'           'http://www.mamedev.org/roms/carpolo/carpolo.zip' \
+      'Rip Cord (Exidy)'           'http://www.mamedev.org/roms/ripcord/ripcord.zip' \
+      'Fire One (Exidy)'           'http://www.mamedev.org/roms/fireone/fireone.zip' \
+      'Crash (Exidy)'              'http://www.mamedev.org/roms/crash/crash.zip' \
+      'Star Fire (Exidy)'          'http://www.mamedev.org/roms/starfire/starfire.zip' \
+      'Side Track (Exidy)'         'http://www.mamedev.org/roms/sidetrac/sidetrac.zip' \
+      'Spectar (Exidy)'            'http://www.mamedev.org/roms/spectar/spectar.zip' \
+      'Targ (Exidy)'               'http://www.mamedev.org/roms/targ/targ.zip' \
+    );
+    NBROMS=$((${#FREEROMS[@]}/2));
+
+    if [ ! -d ${DESTPATH} ]; then
+      mkdir -p ${DESTPATH}
+    fi
+
+    for (( i = 0 ; i < ${#FREEROMS[@]} ; i=i+2 ))
+    do
+      ROMPATH=${DESTPATH}$(basename ${FREEROMS[$i+1]});
+      if [ ! -s $ROMPATH ]; then
+        NOTDOWNLOADED="true";
+        break;
+      fi;
+    done
+
+    if [ "$NOTDOWNLOADED" = "true" ]; then
+      db_get sdlmame/getfreeroms
+      if [ "$RET" = "true" ]; then
+        for (( i = 0 ; i < ${#FREEROMS[@]} ; i=i+2 ))
+        do
+          ROMPATH=${DESTPATH}$(basename ${FREEROMS[$i+1]});
+          #echo -en "\n-- $(((i+1)/2))/${NBROMS}. ${FREEROMS[$i]} ";
+          wget --user-agent="MAME package for Debian/Ubuntu <ludomatic@gmail.com>" ${FREEROMS[$i+1]} -O "$ROMPATH";
+          if [ $? -ne 0 ]; then NOTCOMPLETE="true" ; fi;
+          if [ ! -s $ROMPATH ]; then NOTCOMPLETE="true" ; fi;
+        done
+      fi
+    fi
+
+  ;;
+
+  abort-upgrade|abort-remove|abort-deconfigure)
+  ;;
+
+  *)
+    echo "postinst called with unknown argument \`$1'" >&2
+    exit 1
+  ;;
+
+esac
+
+# dh_installdeb will replace this with shell code automatically
+# generated by other debhelper scripts.
+
+#DEBHELPER#
+
+exit 0

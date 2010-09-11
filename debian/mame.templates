@@ -1,0 +1,6 @@
+Template: mame/getfreeroms
+Type: boolean
+Default: false
+_Description: Download 14 free ROMs (191KB) now?
+ This package cannot include ROMs together with the MAME emulator but it
+ can download free ROMs for non-commercial usage.
