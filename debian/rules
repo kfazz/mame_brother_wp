@@ -1,78 +1,73 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
-# Sample debian/rules that uses debhelper.
 # This file was originally written by Joey Hess and Craig Small.
 # As a special exception, when this file is copied by dh-make into a
 # dh-make output file, you may use that output file without restriction.
 # This special exception was added by Craig Small in version 0.37 of dh-make.
+# With some parts of sdlmame rules file by Cesare Falco.
 
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
 CFLAGS = -Wall -g
 
-BUILDPARAMS = DISTRO=debian-stable
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
 
-ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
-	CFLAGS += -O0
-else
-	CFLAGS += -O2
+# Override relevant make variables in original makefile
+DEB_MAME_OPTS = \
+    OPT_FLAGS="-D'INI_PATH=\"/etc/mame\"'" \
+    FULLNAME=mame \
+    TARGET=mame \
+    SUBTARGET=mame \
+    OSD=sdl \
+    CROSS_BUILD_OSD= \
+    TARGETOS=unix \
+    PREFIX= \
+    SUFFIX= \
+    DEBUG= \
+    PROFILER= \
+    NOWERROR= \
+    MACOSX_USE_LIBSDL= \
+    BUILD_EXPAT= \
+    BUILD_ZLIB= \
+    SYMBOLS= \
+    SYMLEVEL= \
+    DUMPSYM= \
+    PROFILE= \
+    MAP= \
+    VERBOSE= \
+    OPTIMIZE=3 \
+    DISTRO=gcc44-generic
+
+# Override make variables for specific archs
+ifeq ($(DEB_HOST_ARCH),i386)
+DEB_MAME_OPTS += \
+    ARCHOPTS=-march=pentium2 \
+    FORCE_DRC_C_BACKEND= \
+    PTR64= \
+    BIGENDIAN=
 endif
 
-include /usr/share/quilt/quilt.make
+ifeq ($(DEB_HOST_ARCH),amd64)
+DEB_MAME_OPTS += \
+    ARCHOPTS=-march=athlon64 \
+    FORCE_DRC_C_BACKEND= \
+    PTR64=1 \
+    BIGENDIAN=
+endif
 
+#
+# Add powerpc arch here
+#
 
-build: build-stamp
-build-stamp: $(QUILT_STAMPFN)
-	dh_testdir
-	# Add here commands to compile the package.
-	$(MAKE) -j3 $(BUILDPARAMS)
-	#docbook-to-man debian/mame.sgml > mame.1
-	#./mame -listxml > mame.xml
-	touch $@
+# Override dh_auto_build and dh_auto_clean
 
-#clean: unpatch
-#	dh_clean build-stamp
-#	dh_testdir
-#	dh_testroot
-#	debconf-updatepo
-#	rm -f build-stamp
-#	# Add here commands to clean up after the build process.
-#	-$(MAKE) clean
+%:
+	dh $@
 
-install: build
-	dh_testdir
-	dh_testroot
-	dh_clean -k
-	dh_installdirs
-	# Add here commands to install the package into debian/mame.
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/mame
+override_dh_auto_build:
+	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 
+override_dh_auto_clean:
+	$(MAKE) $(DEB_MAME_OPTS) clean
 
-# Build architecture-independent files here.
-binary-indep: build install
-	# We have nothing to do by default.
-
-# Build architecture-dependent files here.
-binary-arch: build install
-	dh_testdir
-	dh_testroot
-	dh_installchangelogs
-	dh_installdocs
-	dh_installexamples
-	dh_install
-	dh_desktop
-	dh_installman
-	dh_link
-	dh_strip
-	dh_compress
-	dh_fixperms
-	dh_installdebconf
-	dh_installdeb
-	dh_shlibdeps
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
-
-binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install

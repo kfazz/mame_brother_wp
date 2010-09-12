@@ -1,4 +1,4 @@
-mame (0139-1) unstable; urgency=low
+mame (0139-1lenny1) stable; urgency=low
 
   * Built from sdlmame 0.135 package and inspired from xmame 0.106 package.
   * This package replaces sdlmame as "there are no longer separate programs
