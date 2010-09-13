@@ -39,4 +39,9 @@ Changes are stored in the source package as diffs in debian/patches and applied
 during the build. See /usr/share/doc/quilt/README.source for a detailed
 explanation.
 
+== UPSTREAM SOURCES ==
+
+MAME sources can be downloaded from http://mamedev.org/release.html
+
+
  -- Ludovic Lechapt <ludomatic@gmail.com>, Mon, 06 Sep 2010 23:44:19 +1100
