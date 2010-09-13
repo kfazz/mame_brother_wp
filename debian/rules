@@ -4,7 +4,7 @@
 # As a special exception, when this file is copied by dh-make into a
 # dh-make output file, you may use that output file without restriction.
 # This special exception was added by Craig Small in version 0.37 of dh-make.
-# With some parts of sdlmame rules file by Cesare Falco.
+# Default/i386/amd64 options from sdlmame rules file by Cesare Falco.
 
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
@@ -60,14 +60,30 @@ endif
 # Add powerpc arch here
 #
 
-# Override dh_auto_build and dh_auto_clean
+# Override dh_auto_build, dh_auto_clean and add support for Quilt patch system
+include /usr/share/quilt/quilt.make
 
 %:
-	dh --with quilt $@
+	dh $@
 
-override_dh_auto_build:
+override_dh_auto_build: build-stamp
+build-stamp: $(QUILT_STAMPFN)
+	dh_testdir
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
+	touch $@
 
-override_dh_auto_clean:
+override_dh_auto_clean: unpatch
+	dh_clean build-stamp
 	$(MAKE) $(DEB_MAME_OPTS) clean
 
+# Upstream sources from ZIP to TGZ
+PACKAGE := $(shell dpkg-parsechangelog | sed -n 's/^Source: //p')
+VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
+get-orig-source:
+	rm -rf $@
+	mkdir -p $@/$(PACKAGE)/$(PACKAGE)-$(VERSION)
+	cd $@ && wget --user-agent="Debian package <ludomatic@gmail.com>" "http://mamedev.org/downloader.php?&file=$(PACKAGE)$(VERSION)s.zip"
+	unzip -o $@/$(PACKAGE)$(VERSION)s.zip -d $@/$(PACKAGE)
+	cd $@/$(PACKAGE) && unzip -o $@/$(PACKAGE)/$(PACKAGE).zip -d $@/$(PACKAGE)/$(PACKAGE)-$(VERSION)
+	tar -cf - $(PACKAGE)-$(VERSION) | gzip -9f - > ../../$(PACKAGE)_$(VERSION).orig.tar.gz
+	cd $@ && rm -rf $@/$(PACKAGE)

@@ -1,0 +1,3 @@
+# watch control file for uscan
+version=3
+http://mamedev.org/release.html downloader\.php.*mame(.*)s\.zip debian uupdate
