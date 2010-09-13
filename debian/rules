@@ -63,7 +63,7 @@ endif
 # Override dh_auto_build and dh_auto_clean
 
 %:
-	dh $@
+	dh --with quilt $@
 
 override_dh_auto_build:
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
