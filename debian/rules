@@ -56,9 +56,11 @@ DEB_MAME_OPTS += \
     BIGENDIAN=
 endif
 
-#
-# Add powerpc arch here
-#
+ifeq ($(DEB_HOST_ARCH),powerpc)
+DEB_MAME_OPTS += \
+    FORCE_DRC_C_BACKEND=1 \
+    BIGENDIAN=1
+endif
 
 # Override dh_auto_build, dh_auto_clean and add support for Quilt patch system
 include /usr/share/quilt/quilt.make
