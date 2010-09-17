@@ -1,4 +1,4 @@
-mame                   usr/share/games/mame/
+mame                   usr/games/
 debian/usr/games/mame  usr/games/
 
 src/osd/sdl/keymaps/*  usr/share/games/mame/keymaps/
