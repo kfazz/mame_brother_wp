@@ -1,5 +1,4 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# MAME package l10n template.
 # This file is distributed under the same license as the PACKAGE package.
 # Ludovic Lechapt <ludomatic@gmail.com>, 2008.
 #
@@ -18,13 +17,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../templates:1001
+#: ../mame.templates:1001
 msgid "Download 14 free ROMs (191KB) now?"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../templates:1001
+#: ../mame.templates:1001
 msgid ""
 "This package cannot include ROMs together with the MAME emulator but it can "
 "download free ROMs for non-commercial usage."
