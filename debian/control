@@ -2,7 +2,7 @@ Source: mame
 Section: non-free/games
 Priority: optional
 Maintainer: Ludovic Lechapt <ludomatic@gmail.com>
-Build-Depends: debhelper (>= 7), quilt (>= 0.40), po-debconf, libexpat1-dev, libsdl1.2-dev, zlib1g-dev, libxinerama-dev, libgconf2-dev, libgtk2.0-dev
+Build-Depends: debhelper (>= 7), po-debconf, libexpat1-dev, libsdl1.2-dev, zlib1g-dev, libxinerama-dev, libgconf2-dev, libgtk2.0-dev
 Standards-Version: 3.8.0
 Vcs-Git: git://git.shaperstudio.com/mamedeb.git
 Vcs-Browser: http://indefero.shaperstudio.com/p/mamedeb/source/tree/master/
