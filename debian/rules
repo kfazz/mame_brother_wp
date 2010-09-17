@@ -63,19 +63,23 @@ DEB_MAME_OPTS += \
 endif
 
 # Override dh_auto_build, dh_auto_clean and add support for Quilt patch system
-include /usr/share/quilt/quilt.make
+# rem quilt # include /usr/share/quilt/quilt.make
 
 %:
 	dh $@
 
-override_dh_auto_build: build-stamp
-build-stamp: $(QUILT_STAMPFN)
-	dh_testdir
+# rem quilt # override_dh_auto_build: build-stamp
+# rem quilt # build-stamp: $(QUILT_STAMPFN)
+# rem quilt # 	dh_testdir
+# rem quilt # 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
+# rem quilt # 	touch $@
+override_dh_auto_build:
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
-	touch $@
 
-override_dh_auto_clean: unpatch
-	dh_clean build-stamp
+# rem quilt # override_dh_auto_clean: unpatch
+# rem quilt # 	dh_clean build-stamp
+# rem quilt # 	$(MAKE) $(DEB_MAME_OPTS) clean
+override_dh_auto_clean:
 	$(MAKE) $(DEB_MAME_OPTS) clean
 
 # Upstream sources from ZIP to TGZ
