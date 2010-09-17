@@ -37,7 +37,7 @@ DEB_MAME_OPTS = \
     MAP= \
     VERBOSE= \
     OPTIMIZE=3 \
-    DISTRO=ubuntu-intrepid
+    DISTRO=gcc44-generic
 
 # Override make variables for specific archs
 ifeq ($(DEB_HOST_ARCH),i386)
