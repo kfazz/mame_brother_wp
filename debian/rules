@@ -81,11 +81,23 @@ override_dh_auto_clean: unpatch
 # Upstream sources from ZIP to TGZ
 PACKAGE := $(shell dpkg-parsechangelog | sed -n 's/^Source: //p')
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
-get-orig-source:
-	rm -rf $@
-	mkdir -p $@/$(PACKAGE)/$(PACKAGE)-$(VERSION)
-	cd $@ && wget --user-agent="Debian package <ludomatic@gmail.com>" "http://mamedev.org/downloader.php?&file=$(PACKAGE)$(VERSION)s.zip"
-	unzip -o $@/$(PACKAGE)$(VERSION)s.zip -d $@/$(PACKAGE)
-	cd $@/$(PACKAGE) && unzip -o $@/$(PACKAGE)/$(PACKAGE).zip -d $@/$(PACKAGE)/$(PACKAGE)-$(VERSION)
-	tar -cf - $(PACKAGE)-$(VERSION) | gzip -9f - > ../../$(PACKAGE)_$(VERSION).orig.tar.gz
-	cd $@ && rm -rf $@/$(PACKAGE)
+FILEBASE = $(PACKAGE)$(VERSION)
+URL = http://mamedev.org/downloader.php?&file=
+AGENT = Debian package <ludomatic@gmail.com>
+
+fetch_upstream:
+	wget -U '$(AGENT)' "$(URL)$(FILEBASE)s.zip" \
+	-O $(FILEBASE)s.zip
+
+get-orig-source: fetch_upstream
+	mkdir tmp
+	unzip $(FILEBASE)s.zip -d tmp
+	mkdir tmp/sub_tmp
+	unzip tmp/$(PACKAGE).zip -d tmp/sub_tmp
+	tar -C tmp/sub_tmp czvf $(PACKAGE)_$(VERSION).orig.tar.gz
+
+#    tar -C tmp/sub_tmp
+#       cd $@/$(PACKAGE) && unzip -o $@/$(PACKAGE)/$(PACKAGE).zip -d $@/$(PACKAGE)/$(PACKAGE)-$(VERSION)
+#       tar -cf - $(PACKAGE)-$(VERSION) | gzip -9f - > ../../$(PACKAGE)_$(VERSION).orig.tar.gz
+#       cd $@ && rm -rf $@/$(PACKAGE)
+
