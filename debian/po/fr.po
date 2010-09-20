@@ -26,13 +26,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../templates:1001
+#: ../mame.templates:1001
 msgid "Download 14 free ROMs (191KB) now?"
 msgstr "Télecharger 14 ROMs libres pour un total de 191Ko maintenant?"
 
 #. Type: boolean
 #. Description
-#: ../templates:1001
+#: ../mame.templates:1001
 msgid ""
 "This package cannot include ROMs together with the MAME emulator but it can "
 "download free ROMs for non-commercial usage."
