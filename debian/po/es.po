@@ -1,0 +1,33 @@
+# MAME package l10n template.
+# This file is distributed under the same license as the PACKAGE package.
+# Ludovic Lechapt <ludomatic@gmail.com>, 2008.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: ludomatic@gmail.com\n"
+"POT-Creation-Date: 2008-12-10 17:21+1100\n"
+"PO-Revision-Date: 2010-09-21 18:14-0500\n"
+"Last-Translator: Felix Arreola Rodriguez <fgatuno.123@gmail.com>\n"
+"Language-Team: Spanish\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ASCII\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. Type: boolean
+#. Description
+#: ../mame.templates:1001
+msgid "Download 14 free ROMs (191KB) now?"
+msgstr "¿Desea descargar 14 ROMs libres (191KB)?"
+
+#. Type: boolean
+#. Description
+#: ../mame.templates:1001
+msgid ""
+"This package cannot include ROMs together with the MAME emulator but it can "
+"download free ROMs for non-commercial usage."
+msgstr ""
+"Este paquete no puede incluir ROMs junto con el emulador MAME, pero puede "
+"descargar ROMs libres para uso no comercial."
