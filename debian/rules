@@ -37,7 +37,8 @@ DEB_MAME_OPTS = \
     MAP= \
     VERBOSE= \
     OPTIMIZE=3 \
-    DISTRO=gcc44-generic
+    DISTRO=ubuntu-intrepid
+#    DISTRO=gcc44-generic
 
 # Override make variables for specific archs
 ifeq ($(DEB_HOST_ARCH),i386)
@@ -73,13 +74,13 @@ endif
 # rem quilt # 	dh_testdir
 # rem quilt # 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 # rem quilt # 	touch $@
-override_dh_auto_build:
+build:
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 
 # rem quilt # override_dh_auto_clean: unpatch
 # rem quilt # 	dh_clean build-stamp
 # rem quilt # 	$(MAKE) $(DEB_MAME_OPTS) clean
-override_dh_auto_clean:
+clean:
 	$(MAKE) $(DEB_MAME_OPTS) clean
 
 # Upstream sources from ZIP to TGZ
