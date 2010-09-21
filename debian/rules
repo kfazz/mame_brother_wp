@@ -86,11 +86,21 @@ clean:
 # Upstream sources from ZIP to TGZ
 PACKAGE := $(shell dpkg-parsechangelog | sed -n 's/^Source: //p')
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
-get-orig-source:
-	rm -rf $@
-	mkdir -p $@/$(PACKAGE)/$(PACKAGE)-$(VERSION)
-	cd $@ && wget --user-agent="Debian package <ludomatic@gmail.com>" "http://mamedev.org/downloader.php?&file=$(PACKAGE)$(VERSION)s.zip"
-	unzip -o $@/$(PACKAGE)$(VERSION)s.zip -d $@/$(PACKAGE)
-	cd $@/$(PACKAGE) && unzip -o $@/$(PACKAGE)/$(PACKAGE).zip -d $@/$(PACKAGE)/$(PACKAGE)-$(VERSION)
-	tar -cf - $(PACKAGE)-$(VERSION) | gzip -9f - > ../../$(PACKAGE)_$(VERSION).orig.tar.gz
-	cd $@ && rm -rf $@/$(PACKAGE)
+FILEBASE = $(PACKAGE)$(VERSION)
+URL = http://mamedev.org/downloader.php?&file=
+AGENT = Debian package <ludomatic@gmail.com>
+TMPDIR := $(shell mktemp --dry-run --directory -p .)
+
+fetch_upstream:
+	wget -U '$(AGENT)' "$(URL)$(FILEBASE)s.zip" -O $(FILEBASE)s.zip
+
+get-orig-source: fetch_upstream
+	mkdir $(TMPDIR)
+	unzip $(FILEBASE)s.zip -d $(TMPDIR)
+	mkdir $(TMPDIR)/sub
+# Not a bug: Mame source needs to be unzipped twice
+	unzip $(TMPDIR)/$(PACKAGE).zip -d $(TMPDIR)/sub
+	tar -C $(TMPDIR)/sub -czvf $(PACKAGE)_$(VERSION).orig.tar.gz .
+	rm -r $(TMPDIR)
+	rm -r $(FILEBASE)s.zip
+
