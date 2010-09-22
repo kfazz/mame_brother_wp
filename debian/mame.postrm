@@ -1,5 +1,5 @@
 #!/bin/sh
-# postrm script for sdlmame
+# postrm script for mame
 #
 # see: dh_installdeb(1)
 
