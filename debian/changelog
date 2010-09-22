@@ -1,4 +1,4 @@
-mame (0.139-1) unstable; urgency=low
+mame (0139-1) unstable; urgency=low
 
   * Built from sdlmame 0.135 package and inspired from xmame 0.106 package.
     Closes: #424905.
