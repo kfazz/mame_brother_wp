@@ -9,23 +9,25 @@ known as ROMs or Romsets: MAME is not a game itself and you will have to obtain
 dumps from arcade boards you own. All revelant information can be found on the
 official website http://mamedev.org.
 
-== BINARY FILE ==
+== DEFAULT FILES ==
 
-Complete MAME architecture and executable are located at /usr/share/games/mame/,
-the configuration file /etc/mame.ini is a link to /usr/share/games/mame/mame.ini
+MAME binary and tools are located in the /usr/bin directory, configuration file
+is set to /etc/mame/mame.ini, core folders are in /usr/share/games/mame (roms,
+cheats, ...) and output folders are in /var/games/mame (memory cards, snapshots,
+etc.).
 
 == ROMS AND CONFIGURATION ==
 
 If you need to set your own ROMs folder or tweak something like video or cheats
 you can either:
-* update directly the /etc/mame/mame.ini link of /usr/share/games/mame/mame.ini,
-* make your own copy of /etc/mame/mame.ini in your home $HOME/.mame/mame.ini,
+* update directly the /etc/mame/mame.ini (note that root privilege are needed),
+* make your own copy of /etc/mame/mame.ini in your home at $HOME/.mame/mame.ini,
 * put your own mame.ini somewhere else and tells mame where to find the folder
   with the command line "mame -inipath /somewhere/else/".
 Simply add your ROMs path to the "rompath" field with a semicolon as separator.
 You can verify that MAME have read correct options with "mame -showconfig" and
 even create a fresh mame.ini file with "mame -createconfig". Brief MAME usage
-can be shown with "mame -showusage".
+can be shown with "mame -showusage". Man page also available using "man mame".
 
 == TOOLS ==
 
