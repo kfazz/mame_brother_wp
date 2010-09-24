@@ -18,22 +18,60 @@
 .\" for manpage-specific macros, see man(7)
 
 .SH "NAME"
-split \- etc.
+split \- File splitter/joiner with hashes.
 
 .SH "SYNOPSIS"
+.TP
+Split file into parts:
+.br
 .B split
-.I file
-.B option1
-.B [option2]
+.B -split
+.I big_file
+.I base_name
+.B size
+.TP
+Join file parts into original file:
+.br
+.B split
+.B -join
+.I split_file
+.I [output_file]
+.TP
+Verify a split file:
+.br
+.B split
+.B -verify
+.I splitfile
 
 .SH "DESCRIPTION"
-etc.
+.TP
+Simple utility to split files and verify/join splitted parts.
+.br
+.B big_file
+is the large file you wish to split.
+.br
+.B base_name
+is the base path and name to assign to the split files.
+.br
+.B size
+is the optional split size, in MB (100MB is the default).
+.br
+.B split_file
+is the name of the
+.B base_name
+.split generated with
+.B -split
+.
+.br
+.B output_file
+is the name of the file to output (defaults to original name).
+
 
 .SH "COPYRIGHT"
-etc.
+Copyright \(co 2008 Aaron Giles. BSD License.
 
 .SH "AUTHOR"
-etc.
+Written by Aaron Giles.
 
 .sp 3
 This manual page was written by Ludovic Lechapt <ludomatic@gmail.com>,
