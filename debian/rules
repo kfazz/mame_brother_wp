@@ -83,16 +83,25 @@ build:
 clean:
 	$(MAKE) $(DEB_MAME_OPTS) clean
 
-# Upstream sources from ZIP to TGZ
+# Convert upstream sources from ZIP to TGZ
 PACKAGE := $(shell dpkg-parsechangelog | sed -n 's/^Source: //p')
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
+
 FILEBASE = $(PACKAGE)$(VERSION)
 URL = http://mamedev.org/downloader.php?&file=
 AGENT = Debian package <ludomatic@gmail.com>
 TMPDIR := $(shell mktemp --dry-run --directory -p .)
 
+# Upstream zip does not have a dot in its name, so we have to cut it out
+# Ugly but needed
+UPSTREAM_VERSION := $(shell dpkg-parsechangelog |\
+ sed -ne 's/^Version: \(.*\)-.*/\1/p' | sed -e 's/\.//' )
+
+
 fetch_upstream:
-	wget -U '$(AGENT)' "$(URL)$(FILEBASE)s.zip" -O $(FILEBASE)s.zip
+	wget -U '$(AGENT)' "$(URL)\
+	$(PACKAGE)$(UPSTREAM_VERSION)s.zip" \
+	-O $(FILEBASE)s.zip
 
 get-orig-source: fetch_upstream
 	mkdir $(TMPDIR)
