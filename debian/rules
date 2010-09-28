@@ -15,7 +15,7 @@ DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
 
 # Override relevant make variables in original makefile
 DEB_MAME_OPTS = \
-    OPT_FLAGS="-D'INI_PATH=\"/etc/mame\"'" \
+    OPT_FLAGS="-D'INI_PATH=\"$HOME/.mame;/etc/mame\"'" \
     FULLNAME=mame \
     TARGET=mame \
     SUBTARGET=mame \
