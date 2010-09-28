@@ -13,7 +13,7 @@ official website http://mamedev.org.
 
 * MAME binary: /usr/games/mame
 * MAME tools directory: /usr/bin (chdman, ldresample, ...)
-* Configuration file: /etc/mame/mame.ini
+* Configuration file: $HOME/.mame or /etc/mame/mame.ini
 * Core folders: /usr/share/games/mame (roms, cheats, ...)
 * Output folders: /var/games/mame (memory cards, snapshots, ...)
 
