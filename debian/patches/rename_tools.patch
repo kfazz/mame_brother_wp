@@ -1,0 +1,43 @@
+Index: mame-0139/src/tools/regrep.c
+===================================================================
+--- mame-0139.orig/src/tools/regrep.c	2010-09-28 17:16:50.996527308 -0500
++++ mame-0139/src/tools/regrep.c	2010-09-28 17:17:11.383526945 -0500
+@@ -258,7 +258,7 @@
+     /* first argument is the directory */
+     if (argc < 4)
+     {
+-    	fprintf(stderr, "Usage:\nregrep <template> <outputdir> <summary1> [<summary2> [<summary3> ...]]\n");
++    	fprintf(stderr, "Usage:\nmame-regrep <template> <outputdir> <summary1> [<summary2> [<summary3> ...]]\n");
+     	return 1;
+     }
+     tempfilename = astring_dupc(argv[1]);
+Index: mame-0139/src/tools/split.c
+===================================================================
+--- mame-0139.orig/src/tools/split.c	2010-09-28 17:09:13.927610223 -0500
++++ mame-0139/src/tools/split.c	2010-09-28 17:09:33.832524302 -0500
+@@ -455,9 +455,9 @@
+ usage:
+ 	fprintf(stderr,
+ 		"Usage:\n"
+-		"  split -split <bigfile> <basename> [<size>] -- split file into parts\n"
+-		"  split -join <splitfile> [<outputfile>] -- join file parts into original file\n"
+-		"  split -verify <splitfile> -- verify a split file\n"
++		"  mame-split -split <bigfile> <basename> [<size>] -- split file into parts\n"
++		"  mame-split -join <splitfile> [<outputfile>] -- join file parts into original file\n"
++		"  mame-split -verify <splitfile> -- verify a split file\n"
+ 		"\n"
+ 		"Where:\n"
+ 		"  <bigfile> is the large file you wish to split\n"
+Index: mame-0139/src/tools/srcclean.c
+===================================================================
+--- mame-0139.orig/src/tools/srcclean.c	2010-09-28 17:15:34.431526420 -0500
++++ mame-0139/src/tools/srcclean.c	2010-09-28 17:16:14.840523525 -0500
+@@ -80,7 +80,7 @@
+ 	/* print usage info */
+ 	if (argc != 2)
+ 	{
+-		printf("Usage:\nsrcclean <file>\n");
++		printf("Usage:\nmame-srcclean <file>\n");
+ 		return 0;
+ 	}
+ 
