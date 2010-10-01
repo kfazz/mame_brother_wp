@@ -6,8 +6,9 @@ src/osd/sdl/man/romcmp.1
 src/osd/sdl/man/testkeys.1
 
 debian/man/ldresample.1
-debian/man/regrep.1
-debian/man/split.1
-debian/man/src2html.1
-debian/man/srcclean.1
 debian/man/unidasm.1
+
+debian/man/mame-regrep.1
+debian/man/mame-split.1
+debian/man/mame-src2html.1
+debian/man/mame-srcclean.1
