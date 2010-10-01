@@ -72,10 +72,10 @@ include /usr/share/quilt/quilt.make
 # Rules to make binarys like split get renamed to mame-split
 # Closes issue #2 (http://indefero.shaperstudio.com/p/mamedeb/issues/2/)
 
-override_dh_auto_build: build-stamp
+build: build-stamp
 build-stamp: $(QUILT_STAMPFN)
-	dh_testdir
-	dh_quilt_patch
+#	dh_testdir
+#	dh_quilt_patch
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 # To get to tools renamed
 	[ -f mame-split ] || mv split mame-split
@@ -87,7 +87,7 @@ build-stamp: $(QUILT_STAMPFN)
 # rem not-quilt # build:
 # rem not-quilt #	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 
-override_dh_auto_clean: unpatch
+clean: unpatch
 	# Just before clening the sources, restore original names
 	test -f mame-split || exit 0; \
 	mv mame-split split
@@ -97,7 +97,7 @@ override_dh_auto_clean: unpatch
 	mv mame-srcclean srcclean
 	test -f mame-src2html || exit 0; \
 	mv mame-src2html src2html
-	dh_quilt_unpatch
+#	dh_quilt_unpatch
 	dh_clean build-stamp
 	$(MAKE) $(DEB_MAME_OPTS) clean
 # Commented out because we now use quilt
