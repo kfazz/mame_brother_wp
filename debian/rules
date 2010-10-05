@@ -116,8 +116,7 @@ TMPDIR := $(shell mktemp --dry-run --directory -p .)
 
 # Upstream zip does not have a dot in its name, so we have to cut it out
 # Ugly but needed
-UPSTREAM_VERSION := $(shell dpkg-parsechangelog |\
- sed -ne 's/^Version: \(.*\)-.*/\1/p' | sed -e 's/\.//' )
+UPSTREAM_VERSION := $(shell echo $(VERSION) | sed -e 's/\.//' )
 
 
 fetch_upstream:
