@@ -40,14 +40,14 @@ if [ ! -e "$INIFILE" ]; then
     sed -i 's/\(   ctrlr\).*/\1;\/usr\/share\/games\/mame\/ctrlr/' $INIFILE
     sed -i 's_/etc/mame_$HOME/.mame;&_' $INIFILE
     sed -i 's/\(   cheat\).*/\1;\/usr\/share\/games\/mame\/cheat/' $INIFILE
-    sed -i 's/\(   cfg\).*/\1;\/var\/games\/mame\/cfg/' $INIFILE
-    sed -i 's/\(   nvram\).*/\1;\/var\/games\/mame\/nvram/' $INIFILE
-    sed -i 's/\(   memcard\).*/\1;\/var\/games\/mame\/memcard/' $INIFILE
-    sed -i 's/\(   inp\).*/\1;\/var\/games\/mame\/inp/' $INIFILE
-    sed -i 's/\(   sta\).*/\1;\/var\/games\/mame\/sta/' $INIFILE
-    sed -i 's/\(   snap\).*/\1;\/var\/games\/mame\/snap/' $INIFILE
-    sed -i 's/\(   diff\).*/\1;\/var\/games\/mame\/diff/' $INIFILE
-    sed -i 's/\(   comments\).*/\1;\/var\/games\/mame\/comments/' $INIFILE
+    sed -i 's_[ +]cfg_ /var/games/mame/cfg;cfg_' $INIFILE
+    sed -i 's_[ +]nvram_ /var/games/mame/nvram;nvram_' $INIFILE
+    sed -i 's_[ +]memcard_ /var/games/mame/memcard;memcard_' $INIFILE
+    sed -i 's_[ +]inp_ /var/games/mame/inp;inp_' $INIFILE
+    sed -i 's_[ +]sta_ /var/games/mame/sta;sta_' $INIFILE
+    sed -i 's_[ +]snap_ /var/games/mame/snap;snap_' $INIFILE
+    sed -i 's_[ +]diff_ /var/games/mame/diff;diff_' $INIFILE
+    sed -i 's_[ +]comments_ /var/games/mame/comments;comments_' $INIFILE
   fi
 fi
 
