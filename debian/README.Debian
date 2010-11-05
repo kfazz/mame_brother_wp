@@ -9,11 +9,41 @@ known as ROMs or Romsets: MAME is not a game itself and you will have to obtain
 dumps from arcade boards you own. All revelant information can be found on the
 official website http://mamedev.org.
 
+== QUICK START == 
+1. Create a folder "mame" and a subfolder "mame/roms" in your home directory.
+
+2. Download one of the freely available roms from http://mamedev.org/roms
+(for instance, Alien Arena) and put the alienar.zip in the "roms" folder
+
+3. Check now the sanity of your roms. Mame is very picky about that.
+
+mame -verifyroms
+
+romset alienar is good
+mac2bios: macs2os_l.bin (524288 bytes) - NOT FOUND - NO GOOD DUMP KNOWN
+mac2bios: macs2os_h.bin (524288 bytes) - NOT FOUND - NO GOOD DUMP KNOWN
+romset mac2bios is best available
+2 romsets found, 2 were OK.
+
+you can safely ignore the mac2bios warning
+
+4. Now start the game with the command
+
+mame alienar 
+
+5. Basic keyboard commands include
+  - 5 key to insert a coin
+  - 1 key to start the game 
+  - Tab key to access the mame internal menu
+
+6. If mame is way too slow on your computer and you have 3D acceleration 
+available, change the video parameter to "opengl" in /etc/mame/mame.ini
+
 == DEFAULT FILES ==
 
 * MAME binary: /usr/games/mame
 * MAME tools directory: /usr/bin (chdman, ldresample, ...)
-* Configuration file: $HOME/.mame or /etc/mame/mame.ini
+* Configuration file: $HOME/.mame/mame.ini or /etc/mame/mame.ini
 * Core folders: /usr/share/games/mame (roms, cheats, ...)
 * Output folders: /var/games/mame (memory cards, snapshots, ...)
 
@@ -21,7 +51,7 @@ official website http://mamedev.org.
 
 If you need to set your own ROMs folder or tweak something like video or cheats
 you can either:
-* update directly the /etc/mame/mame.ini (note that root privilege are needed),
+* update directly the /etc/mame/mame.ini,
 * make your own copy of /etc/mame/mame.ini in your home at $HOME/.mame/mame.ini,
 * put your own mame.ini somewhere else and tells mame where to find the folder
   with the command line "mame -inipath /somewhere/else/".
