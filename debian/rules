@@ -39,7 +39,6 @@ DEB_MAME_OPTS = \
     OPTIMIZE=3 \
     DISTRO=gcc44-generic
 
-
 # Override make variables for specific archs
 ifeq ($(DEB_HOST_ARCH),i386)
 DEB_MAME_OPTS += \
@@ -64,9 +63,6 @@ DEB_MAME_OPTS += \
     BIGENDIAN=1
 endif
 
-# Override dh_auto_build, dh_auto_clean and add support for Quilt patch system
-include /usr/share/quilt/quilt.make
-
 %:
 	dh $@
 
@@ -74,9 +70,8 @@ include /usr/share/quilt/quilt.make
 # Closes issue #2 (http://indefero.shaperstudio.com/p/mamedeb/issues/2/)
 
 build: build-stamp
-build-stamp: $(QUILT_STAMPFN)
+build-stamp:
 #	dh_testdir
-#	dh_quilt_patch
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 # To get to tools renamed
 	[ -f mame-split ] || mv split mame-split
@@ -84,11 +79,8 @@ build-stamp: $(QUILT_STAMPFN)
 	[ -f mame-srcclean ] || mv srcclean mame-srcclean
 	[ -f mame-src2html ] || mv src2html mame-src2html
 	touch $@
-# Commented out because we now use quilt
-# rem not-quilt # build:
-# rem not-quilt #	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 
-clean: unpatch
+clean:
 	# Just before clening the sources, restore original names
 	test -f mame-split || exit 0; \
 	mv mame-split split
@@ -98,12 +90,8 @@ clean: unpatch
 	mv mame-srcclean srcclean
 	test -f mame-src2html || exit 0; \
 	mv mame-src2html src2html
-#	dh_quilt_unpatch
 	dh_clean build-stamp
 	$(MAKE) $(DEB_MAME_OPTS) clean
-# Commented out because we now use quilt
-# rem not-quilt # clean: 
-# rem not-quilt #	$(MAKE) $(DEB_MAME_OPTS) clean
 
 # Convert upstream sources from ZIP to TGZ
 PACKAGE := $(shell dpkg-parsechangelog | sed -n 's/^Source: //p')
@@ -117,7 +105,6 @@ TMPDIR := $(shell mktemp --dry-run --directory -p .)
 # Upstream zip does not have a dot in its name, so we have to cut it out
 # Ugly but needed
 UPSTREAM_VERSION := $(shell echo $(VERSION) | sed -e 's/\.//' )
-
 
 fetch_upstream:
 	wget -U '$(AGENT)' "$(URL)\
