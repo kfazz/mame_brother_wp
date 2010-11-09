@@ -9,7 +9,6 @@ Vcs-Git: git://git.shaperstudio.com/mamedeb.git
 Vcs-Browser: http://indefero.shaperstudio.com/p/mamedeb/source/tree/master/
 Homepage: http://mamedev.org
 
-
 Package: mame
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, wget
@@ -17,16 +16,14 @@ Suggests: mame-tools
 Replaces: sdlmame
 Conflicts: sdlmame, xmame, xmame-common, xmame-gl, xmame-sdl, xmame-svga, xmame-x
 Description: Multiple Arcade Machine Emulator (MAME)
- MAME is an emulator hardware: it faithfully reproduces the behavior of many
+ MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can
  directly, through ROM images, run the complete system of these old arcade
  machines. These ROMs are mostly subject to copyright and it is therefore
  illegal to use them if you do not own the arcade machine.
  .
- This package provides MAME binary and configuration files.
+ This package provides the MAME binary and configuration files.
  .
- MAME by N. Salmoria and the MAME Team - http://mamedev.org
- SDL port by R. Belmont and O. Galibert - http://rbelmont.mameworld.info
 
 Package: mame-tools
 Section: non-free/utils
@@ -35,7 +32,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, wget
 Recommends: mame (= ${source:Version})
 Conflicts: xmame-tools
 Description: Tools for Multiple Arcade Machine Emulator (MAME)
- MAME is an emulator hardware: it faithfully reproduces the behavior of many
+ MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can
  directly, through ROM images, run the complete system of these old arcade
  machines. These ROMs are mostly subject to copyright and it is therefore
@@ -54,5 +51,4 @@ Description: Tools for Multiple Arcade Machine Emulator (MAME)
   - testkeys (Keyboard code viewer)
   - unidasm (Generic MAME disassembler)
  .
- MAME by N. Salmoria and the MAME Team - http://mamedev.org
- SDL port by R. Belmont and O. Galibert - http://rbelmont.mameworld.info
+
