@@ -1,0 +1,370 @@
+Format-Specification: http://svn.debian.org/wsvn/dep/web/deps/dep5.mdwn?op=file&rev=135
+Name: MAME
+Source: http://mamedev.org
+Disclaimer: 
+ This package is not part of the GNU/Linux Debian distribution.  It is
+ provided in the non-free archive area as a convenience to Debian users.
+ The contents of this package cannot be distributed as part of the Debian
+ distribution because the Mame Software License does not allow commercial use.
+XS-Autobuild: yes
+
+Files: debian/*
+Copyright: Ludovic Lechapt <ludomatic@gmail.com>
+           Mamedeb team <mamedeb@googlegroups.com>
+Based on Cesare Falco's package, and the previous xmame package.
+
+Files: *
+Copyright: Nicola Salmoria and the MAME team
+License: MAME
+
+Files: src/emu/cpu/drc*,
+ src/emu/cpu/vtlb*,
+ src/emu/cpu/x86*,
+ src/emu/debug/express.*,
+ src/emu/machine/i8243.*,
+ src/emu/sound/bsmt2000.c,
+ src/lib/util/*,
+ src/osd/*,
+ src/tools/chdman.c,
+ src/tools/jedutil.c,
+ src/tools/ldresample.c,
+ src/tools/ldverify.c,
+ src/tools/regrep.c,
+ src/tools/split.c,
+ src/tools/src2html.c,
+ src/tools/srcclean.c,
+ src/tools/tools.mak,
+ src/tools/unidasm.c
+Copyright: Aaron Giles
+License: MAME
+
+Files: src/emu/cpu/alph8201/*
+Copyright: Tatsuyuki Satoh
+License: MAME
+
+Files: src/emu/cpu/arm7/*,
+ src/emu/cpu/mcs51/*
+Copyright: Steve Ellenoff
+License: MAME
+
+Files: src/emu/cpu/cdp1802/*,
+ src/emu/cpu/lh5801/*,
+ src/emu/cpu/saturn/*,
+ src/emu/cpu/sc61860/*,
+ src/emu/sound/sid.*
+Copyright: Peter Trauner
+License: MAME
+
+Files: src/emu/cpu/cp1610/*
+Copyright: Frank Palazzolo
+License: MAME
+
+Files: src/emu/cpu/f8/*,
+ src/emu/cpu/i8085/*,
+ src/emu/cpu/m6502/*,
+ src/emu/cpu/sh2/*,
+ src/emu/cpu/spc700/spc700ds.*,
+ src/emu/cpu/upd7810/*,
+ src/emu/cpu/z80/*,
+ src/emu/cpu/z180/*,
+ src/emu/cpu/z8000/*
+Copyright: Juergen Buchmueller
+License: MAME
+
+Files: src/emu/cpu/g65816/*,
+ src/emu/cpu/m68000/*
+Copyright: Karl Stenerud
+License: MAME
+
+Files: src/emu/cpu/h6280/*
+Copyright: Bryan McPhail
+License: MAME
+
+Files: src/emu/cpu/hd6309/*
+Copyright: John Butler, Tim Lindner
+License: MAME
+
+Files: src/emu/cpu/i860/*
+Copyright: Jason Eckhardt 
+License: MAME
+
+Files: src/emu/cpu/lr35902/*,
+ src/emu/cpu/rsp/*,
+ src/emu/cpu/z8/*,
+ src/emu/machine/6526cia.h,
+ src/emu/machine/cdp1852.h,
+ src/emu/machine/i8255a.*,
+ src/emu/machine/z80dart.*,
+ src/emu/machine/z80sti.*,
+ src/emu/sound/cdp1863.*,
+ src/emu/sound/cdp1864.*
+Copyright: The MESS team
+License: MAME
+
+Files: src/emu/cpu/m6809/*
+Copyright: John Butler
+License: MAME
+
+Files: src/emu/cpu/mcs48/*
+Copyright: Mirko Buffoni
+License: MAME
+
+Files: src/emu/cpu/pic16c5x/*,
+ src/emu/cpu/pic16c62x/*,
+ src/emu/cpu/tms32010/*,
+ src/emu/cpu/tms32025/*
+Copyright: Tony La Porta
+License: MAME
+
+Files: src/emu/cpu/ssp1601/*,
+ src/mame/drivers/megadriv.c
+Copyright: Grazvydas Ignotas
+License: MAME
+
+Files: src/emu/cpu/tms7000/*
+Copyright: Tim Lindner
+License: MAME
+
+Files: src/emu/cpu/tms9900/9900dasm.c
+Copyright: Raphael Nabet
+License: MAME
+
+Files: src/emu/cpu/tms34010/*
+Copyright: Alex Pasadyn, Zsolt Vasvari
+License: MAME
+
+Files: src/emu/sound/c6280.c
+Copyright: Charles MacDonald
+License: LGPL-2.1+
+
+Files: src/emu/sound/es5503.c,
+ src/emu/sound/ymf271.*
+Copyright: R. Belmont
+License: MAME or GPL-2
+
+Files: src/emu/sound/fm.*
+Copyright: Jarek Burczynski, Tatsuyuki Satoh
+License: MAME
+
+Files: src/emu/sound/s14001a.*
+Copyright: Jonathan Gevaryahu
+License: MAME
+
+Files: src/emu/sound/sidw6581.h
+Copyright: Dag Lem
+License: MAME
+
+Files: src/emu/sound/sp0256.*
+Copyright: Joseph Zbiciak, Tim Lindner
+License: MAME
+
+Files: src/emu/sound/tiasound.*
+Copyright: Ron Fries
+License: MAME
+
+Files: src/emu/sound/ym2151.*,
+ "src/emu/sound/ym2413.*
+Copyright: Jarek Burczynski
+License: MAME
+
+Files: src/emu/sound/ymf278b.*
+Copyright: R. Belmont and O. Galibert
+License: MAME or GPL-2
+
+Files: src/lib/expat/*
+Copyright: 1998, 1999, 2000 Thai Open Source Software Center Ltd
+License:
+ Copyright (c) 1998, 1999, 2000 Thai Open Source Software Center Ltd
+ .                               and Clark Cooper
+ Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006 Expat maintainers.
+ .
+ Permission is hereby granted, free of charge, to any person obtaining
+ a copy of this software and associated documentation files (the
+ "Software"), to deal in the Software without restriction, including
+ without limitation the rights to use, copy, modify, merge, publish,
+ distribute, sublicense, and/or sell copies of the Software, and to
+ permit persons to whom the Software is furnished to do so, subject to
+ the following conditions:
+ .
+ The above copyright notice and this permission notice shall be included
+ in all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ .
+
+Files: src/lib/softfloat/*
+Copyright: 2002 John R. Hauser
+License:
+ SoftFloat was written by me, John R. Hauser.  This work was made possible in
+ part by the International Computer Science Institute, located at Suite 600,
+ 1947 Center Street, Berkeley, California 94704.  Funding was partially
+ provided by the National Science Foundation under grant MIP-9311980.  The
+ original version of this code was written as part of a project to build
+ a fixed-point vector processor in collaboration with the University of
+ California at Berkeley, overseen by Profs. Nelson Morgan and John Wawrzynek.
+ .
+ THIS SOFTWARE IS DISTRIBUTED AS IS, FOR FREE.  Although reasonable effort
+ has been made to avoid it, THIS SOFTWARE MAY CONTAIN FAULTS THAT WILL AT
+ TIMES RESULT IN INCORRECT BEHAVIOR.  USE OF THIS SOFTWARE IS RESTRICTED TO
+ PERSONS AND ORGANIZATIONS WHO CAN AND WILL TAKE FULL RESPONSIBILITY FOR ALL
+ LOSSES, COSTS, OR OTHER PROBLEMS THEY INCUR DUE TO THE SOFTWARE, AND WHO
+ FURTHERMORE EFFECTIVELY INDEMNIFY JOHN HAUSER AND THE INTERNATIONAL COMPUTER
+ SCIENCE INSTITUTE (possibly via similar legal warning) AGAINST ALL LOSSES,
+ COSTS, OR OTHER PROBLEMS INCURRED BY THEIR CUSTOMERS AND CLIENTS DUE TO THE
+ SOFTWARE.
+ .
+ Derivative works are acceptable, even for commercial purposes, provided
+ that the minimal documentation requirements stated in the source code are
+ satisfied.
+ .
+
+Files: src/lib/util/md5.*
+Copyright: Public domain
+Licence:
+ This code implements the MD5 message-digest algorithm.
+ The algorithm is due to Ron Rivest.  This code was
+ written by Colin Plumb in 1993, no copyright is claimed.
+ This code is in the public domain; do with it what you wish.
+ .
+ Equivalent code is available from RSA Data Security, Inc.
+ This code has been tested against that, and is equivalent,
+ except that you don't need to include two pages of legalese
+ with every copy.
+ .
+ To compute the message digest of a chunk of bytes, declare an
+ MD5Context structure, pass it to MD5Init, call MD5Update as
+ needed on buffers full of bytes, and then call MD5Final, which
+ will fill a supplied 16-byte array with the digest.
+ . 
+ Changed so as no longer to depend on Colin Plumb's `usual.h' header
+ definitions; now uses stuff from dpkg's config.h.
+ - Ian Jackson <ijackson@nyx.cs.du.edu>.
+ Still in the public domain.
+ .
+
+Files: src/lib/util/sha1.*
+Copyright: 2001 Peter Gutmann, Andrew Kuchling, Niels Moeller
+License: LGPL-2.1+
+
+Files: src/lib/zlib/*
+Copyright: 1995-2005 Jean-loup Gailly and Mark Adler
+License:
+ Copyright (C) 1995-2005 Jean-loup Gailly and Mark Adler
+ .
+ This software is provided 'as-is', without any express or implied
+ warranty.  In no event will the authors be held liable for any damages
+ arising from the use of this software.
+ .
+ Permission is granted to anyone to use this software for any purpose,
+ including commercial applications, and to alter it and redistribute it
+ freely, subject to the following restrictions:
+ .
+ 1. The origin of this software must not be misrepresented; you must not
+    claim that you wrote the original software. If you use this software
+    in a product, an acknowledgment in the product documentation would be
+    appreciated but is not required.
+ 2. Altered source versions must be plainly marked as such, and must not be
+    misrepresented as being the original software.
+ 3. This notice may not be removed or altered from any source distribution.
+ .
+ Jean-loup Gailly        Mark Adler
+ jloup@gzip.org          madler@alumni.caltech.edu
+ . 
+ The data format used by the zlib library is described by RFCs (Request for
+ Comments) 1950 to 1952 in the files http://www.ietf.org/rfc/rfc1950.txt
+ (zlib format), rfc1951.txt (deflate format) and rfc1952.txt (gzip format).
+ .
+
+Files: src/mame/audio/carnival.c
+Copyright: Peter J.C.Clare
+License: MAME
+
+Files: src/mame/audio/snes_snd.c
+Copyright: Brad Martin
+License: MAME
+
+Files: src/mame/audio/starwars.c,
+ src/mame/drivers/starwars.c,
+ src/mame/machine/starwars.c
+Copyright: Steve Baines
+License: MAME
+
+Files: src/mame/drivers/bfmsys85.c,
+ src/mame/drivers/bfm_sc1.c,
+ src/mame/drivers/maygay1b.c,
+ src/mame/video/awpvid.*,
+ src/mame/video/bfm_dm01.c
+Copyright: J. Wallace and the AGEMAME Development Team
+License: MAME
+
+Files: src/mame/machine/mathbox.*
+Copyright: Eric Smith
+License: MAME
+
+Files: src/mame/machine/snesdsp3.c
+Copyright: John Weidman, Kris Bleakley, Lancer, Nach, z80 gaiden,
+ Jonas Quinn
+License: MAME
+
+Files: src/mame/machine/snesdsp4.c
+Copyright: Dreamer Nom, John Weidman, Kris Bleakley, Nach, z80 gaiden,
+ Jonas Quinn
+License: MAME
+
+Files: src/osd/sdl/gl_shader_tool.*
+Copyright: Sven Gothel
+License: MAME or GPL-2
+
+Files: src/osd/sdl/SDL1211_opengl.h
+Copyright: Sam Lantinga
+License: LGPL-2.1
+
+License: MAME
+ Copyright (c) 1997-2007, Nicola Salmoria and the MAME team
+ All rights reserved.
+ .
+ Redistribution and use of this code or any derivative works are permitted
+ provided that the following conditions are met:
+ .
+ * Redistributions may not be sold, nor may they be used in a commercial
+ product or activity.
+ .
+ * Redistributions that are modified from the original source must include the
+ complete source code, including the source code for all components used by a
+ binary built from the modified sources. However, as a special exception, the
+ source code distributed need not include anything that is normally distributed
+ (in either source or binary form) with the major components (compiler, kernel,
+ and so on) of the operating system on which the executable runs, unless that
+ component itself accompanies the executable.
+ .
+ * Redistributions must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other
+ materials provided with the distribution.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ POSSIBILITY OF SUCH DAMAGE.
+ .
+
+License: GPL-2
+ See the file /usr/share/common-licenses/GPL-2.
+ .
+
+License: LGPL-2.1
+ See the file /usr/share/common-licenses/LGPL-2.1
+ .
+
