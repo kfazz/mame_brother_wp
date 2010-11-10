@@ -117,7 +117,7 @@ get-orig-source: fetch_upstream
 	mkdir -p $(TMPDIR)/sub/$(PACKAGE)-$(VERSION)
 # Not a bug: Mame source needs to be unzipped twice
 	unzip $(TMPDIR)/$(PACKAGE).zip -d $(TMPDIR)/sub/$(PACKAGE)-$(VERSION)
-	tar -C $(TMPDIR)/sub -czvf $(PACKAGE)_$(VERSION).orig.tar.gz .
+	tar -C $(TMPDIR)/sub -cvf - . | gzip -c9  > ../$(PACKAGE)_$(VERSION).orig.tar.gz 
 	rm -r $(TMPDIR)
 	rm -r $(FILEBASE)s.zip
 
