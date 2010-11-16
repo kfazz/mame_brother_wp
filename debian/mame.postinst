@@ -51,14 +51,6 @@ if [ ! -e "$INIFILE" ]; then
   fi
 fi
 
-
-# Checking /var/games/mame access rights
-# dh_fixperms does this in the makefile #chown root:root /usr/games/mame
-# dh_fixperms does this in the makefile #chmod 4755 /usr/games/mame
-find /var/games/mame/ -type f -exec chmod o+rwx {} \;
-find /var/games/mame/ -type d -exec chmod o+rw {} \;
-
-
 # Downloading the free roms from Mame's website
 case "$1" in
   preconfigure|configure)
