@@ -66,14 +66,12 @@ endif
 %:
 	dh $@
 
-# Rules to make binarys like split get renamed to mame-split
-# Closes issue #2 (http://indefero.shaperstudio.com/p/mamedeb/issues/2/)
-
 build: build-stamp
 build-stamp:
 #	dh_testdir
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
-# To get to tools renamed
+# mame-tools are renamed to avoid name collision with other binaries
+# (ie GNU split ) 
 	[ -f mame-split ] || mv split mame-split
 	[ -f mame-regrep ] || mv regrep mame-regrep
 	[ -f mame-srcclean ] || mv srcclean mame-srcclean
@@ -81,7 +79,7 @@ build-stamp:
 	touch $@
 
 clean:
-	# Just before clening the sources, restore original names
+	# Just before cleaning the sources, restore original names
 	test -f mame-split || exit 0; \
 	mv mame-split split
 	test -f mame-regrep || exit 0; \
@@ -102,8 +100,7 @@ URL = http://mamedev.org/downloader.php?&file=
 AGENT = Debian package <ludomatic@gmail.com>
 TMPDIR := $(shell mktemp --dry-run --directory -p .)
 
-# Upstream zip does not have a dot in its name, so we have to cut it out
-# Ugly but needed
+# Upstream zip file does not have a dot in its name, so we have to cut it out
 UPSTREAM_VERSION := $(shell echo $(VERSION) | sed -e 's/\.//' )
 
 fetch_upstream:
@@ -120,4 +117,3 @@ get-orig-source: fetch_upstream
 	tar -C $(TMPDIR)/sub -cvf - . | gzip -c9  > ../$(PACKAGE)_$(VERSION).orig.tar.gz 
 	rm -r $(TMPDIR)
 	rm -r $(FILEBASE)s.zip
-
