@@ -12,14 +12,17 @@ official website http://mamedev.org.
 == QUICK START == 
 1. Create a folder "mame" and a subfolder "mame/roms" in your home directory.
 
-2. Download one of the freely available roms from http://mamedev.org/roms
-(for instance, Alien Arena) and put the alienar.zip in the "roms" folder
+2. Download the freely available rom World Rally from http://gaelco.com
+(for instance, Alien Arena) and put the wrally in the "roms" folder
 
 3. Check now the sanity of your roms. Mame is very picky about that.
 
 mame -verifyroms
 
-romset alienar is good
+wrally  : tibpal20l8-25cnt.b23 (260 bytes) - NOT FOUND - NO GOOD DUMP KNOWN
+wrally  : gal16v8-25lnc.h21 (260 bytes) - NOT FOUND - NO GOOD DUMP KNOWN
+wrally  : tibpal20l8-25cnt.h15 (260 bytes) - NOT FOUND - NO GOOD DUMP KNOWN
+romset wrally is best available
 mac2bios: macs2os_l.bin (524288 bytes) - NOT FOUND - NO GOOD DUMP KNOWN
 mac2bios: macs2os_h.bin (524288 bytes) - NOT FOUND - NO GOOD DUMP KNOWN
 romset mac2bios is best available
@@ -29,15 +32,16 @@ you can safely ignore the mac2bios warning
 
 4. Now start the game with the command
 
-mame alienar 
+mame wrally 
 
 5. Basic keyboard commands include
   - 5 key to insert a coin
   - 1 key to start the game 
   - Tab key to access the mame internal menu
 
-6. If mame is way too slow on your computer and you have 3D acceleration 
-available, change the video parameter to "opengl" in /etc/mame/mame.ini
+6. If mame is way too slow on your computer and you have 3D hardware 
+acceleration available, change the video parameter to "opengl" in 
+/etc/mame/mame.ini
 
 == DEFAULT FILES ==
 
@@ -49,16 +53,16 @@ available, change the video parameter to "opengl" in /etc/mame/mame.ini
 
 == ROMS AND CONFIGURATION ==
 
-If you need to set your own ROMs folder or tweak something like video or cheats
-you can either:
+If you need to change the location of the romss folder or tweak something like 
+video or cheats you can either:
 * update directly the /etc/mame/mame.ini,
 * make your own copy of /etc/mame/mame.ini in your home at $HOME/.mame/mame.ini,
 * put your own mame.ini somewhere else and tells mame where to find the folder
   with the command line "mame -inipath /somewhere/else/".
-Simply add your ROMs path to the "rompath" field with a semicolon as separator.
+
 You can verify that MAME have read correct options with "mame -showconfig" and
 even create a fresh mame.ini file with "mame -createconfig". Brief MAME usage
-can be shown with "mame -showusage". Man page also available using "man mame".
+can be shown with "mame -showusage" and a full man page is also available.
 
 == TOOLS ==
 
@@ -72,9 +76,8 @@ Changes are stored in the source package as diffs in debian/patches and applied
 during the build. See /usr/share/doc/quilt/README.source for a detailed
 explanation.
 
-== UPSTREAM SOURCES ==
+== UPSTREAM SOURCE ==
 
-MAME sources can be downloaded from http://mamedev.org/release.html
-
+The MAME source code can be downloaded from http://mamedev.org/release.html
 
  -- Ludovic Lechapt <ludomatic@gmail.com>, Mon, 06 Sep 2010 23:44:19 +1100
