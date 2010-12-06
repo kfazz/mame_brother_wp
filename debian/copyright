@@ -17,26 +17,145 @@ Files: *
 Copyright: Nicola Salmoria and the MAME team
 License: MAME
 
-Files: src/emu/cpu/drc*,
- src/emu/cpu/vtlb*,
- src/emu/cpu/x86*,
- src/emu/debug/express.*,
- src/emu/machine/i8243.*,
- src/emu/sound/bsmt2000.c,
- src/lib/util/*,
- src/osd/*,
- src/tools/chdman.c,
- src/tools/jedutil.c,
- src/tools/ldresample.c,
- src/tools/ldverify.c,
- src/tools/regrep.c,
- src/tools/split.c,
- src/tools/src2html.c,
- src/tools/srcclean.c,
- src/tools/tools.mak,
- src/tools/unidasm.c
+Files: src/build/makedep.c
+src/emu/addrmap.c
+src/emu/addrmap.h
+src/emu/cpu/adsp2100/adsp2100.c
+src/emu/cpu/adsp2100/adsp2100.h
+src/emu/cpu/asap/asap.c
+src/emu/cpu/asap/asap.h
+src/emu/debug/debugcpu.c
+src/emu/debug/debugcpu.h
+src/emu/debug/debugvw.c
+src/emu/debug/debugvw.h
+src/emu/debug/dvdisasm.c
+src/emu/debug/dvdisasm.h
+src/emu/debug/dvmemory.c
+src/emu/debug/dvmemory.h
+src/emu/debug/dvstate.c
+src/emu/debug/dvstate.h
+src/emu/debug/dvtext.c
+src/emu/debug/dvtext.h
+src/emu/delegate.c
+src/emu/delegate.h
+src/emu/devcpu.c
+src/emu/devcpu.h
+src/emu/devimage.c
+src/emu/devintrf.c
+src/emu/devintrf.h
+src/emu/devlegcy.c
+src/emu/devlegcy.h
+src/emu/didisasm.c
+src/emu/didisasm.h
+src/emu/diexec.c
+src/emu/diexec.h
+src/emu/diimage.c
+src/emu/diimage.h
+src/emu/dimemory.c
+src/emu/dimemory.h
+src/emu/dinvram.c
+src/emu/dinvram.h
+src/emu/disound.c
+src/emu/disound.h
+src/emu/distate.c
+src/emu/distate.h
+src/emu/drivers/emudummy.c
+src/emu/emualloc.c
+src/emu/emualloc.h
+src/emu/emu.h
+src/emu/machine.c
+src/emu/machine/er2055.c
+src/emu/machine/er2055.h
+src/emu/machine.h
+src/emu/machine/nvram.c
+src/emu/machine/nvram.h
+src/emu/mconfig.c
+src/emu/mconfig.h
+src/emu/memory.c
+src/emu/memory.h
+src/emu/profiler.c
+src/emu/profiler.h
+src/emu/render.c
+src/emu/render.h
+src/emu/rendlay.c
+src/emu/rendlay.h
+src/emu/schedule.c
+src/emu/schedule.h
+src/emu/video.c
+src/emu/video.h
+src/emu/video/vooddefs.h
+src/emu/video/voodoo.c
+src/emu/video/voodoo.h
+src/lib/util/*
+src/mame/machine/atarigen.c
+src/mame/machine/atarigen.h
+src/osd/osdcomm.h
+src/osd/osdcore.h
+src/osd/osdepend.h
+src/osd/osdmini/minidir.c
+src/osd/osdmini/minifile.c
+src/osd/osdmini/minimain.c
+src/osd/osdmini/minimisc.c
+src/osd/osdmini/minisync.c
+src/osd/osdmini/minitime.c
+src/osd/osdmini/miniwork.c
+src/osd/osdmini/osdmini.mak
+src/osd/windows/d3d8intf.c
+src/osd/windows/d3d9intf.c
+src/osd/windows/d3dintf.h
+src/osd/windows/debugwin.c
+src/osd/windows/debugwin.h
+src/osd/windows/drawd3d.c
+src/osd/windows/drawdd.c
+src/osd/windows/drawgdi.c
+src/osd/windows/drawnone.c
+src/osd/windows/eivc.h
+src/osd/windows/eivcx86.h
+src/osd/windows/input.c
+src/osd/windows/input.h
+src/osd/windows/ledutil.c
+src/osd/windows/main.c
+src/osd/windows/mame.rc
+src/osd/windows/osinline.h
+src/osd/windows/output.c
+src/osd/windows/output.h
+src/osd/windows/sound.c
+src/osd/windows/sound.h
+src/osd/windows/strconv.c
+src/osd/windows/strconv.h
+src/osd/windows/vconv.c
+src/osd/windows/video.c
+src/osd/windows/video.h
+src/osd/windows/winalloc.c
+src/osd/windows/winclip.c
+src/osd/windows/windir.c
+src/osd/windows/window.c
+src/osd/windows/window.h
+src/osd/windows/windows.mak
+src/osd/windows/winfile.c
+src/osd/windows/winmain.c
+src/osd/windows/winmain.h
+src/osd/windows/winmisc.c
+src/osd/windows/winprefix.h
+src/osd/windows/winsync.c
+src/osd/windows/wintime.c
+src/osd/windows/winutf8.c
+src/osd/windows/winutf8.h
+src/osd/windows/winutil.c
+src/osd/windows/winutil.h
+src/osd/windows/winwork.c
+src/tools/chdman.c
+src/tools/jedutil.c
+src/tools/ldresample.c
+src/tools/ldverify.c
+src/tools/regrep.c
+src/tools/split.c
+src/tools/src2html.c
+src/tools/srcclean.c
+src/tools/tools.mak
+src/tools/unidasm.c
 Copyright: Aaron Giles
-License: MAME
+License: BSD
 
 Files: src/emu/cpu/alph8201/*
 Copyright: Tatsuyuki Satoh
@@ -366,5 +485,9 @@ License: GPL-2
 
 License: LGPL-2.1
  See the file /usr/share/common-licenses/LGPL-2.1
+ .
+
+License: BSD
+ See the file /usr/share/common-licenses/BSD
  .
 
