@@ -96,7 +96,7 @@ PACKAGE := $(shell dpkg-parsechangelog | sed -n 's/^Source: //p')
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
 
 FILEBASE = $(PACKAGE)$(VERSION)
-URL = http://mamedev.org/downloader.php?&file=
+URL = http://www.whiper.com/mame/140/
 AGENT = Debian package <ludomatic@gmail.com>
 TMPDIR := $(shell mktemp --dry-run --directory -p .)
 
