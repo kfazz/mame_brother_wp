@@ -14,8 +14,9 @@ Package: mame
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, wget
 Suggests: mame-tools
-Replaces: sdlmame
-Conflicts: sdlmame, xmame, xmame-common, xmame-gl, xmame-sdl, xmame-svga, xmame-x
+Provides: xmame-common, xmame-sdl, xmame-svga, xmame-x
+Replaces: xmame-common (<< 0.140-1), xmame-sdl (<< 0.140-1), xmame-svga (<< 0.140-1), xmame-x (<< 0.140-1)
+Conflicts: xmame-common (<< 0.140-1), xmame-sdl (<< 0.140-1), xmame-svga (<< 0.140-1), xmame-x (<< 0.140-1)
 Description: Multiple Arcade Machine Emulator (MAME)
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can
@@ -29,7 +30,7 @@ Description: Multiple Arcade Machine Emulator (MAME)
 Package: mame-tools
 Section: non-free/utils
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, wget
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Recommends: mame (= ${source:Version})
 Conflicts: xmame-tools
 Description: Tools for Multiple Arcade Machine Emulator (MAME)
@@ -52,4 +53,45 @@ Description: Tools for Multiple Arcade Machine Emulator (MAME)
   - testkeys (Keyboard code viewer)
   - unidasm (Generic MAME disassembler)
  .
+
+Package: xmame-commom
+Depends: mame
+Architecture: all
+Section: oldlibs
+Description: Transitional package for mame
+ This is a transitional package for mame, and can be safely removed
+ after the installation is complete.
+
+Package: xmame-sdl
+Depends: mame
+Architecture: all
+Section: oldlibs
+Description: Transitional package for mame
+ This is a transitional package for mame, and can be safely removed
+ after the installation is complete.
+
+Package: xmame-svga
+Depends: mame
+Architecture: all
+Section: oldlibs
+Description: Transitional package for mame
+ This is a transitional package for mame, and can be safely removed
+ after the installation is complete.
+
+Package: xmame-x
+Depends: mame
+Architecture: all
+Section: oldlibs
+Description: Transitional package for mame
+ This is a transitional package for mame, and can be safely removed
+ after the installation is complete.
+
+Package: xmame-tools
+Depends: mame-tools
+Architecture: all
+Section: oldlibs
+Description: Transitional package for mame-tools
+ This is a transitional package for mame-tools, and can be safely removed
+ after the installation is complete.
+
 
