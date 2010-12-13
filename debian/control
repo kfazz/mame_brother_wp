@@ -32,7 +32,7 @@ Section: non-free/utils
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Recommends: mame (= ${source:Version})
-Conflicts: xmame-tools
+Conflicts: xmame-tools (<< 0.140-1)
 Description: Tools for Multiple Arcade Machine Emulator (MAME)
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can
