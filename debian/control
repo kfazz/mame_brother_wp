@@ -54,7 +54,7 @@ Description: Tools for Multiple Arcade Machine Emulator (MAME)
   - unidasm (Generic MAME disassembler)
  .
 
-Package: xmame-commom
+Package: xmame-common
 Depends: mame, ${misc:Depends}
 Architecture: all
 Description: Transitional package for mame
