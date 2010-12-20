@@ -66,9 +66,7 @@ endif
 %:
 	dh $@
 
-build: build-stamp
-build-stamp:
-#	dh_testdir
+override_dh_auto_build:
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 # mame-tools are renamed to avoid name collision with other binaries
 # (ie GNU split ) 
@@ -76,7 +74,6 @@ build-stamp:
 	[ -f mame-regrep ] || mv regrep mame-regrep
 	[ -f mame-srcclean ] || mv srcclean mame-srcclean
 	[ -f mame-src2html ] || mv src2html mame-src2html
-	touch $@
 
 clean:
 	# Just before cleaning the sources, restore original names
