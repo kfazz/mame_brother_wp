@@ -88,7 +88,7 @@ clean:
 	dh_clean build-stamp
 	$(MAKE) $(DEB_MAME_OPTS) clean
 
-# Convert upstream sources from ZIP to TGZ
+# Convert upstream sources from zip to tar.bz2
 PACKAGE := $(shell dpkg-parsechangelog | sed -n 's/^Source: //p')
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
 
