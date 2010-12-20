@@ -2,7 +2,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH MAME-SRCCLEAN 1 "september 18, 2010" "MAME 0139"
+.TH MAME-SRCCLEAN 1 "December 20, 2010" "MAME 0140"
 
 .\" Please adjust this date whenever revising the manpage.
 .\"
@@ -25,7 +25,9 @@ mame-srcclean \- Basic source code cleaner.
 .I file
 
 .SH "DESCRIPTION"
-Utility used to clean C/C++ source files: removes extra space and tabs, inserts proper CR/LF, adds newline at end of file, etc.
+Utility used to clean C/C++ source files. It removes extra space and tabs
+, substitutes Unix and Mac-style line-ends with CRLF, adds a newline at 
+end of file if missing.
 
 
 .SH "COPYRIGHT"
