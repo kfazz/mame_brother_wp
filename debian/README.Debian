@@ -1,19 +1,11 @@
 MAME for Debian
 ---------------
 
-== ABOUT MAME ==
-
-MAME(TM) stands for Multiple Arcade Machine Emulator.
-This package only installs the material binary emulator, not the arcade dumps
-known as ROMs or Romsets: MAME is not a game itself and you will have to obtain
-dumps from arcade boards you own. All revelant information can be found on the
-official website http://mamedev.org.
-
 == QUICK START == 
 1. Create a folder "mame" and a subfolder "mame/roms" in your home directory.
 
 2. Download the freely available rom World Rally from http://gaelco.com
-(for instance, Alien Arena) and put the wrally in the "roms" folder
+and put the wrally.zip file in the "roms" folder
 
 3. Check now the sanity of your roms. Mame is very picky about that.
 
@@ -30,9 +22,9 @@ romset mac2bios is best available
 
 you can safely ignore the mac2bios warning
 
-4. Now start the game with the command
+4. Now start the Mame with the command
 
-mame wrally 
+mame or from your desktop applications menu
 
 5. Basic keyboard commands include
   - 5 key to insert a coin
@@ -40,8 +32,7 @@ mame wrally
   - Tab key to access the mame internal menu
 
 6. If mame is way too slow on your computer and you have 3D hardware 
-acceleration available, change the video parameter to "opengl" in 
-/etc/mame/mame.ini
+acceleration available, change the "video" parameter from "soft" to "opengl" in /etc/mame/mame.ini
 
 == DEFAULT FILES ==
 
