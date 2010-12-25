@@ -1,3 +1,4 @@
-# watch control file for uscan
+# Taken from Ubuntu mame package
 version=3
-http://mamedev.org/release.html downloader\.php.*mame(.*)s\.zip debian uupdate
+opts="dversionmangle=s/u\d+//,filenamemangle=s/.*=(.*)/$1/" \
+ http://mamedev.org/release.html downloader\.php.*mame(\d)(\d+)s\.zip
