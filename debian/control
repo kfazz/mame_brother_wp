@@ -57,29 +57,29 @@ Description: Tools for Multiple Arcade Machine Emulator (MAME)
 Package: xmame-common
 Depends: mame, ${misc:Depends}
 Architecture: all
-Description: Transitional package for mame
+Description: Transitional package for xmame-common
  This is a transitional package for mame, and can be safely removed
  after the installation is complete.
 
 Package: xmame-sdl
 Depends: mame, ${misc:Depends}
 Architecture: all
-Description: Transitional package for mame
- This is a transitional package for mame, and can be safely removed
+Description: Transitional package for xmame-sdl
+ This is a transitional package for xmame-sdl, and can be safely removed
  after the installation is complete.
 
 Package: xmame-svga
 Depends: mame, ${misc:Depends}
 Architecture: all
-Description: Transitional package for mame
- This is a transitional package for mame, and can be safely removed
+Description: Transitional package for xmame-svga
+ This is a transitional package for xmame-svga, and can be safely removed
  after the installation is complete.
 
 Package: xmame-x
 Depends: mame, ${misc:Depends}
 Architecture: all
-Description: Transitional package for mame
- This is a transitional package for mame, and can be safely removed
+Description: Transitional package for xmame-x
+ This is a transitional package for xmame-x, and can be safely removed
  after the installation is complete.
 
 Package: xmame-tools
