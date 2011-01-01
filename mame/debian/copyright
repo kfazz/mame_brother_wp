@@ -13,6 +13,12 @@ Copyright: Ludovic Lechapt <ludomatic@gmail.com>
            Mamedeb team <mamedeb@googlegroups.com>
 Based on Cesare Falco's package, and the previous xmame package.
 
+Files: debian/rules
+Copyright: Cesare Falco <cesare.falco@gmail.com>
+           Ludovic Lechapt <ludomatic@gmail.com>
+           Mamedeb team <mamedeb@googlegroups.com>
+License: GPL-2
+
 Files: *
 Copyright: Nicola Salmoria and the MAME team
 License: MAME
