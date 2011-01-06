@@ -32,7 +32,8 @@ mame or from your desktop applications menu
   - Tab key to access the mame internal menu
 
 6. If mame is way too slow on your computer and you have 3D hardware 
-acceleration available, change the "video" parameter from "soft" to "opengl" in /etc/mame/mame.ini
+acceleration available, change the "video" parameter from "soft" to "opengl"
+in /etc/mame/mame.ini
 
 == DEFAULT FILES ==
 
@@ -49,7 +50,7 @@ video or cheats you can either:
 * update directly the /etc/mame/mame.ini,
 * make your own copy of /etc/mame/mame.ini in your home at $HOME/.mame/mame.ini,
 * put your own mame.ini somewhere else and tells mame where to find the folder
-  with the command line "mame -inipath /somewhere/else/".
+with the command line "mame -inipath /somewhere/else/".
 
 You can verify that MAME have read correct options with "mame -showconfig" and
 even create a fresh mame.ini file with "mame -createconfig". Brief MAME usage
