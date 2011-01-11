@@ -4,13 +4,6 @@ usr/share/games/mame/samples
 usr/share/games/mame/snap
 usr/share/games/mame/ctrlr
 usr/share/games/mame/cheat
+usr/share/games/mame/hash
 
-var/games/mame
-var/games/mame/cfg
-var/games/mame/nvram
-var/games/mame/memcard
-var/games/mame/inp
-var/games/mame/sta
-var/games/mame/snap
-var/games/mame/diff
-var/games/mame/comments
+
