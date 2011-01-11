@@ -22,32 +22,30 @@ set -e
 . /usr/share/debconf/confmodule
 
 # Initial creation of a system-wide mame.ini
-INIPATH="/etc/mame";
-INIFILE="$INIPATH/mame.ini";
-mkdir -p $INIPATH
-if [ ! -e "$INIFILE" ]; then
-  #echo "Default MAME configuration file '$INIFILE' not found!";
-  #echo "Creating one...";
+INIPATH="/etc/mame"
+INIFILE="$INIPATH/mame.ini"
+
+if [ ! -e $INIFILE ]; then
+  # Default MAME configuration file '$INIFILE' not found"
+  # Creating one
+  [ -w $INIPATH ] || mkdir $INIPATH
   cd $INIPATH
   /usr/games/mame -createconfig
   if [ ! -e "$INIFILE" ]; then
     echo "Error while creating default configuration file. Please create/edit file '$INIFILE' manually." >&2
-  else
-    #echo "Updating default options...";
-	sed  -i 's,/etc/mame,$HOME/.mame;&,' $INIFILE
-	OURPATH=/usr/share/games/mame
-	for DIR in roms samples artwork ctrlr cheat crosshair; do
-		sed -i s,$DIR$,'$HOME'/mame/$DIR\;$OURPATH/$DIR, $INIFILE
+  else    
+    # edit ini file path	
+    sed  -i 's,/etc/mame,$HOME/.mame;&,' $INIFILE
+	SYSTEM_PATH=/usr/share/games/mame
+    # edit core search path options
+	for DIR in roms hash samples artwork ctrlr cheat crosshair ; do
+		sed -i s," $DIR$",'$HOME'/mame/$DIR\;$SYSTEM_PATH/$DIR, $INIFILE
 	done
+    # edit core output directory options
+    for DIR in cfg nvram memcard inp sta snap diff comments; do
+        sed -i s," $DIR$",'$HOME/.mame/'$DIR, $INIFILE
+    done
 
-    sed -i 's_[ +]cfg_ /var/games/mame/cfg;cfg_' $INIFILE
-    sed -i 's_[ +]nvram_ /var/games/mame/nvram;nvram_' $INIFILE
-    sed -i 's_[ +]memcard_ /var/games/mame/memcard;memcard_' $INIFILE
-    sed -i 's_[ +]inp_ /var/games/mame/inp;inp_' $INIFILE
-    sed -i 's_[ +]sta_ /var/games/mame/sta;sta_' $INIFILE
-    sed -i 's_[ +]snap_ /var/games/mame/snap;snap_' $INIFILE
-    sed -i 's_[ +]diff_ /var/games/mame/diff;diff_' $INIFILE
-    sed -i 's_[ +]comments_ /var/games/mame/comments;comments_' $INIFILE
   fi
 fi
 
