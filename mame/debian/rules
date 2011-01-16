@@ -75,6 +75,12 @@ override_dh_auto_build:
 	[ -f mame-srcclean ] || mv srcclean mame-srcclean
 	[ -f mame-src2html ] || mv src2html mame-src2html
 
+# dh_installchangelogs doesn't know about whatsnew.txt,
+# so we need to make an explicit call
+override_dh_auto_install:
+	dh_auto_install
+	dh_installchangelogs whatsnew.txt
+
 clean:
 	# Just before cleaning the sources, restore original names
 	test -f mame-split || exit 0; \

@@ -1,8 +1,17 @@
-mame (0.141-1) unstable; urgency=low
+mame (0.141-1) experimental; urgency=low
 
+  [ Emmanuel Kasper ]
   * New upstream release
 
- -- Emmanuel Kasper <emmanuel@libera.cc>  Thu, 06 Jan 2011 00:24:19 +0100
+  [ Jordi Mallach ]
+  * Add DEP-3 header to rename-tools patch.
+  * Override dh_auto_install to explicitly install whatsnew.txt as an
+    upstream changelog.
+  * Add missing escaping of minus signs in several manpages.
+  * Upload to experimental, as this package should replace xmame.
+  * Add myself to Uploaders.
+
+ -- Jordi Mallach <jordi@debian.org>  Wed, 12 Jan 2011 21:29:51 +0100
 
 mame (0.140-1) unstable; urgency=low
 
