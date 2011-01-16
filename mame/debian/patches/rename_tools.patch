@@ -1,3 +1,7 @@
+Description: Rename binaries that nameclash with other Unix tools
+Author: Félix Gatuno Arreola <fgatuno.123@gmail.com>
+Forwarded: yes
+
 Index: mame-0139/src/tools/regrep.c
 ===================================================================
 --- mame-0139.orig/src/tools/regrep.c	2010-09-28 17:16:50.996527308 -0500

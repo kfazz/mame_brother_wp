@@ -25,7 +25,7 @@ mame-src2html \- MAME source code to HTML converter.
 .I source
 .I destination
 .I template
-.B [-Iincludepath [-Iincludepath [...]]]
+.B [\-Iincludepath [\-Iincludepath [...]]]
 
 .SH "DESCRIPTION"
 .TP
@@ -40,12 +40,12 @@ is the base path where you want to output HTML files.
 .B template
 is the structured HTML file used as a model to generate HTML files.
 .br
-.B -I
+.B \-I
 is an optional parameter used to add
 .I includepath
 where source code resides. Add as many 
-.B -I
-as you want, eg: -Ipath1 -Ipath2 -Ipath3.
+.B \-I
+as you want, eg: \-Ipath1 \-Ipath2 \-Ipath3.
 
 .SH "SEE ALSO"
 \fBmame\fR(1)

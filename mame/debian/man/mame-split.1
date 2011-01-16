@@ -25,7 +25,7 @@ mame-split \- File splitter/joiner with hashes.
 Split file into parts:
 .br
 .B mame-split
-.B -split
+.B \-split
 .I big_file
 .I base_name
 .B size
@@ -33,19 +33,19 @@ Split file into parts:
 Join file parts into original file:
 .br
 .B mame-split
-.B -join
+.B \-join
 .I split_file
 .I [output_file]
 .TP
 Verify a split file:
 .br
 .B mame-split
-.B -verify
+.B \-verify
 .I splitfile
 
 .SH "DESCRIPTION"
 .TP
-Simple utility to split files and verify/join splitted parts.
+Simple utility to split files and verify/join split parts.
 .br
 .B big_file
 is the large file you wish to split.
@@ -60,7 +60,7 @@ is the optional split size, in MB (100MB is the default).
 is the name of the
 .BR "base_name" ".split"
 generated with
-.B -split
+.B \-split
 .
 .br
 .B output_file
