@@ -1,7 +1,14 @@
 MAME for Debian
 ---------------
 
-== QUICK START == 
+== HISTORY ==
+
+This package supercedes the xmame-* packages, as the unix sdl port of mame
+has been integrated in official mame since 0.136
+see http://rbelmont.mameworld.info/?p=519 for info
+
+== QUICK START ==
+
 1. Create a folder "mame" and a subfolder "mame/roms" in your home directory.
 
 2. Download the freely available rom World Rally from http://gaelco.com
@@ -22,9 +29,8 @@ romset mac2bios is best available
 
 you can safely ignore the mac2bios warning
 
-4. Now start the Mame with the command
-
-mame or from your desktop applications menu
+4. Now start Mame with the command "mame" from the shell 
+or from your desktop applications menu
 
 5. Basic keyboard commands include
   - 5 key to insert a coin
@@ -72,4 +78,4 @@ explanation.
 
 The MAME source code can be downloaded from http://mamedev.org/release.html
 
- -- Ludovic Lechapt <ludomatic@gmail.com>, Mon, 06 Sep 2010 23:44:19 +1100
+
