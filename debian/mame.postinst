@@ -21,32 +21,41 @@ set -e
 # Load default debconf 
 . /usr/share/debconf/confmodule
 
-# Initial creation of a system-wide mame.ini
 INIPATH="/etc/mame"
 INIFILE="$INIPATH/mame.ini"
 
 if [ ! -e $INIFILE ]; then
-  # Default MAME configuration file '$INIFILE' not found"
-  # Creating one
-  [ -w $INIPATH ] || mkdir $INIPATH
-  cd $INIPATH
+   # creating a default mame.ini
+  [ -w $INIPATH ] || mkdir $INIPATH  
+  cd $INIPATH 
   /usr/games/mame -createconfig
-  if [ ! -e "$INIFILE" ]; then
-    echo "Error while creating default configuration file. Please create/edit file '$INIFILE' manually." >&2
-  else    
-    # edit ini file path	
-    sed  -i 's,/etc/mame,$HOME/.mame;&,' $INIFILE
-	SYSTEM_PATH=/usr/share/games/mame
+    if [ ! -e "$INIFILE" ]; then
+        echo "Error while creating default configuration file. Please create/edit file '$INIFILE' manually." >&2
+    else
+
+    # Explanation header for our generated mame.ini        
+    sed -i "1a \
+# This config file was generated at the first installation of the\
+ mame package\n\
+# You can change settings in a personal \$HOME/.mame/mame.ini\n\
+# or here for all users" $INIFILE
+    
+    # Allow user defined profile in $HOME/.mame/mame.ini    
+    sed  -i 's, /etc/mame,$HOME/.mame;&,' $INIFILE
+
     # edit core search path options
-	for DIR in roms hash samples artwork ctrlr cheat crosshair ; do
-		sed -i s," $DIR$",'$HOME'/mame/$DIR\;$SYSTEM_PATH/$DIR, $INIFILE
+    SYSTEM_PATH=/usr/share/games/mame	
+    for DIR in roms hash samples artwork ctrlr cheat crosshair ; do
+		    sed -i s," $DIR$",'$HOME'/mame/$DIR\;$SYSTEM_PATH/$DIR, $INIFILE
 	done
+
     # edit core output directory options
     for DIR in cfg nvram memcard inp sta snap diff comments; do
-        sed -i s," $DIR$",'$HOME/.mame/'$DIR, $INIFILE
-    done
-
+            sed -i s," $DIR$",'$HOME/.mame/'$DIR, $INIFILE
+    done 
   fi
+else 
+  echo "An existing $INIFILE has been found, not re-creating"
 fi
 
 
