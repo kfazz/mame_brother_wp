@@ -68,6 +68,7 @@ endif
 
 override_dh_auto_build:
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
+
 # mame-tools are renamed to avoid name collision with other binaries
 # (ie GNU split ) 
 	[ -f mame-split ] || mv split mame-split
@@ -81,6 +82,10 @@ override_dh_auto_install:
 	dh_auto_install
 	dh_installchangelogs whatsnew.txt
 
+# Remove useless docs
+override_dh_installdocs:
+	dh_installdocs --exclude=license.txt \
+                   --exclude=windows.txt
 clean:
 	# Just before cleaning the sources, restore original names
 	test -f mame-split || exit 0; \
