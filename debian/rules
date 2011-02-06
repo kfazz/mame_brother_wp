@@ -82,10 +82,12 @@ override_dh_auto_install:
 	dh_auto_install
 	dh_installchangelogs whatsnew.txt
 
-# Remove useless docs
+# Remove Windows specific documentation
 override_dh_installdocs:
 	dh_installdocs --exclude=license.txt \
-                   --exclude=windows.txt
+                   --exclude=windows.txt \
+                   --exclude=newvideo.txt
+
 clean:
 	# Just before cleaning the sources, restore original names
 	test -f mame-split || exit 0; \
