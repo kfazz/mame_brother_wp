@@ -1,3 +1,11 @@
+mame (0.141-2) UNRELEASED; urgency=low
+
+  * Update VCS address to point to Alioth
+  * Improve handling of upgrade in case of existing /etc/mame/mame.ini
+  * Documentation improvements
+
+ -- Emmanuel Kasper <emmanuel@libera.cc>  Fri, 04 Feb 2011 11:06:07 +0100
+
 mame (0.141-1) experimental; urgency=low
 
   [ Emmanuel Kasper ]
