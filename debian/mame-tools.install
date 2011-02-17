@@ -2,10 +2,6 @@ chdman      usr/bin/
 jedutil     usr/bin/
 ldresample  usr/bin/
 ldverify    usr/bin/
-mame-regrep      usr/bin/
 romcmp      usr/bin/
-mame-split       usr/bin/
-mame-src2html    usr/bin/
-mame-srcclean    usr/bin/
 testkeys    usr/bin/
 unidasm     usr/bin/

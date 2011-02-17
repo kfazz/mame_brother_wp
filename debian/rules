@@ -69,13 +69,6 @@ endif
 override_dh_auto_build:
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 
-# mame-tools are renamed to avoid name collision with other binaries
-# (ie GNU split ) 
-	[ -f mame-split ] || mv split mame-split
-	[ -f mame-regrep ] || mv regrep mame-regrep
-	[ -f mame-srcclean ] || mv srcclean mame-srcclean
-	[ -f mame-src2html ] || mv src2html mame-src2html
-
 # dh_installchangelogs doesn't know about whatsnew.txt,
 # so we need to make an explicit call
 override_dh_auto_install:
@@ -89,16 +82,6 @@ override_dh_installdocs:
                    --exclude=newvideo.txt
 
 clean:
-	# Just before cleaning the sources, restore original names
-	test -f mame-split || exit 0; \
-	mv mame-split split
-	test -f mame-regrep || exit 0; \
-	mv mame-regrep regrep
-	test -f mame-srcclean || exit 0; \
-	mv mame-srcclean srcclean
-	test -f mame-src2html || exit 0; \
-	mv mame-src2html src2html
-	dh_clean build-stamp
 	$(MAKE) $(DEB_MAME_OPTS) clean
 
 # Convert upstream sources from zip to tar.bz2

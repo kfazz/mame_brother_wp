@@ -3,8 +3,12 @@ mame (0.141-2) UNRELEASED; urgency=low
   * Update VCS address to point to Alioth
   * Improve handling of upgrade in case of existing /etc/mame/mame.ini
   * Documentation improvements
+  * Remove mame-regrep,mame-split,mame-src2html,mame-srcclean from mame-tools
+  as suggested by upstream, cf
+  http://forums.bannister.org/
+  ubbthreads.php?ubb=showflat&Number=66395#Post66395
 
- -- Emmanuel Kasper <emmanuel@libera.cc>  Fri, 04 Feb 2011 11:06:07 +0100
+ -- Emmanuel Kasper <emmanuel@libera.cc>  Thu, 17 Feb 2011 19:06:59 +0100
 
 mame (0.141-1) experimental; urgency=low
 
