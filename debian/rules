@@ -37,6 +37,8 @@ DEB_MAME_OPTS = \
     MAP= \
     VERBOSE= \
     OPTIMIZE=3 \
+    LDFLAGS="-Wl,--as-needed" \
+    LDFLAGSEMULATOR="-Wl,--as-needed" \
     DISTRO=gcc44-generic
 
 # Override make variables for specific archs
