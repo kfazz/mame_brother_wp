@@ -51,7 +51,7 @@ in /etc/mame/mame.ini
 
 == ROMS AND CONFIGURATION ==
 
-If you need to change the location of the romss folder or tweak something like 
+If you need to change the location of the roms folder or tweak something like 
 video or cheats you can either:
 * update directly the /etc/mame/mame.ini,
 * make your own copy of /etc/mame/mame.ini in your home at $HOME/.mame/mame.ini,
@@ -61,6 +61,9 @@ with the command line "mame -inipath /somewhere/else/".
 You can verify that MAME have read correct options with "mame -showconfig" and
 even create a fresh mame.ini file with "mame -createconfig". Brief MAME usage
 can be shown with "mame -showusage" and a full man page is also available.
+
+If you upgraded from a previous version of *mame, you might have to change your
+rom sets, see http://ur1.ca/3a2w5
 
 == TOOLS ==
 
