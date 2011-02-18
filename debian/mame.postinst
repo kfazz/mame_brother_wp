@@ -41,7 +41,7 @@ if [ ! -e $INIFILE ]; then
 # or here for all users" $INIFILE
     
     # Allow user defined profile in $HOME/.mame/mame.ini    
-    sed  -i 's, /etc/mame,$HOME/.mame;&,' $INIFILE
+    sed  -i 's,/etc/mame$,$HOME/.mame;&,' $INIFILE
 
     # edit core search path options
     SYSTEM_PATH=/usr/share/games/mame	
