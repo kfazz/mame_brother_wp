@@ -3,7 +3,7 @@ MAME for Debian
 
 == HISTORY ==
 
-This package supercedes the xmame-* packages, as the unix sdl port of mame
+This package supersedes the xmame-* packages, as the unix sdl port of Mame
 has been integrated in official mame since 0.136
 see http://rbelmont.mameworld.info/?p=519 for info
 
@@ -39,36 +39,37 @@ or from your desktop applications menu
 
 6. If mame is way too slow on your computer and you have 3D hardware 
 acceleration available, change the "video" parameter from "soft" to "opengl"
-in /etc/mame/mame.ini
+in the Mame configuration file.
 
 == DEFAULT FILES ==
 
 * MAME binary: /usr/games/mame
 * MAME tools directory: /usr/bin (chdman, ldresample, ...)
 * Configuration file: $HOME/.mame/mame.ini or /etc/mame/mame.ini
+* Output folders: $HOME/.mame (memory cards, snapshots, ...)
 * Core folders: /usr/share/games/mame (roms, cheats, ...)
-* Output folders: /var/games/mame (memory cards, snapshots, ...)
 
 == ROMS AND CONFIGURATION ==
 
+An initial configuration file is created during the first package installation
+in /etc/mame/mame.ini
+
 If you need to change the location of the roms folder or tweak something like 
 video or cheats you can either:
-* update directly the /etc/mame/mame.ini,
-* make your own copy of /etc/mame/mame.ini in your home at $HOME/.mame/mame.ini,
-* put your own mame.ini somewhere else and tells mame where to find the folder
-with the command line "mame -inipath /somewhere/else/".
+* make your own copy of /etc/mame/mame.ini in your home at $HOME/.mame/mame.ini
+and edit that file (recommended)
+* edit directly /etc/mame/mame.ini 
 
-You can verify that MAME have read correct options with "mame -showconfig" and
-even create a fresh mame.ini file with "mame -createconfig". Brief MAME usage
-can be shown with "mame -showusage" and a full man page is also available.
+You can verify that MAME have read the correct options with "mame -showconfig"
+and even create a fresh mame.ini file with "mame -createconfig".
 
-If you upgraded from a previous version of *mame, you might have to change your
-rom sets, see http://ur1.ca/3a2w5
+If you upgraded from a previous version of mame, you might have to replace your
+rom sets, see the Mame FAQ http://ur1.ca/3a2w5
 
 == TOOLS ==
 
-MAME utilities like chdman, jedutil, ldresample or ldverify are available on a
-separate extra package mame-tools.
+MAME utilities like chdman, jedutil, ldresample or ldverify are available in a
+separate extra package called mame-tools.
 
 == PATCH ==
 
@@ -76,9 +77,5 @@ This package uses quilt to manage all modifications to the upstream source.
 Changes are stored in the source package as diffs in debian/patches and applied
 during the build. See /usr/share/doc/quilt/README.source for a detailed
 explanation.
-
-== UPSTREAM SOURCE ==
-
-The MAME source code can be downloaded from http://mamedev.org/release.html
 
 
