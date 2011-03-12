@@ -8,6 +8,7 @@ mame (0.141-2) UNRELEASED; urgency=low
   http://forums.bannister.org/
   ubbthreads.php?ubb=showflat&Number=66395#Post66395
   * Link with --as-needed LDFLAGS
+  * Debian Games Team as package maintainer
 
  -- Emmanuel Kasper <emmanuel@libera.cc>  Fri, 18 Feb 2011 13:54:41 +0100
 
