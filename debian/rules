@@ -38,8 +38,7 @@ DEB_MAME_OPTS = \
     VERBOSE= \
     OPTIMIZE=3 \
     LDFLAGS="-Wl,--as-needed" \
-    LDFLAGSEMULATOR="-Wl,--as-needed" \
-    DISTRO=gcc44-generic
+    LDFLAGSEMULATOR="-Wl,--as-needed"
 
 # Override make variables for specific archs
 ifeq ($(DEB_HOST_ARCH),i386)
