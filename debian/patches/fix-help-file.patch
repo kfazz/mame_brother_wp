@@ -1,0 +1,15 @@
+From: Emmanuel Kasper <emmanuel@libera.cc>
+Subject: Fix usage file as shown when calling mame -h
+Forwarded: yes
+Bug: http://www.mametesters.org/view.php?id=4298
+--- a/src/emu/clifront.c
++++ b/src/emu/clifront.c
+@@ -342,7 +342,7 @@
+ 		   "        MAME -showusage    for a brief list of options\n"
+ 		   "        MAME -showconfig   for a list of configuration options\n"
+ 		   "        MAME -createconfig to create a " CONFIGNAME ".ini\n\n"
+-		   "For usage instructions, please consult the file windows.txt\n");
++		   "For usage instructions, please consult the file config.txt\n");
+ #else
+ 	mess_display_help();
+ #endif
