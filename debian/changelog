@@ -1,16 +1,18 @@
 mame (0.141-2) UNRELEASED; urgency=low
 
+  [ Emmanuel Kasper ]
   * Update VCS address to point to Alioth
   * Improve handling of upgrade in case of existing /etc/mame/mame.ini
   * Documentation improvements
-  * Remove mame-regrep,mame-split,mame-src2html,mame-srcclean from mame-tools
-  as suggested by upstream, cf
-  http://forums.bannister.org/
-  ubbthreads.php?ubb=showflat&Number=66395#Post66395
+  * Remove mame-regrep, mame-split, mame-src2html and mame-srcclean from
+    mame-tools as suggested by upstream
   * Link with --as-needed LDFLAGS
   * Debian Games Team as package maintainer
 
- -- Emmanuel Kasper <emmanuel@libera.cc>  Fri, 18 Feb 2011 13:54:41 +0100
+  [ Jordi Mallach ]
+  * Minor cleanups in maintainer scripts.
+
+ -- Jordi Mallach <jordi@debian.org>  Sun, 03 Apr 2011 20:32:49 +0200
 
 mame (0.141-1) experimental; urgency=low
 
