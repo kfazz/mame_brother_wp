@@ -7,7 +7,7 @@ Build-Depends: debhelper (>= 7.0.50~), libexpat1-dev, libsdl1.2-dev, zlib1g-dev,
 Standards-Version: 3.9.1
 Vcs-Git: git://git.debian.org/pkg-games/mame.git
 Vcs-Browser: http://git.debian.org/?p=pkg-games/mame.git
-Homepage: http://mamedev.org
+Homepage: http://mamedev.org/
 XS-Autobuild: yes
 
 Package: mame
