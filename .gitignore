@@ -7,7 +7,6 @@ ldresample
 ldverify
 makefile
 mame
-mame.ini
 nvram/
 obj/
 regrep
