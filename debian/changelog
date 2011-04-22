@@ -1,4 +1,4 @@
-mame (0.141-3) UNRELEASED; urgency=low
+mame (0.141-3) unstable; urgency=low
 
   [ Emmanuel Kasper ]
   * Add make variables to build on GNU/kFreeBSD
@@ -23,7 +23,7 @@ mame (0.141-3) UNRELEASED; urgency=low
   * Bump Standards-Version to 3.9.2 (no changes needed).
   * Use bzip2 for the debian tar.
 
- -- Jordi Mallach <jordi@debian.org>  Fri, 22 Apr 2011 13:32:48 +0200
+ -- Jordi Mallach <jordi@debian.org>  Fri, 22 Apr 2011 18:33:44 +0200
 
 mame (0.141-2) experimental; urgency=low
 
