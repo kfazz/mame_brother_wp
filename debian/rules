@@ -41,19 +41,20 @@ DEB_MAME_OPTS = \
     LDFLAGSEMULATOR="-Wl,--as-needed"
 
 # Override make variables for specific archs
-ifeq ($(DEB_HOST_ARCH),i386)
-DEB_MAME_OPTS += \
-    ARCHOPTS=-march=pentium2 \
-    FORCE_DRC_C_BACKEND= \
-    PTR64= \
-    BIGENDIAN=
-endif
-
+# Linux architectures
 ifeq ($(DEB_HOST_ARCH),amd64)
 DEB_MAME_OPTS += \
     ARCHOPTS=-march=athlon64 \
     FORCE_DRC_C_BACKEND= \
     PTR64=1 \
+    BIGENDIAN=
+endif
+
+ifeq ($(DEB_HOST_ARCH),i386)
+DEB_MAME_OPTS += \
+    ARCHOPTS=-march=pentium2 \
+    FORCE_DRC_C_BACKEND= \
+    PTR64= \
     BIGENDIAN=
 endif
 
@@ -64,19 +65,20 @@ DEB_MAME_OPTS += \
     BIGENDIAN=1
 endif
 
-ifeq ($(DEB_HOST_ARCH),kfreebsd-i386)
-DEB_MAME_OPTS += \
-    TARGETOS=freebsd \
-    FORCE_DRC_C_BACKEND= \
-    PTR64= \
-    BIGENDIAN=
-endif
-
+# kFreeBSD architectures
 ifeq ($(DEB_HOST_ARCH),kfreebsd-amd64)
 DEB_MAME_OPTS += \
     TARGETOS=freebsd \
     PTR64=1 \
     FORCE_DRC_C_BACKEND= \
+    BIGENDIAN=
+endif
+
+ifeq ($(DEB_HOST_ARCH),kfreebsd-i386)
+DEB_MAME_OPTS += \
+    TARGETOS=freebsd \
+    FORCE_DRC_C_BACKEND= \
+    PTR64= \
     BIGENDIAN=
 endif
 
