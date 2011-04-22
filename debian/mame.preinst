@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -e
+
+INI="/etc/mame/mame.ini"
+OLDMD5="7af600a8acb389a87ecff54b5bf53771 faf5639e834d50ef8067bf014aa43d96"
+
+# Avoid a dpkg prompt if mame.ini is what 0.141-2 generated in postinst
+if [ "$1" = "upgrade" -a -f "$INI" ]; then
+    if dpkg --compare-versions "$2" le "0.141-2"; then
+        curmd5="$(md5sum $INI | cut -d' ' -f 1)"
+        for md5sum in $OLDMD5; do
+            if [ "$curmd5" = "$md5sum" ]; then
+                echo rm -f $INI
+                break
+            fi
+        done
+    fi
+fi
+
+#DEBHELPER#

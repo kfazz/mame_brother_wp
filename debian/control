@@ -3,8 +3,8 @@ Section: non-free/games
 Priority: optional
 Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
 Uploaders: Ludovic Lechapt <ludomatic@gmail.com>, Félix Arreola Rodríguez <fgatuno.123@gmail.com>, Emmanuel Kasper <emmanuel@libera.cc>, Jordi Mallach <jordi@debian.org>
-Build-Depends: debhelper (>= 7.0.50~), libexpat1-dev, libsdl1.2-dev, zlib1g-dev, libxinerama-dev, libgconf2-dev, libgtk2.0-dev, libsdl-ttf2.0-dev
-Standards-Version: 3.9.1
+Build-Depends: debhelper (>= 8), libexpat1-dev, libsdl1.2-dev, zlib1g-dev, libxinerama-dev, libgconf2-dev, libgtk2.0-dev, libsdl-ttf2.0-dev
+Standards-Version: 3.9.2
 Vcs-Git: git://git.debian.org/pkg-games/mame.git
 Vcs-Browser: http://git.debian.org/?p=pkg-games/mame.git
 Homepage: http://mamedev.org/
@@ -16,7 +16,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Suggests: mame-tools
 Provides: xmame-common, xmame-sdl, xmame-svga, xmame-x
 Replaces: xmame-common (<< 0.140-1), xmame-sdl (<< 0.140-1), xmame-svga (<< 0.140-1), xmame-x (<< 0.140-1)
-Conflicts: xmame-common (<< 0.140-1), xmame-sdl (<< 0.140-1), xmame-svga (<< 0.140-1), xmame-x (<< 0.140-1)
+Breaks: xmame-common (<< 0.140-1), xmame-sdl (<< 0.140-1), xmame-svga (<< 0.140-1), xmame-x (<< 0.140-1)
 Description: Multiple Arcade Machine Emulator (MAME)
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can
@@ -32,7 +32,7 @@ Section: non-free/utils
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Recommends: mame (= ${source:Version})
-Conflicts: xmame-tools (<< 0.140-1)
+Breaks: xmame-tools (<< 0.140-1)
 Description: Tools for Multiple Arcade Machine Emulator (MAME)
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can
@@ -76,5 +76,3 @@ Architecture: all
 Description: Transitional package for mame-tools
  This is a transitional package for mame-tools, and can be safely removed
  after the installation is complete.
-
-

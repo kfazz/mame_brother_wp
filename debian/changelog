@@ -9,6 +9,18 @@ mame (0.141-3) UNRELEASED; urgency=low
   * Set NOASM=1 globally, and unset for the targets that are known to have
     a native ASM implementation (x86 and ppc). Builds for most other
     Debian architectures will fail due to memory alignment issues, though.
+  * Add a minimal mame.ini, only showing the default paths options and
+    other important options like "video" or "multithreading", and install
+    it as a proper conffile.
+  * Remove mame.postinst and mame.prerm, to stop generating a mame.ini
+    file on postinst, which was never being updated on upgrades.
+  * If the generated mame.ini in 0.141-1 or 0.141-2 is not modified,
+    remove mame.ini to avoid a dpkg conffile prompt.
+  * Autogenerate a mame.ini using mame -createconfig after the build is
+    done, and install it as an example.
+  * Change all uses of Conflicts to Breaks.
+  * Bump debhelper compat version to 8.
+  * Bump Standards-Version to 3.9.2 (no changes needed).
 
  -- Jordi Mallach <jordi@debian.org>  Fri, 22 Apr 2011 13:32:48 +0200
 

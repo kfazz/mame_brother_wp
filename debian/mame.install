@@ -1,6 +1,8 @@
-mame                         usr/games/
+mame				usr/games
 
-src/osd/sdl/keymaps/*        usr/share/games/mame/keymaps/
+src/osd/sdl/keymaps		usr/share/games/mame/keymaps
 
-debian/install/mame.xpm      usr/share/pixmaps/
-debian/install/mame.desktop  usr/share/applications/
+debian/install/mame.xpm		usr/share/pixmaps
+debian/install/mame.desktop	usr/share/applications
+
+debian/mame.ini			etc/mame/mame.ini

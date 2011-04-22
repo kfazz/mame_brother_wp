@@ -93,6 +93,8 @@ endif
 
 override_dh_auto_build:
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
+	$(CURDIR)/mame -createconfig
+	mv mame.ini default.mame.ini
 
 # dh_installchangelogs doesn't know about whatsnew.txt,
 # so we need to make an explicit call
