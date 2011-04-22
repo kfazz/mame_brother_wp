@@ -11,7 +11,7 @@ if [ "$1" = "upgrade" -a -f "$INI" ]; then
         curmd5="$(md5sum $INI | cut -d' ' -f 1)"
         for md5sum in $OLDMD5; do
             if [ "$curmd5" = "$md5sum" ]; then
-                echo rm -f $INI
+                rm -f $INI
                 break
             fi
         done
