@@ -22,6 +22,7 @@ DEB_MAME_OPTS = \
     OSD=sdl \
     CROSS_BUILD_OSD= \
     TARGETOS=unix \
+    NOASM=1 \
     PREFIX= \
     SUFFIX= \
     DEBUG= \
@@ -47,6 +48,7 @@ DEB_MAME_OPTS += \
     ARCHOPTS=-march=athlon64 \
     FORCE_DRC_C_BACKEND= \
     PTR64=1 \
+    NOASM= \
     BIGENDIAN=
 endif
 
@@ -55,6 +57,7 @@ DEB_MAME_OPTS += \
     ARCHOPTS=-march=pentium2 \
     FORCE_DRC_C_BACKEND= \
     PTR64= \
+    NOASM= \
     BIGENDIAN=
 endif
 
@@ -62,6 +65,7 @@ ifeq ($(DEB_HOST_ARCH),powerpc)
 DEB_MAME_OPTS += \
     ARCHOPTS=-Upowerpc \
     FORCE_DRC_C_BACKEND=1 \
+    NOASM= \
     BIGENDIAN=1
 endif
 
@@ -71,6 +75,7 @@ DEB_MAME_OPTS += \
     TARGETOS=freebsd \
     PTR64=1 \
     FORCE_DRC_C_BACKEND= \
+    NOASM= \
     BIGENDIAN=
 endif
 
@@ -79,6 +84,7 @@ DEB_MAME_OPTS += \
     TARGETOS=freebsd \
     FORCE_DRC_C_BACKEND= \
     PTR64= \
+    NOASM= \
     BIGENDIAN=
 endif
 

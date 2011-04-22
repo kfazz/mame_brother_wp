@@ -6,6 +6,9 @@ mame (0.141-3) UNRELEASED; urgency=low
   [ Jordi Mallach ]
   * Add fix_powerpc_build.patch: Fix an incorrectly declared ifdef that
     made bigendian builds fail.
+  * Set NOASM=1 globally, and unset for the targets that are known to have
+    a native ASM implementation (x86 and ppc). Builds for most other
+    Debian architectures will fail due to memory alignment issues, though.
 
  -- Jordi Mallach <jordi@debian.org>  Fri, 22 Apr 2011 13:32:48 +0200
 
