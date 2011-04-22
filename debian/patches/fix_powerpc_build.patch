@@ -2,7 +2,8 @@ From: Jordi Mallach <jordi@debian.org>
 Description: Fix linux/ppc build
  The Linux PowerPC build of the SDL target failed to build due to a badly
  declared ifdef.
-Forwarded: no
+Forwarded: yes
+Bug: http://www.mametesters.org/view.php?id=4316
 
 Index: mame-0.141/src/mame/video/n64.h
 ===================================================================
