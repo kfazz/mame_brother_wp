@@ -1,0 +1,19 @@
+From: Jordi Mallach <jordi@debian.org>
+Description: Fix linux/ppc build
+ The Linux PowerPC build of the SDL target failed to build due to a badly
+ declared ifdef.
+Forwarded: no
+
+Index: mame-0.141/src/mame/video/n64.h
+===================================================================
+--- mame-0.141.orig/src/mame/video/n64.h	2011-04-22 12:56:00.950598302 +0200
++++ mame-0.141/src/mame/video/n64.h	2011-04-22 12:56:16.858598308 +0200
+@@ -40,7 +40,7 @@
+ #define FORMAT_IA				3
+ #define FORMAT_I				4
+ 
+-#if LSB_FIRST
++#ifdef LSB_FIRST
+ #define BYTE_XOR_DWORD_SWAP 7
+ #define WORD_XOR_DWORD_SWAP 3
+ #else
