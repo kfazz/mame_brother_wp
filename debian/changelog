@@ -21,6 +21,7 @@ mame (0.141-3) UNRELEASED; urgency=low
   * Change all uses of Conflicts to Breaks.
   * Bump debhelper compat version to 8.
   * Bump Standards-Version to 3.9.2 (no changes needed).
+  * Use bzip2 for the debian tar.
 
  -- Jordi Mallach <jordi@debian.org>  Fri, 22 Apr 2011 13:32:48 +0200
 
