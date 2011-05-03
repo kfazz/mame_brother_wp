@@ -39,7 +39,8 @@ DEB_MAME_OPTS = \
     VERBOSE= \
     OPTIMIZE=3 \
     LDFLAGS="-Wl,--as-needed" \
-    LDFLAGSEMULATOR="-Wl,--as-needed"
+    LDFLAGSEMULATOR="-Wl,--as-needed" \
+    NOWERROR=1
 
 # Override make variables for specific archs
 # Linux architectures
