@@ -1,6 +1,9 @@
 mame (0.142-1) UNRELEASED; urgency=low
 
   * New upstream release
+  * Set NOWERROR=1 to allow compiling with gcc-4.6
+  * Remove fix_powerpc_build.patch from the quilt serie, as upstream has took
+    it in this release
 
  -- Emmanuel Kasper <emmanuel@libera.cc>  Tue, 03 May 2011 22:01:06 +0200
 
