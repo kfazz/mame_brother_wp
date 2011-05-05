@@ -13,7 +13,7 @@ XS-Autobuild: yes
 Package: mame
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Suggests: mame-tools
+Suggests: mame-tools, gnome-video-arcade
 Provides: xmame-common, xmame-sdl, xmame-svga, xmame-x
 Replaces: xmame-common (<< 0.140-1), xmame-sdl (<< 0.140-1), xmame-svga (<< 0.140-1), xmame-x (<< 0.140-1)
 Breaks: xmame-common (<< 0.140-1), xmame-sdl (<< 0.140-1), xmame-svga (<< 0.140-1), xmame-x (<< 0.140-1)
