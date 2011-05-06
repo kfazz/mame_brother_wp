@@ -51,7 +51,7 @@ in the Mame configuration file.
 
 == ROMS AND CONFIGURATION ==
 
-An initial configuration file is created during the first package installation
+A default configuration file is provided with the package and installed 
 in /etc/mame/mame.ini
 
 If you need to change the location of the roms folder or tweak something like 
