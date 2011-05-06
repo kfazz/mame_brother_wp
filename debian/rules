@@ -118,7 +118,7 @@ VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
 
 FILEBASE = $(PACKAGE)$(VERSION)
 URL = http://mamedev.org/downloader.php?file=releases/
-AGENT = Debian package <ludomatic@gmail.com>
+AGENT = Debian package mame@packages.qa.debian.org
 TMPDIR := $(shell mktemp --dry-run --directory -p .)
 
 # Upstream zip file does not have a dot in its name, so we have to cut it out
