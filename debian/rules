@@ -90,7 +90,7 @@ DEB_MAME_OPTS += \
 endif
 
 %:
-	dh $@
+	dh $@ --with-quilt
 
 override_dh_auto_build:
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
