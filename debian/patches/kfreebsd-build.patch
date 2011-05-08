@@ -4,10 +4,8 @@ Description: Fix kfreebsd build
 Forwarded: yes
 Bug: http://mametesters.org/view.php?id=4127
 
-Index: mame/src/osd/sdl/sdlprefix.h
-===================================================================
---- mame.orig/src/osd/sdl/sdlprefix.h	2011-05-08 13:17:25.427938787 -0500
-+++ mame/src/osd/sdl/sdlprefix.h	2011-05-08 13:19:17.100997140 -0500
+--- a/src/osd/sdl/sdlprefix.h
++++ b/src/osd/sdl/sdlprefix.h
 @@ -42,7 +42,7 @@
  /* Large file support on IRIX needs _SGI_SOURCE */
  #undef _POSIX_SOURCE
