@@ -1,12 +1,16 @@
 mame (0.142-1) UNRELEASED; urgency=low
 
+  [ Emmanuel Kasper ]
   * New upstream release
   * Set NOWERROR=1 to allow compiling with gcc-4.6
   * Remove fix_powerpc_build.patch from the quilt serie, as upstream has took
     it in this release
   * Add gnome-video-arcade front end as a suggested package
 
- -- Emmanuel Kasper <emmanuel@libera.cc>  Tue, 03 May 2011 22:01:06 +0200
+  [ Félix Arreola Rodríguez ]
+  * Add kfreebsd-build.patch to quilt serie, to fix build on kfreebsd
+
+ -- Félix Arreola Rodríguez <gatuno@gatuno-deb>  Sun, 08 May 2011 13:32:17 -0500
 
 mame (0.141-3) unstable; urgency=low
 
