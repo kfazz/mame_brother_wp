@@ -15,7 +15,7 @@ Copyright: Ludovic Lechapt <ludomatic@gmail.com>
 Files: debian/rules
 Copyright: Cesare Falco <cesare.falco@gmail.com>
            Ludovic Lechapt <ludomatic@gmail.com>
-           Mamedeb team <mamedeb@googlegroups.com>
+           Mamedeb team <mame@packages.debian.org>
 License: GPL-2+
 
 Files: *
