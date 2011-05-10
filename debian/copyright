@@ -10,7 +10,7 @@ XS-Autobuild: yes
 
 Files: debian/*
 Copyright: Ludovic Lechapt <ludomatic@gmail.com>
-           Mamedeb team <mamedeb@googlegroups.com>
+           Mamedeb team <mame@packages.debian.org>
 
 Files: debian/rules
 Copyright: Cesare Falco <cesare.falco@gmail.com>
