@@ -11,8 +11,10 @@ mame (0.142-1) unstable; urgency=low
 
   [ Jordi Mallach ]
   * Remove unneeded and bogus addition of --with-quilt to the dh invocation.
+  * Add Cesare Falco (long time Ubuntu maintainer) to Uploaders, and wrap
+    them into multiple lines.
 
- -- Jordi Mallach <jordi@debian.org>  Wed, 11 May 2011 20:49:17 +0200
+ -- Jordi Mallach <jordi@debian.org>  Wed, 11 May 2011 21:06:50 +0200
 
 mame (0.141-3) unstable; urgency=low
 
