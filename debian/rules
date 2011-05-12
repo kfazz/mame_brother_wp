@@ -70,6 +70,12 @@ DEB_MAME_OPTS += \
     BIGENDIAN=1
 endif
 
+ifeq ($(DEB_HOST_ARCH),s390)
+DEB_MAME_OPTS += \
+    FORCE_DRC_C_BACKEND=1 \
+    BIGENDIAN=1
+endif
+
 # kFreeBSD architectures
 ifeq ($(DEB_HOST_ARCH),kfreebsd-amd64)
 DEB_MAME_OPTS += \
