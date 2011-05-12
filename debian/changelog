@@ -1,11 +1,17 @@
 mame (0.142-2) UNRELEASED; urgency=low
 
-  * Restrict Architectures to those known to not fail due to memory
-    alignment issues: amd64, i386, kfreebsd-amd64, kfreebsd-i386, powerpc,
-    s390.
-  * Add variables in an attempt to fix s390 builds.
+  * Restrict Architectures to those known to not fail to build due to
+    memory alignment issues: amd64, i386, kfreebsd-amd64, kfreebsd-i386,
+    powerpc, s390.
+  * Add the necessary variables to fix s390 builds (it's big endian and
+    has no targetted DRC implementation).
   * Modify get-orig-source to also fetch MESS sources and build a new
     dpkg source component tarball.
+  * Add a new mess binary package and transitional packages for xmess-*
+    (closes: #507932). 
+  * Setup the source dir to enable building mess even if its source is in
+    a mess subdir, by creating necessary symlinks and directory renames
+    before the build, and restoring everything on clean.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 12 May 2011 16:37:27 +0200
 

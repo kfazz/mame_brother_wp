@@ -99,6 +99,14 @@ endif
 	dh $@
 
 override_dh_auto_build:
+	# MESS is an overlay of the MAME source code, but we need to have
+	# the code in a mess directory, as that's how dpkg components
+	# work. Move dirs and create symlinks for MESS stuff outside its
+	# component directory to enable its build.
+	mv hash hash.mame
+	ln -s ../../hash.mame/megatech.xml mess/hash/
+	ln -s mess/artwork artwork
+	ln -s ../mess/src/mess src/mess
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
@@ -108,6 +116,7 @@ override_dh_auto_build:
 override_dh_auto_install:
 	dh_auto_install
 	dh_installchangelogs whatsnew.txt
+	dh_installchangelogs -pmess -pmess-tools mess/docs/messnew.txt
 
 # Remove Windows specific documentation
 override_dh_installdocs:
@@ -117,6 +126,9 @@ override_dh_installdocs:
 
 clean:
 	$(MAKE) $(DEB_MAME_OPTS) clean
+	# Undo MESS modifications. This could be a bit more robust.
+	-rm artwork hash src/mess mess/hash/megatech.xml
+	-mv hash.mame hash
 
 # Convert upstream sources from zip to tar.bz2
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')

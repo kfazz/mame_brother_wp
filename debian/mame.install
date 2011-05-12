@@ -7,4 +7,4 @@ debian/install/mame.desktop	usr/share/applications
 
 debian/mame.ini			etc/mame
 
-hash/*	usr/share/games/mame/hash
+hash.mame/*	usr/share/games/mame/hash

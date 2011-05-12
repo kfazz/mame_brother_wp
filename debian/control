@@ -19,8 +19,8 @@ Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Suggests: mame-tools, gnome-video-arcade
 Provides: xmame-common, xmame-sdl, xmame-svga, xmame-x
-Replaces: xmame-common (<< 0.140-1), xmame-sdl (<< 0.140-1), xmame-svga (<< 0.140-1), xmame-x (<< 0.140-1)
-Breaks: xmame-common (<< 0.140-1), xmame-sdl (<< 0.140-1), xmame-svga (<< 0.140-1), xmame-x (<< 0.140-1)
+Replaces: xmame-common (<< 0.140), xmame-sdl (<< 0.140), xmame-svga (<< 0.140), xmame-x (<< 0.140)
+Breaks: xmame-common (<< 0.140), xmame-sdl (<< 0.140), xmame-svga (<< 0.140), xmame-x (<< 0.140)
 Description: Multiple Arcade Machine Emulator (MAME)
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can
@@ -35,7 +35,7 @@ Section: non-free/utils
 Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Recommends: mame (= ${source:Version})
-Breaks: xmame-tools (<< 0.140-1)
+Breaks: xmame-tools (<< 0.140)
 Description: Tools for Multiple Arcade Machine Emulator (MAME)
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can
@@ -51,6 +51,26 @@ Description: Tools for Multiple Arcade Machine Emulator (MAME)
   - romcmp (ROM comparison utility program)
   - testkeys (Keyboard code viewer)
   - unidasm (Generic MAME disassembler)
+
+Package: mess
+Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: mess-desktop-entries
+Suggests: mame-tools
+Provides: xmess-common, xmess-sdl, xmess-x
+Replaces: xmess-common (<< 0.142), xmess-sdl (<< 0.142), xmess-x (<< 0.142)
+Breaks: xmess-common (<< 0.142), xmess-sdl (<< 0.142), xmess-x (<< 0.142)
+Description: Multi Emulator Super System (MESS)
+ MESS is an emulator for various consoles and computing systems, sharing a
+ lot of codebase with the MAME project.
+ .
+ Some of the well known consoles and computers emulated are the Atari 2600,
+ Lynx, NES, SNES, Nintendo 64, GameBoy, Sega Master System, Sega Megadrive,
+ Game Gear, Colecovision, Vectrex, Apple II, Atari 400/800, Commodore 64/128,
+ IBM PC XT and AT (MDA and CGA), ZX80, ZX Spectrum, TI99/4, TRS-80, and the
+ MSX.
+ .
+ This package provides the MESS binary and configuration files.
 
 Package: xmame-sdl
 Depends: mame, ${misc:Depends}
@@ -78,4 +98,18 @@ Depends: mame, ${misc:Depends}
 Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
 Description: Transitional package for mame-tools
  This is a transitional package for mame-tools, and can be safely removed
+ after the installation is complete.
+
+Package: xmess-sdl
+Depends: mess, ${misc:Depends}
+Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
+Description: Transitional package for xmess-sdl
+ This is a transitional package for xmess-sdl, and can be safely removed
+ after the installation is complete.
+
+Package: xmess-x
+Depends: mess, ${misc:Depends}
+Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
+Description: Transitional package for xmess-x
+ This is a transitional package for xmess-x, and can be safely removed
  after the installation is complete.
