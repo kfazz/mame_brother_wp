@@ -105,6 +105,7 @@ override_dh_auto_build:
 	# component directory to enable its build.
 	mv hash hash.mame
 	ln -s ../../hash.mame/megatech.xml mess/hash/
+	ln -s mess/hash hash
 	ln -s mess/artwork artwork
 	ln -s ../mess/src/mess src/mess
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
