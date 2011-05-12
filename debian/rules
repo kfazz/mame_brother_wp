@@ -119,28 +119,48 @@ clean:
 	$(MAKE) $(DEB_MAME_OPTS) clean
 
 # Convert upstream sources from zip to tar.bz2
-PACKAGE := $(shell dpkg-parsechangelog | sed -n 's/^Source: //p')
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
+MAME_PACKAGE = mame
+MAME_FILEBASE = $(MAME_PACKAGE)$(VERSION)
+MAME_URL = http://mamedev.org/downloader.php?file=releases/
+MESS_PACKAGE = mess
+MESS_FILEBASE = $(MESS_PACKAGE)$(VERSION)
+MESS_URL = http://mess.redump.net/_media/downloads:
 
-FILEBASE = $(PACKAGE)$(VERSION)
-URL = http://mamedev.org/downloader.php?file=releases/
-AGENT = Debian package mame@packages.qa.debian.org
+AGENT = Debian MAME Packagers <mame@packages.debian.org>
 TMPDIR := $(shell mktemp --dry-run --directory -p .)
 
 # Upstream zip file does not have a dot in its name, so we have to cut it out
 UPSTREAM_VERSION := $(shell echo $(VERSION) | sed -e 's/\.//' )
 
-fetch_upstream:
-	wget -U '$(AGENT)' "$(URL)\
-	$(PACKAGE)$(UPSTREAM_VERSION)s.zip" \
-	-O $(FILEBASE)s.zip
+$(MAME_FILEBASE)s.zip:
+	wget -U '$(AGENT)' "$(MAME_URL)\
+	$(MAME_PACKAGE)$(UPSTREAM_VERSION)s.zip" \
+	-O $(MAME_FILEBASE)s.zip
 
-get-orig-source: fetch_upstream
+$(MESS_FILEBASE)s.zip:
+	wget -U '$(AGENT)' "$(MESS_URL)\
+	$(MESS_PACKAGE)$(UPSTREAM_VERSION)s.zip" \
+	-O $(MESS_FILEBASE)s.zip
+
+get-orig-source: $(MAME_FILEBASE)s.zip $(MESS_FILEBASE)s.zip
 	mkdir $(TMPDIR)
-	unzip $(FILEBASE)s.zip -d $(TMPDIR)
-	mkdir -p $(TMPDIR)/sub/$(PACKAGE)-$(VERSION)
-# Not a bug: Mame source needs to be unzipped twice
-	unzip $(TMPDIR)/$(PACKAGE).zip -d $(TMPDIR)/sub/$(PACKAGE)-$(VERSION)
-	tar -C $(TMPDIR)/sub -cvf - . | bzip2 -c9  > ../$(PACKAGE)_$(VERSION).orig.tar.bz2
+
+	# Create an orig.tar.bz2 tarball for MAME
+	unzip $(MAME_FILEBASE)s.zip -d $(TMPDIR)
+	mkdir -p $(TMPDIR)/sub/$(MAME_PACKAGE)-$(VERSION)
+	# Not a bug: Mame source needs to be unzipped twice
+	unzip $(TMPDIR)/$(MAME_PACKAGE).zip \
+	  -d $(TMPDIR)/sub/$(MAME_PACKAGE)-$(VERSION)
+	tar -C $(TMPDIR)/sub -cvf - $(MAME_PACKAGE)-$(VERSION) | \
+	  bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig.tar.bz2
+	rm $(MAME_FILEBASE)s.zip
+
+	# Create an orig-mess.tar.bz2 component tarball for MESS
+	mkdir -p $(TMPDIR)/$(MESS_PACKAGE)-$(VERSION)
+	unzip $(MESS_FILEBASE)s.zip -d $(TMPDIR)/$(MESS_PACKAGE)-$(VERSION)
+	tar -C $(TMPDIR) -cvf - $(MESS_PACKAGE)-$(VERSION) | \
+	  bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig-$(MESS_PACKAGE).tar.bz2
+	rm $(MESS_FILEBASE)s.zip
+
 	rm -r $(TMPDIR)
-	rm -r $(FILEBASE)s.zip

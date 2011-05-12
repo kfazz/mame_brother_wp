@@ -4,8 +4,10 @@ mame (0.142-2) UNRELEASED; urgency=low
     alignment issues: amd64, i386, kfreebsd-amd64, kfreebsd-i386, powerpc,
     s390.
   * Add variables in an attempt to fix s390 builds.
+  * Modify get-orig-source to also fetch MESS sources and build a new
+    dpkg source component tarball.
 
- -- Jordi Mallach <jordi@debian.org>  Thu, 12 May 2011 16:27:42 +0200
+ -- Jordi Mallach <jordi@debian.org>  Thu, 12 May 2011 16:37:27 +0200
 
 mame (0.142-1) unstable; urgency=low
 
