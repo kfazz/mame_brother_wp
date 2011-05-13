@@ -1,12 +1,11 @@
-#FIXME# I have no idea of what we need here
 mess				usr/games
 
-#FIXMEsrc/osd/sdl/keymaps		usr/share/games/mame
+src/osd/sdl/keymaps		usr/share/games/mess
 
-#FIXMEdebian/install/mame.xpm		usr/share/pixmaps
-#FIXMEdebian/install/mame.desktop	usr/share/applications
+#FIXMEdebian/install/mess.xpm		usr/share/pixmaps
+#FIXMEdebian/install/mess.desktop	usr/share/applications
 
-#FIXMEdebian/mess.ini			etc/mame
+debian/mess.ini			etc/mame
 
-mess/artwork			usr/share/games/mess/artwork
-mess/hash/*			usr/share/games/mess/hash
+messdir/artwork			usr/share/games/mess
+messdir/hash/*			usr/share/games/mess/hash

@@ -42,6 +42,13 @@ DEB_MAME_OPTS = \
     LDFLAGSEMULATOR="-Wl,--as-needed" \
     NOWERROR=1
 
+DEB_MESS_OPTS = \
+    $(DEB_MAME_OPTS) \
+    OPT_FLAGS="-D'INI_PATH=\"/etc/mess\"'" \
+    FULLNAME=mess \
+    TARGET=mess \
+    SUBTARGET=mess
+
 # Override make variables for specific archs
 # Linux architectures
 ifeq ($(DEB_HOST_ARCH),amd64)
@@ -103,14 +110,20 @@ override_dh_auto_build:
 	# the code in a mess directory, as that's how dpkg components
 	# work. Move dirs and create symlinks for MESS stuff outside its
 	# component directory to enable its build.
-	mv hash hash.mame
-	ln -s ../../hash.mame/megatech.xml mess/hash/
-	ln -s mess/hash hash
-	ln -s mess/artwork artwork
-	ln -s ../mess/src/mess src/mess
+	[ -d mess ] && mv mess messdir
+	[ -d hash ] && mv hash hash.mame
+	[ ! -L messdir/hash/megatech.xmk ] && \
+	  ln -s ../../hash.mame/megatech.xml messdir/hash
+	[ ! -L hash ] && ln -s messdir/hash hash
+	[ ! -L artwork ] && ln -s messdir/artwork artwork
+	[ ! -L sysinfo.dat ] && ln -s messdir/sysinfo.dat sysinfo.dat
+	[ ! -L src/mess ] && ln -s ../messdir/src/mess src/mess
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
+	$(MAKE) -j3 $(DEB_MESS_OPTS) all
+	$(CURDIR)/mess -createconfig
+	mv mess.ini default.mess.ini
 
 # dh_installchangelogs doesn't know about whatsnew.txt,
 # so we need to make an explicit call
@@ -127,9 +140,15 @@ override_dh_installdocs:
 
 clean:
 	$(MAKE) $(DEB_MAME_OPTS) clean
-	# Undo MESS modifications. This could be a bit more robust.
-	-rm artwork hash src/mess mess/hash/megatech.xml
-	-mv hash.mame hash
+	-rm default.mame.ini default.mess.ini
+	# Undo MESS modifications.
+	[ -L artwork ] && rm artwork
+	[ -L hash ] && rm hash
+	[ -L sysinfo.dat ] && rm sysinfo.dat
+	[ -L src/mess ] && rm src/mess
+	[ -L messdir/hash/megatech.xml ] && rm messdir/hash/megatech.xml
+	[ -d hash.mame ] && mv hash.mame hash
+	[ -d messdir ] && mv messdir mess
 
 # Convert upstream sources from zip to tar.bz2
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')

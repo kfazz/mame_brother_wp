@@ -12,6 +12,9 @@ mame (0.142-2) UNRELEASED; urgency=low
   * Setup the source dir to enable building mess even if its source is in
     a mess subdir, by creating necessary symlinks and directory renames
     before the build, and restoring everything on clean.
+  * Rework debian/rules as needed to make mess fit in.
+  * Create a minimal mess.ini (identical to mame.ini).
+  * Add castool and imgtool to mame-tools.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 12 May 2011 16:37:27 +0200
 

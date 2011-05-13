@@ -43,14 +43,17 @@ Description: Tools for Multiple Arcade Machine Emulator (MAME)
  machines. These ROMs are subject to copyright and it is in most of the cases
  illegal to use them if you do not own the arcade machine.
  .
- This package provides tools to be used with MAME :
-  - chdman (MAME Compressed Hunks of Data CHD manager)
-  - jedutil (binary to/from JEDEC file converter)
-  - ldresample (Laserdisc audio synchronizer and resampler)
-  - ldverify (Laserdisc AVI/CHD verifier)
-  - romcmp (ROM comparison utility program)
-  - testkeys (Keyboard code viewer)
-  - unidasm (Generic MAME disassembler)
+ This package provides tools to be used with MAME and MESS. It currently
+ contains:
+  castool -- generic cassette manipulation tool for MESS
+  chdman -- MAME Compressed Hunks of Data CHD manager
+  imgtool -- generic image manipulation tool for MESS
+  jedutil -- binary to/from JEDEC file converter
+  ldresample -- Laserdisc audio synchronizer and resampler
+  ldverify -- Laserdisc AVI/CHD verifier
+  romcmp -- ROM comparison utility program
+  testkeys -- keyboard code viewer
+  unidasm -- generic MAME disassembler
 
 Package: mess
 Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
