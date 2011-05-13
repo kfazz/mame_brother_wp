@@ -1,11 +1,14 @@
 [Desktop Entry]
-Name=MAME
-Name[fr]=MAME
-Comment=MAME(tm) arcade emulator
-GenericName=MAME(tm) arcade emulator
-GenericName[fr]=MAME(tm) arcade emulator
+Name=MAME™ Arcade Emulator
+Name[ca]=Emulador de jocs arcade MAME™
+Name[fr]=MAME™ arcade emulator
+GenericName=Arcade Emulator
+GenericName[ca]=Emulador de jocs arcade
+GenericName[fr]=Arcade emulator
+Comment=Play vintage arcade games using the MAME emulator
+Comment[ca]=Jugueu a jocs d'arcade antics emprant l'emulador MAME
 Exec=/usr/games/mame
-Icon=mame.xpm
+Icon=mame
 Terminal=false
 Type=Application
 Categories=Game;Emulator;

@@ -15,6 +15,7 @@ mame (0.142-2) UNRELEASED; urgency=low
   * Rework debian/rules as needed to make mess fit in.
   * Create a minimal mess.ini (identical to mame.ini).
   * Add castool and imgtool to mame-tools.
+  * Improve desktop file and translate it to Catalan.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 12 May 2011 16:37:27 +0200
 
