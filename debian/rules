@@ -142,13 +142,13 @@ clean:
 	$(MAKE) $(DEB_MAME_OPTS) clean
 	-rm default.mame.ini default.mess.ini
 	# Undo MESS modifications.
-	[ -L artwork ] && rm artwork
-	[ -L hash ] && rm hash
-	[ -L sysinfo.dat ] && rm sysinfo.dat
-	[ -L src/mess ] && rm src/mess
-	[ -L messdir/hash/megatech.xml ] && rm messdir/hash/megatech.xml
-	[ -d hash.mame ] && mv hash.mame hash
-	[ -d messdir ] && mv messdir mess
+	[ ! -L artwork ] || rm artwork
+	[ ! -L hash ] || rm hash
+	[ ! -L sysinfo.dat ] || rm sysinfo.dat
+	[ ! -L src/mess ] || rm src/mess
+	[ ! -L messdir/hash/megatech.xml ] || rm messdir/hash/megatech.xml
+	[ ! -d hash.mame ] || mv hash.mame hash
+	[ ! -d messdir ] || mv messdir mess
 
 # Convert upstream sources from zip to tar.bz2
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
