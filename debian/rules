@@ -69,6 +69,20 @@ DEB_MAME_OPTS += \
     BIGENDIAN=
 endif
 
+ifeq ($(DEB_HOST_ARCH),ia64)
+DEB_MAME_OPTS += \
+    FORCE_DRC_C_BACKEND=1 \
+    PTR64=1 \
+    NOASM=1 \
+    BIGENDIAN=
+endif
+
+ifeq ($(DEB_HOST_ARCH),mips)
+DEB_MAME_OPTS += \
+    FORCE_DRC_C_BACKEND=1 \
+    BIGENDIAN=1
+endif
+
 ifeq ($(DEB_HOST_ARCH),powerpc)
 DEB_MAME_OPTS += \
     ARCHOPTS=-Upowerpc \
@@ -78,6 +92,12 @@ DEB_MAME_OPTS += \
 endif
 
 ifeq ($(DEB_HOST_ARCH),s390)
+DEB_MAME_OPTS += \
+    FORCE_DRC_C_BACKEND=1 \
+    BIGENDIAN=1
+endif
+
+ifeq ($(DEB_HOST_ARCH),sparc)
 DEB_MAME_OPTS += \
     FORCE_DRC_C_BACKEND=1 \
     BIGENDIAN=1

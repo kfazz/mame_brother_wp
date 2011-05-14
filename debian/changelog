@@ -1,7 +1,8 @@
 mame (0.142-2) UNRELEASED; urgency=low
 
-  * Add the necessary variables to fix s390 builds (it's big endian and
-    has no targetted DRC implementation).
+  * Add the necessary variables to fix s390 and sparc builds (they are big
+    endian and have no targetted DRC implementation).
+  * Add variables for mips and ia64.
   * Modify get-orig-source to also fetch MESS sources and build a new
     dpkg source component tarball.
   * Add a new mess binary package and transitional packages for xmess-*
