@@ -1,8 +1,5 @@
 mame (0.142-2) UNRELEASED; urgency=low
 
-  * Restrict Architectures to those known to not fail to build due to
-    memory alignment issues: amd64, i386, kfreebsd-amd64, kfreebsd-i386,
-    powerpc, s390.
   * Add the necessary variables to fix s390 builds (it's big endian and
     has no targetted DRC implementation).
   * Modify get-orig-source to also fetch MESS sources and build a new

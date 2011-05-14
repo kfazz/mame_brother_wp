@@ -15,7 +15,7 @@ Homepage: http://mamedev.org/
 XS-Autobuild: yes
 
 Package: mame
-Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
+Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Suggests: mame-tools, gnome-video-arcade
 Provides: xmame-common, xmame-sdl, xmame-svga, xmame-x
@@ -29,10 +29,11 @@ Description: Multiple Arcade Machine Emulator (MAME)
  illegal to use them if you do not own the arcade machine.
  .
  This package provides the MAME binary and configuration files.
+ .
 
 Package: mame-tools
 Section: non-free/utils
-Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
+Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Recommends: mame (= ${source:Version})
 Breaks: xmame-tools (<< 0.140)
@@ -77,7 +78,7 @@ Description: Multi Emulator Super System (MESS)
 
 Package: xmame-sdl
 Depends: mame, ${misc:Depends}
-Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
+Architecture: all
 Description: Transitional package for xmame-sdl
  This is a transitional package for xmame-sdl, and can be safely removed
  after the installation is complete.
@@ -91,14 +92,14 @@ Description: Transitional package for xmame-svga
 
 Package: xmame-x
 Depends: mame, ${misc:Depends}
-Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
+Architecture: all
 Description: Transitional package for xmame-x
  This is a transitional package for xmame-x, and can be safely removed
  after the installation is complete.
 
 Package: xmame-tools
 Depends: mame, ${misc:Depends}
-Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
+Architecture: all
 Description: Transitional package for mame-tools
  This is a transitional package for mame-tools, and can be safely removed
  after the installation is complete.
