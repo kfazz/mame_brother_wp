@@ -150,7 +150,7 @@ override_dh_auto_build:
 override_dh_auto_install:
 	dh_auto_install
 	dh_installchangelogs whatsnew.txt
-	dh_installchangelogs -pmess -pmess-tools mess/docs/messnew.txt
+	dh_installchangelogs -pmess messdir/docs/messnew.txt
 
 # Remove Windows specific documentation
 override_dh_installdocs:
