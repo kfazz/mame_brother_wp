@@ -145,20 +145,7 @@ override_dh_auto_build:
 	$(CURDIR)/mess -createconfig
 	mv mess.ini default.mess.ini
 
-# dh_installchangelogs doesn't know about whatsnew.txt,
-# so we need to make an explicit call
-override_dh_auto_install:
-	dh_auto_install
-	dh_installchangelogs whatsnew.txt
-	dh_installchangelogs -pmess messdir/docs/messnew.txt
-
-# Remove Windows specific documentation
-override_dh_installdocs:
-	dh_installdocs --exclude=license.txt \
-                   --exclude=windows.txt \
-                   --exclude=newvideo.txt
-
-clean:
+override_dh_auto_clean:
 	$(MAKE) $(DEB_MAME_OPTS) clean
 	-rm default.mame.ini default.mess.ini
 	# Undo MESS modifications.
@@ -169,6 +156,26 @@ clean:
 	[ ! -L messdir/hash/megatech.xml ] || rm messdir/hash/megatech.xml
 	[ ! -d hash.mame ] || mv hash.mame hash
 	[ ! -d messdir ] || mv messdir mess
+
+# dh_installchangelogs doesn't know about whatsnew.txt,
+# so we need to make an explicit call
+override_dh_installchangelogs:
+	dh_installchangelogs whatsnew.txt
+	dh_installchangelogs -pmess messdir/docs/messnew.txt
+
+# Remove Windows specific documentation
+override_dh_installdocs:
+	dh_installdocs --exclude=license.txt \
+                   --exclude=windows.txt \
+                   --exclude=newvideo.txt
+
+# Remove OSX specific keymaps
+override_dh_install:
+	dh_install --exclude=OSX.txt
+
+override_dh_builddeb:
+	dh_builddeb -- -Zbzip2
+
 
 # Convert upstream sources from zip to tar.bz2
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
@@ -203,16 +210,26 @@ get-orig-source: $(MAME_FILEBASE)s.zip $(MESS_FILEBASE)s.zip
 	mkdir -p $(TMPDIR)/sub/$(MAME_PACKAGE)-$(VERSION)
 	# Not a bug: Mame source needs to be unzipped twice
 	unzip $(TMPDIR)/$(MAME_PACKAGE).zip \
-	  -d $(TMPDIR)/sub/$(MAME_PACKAGE)-$(VERSION)
+	    -d $(TMPDIR)/sub/$(MAME_PACKAGE)-$(VERSION)
+	# Strip trailing CR
+	find $(TMPDIR)/sub/$(MAME_PACKAGE)-$(VERSION) \
+	    -type f -regextype posix-egrep \
+	    ! -regex ".*(zip|gif|png|bmp|ico)" \
+	    | xargs sed -i "s/\r$$//"
 	tar -C $(TMPDIR)/sub -cvf - $(MAME_PACKAGE)-$(VERSION) | \
-	  bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig.tar.bz2
+	    bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig.tar.bz2
 	rm $(MAME_FILEBASE)s.zip
 
 	# Create an orig-mess.tar.bz2 component tarball for MESS
 	mkdir -p $(TMPDIR)/$(MESS_PACKAGE)-$(VERSION)
 	unzip $(MESS_FILEBASE)s.zip -d $(TMPDIR)/$(MESS_PACKAGE)-$(VERSION)
+	# Strip trailing CR
+	find $(TMPDIR)/$(MESS_PACKAGE)-$(VERSION) \
+	    -type f -regextype posix-egrep \
+	    ! -regex ".*(zip|gif|png|bmp|ico)" \
+	    | xargs sed -i "s/\r$$//"
 	tar -C $(TMPDIR) -cvf - $(MESS_PACKAGE)-$(VERSION) | \
-	  bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig-$(MESS_PACKAGE).tar.bz2
+	    bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig-$(MESS_PACKAGE).tar.bz2
 	rm $(MESS_FILEBASE)s.zip
 
 	rm -r $(TMPDIR)

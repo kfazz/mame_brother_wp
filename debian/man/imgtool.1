@@ -1,0 +1,82 @@
+.\"  -*- nroff -*-
+.\"
+.\" imgtool.1
+.\"
+.\" Man page created from info in imgtool.txt
+.\" Cesare Falco <cesare.falco@gmail.com>, February 2011
+.\"
+.\"
+.TH Imgtool 1 2011-02-03 0.141 "Imgtool \- Image manipulation tool for MESS"
+.\"
+.\"
+.\" NAME chapter
+.SH NAME
+Imgtool \- A generic image manipulation tool for MESS
+.\"
+.\"
+.\" SYNOPSIS chapter
+.SH SYNOPSIS
+.br
+.B imgtool
+.B create|dir|del|info|crc|good
+.I format image
+.br
+.B imgtool
+.B get|put|getall [\-\-filter=\fIfilter\fB]\fR
+.I format image
+.br
+.B imgtool
+.B listformats|listfilters
+.br
+.B imgtool
+.B listdriveroptions
+.I format
+.\"
+.\"
+.\" DESCRIPTION chapter
+.SH DESCRIPTION
+Imgtool is a tool for the maintenance and manipulation of disk and other types
+of images that MESS users need to deal with. Functions include retrieving and
+storing files and CRC checking and validation.
+.\"
+.\"
+.\" COMMANDS chapter
+.SH COMMANDS
+.TP
+.B create
+Creates and image
+.TP
+.B dir
+Lists the contents of an image.
+.TP
+.B get
+Gets a single file from an image.
+.TP
+.B put
+Puts a single file on an image (wildcards supported).
+.TP
+.B getall
+Gets all files off an image.
+.TP
+.B del
+Deletes a file on an image.
+.TP
+.B info
+Retrieves info about an image (by reading CRC files).
+.TP
+.B crc
+Retrieves info about an image in the same format used by the CRC files.
+.TP
+.B good
+CRC checks a set of images and for matching images, copy into a new directory.
+.TP
+.B listformats
+Lists all image file formats supported by imgtool.
+.TP
+.B listfilters
+Lists all filters supported by imgtool.
+Filters are a mean to process data being written into or read out of an image
+in a certain way.
+.TP
+.B listdriveroptions
+Lists all format-specific options for the 'put' and 'create' commands

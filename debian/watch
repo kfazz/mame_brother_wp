@@ -1,4 +1,7 @@
-# Taken from Ubuntu mame package
 version=3
-opts="dversionmangle=s/u\d+//,filenamemangle=s/.*=(.*)/$1/" \
- http://mamedev.org/release.html downloader\.php.*mame(\d)(\d+)s\.zip
+#opts="dversionmangle=s/u\d+//,filenamemangle=s/.*\/(.*)/$1/" \
+opts="dversionmangle=s/u\d+//" \
+ http://mamedev.org/release.html .*mame(\d)(\d+)s.zip
+#opts="dversionmangle=s/u\d+//,filenamemangle=s/.*\/(.*)/$1/" \
+opts="dversionmangle=s/u\d+//" \
+ http://www.mess.org/download.php .*mess(\d)(\d+)s.zip
