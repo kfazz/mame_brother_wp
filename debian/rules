@@ -132,8 +132,6 @@ override_dh_auto_build:
 	# component directory to enable its build.
 	[ -d mess ] && mv mess messdir
 	[ -d hash ] && mv hash hash.mame
-	[ ! -L messdir/hash/megatech.xmk ] && \
-	  ln -s ../../hash.mame/megatech.xml messdir/hash
 	[ ! -L hash ] && ln -s messdir/hash hash
 	[ ! -L artwork ] && ln -s messdir/artwork artwork
 	[ ! -L sysinfo.dat ] && ln -s messdir/sysinfo.dat sysinfo.dat
@@ -153,7 +151,6 @@ override_dh_auto_clean:
 	[ ! -L hash ] || rm hash
 	[ ! -L sysinfo.dat ] || rm sysinfo.dat
 	[ ! -L src/mess ] || rm src/mess
-	[ ! -L messdir/hash/megatech.xml ] || rm messdir/hash/megatech.xml
 	[ ! -d hash.mame ] || mv hash.mame hash
 	[ ! -d messdir ] || mv messdir mess
 
