@@ -145,7 +145,8 @@ override_dh_auto_build:
 
 override_dh_auto_clean:
 	$(MAKE) $(DEB_MAME_OPTS) clean
-	-rm default.mame.ini default.mess.ini
+	[ ! -f default.mame.ini ] || rm default.mame.ini
+	[ ! -f default.mess.ini ] || rm default.mess.ini
 	# Undo MESS modifications.
 	[ ! -L artwork ] || rm artwork
 	[ ! -L hash ] || rm hash
