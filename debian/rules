@@ -145,6 +145,9 @@ override_dh_auto_build:
 
 override_dh_auto_clean:
 	$(MAKE) $(DEB_MAME_OPTS) clean
+	# failover to find a mess makefile in case we start from a clean dir
+	[ -d mess ] && mv mess messdir
+	[ ! -L src/mess ] && ln -s ../messdir/src/mess src/mess
 	$(MAKE) $(DEB_MESS_OPTS) clean
 	[ ! -f default.mame.ini ] || rm default.mame.ini
 	[ ! -f default.mess.ini ] || rm default.mess.ini
