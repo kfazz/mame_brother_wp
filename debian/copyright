@@ -1,12 +1,11 @@
-Format-Specification: http://svn.debian.org/wsvn/dep/web/deps/dep5.mdwn?op=file&rev=174
-Name: MAME
-Source: http://mamedev.org
+Format-Specification: http://dep.debian.net/deps/dep5/
+Upstream-Name: MAME
+Source: http://mamedev.org and http://mess.redump.net. The mess source code is a source code layer which is added to the mame source code for building.
 Disclaimer: 
  This package is not part of the GNU/Linux Debian distribution.  It is
  provided in the non-free archive area as a convenience to Debian users.
  The contents of this package cannot be distributed as part of the Debian
  distribution because the Mame Software License does not allow commercial use.
-XS-Autobuild: yes
 
 Files: debian/*
 Copyright: Ludovic Lechapt <ludomatic@gmail.com>
@@ -641,6 +640,80 @@ License: MAME or GPL-2
 Files: src/osd/sdl/SDL1211_opengl.h
 Copyright: Sam Lantinga
 License: LGPL-2.1
+
+Files: mess/src/*
+Copyright: MESS Team
+License: MAME
+
+Files: mess/src/osd/winui/*
+Copyright: Michael Soderstrom, Chris Kirmse, MAME32/MAMEUI team
+License: MAME
+
+Files: mess/src/osd/winui/winui.mak,
+mess/tiny.mak
+License: MAME
+Copyright: Nicola Salmoria and the MAME team
+
+Files: mess/src/mess/video/hp48.c,
+mess/src/mess/video/thomson.c,
+mess/src/mess/formats/thom_cas.h,
+mess/src/mess/formats/thom_cas.c,
+mess/src/mess/tools/imgtool/modules/thomson.c,
+mess/src/mess/includes/thomson.h,
+mess/src/mess/includes/hp48.h,
+mess/src/mess/drivers/hp48.c,
+mess/src/mess/drivers/thomson.c,
+mess/src/mess/audio/mea8000.h,
+mess/src/mess/audio/mea8000.c,
+mess/src/mess/machine/mc6846.h,
+mess/src/mess/machine/thomflop.h,
+mess/src/mess/machine/thomflop.c,
+mess/src/mess/machine/mc6846.c,
+mess/src/mess/machine/hp48.c,
+mess/src/mess/machine/thomson.c,
+mess/src/mess/machine/mc6854.h,
+mess/src/mess/machine/mc6843.h,
+mess/src/mess/machine/mc6843.c,
+mess/src/mess/machine/mc6854.c
+License: MAME
+Copyright: Antoine Mine
+
+Files: mess/src/osd/windows/mess.rc
+Copyright: Aaron Giles
+License: BSD-3-clause
+
+Files: mess/src/mess/video/vic6567.c
+Copyright: Christian Bauer
+License:
+The rights on the source code remain at the author.
+It may not - not even in parts - used for commercial purposes without explicit
+written permission by the author.
+Permission to use it for non-commercial purposes is hereby granted als long as
+my copyright notice remains in the program.
+You are not allowed to use the source to create and distribute a modified
+version of Frodo.
+
+Files: mess/src/mess/video/pc1403.c
+Copyright: Peter Trauner
+License:
+ *   Copyright (c) 2001 Peter Trauner, all rights reserved.
+ *
+ *   - This source code is released as freeware for non-commercial purposes.
+ *   - You are free to use and redistribute this code in modified or
+ *     unmodified form, provided you list me in the credits.
+ *   - If you modify this source code, you must add a notice to each modified
+ *     source file that it has been changed.  If you're a nice person, you
+ *     will clearly mark each change too.  :)
+ *   - If you wish to use this for commercial purposes, please contact me at
+ *     peter.trauner@jk.uni-linz.ac.at
+ *   - The author of this copywritten work reserves the right to change the
+ *     terms of its usage and license at any time, including retroactively
+ *   - This entire notice must remain in the source code.
+
+Files: mess/src/mess/machine/msx.c,
+mess/src/mess/machine/msx_slot.c
+Copyright: Sean Young
+License: MAME
 
 License: MAME
  Copyright (c) 1997-2007, Nicola Salmoria and the MAME team
