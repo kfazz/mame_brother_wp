@@ -642,17 +642,12 @@ Copyright: Sam Lantinga
 License: LGPL-2.1
 
 Files: mess/src/*
-Copyright: MESS Team
+Copyright: Nicola Salmoria and the MAME team
 License: MAME
 
 Files: mess/src/osd/winui/*
 Copyright: Michael Soderstrom, Chris Kirmse, MAME32/MAMEUI team
 License: MAME
-
-Files: mess/src/osd/winui/winui.mak,
-mess/tiny.mak
-License: MAME
-Copyright: Nicola Salmoria and the MAME team
 
 Files: mess/src/mess/video/hp48.c,
 mess/src/mess/video/thomson.c,
@@ -686,10 +681,8 @@ Files: mess/src/mess/video/vic6567.c
 Copyright: Christian Bauer
 License:
 The rights on the source code remain at the author.
-It may not - not even in parts - used for commercial purposes without explicit
-written permission by the author.
-Permission to use it for non-commercial purposes is hereby granted als long as
-my copyright notice remains in the program.
+It may not - not even in parts - used for commercial purposes without explicit written permission by the author.
+Permission to use it for non-commercial purposes is hereby granted als long as my copyright notice remains in the program.
 You are not allowed to use the source to create and distribute a modified
 version of Frodo.
 
@@ -714,6 +707,11 @@ Files: mess/src/mess/machine/msx.c,
 mess/src/mess/machine/msx_slot.c
 Copyright: Sean Young
 License: MAME
+
+Files: mess/src/mess/tools/imgtool/modules/xsa.c
+Copyright: Nicola Salmoria and the MAME team
+License: MAME
+uses XSA code developed by Alex Wulms/XelaSoft.
 
 License: MAME
  Copyright (c) 1997-2007, Nicola Salmoria and the MAME team
