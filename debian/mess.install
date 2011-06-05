@@ -2,9 +2,6 @@ mess				usr/games
 
 src/osd/sdl/keymaps		usr/share/games/mess
 
-#FIXMEdebian/install/mess.xpm		usr/share/pixmaps
-#FIXMEdebian/install/mess.desktop	usr/share/applications
-
 debian/mess.ini			etc/mess
 
 messdir/artwork			usr/share/games/mess
