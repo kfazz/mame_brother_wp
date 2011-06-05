@@ -15,6 +15,25 @@ mame (0.142-2) UNRELEASED; urgency=low
   * Add castool and imgtool to mame-tools.
   * Improve desktop file and translate it to Catalan.
 
+  [ Cesare Falco ]
+  * Initial merge from Ubuntu package.
+  * Some imports from corresponding debian/ files from Ubuntu package:
+    - control: sdlmame/sdlmame-tools transitional packages
+      (upgrading from Ubuntu 10.04 LTS still needs them)
+    - rules:
+      + override dh_installchangelogs instead of dh_auto_install
+      + override_dh_install, exclude keymaps for OSX
+      + renamed clean to override_dh_auto_clean, moved up
+      + strip CR from source files
+    - watch: added URL for MESS
+    - mame-tools: removed unidasm, tool intended for development only
+    - manpages for mess, castool and imgtool
+
+  [ Emmanuel Kasper ]
+  * Fix clean rule on a clean tree.
+  * Add copyright information for MESS sources.
+  * Remove symlinking of megatech.xml.
+
  -- Jordi Mallach <jordi@debian.org>  Thu, 12 May 2011 16:37:27 +0200
 
 mame (0.142-1) unstable; urgency=low
