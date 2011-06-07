@@ -171,6 +171,8 @@ override_dh_installdocs:
 
 # Remove OSX specific keymaps
 override_dh_install:
+	# windows created file might have wrongly the set executable bit
+	chmod 644 messdir/hash/*
 	dh_install --exclude=OSX.txt
 
 override_dh_builddeb:
