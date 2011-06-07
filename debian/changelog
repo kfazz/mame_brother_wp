@@ -30,6 +30,7 @@ mame (0.142-2) UNRELEASED; urgency=low
     - manpages for mess, castool and imgtool
 
   [ Emmanuel Kasper ]
+  * Remove executable bit set by windows on all mess hash files 
   * Fix clean rule on a clean tree.
   * Add copyright information for MESS sources.
   * Remove symlinking of megatech.xml.
