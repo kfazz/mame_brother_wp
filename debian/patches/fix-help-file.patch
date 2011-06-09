@@ -2,9 +2,9 @@ From: Emmanuel Kasper <emmanuel@libera.cc>
 Subject: Fix usage file as shown when calling mame -h
 Forwarded: yes
 Bug: http://www.mametesters.org/view.php?id=4298
---- a/src/emu/clifront.c
-+++ b/src/emu/clifront.c
-@@ -342,7 +342,7 @@
+--- mame-0.142.orig/src/emu/clifront.c	2011-06-09 23:04:15.000000000 +0200
++++ mame-0.142/src/emu/clifront.c	2011-06-09 23:04:37.000000000 +0200
+@@ -361,7 +361,7 @@
  		   "        MAME -showusage    for a brief list of options\n"
  		   "        MAME -showconfig   for a list of configuration options\n"
  		   "        MAME -createconfig to create a " CONFIGNAME ".ini\n\n"
