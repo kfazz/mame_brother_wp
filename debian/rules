@@ -195,14 +195,14 @@ TMPDIR := $(shell mktemp --dry-run --directory -p .)
 UPSTREAM_VERSION := $(shell echo $(VERSION) | sed -e 's/\.//' )
 
 $(MAME_FILEBASE)s.zip:
-	wget -U '$(AGENT)' "$(MAME_URL)\
-	$(MAME_PACKAGE)$(UPSTREAM_VERSION)s.zip" \
-	-O $(MAME_FILEBASE)s.zip
+	wget -U '$(AGENT)' \
+        "$(MAME_URL)$(MAME_PACKAGE)$(UPSTREAM_VERSION)s.zip" \
+        -O $(MAME_FILEBASE)s.zip
 
 $(MESS_FILEBASE)s.zip:
-	wget -U '$(AGENT)' "$(MESS_URL)\
-	$(MESS_PACKAGE)$(UPSTREAM_VERSION)s.zip" \
-	-O $(MESS_FILEBASE)s.zip
+	wget -U '$(AGENT)' \
+        "$(MESS_URL)$(MESS_PACKAGE)$(UPSTREAM_VERSION)s.zip" \
+        -O $(MESS_FILEBASE)s.zip
 
 get-orig-source: $(MAME_FILEBASE)s.zip $(MESS_FILEBASE)s.zip
 	mkdir $(TMPDIR)
@@ -220,7 +220,7 @@ get-orig-source: $(MAME_FILEBASE)s.zip $(MESS_FILEBASE)s.zip
 	    | xargs sed -i "s/\r$$//"
 	tar -C $(TMPDIR)/sub -cvf - $(MAME_PACKAGE)-$(VERSION) | \
 	    bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig.tar.bz2
-	rm $(MAME_FILEBASE)s.zip
+	rm -f $(MAME_FILEBASE)s.zip
 
 	# Create an orig-mess.tar.bz2 component tarball for MESS
 	mkdir -p $(TMPDIR)/$(MESS_PACKAGE)-$(VERSION)
@@ -232,6 +232,6 @@ get-orig-source: $(MAME_FILEBASE)s.zip $(MESS_FILEBASE)s.zip
 	    | xargs sed -i "s/\r$$//"
 	tar -C $(TMPDIR) -cvf - $(MESS_PACKAGE)-$(VERSION) | \
 	    bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig-$(MESS_PACKAGE).tar.bz2
-	rm $(MESS_FILEBASE)s.zip
+	rm -f $(MESS_FILEBASE)s.zip
 
-	rm -r $(TMPDIR)
+	rm -rf $(TMPDIR)
