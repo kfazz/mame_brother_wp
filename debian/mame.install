@@ -2,5 +2,5 @@ mame usr/games
 debian/install/mame.xpm usr/share/pixmaps
 debian/install/mame.desktop usr/share/applications
 debian/mame.ini etc/mame
-hash/* usr/share/games/mame/hash
+hash.mame/* usr/share/games/mame/hash
 src/osd/sdl/keymaps/*.txt usr/share/games/mame/keymaps
