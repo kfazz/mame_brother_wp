@@ -1,3 +1,5 @@
+From: Cesare Falco <cesare.falco@gmail.com>
+Subject: Fix section in mame manpage
 Index: mame-0.142/src/osd/sdl/man/mame.1
 ===================================================================
 --- mame-0.142.orig/src/osd/sdl/man/mame.1	2011-06-16 09:58:20.000000000 +0200
