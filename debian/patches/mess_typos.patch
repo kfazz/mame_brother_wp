@@ -2,8 +2,8 @@ From: Cesare Falco <cesare.falco@gmail.com>
 Subject: Fix typos in mess tree to make lintian happier
 Index: mame-0.142/mess/docs/messnew.txt
 ===================================================================
---- mame-0.142.orig/mess/docs/messnew.txt	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/docs/messnew.txt	2011-06-16 09:33:12.000000000 +0200
+--- mame-0.142.orig/mess/docs/messnew.txt	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/docs/messnew.txt	2011-06-16 10:00:03.000000000 +0200
 @@ -7652,7 +7652,7 @@
    [Nate Woods]
  
@@ -15,8 +15,8 @@ Index: mame-0.142/mess/docs/messnew.txt
  
 Index: mame-0.142/mess/src/mess/drivers/newbrain.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/drivers/newbrain.c	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/src/mess/drivers/newbrain.c	2011-06-16 09:33:12.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/drivers/newbrain.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/drivers/newbrain.c	2011-06-16 10:00:03.000000000 +0200
 @@ -756,7 +756,7 @@
          3       MSPD        1 enables 50K Baud serial data rate to be obtained ie. CTC input clock of 800 kHz. 0 selects xxx.692 kHz
          4       ENOR        1 enables serial receive clock to sound output summer, and also selects serial input from the printer port. 0 selects serial input from the comms port
@@ -28,8 +28,8 @@ Index: mame-0.142/mess/src/mess/drivers/newbrain.c
      */
 Index: mame-0.142/mess/src/mess/machine/thomson.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/machine/thomson.c	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/src/mess/machine/thomson.c	2011-06-16 09:33:12.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/machine/thomson.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/machine/thomson.c	2011-06-16 10:00:03.000000000 +0200
 @@ -1165,7 +1165,7 @@
  		/* joystick */
  		/* bits 6-7: action buttons A (0=pressed) */
@@ -41,8 +41,8 @@ Index: mame-0.142/mess/src/mess/machine/thomson.c
  	}
 Index: mame-0.142/mess/sysinfo.dat
 ===================================================================
---- mame-0.142.orig/mess/sysinfo.dat	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/sysinfo.dat	2011-06-16 09:33:12.000000000 +0200
+--- mame-0.142.orig/mess/sysinfo.dat	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/sysinfo.dat	2011-06-16 10:00:03.000000000 +0200
 @@ -527,7 +527,7 @@
  
    * Sound: Four 8 bit PCM voices, 9 octaves
@@ -72,8 +72,8 @@ Index: mame-0.142/mess/sysinfo.dat
  
 Index: mame-0.142/mess/hash/megadriv.xml
 ===================================================================
---- mame-0.142.orig/mess/hash/megadriv.xml	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/hash/megadriv.xml	2011-06-16 09:33:13.000000000 +0200
+--- mame-0.142.orig/mess/hash/megadriv.xml	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/hash/megadriv.xml	2011-06-16 10:00:03.000000000 +0200
 @@ -16303,7 +16303,7 @@
  		On the Quackshot PCB there is a 512Kb rom.
  		Normally all the address lines from A1 to A19 (the whole 512Kb range) tied to the chip in the right order.
@@ -85,8 +85,8 @@ Index: mame-0.142/mess/hash/megadriv.xml
  	-->
 Index: mame-0.142/mess/src/mess/drivers/ti99_8.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/drivers/ti99_8.c	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/src/mess/drivers/ti99_8.c	2011-06-16 09:33:13.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/drivers/ti99_8.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/drivers/ti99_8.c	2011-06-16 10:00:03.000000000 +0200
 @@ -49,7 +49,7 @@
      Mapper has 4kb page size (-> 16 pages per map file), 32 bits per page
      entry.  Address bits A0-A3 are the page index, whereas bits A4-A15 are the
@@ -98,8 +98,8 @@ Index: mame-0.142/mess/src/mess/drivers/ti99_8.c
      interpreter(???).
 Index: mame-0.142/mess/src/mess/formats/hect_tap.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/formats/hect_tap.c	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/src/mess/formats/hect_tap.c	2011-06-16 09:33:13.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/formats/hect_tap.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/formats/hect_tap.c	2011-06-16 10:00:03.000000000 +0200
 @@ -118,7 +118,7 @@
         if (data_pos>1)
                  previous_block = casdata[data_pos-1];
@@ -120,8 +120,8 @@ Index: mame-0.142/mess/src/mess/formats/hect_tap.c
  		/*block_count=0;*/
 Index: mame-0.142/mess/src/mess/machine/990_hd.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/machine/990_hd.c	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/src/mess/machine/990_hd.c	2011-06-16 09:33:13.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/machine/990_hd.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/machine/990_hd.c	2011-06-16 10:00:03.000000000 +0200
 @@ -29,7 +29,7 @@
  overriden if more than one controller is used */
  #define MAX_DISK_UNIT 4
@@ -133,8 +133,8 @@ Index: mame-0.142/mess/src/mess/machine/990_hd.c
  /* I chose a limit of 512.  No need to use more until someone writes CD-ROMs
 Index: mame-0.142/mess/src/mess/machine/990_tap.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/machine/990_tap.c	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/src/mess/machine/990_tap.c	2011-06-16 09:33:13.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/machine/990_tap.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/machine/990_tap.c	2011-06-16 10:00:03.000000000 +0200
 @@ -315,7 +315,7 @@
  		goto update_registers;
  	}
@@ -146,8 +146,8 @@ Index: mame-0.142/mess/src/mess/machine/990_tap.c
  
 Index: mame-0.142/mess/src/mess/machine/hecdisk2.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/machine/hecdisk2.c	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/src/mess/machine/hecdisk2.c	2011-06-16 09:33:13.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/machine/hecdisk2.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/machine/hecdisk2.c	2011-06-16 10:00:03.000000000 +0200
 @@ -210,7 +210,7 @@
  {
  	/* To generate the NMI signal (late) when uPD DMA request*/
@@ -177,8 +177,8 @@ Index: mame-0.142/mess/src/mess/machine/hecdisk2.c
  // check if current commande is write cmde.
 Index: mame-0.142/mess/src/mess/machine/pce.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/machine/pce.c	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/src/mess/machine/pce.c	2011-06-16 09:33:13.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/machine/pce.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/machine/pce.c	2011-06-16 10:00:03.000000000 +0200
 @@ -1195,7 +1195,7 @@
  		}
  		else
@@ -190,8 +190,8 @@ Index: mame-0.142/mess/src/mess/machine/pce.c
  		pce_cd.data_buffer_index = 0;
 Index: mame-0.142/mess/src/mess/machine/strata.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/machine/strata.c	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/src/mess/machine/strata.c	2011-06-16 09:33:13.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/machine/strata.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/machine/strata.c	2011-06-16 10:00:03.000000000 +0200
 @@ -51,7 +51,7 @@
  	int status;			// current status
  	int master_lock;	// master lock flag
@@ -203,8 +203,8 @@ Index: mame-0.142/mess/src/mess/machine/strata.c
  	UINT8 *data_ptr;	// main FEEPROM area
 Index: mame-0.142/mess/src/mess/machine/wswan.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/machine/wswan.c	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/src/mess/machine/wswan.c	2011-06-16 09:33:13.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/machine/wswan.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/machine/wswan.c	2011-06-16 10:00:03.000000000 +0200
 @@ -1452,7 +1452,7 @@
  			{
  				state->m_vdp.timer_hblank_reload = 0;
@@ -216,8 +216,8 @@ Index: mame-0.142/mess/src/mess/machine/wswan.c
  	}
 Index: mame-0.142/mess/src/mess/tools/imgtool/modules/concept.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/tools/imgtool/modules/concept.c	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/src/mess/tools/imgtool/modules/concept.c	2011-06-16 09:33:13.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/tools/imgtool/modules/concept.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/tools/imgtool/modules/concept.c	2011-06-16 10:00:03.000000000 +0200
 @@ -409,7 +409,7 @@
  	free_blocks = get_UINT16xE(image->dev_dir.vol_hdr.disk_flipped, image->dev_dir.vol_hdr.last_block)
  					- get_UINT16xE(image->dev_dir.vol_hdr.disk_flipped, image->dev_dir.vol_hdr.next_block);
@@ -229,8 +229,8 @@ Index: mame-0.142/mess/src/mess/tools/imgtool/modules/concept.c
  		free_blocks -= get_UINT16xE(image->dev_dir.vol_hdr.disk_flipped, image->dev_dir.file_dir[i].next_block)
 Index: mame-0.142/mess/src/mess/tools/imgtool/modules/ti99.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/tools/imgtool/modules/ti99.c	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/src/mess/tools/imgtool/modules/ti99.c	2011-06-16 09:33:13.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/tools/imgtool/modules/ti99.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/tools/imgtool/modules/ti99.c	2011-06-16 10:00:03.000000000 +0200
 @@ -64,11 +64,11 @@
      "fphysrecs".
  
@@ -413,8 +413,8 @@ Index: mame-0.142/mess/src/mess/tools/imgtool/modules/ti99.c
  		errorcode = read_file_physrec(&l3_file->l2_file, l3_file->cur_phys_rec, physrec_buf);
 Index: mame-0.142/mess/src/mess/tools/imgtool/modules/ti990hd.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/tools/imgtool/modules/ti990hd.c	2011-06-16 09:33:08.000000000 +0200
-+++ mame-0.142/mess/src/mess/tools/imgtool/modules/ti990hd.c	2011-06-16 09:33:13.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/tools/imgtool/modules/ti990hd.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/tools/imgtool/modules/ti990hd.c	2011-06-16 10:00:03.000000000 +0200
 @@ -14,7 +14,7 @@
  #include "osdepend.h"
  #include "imgtoolx.h"
@@ -479,8 +479,8 @@ Index: mame-0.142/mess/src/mess/tools/imgtool/modules/ti990hd.c
  				while ((i<totsecs) && (! (image->sec0.abm[i >> 3] & (1 << (i & 7)))))
 Index: mame-0.142/mess/src/mess/devices/coco_vhd.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/devices/coco_vhd.c	2011-06-16 09:38:05.000000000 +0200
-+++ mame-0.142/mess/src/mess/devices/coco_vhd.c	2011-06-16 09:38:15.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/devices/coco_vhd.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/devices/coco_vhd.c	2011-06-16 10:00:03.000000000 +0200
 @@ -26,7 +26,7 @@
      Error values:
  
@@ -492,8 +492,8 @@ Index: mame-0.142/mess/src/mess/devices/coco_vhd.c
       4 = Unable to open VHD image file
 Index: mame-0.142/mess/src/mess/drivers/dectalk.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/drivers/dectalk.c	2011-06-16 09:39:03.000000000 +0200
-+++ mame-0.142/mess/src/mess/drivers/dectalk.c	2011-06-16 09:39:11.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/drivers/dectalk.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/drivers/dectalk.c	2011-06-16 10:00:03.000000000 +0200
 @@ -17,7 +17,7 @@
  *    * pins IP0, IP2, and IP3 are connected to the primary serial port:
  *      * IP0 is CTS
@@ -505,8 +505,8 @@ Index: mame-0.142/mess/src/mess/drivers/dectalk.c
  *      * IP5 low: unknown
 Index: mame-0.142/mess/src/mess/drivers/fm7.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/drivers/fm7.c	2011-06-16 09:38:24.000000000 +0200
-+++ mame-0.142/mess/src/mess/drivers/fm7.c	2011-06-16 09:38:57.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/drivers/fm7.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/drivers/fm7.c	2011-06-16 10:00:03.000000000 +0200
 @@ -659,19 +659,19 @@
  		case 1:  // get keyboard scancode mode
  			state->m_encoder.buffer[0] = state->m_key_scan_mode;
@@ -562,8 +562,8 @@ Index: mame-0.142/mess/src/mess/drivers/fm7.c
  	state->m_encoder.position = 0;
 Index: mame-0.142/mess/src/mess/machine/er59256.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/machine/er59256.c	2011-06-16 09:39:58.000000000 +0200
-+++ mame-0.142/mess/src/mess/machine/er59256.c	2011-06-16 09:40:04.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/machine/er59256.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/machine/er59256.c	2011-06-16 10:00:03.000000000 +0200
 @@ -38,7 +38,7 @@
      UINT16  in_shifter;
      UINT32  out_shifter;
@@ -575,8 +575,8 @@ Index: mame-0.142/mess/src/mess/machine/er59256.c
      /* Command & addresss */
 Index: mame-0.142/mess/src/mess/machine/x68k_hdc.c
 ===================================================================
---- mame-0.142.orig/mess/src/mess/machine/x68k_hdc.c	2011-06-16 09:39:41.000000000 +0200
-+++ mame-0.142/mess/src/mess/machine/x68k_hdc.c	2011-06-16 09:39:52.000000000 +0200
+--- mame-0.142.orig/mess/src/mess/machine/x68k_hdc.c	2011-06-16 09:59:15.000000000 +0200
++++ mame-0.142/mess/src/mess/machine/x68k_hdc.c	2011-06-16 10:00:03.000000000 +0200
 @@ -294,7 +294,7 @@
  					sasi->io = 1;  // Output
  					sasi->status_port |= 0x04;  // C/D remains the same
@@ -586,3 +586,16 @@ Index: mame-0.142/mess/src/mess/machine/x68k_hdc.c
  				}
  			}
  		}
+Index: mame-0.142/mess/src/mess/drivers/primo.c
+===================================================================
+--- mame-0.142.orig/mess/src/mess/drivers/primo.c	2011-06-16 10:10:56.000000000 +0200
++++ mame-0.142/mess/src/mess/drivers/primo.c	2011-06-16 10:11:10.000000000 +0200
+@@ -384,7 +384,7 @@
+ 
+ ROM_START( primob64 )
+ 	ROM_REGION( 0x1c000, "maincpu", ROMREGION_ERASEFF )
+-	ROM_SYSTEM_BIOS(0, "standart", "Standart")
++	ROM_SYSTEM_BIOS(0, "standard", "Standard")
+ 	ROMX_LOAD( "b64.rom",     0x10000, 0x4000, CRC(cea28188) SHA1(a77e42e97402e601b78ab3751eac1e85d0bbb4a0), ROM_BIOS(1) )
+ 	ROM_SYSTEM_BIOS(1, "cdos", "CDOS")
+ 	ROMX_LOAD( "b64cdos.rom", 0x10000, 0x4000, CRC(73305e4d) SHA1(c090c3430cdf19eed8363377b981e1c21a4ed169), ROM_BIOS(2) )
