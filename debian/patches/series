@@ -1,2 +1,4 @@
 kfreebsd-build.patch
 fix-help-file.patch
+mess_typos.patch
+mame_typos.patch
