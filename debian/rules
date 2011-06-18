@@ -125,7 +125,7 @@ endif
 %:
 	dh $@
 
-override_dh_auto_build:
+prepare_mess_dirs:
 	# MESS is an overlay of the MAME source code, but we need to have
 	# the code in a mess directory, as that's how dpkg components
 	# work. Move dirs and create symlinks for MESS stuff outside its
@@ -136,6 +136,9 @@ override_dh_auto_build:
 	[ ! -L artwork ] && ln -s messdir/artwork artwork
 	[ ! -L sysinfo.dat ] && ln -s messdir/sysinfo.dat sysinfo.dat
 	[ ! -L src/mess ] && ln -s ../messdir/src/mess src/mess
+	touch $@
+
+override_dh_auto_build: prepare_mess_dirs
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
@@ -155,6 +158,7 @@ override_dh_auto_clean:
                              clean
 	# target may fail if the symlinks have not been created
 	-$(MAKE) $(DEB_MESS_OPTS) clean
+	-rm prepare_mess_dirs
 	[ ! -f default.mame.ini ] || rm default.mame.ini
 	[ ! -f default.mess.ini ] || rm default.mess.ini
 	# Undo MESS modifications.
