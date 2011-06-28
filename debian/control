@@ -64,7 +64,7 @@ Description: Tools for Multiple Arcade Machine Emulator (MAME)
 
 Package: mess
 Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, mess-data
 Recommends: mess-desktop-entries
 Suggests: mame-tools
 Provides: xmess-common, xmess-sdl, xmess-x
@@ -81,6 +81,21 @@ Description: Multi Emulator Super System (MESS)
  MSX.
  .
  This package provides the MESS binary and configuration files.
+
+Package: mess-data
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Multi Emulator Super System (MESS)
+ MESS is an emulator for various consoles and computing systems, sharing a
+ lot of codebase with the MAME project.
+ .
+ Some of the well known consoles and computers emulated are the Atari 2600,
+ Lynx, NES, SNES, Nintendo 64, GameBoy, Sega Master System, Sega Megadrive,
+ Game Gear, Colecovision, Vectrex, Apple II, Atari 400/800, Commodore 64/128,
+ IBM PC XT and AT (MDA and CGA), ZX80, ZX Spectrum, TI99/4, TRS-80, and the
+ MSX.
+ .
+ This package provides the MESS hash files, keymaps and artwork.
 
 Package: xmame-sdl
 Depends: mame, ${misc:Depends}

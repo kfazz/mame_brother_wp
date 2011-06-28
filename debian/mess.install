@@ -1,6 +1,3 @@
 mess usr/games
 debian/mess.ini etc/mess
-messdir/artwork/* usr/share/games/mess/artwork
-messdir/hash/* usr/share/games/mess/hash
-messdir/sysinfo.dat usr/share/games/mess
-src/osd/sdl/keymaps/*.txt usr/share/games/mess/keymaps
+
