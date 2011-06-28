@@ -35,7 +35,7 @@ mame (0.142-2) UNRELEASED; urgency=low
   * Add copyright information for MESS sources.
   * Remove symlinking of megatech.xml.
   * Add README.Debian for the mess binary package.
-  * Create a mess-data package for mess architecture independant files
+  * Create a mess-data package for mess architecture independent files
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 12 May 2011 16:37:27 +0200
 
