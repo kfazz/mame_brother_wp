@@ -229,6 +229,7 @@ get-orig-source: $(MAME_FILEBASE)s.zip $(MESS_FILEBASE)s.zip
 	find $(TMPDIR)/sub/$(MAME_PACKAGE)-$(VERSION) \
 	    -type f -regextype posix-egrep \
 	    ! -regex ".*(zip|gif|png|bmp|ico)" \
+	    | sed 's/\ /\\\ /g' \
 	    | xargs sed -i "s/\r$$//"
 	tar -C $(TMPDIR)/sub -cvf - $(MAME_PACKAGE)-$(VERSION) | \
 	    bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig.tar.bz2
@@ -241,6 +242,7 @@ get-orig-source: $(MAME_FILEBASE)s.zip $(MESS_FILEBASE)s.zip
 	find $(TMPDIR)/$(MESS_PACKAGE)-$(VERSION) \
 	    -type f -regextype posix-egrep \
 	    ! -regex ".*(zip|gif|png|bmp|ico)" \
+	    | sed 's/\ /\\\ /g' \
 	    | xargs sed -i "s/\r$$//"
 	tar -C $(TMPDIR) -cvf - $(MESS_PACKAGE)-$(VERSION) | \
 	    bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig-$(MESS_PACKAGE).tar.bz2
