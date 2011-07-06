@@ -6,6 +6,7 @@ mame (0.143-1) UNRELEASED; urgency=low
 
 mame (0.142-2) UNRELEASED; urgency=low
 
+  [ Jordi Mallach ]
   * Add the necessary variables to fix s390 and sparc builds (they are big
     endian and have no targetted DRC implementation).
   * Add variables for mips and ia64.
