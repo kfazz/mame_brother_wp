@@ -143,9 +143,6 @@ override_dh_auto_build: prepare_mess_dirs
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
-	$(MAKE) -j3 $(DEB_MAME_OPTS) TARGET=ldplayer \
-                                 FULLNAME=ldplayer \
-                                 SUBTARGET=ldplayer
 	$(MAKE) -j3 $(DEB_MESS_OPTS) all
 	$(CURDIR)/mess -createconfig
 	mv mess.ini default.mess.ini
@@ -153,10 +150,6 @@ override_dh_auto_build: prepare_mess_dirs
 override_dh_auto_clean:
 	echo "Starting clean process..."
 	$(MAKE) $(DEB_MAME_OPTS) clean
-	$(MAKE) $(DEB_MAME_OPTS) TARGET=ldplayer \
-                             FULLNAME=ldplayer \
-                             SUBTARGET=ldplayer \
-                             clean
 	# target may fail if the symlinks have not been created
 	-$(MAKE) $(DEB_MESS_OPTS) clean
 	-rm prepare_mess_dirs
@@ -168,7 +161,7 @@ override_dh_auto_clean:
 	[ ! -L sysinfo.dat ] || rm sysinfo.dat
 	[ ! -L src/mess ] || rm src/mess
 	[ ! -d hash.mame ] || mv hash.mame hash
-	[ ! -d artwork.mame ] || mv hash.mame
+	[ ! -d artwork.mame ] || mv artwork.mame artwork
 	[ ! -d messdir ] || mv messdir mess
 
 # dh_installchangelogs doesn't know about whatsnew.txt,

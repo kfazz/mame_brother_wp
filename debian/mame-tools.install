@@ -2,7 +2,6 @@ castool usr/bin/
 chdman usr/bin/
 imgtool usr/bin/
 jedutil usr/bin/
-ldplayer usr/bin/
 ldresample usr/bin/
 ldverify usr/bin/
 romcmp usr/bin/
