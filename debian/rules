@@ -132,6 +132,7 @@ prepare_mess_dirs:
 	# component directory to enable its build.
 	[ -d mess ] && mv mess messdir
 	[ -d hash ] && mv hash hash.mame
+	[ -d artwork ] && mv artwork artwork.mame
 	[ ! -L hash ] && ln -s messdir/hash hash
 	[ ! -L artwork ] && ln -s messdir/artwork artwork
 	[ ! -L sysinfo.dat ] && ln -s messdir/sysinfo.dat sysinfo.dat
@@ -167,6 +168,7 @@ override_dh_auto_clean:
 	[ ! -L sysinfo.dat ] || rm sysinfo.dat
 	[ ! -L src/mess ] || rm src/mess
 	[ ! -d hash.mame ] || mv hash.mame hash
+	[ ! -d artwork.mame ] || mv hash.mame
 	[ ! -d messdir ] || mv messdir mess
 
 # dh_installchangelogs doesn't know about whatsnew.txt,
