@@ -83,7 +83,7 @@ Description: Multi Emulator Super System (MESS)
 
 Package: mess-data
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${misc:Depends}
 Description: Multi Emulator Super System (MESS)
  MESS is an emulator for various consoles and computing systems, sharing a
  lot of codebase with the MAME project.
