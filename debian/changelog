@@ -3,7 +3,7 @@ mame (0.143-1) UNRELEASED; urgency=low
   [ Emmanuel Kasper ]
   * New upstream release
   * Start by default in windowed mode
-  * Add missing ressource directories to match our default mess.ini
+  * Add missing resources directories to match our default mess.ini
 
   [ Félix Arreola Rodríguez ]
   * Remove kfreebsd-build.patch (fixed upstream)
