@@ -62,7 +62,7 @@ Description: Tools for Multiple Arcade Machine Emulator (MAME)
   testkeys -- keyboard code viewer
 
 Package: mess
-Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
+Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, mess-data
 Recommends: mess-desktop-entries
 Suggests: mame-tools
