@@ -1,12 +1,15 @@
+artwork/
 cfg/
 chdman
 docs/
 gcc-4.2
+hlsl/
 jedutil
 ldresample
 ldverify
 makefile
 mame
+mess/
 nvram/
 obj/
 regrep
