@@ -1,4 +1,4 @@
-mame (0.143-1) UNRELEASED; urgency=low
+mame (0.143-1) unstable; urgency=low
 
   [ Emmanuel Kasper ]
   * New upstream release
@@ -8,9 +8,9 @@ mame (0.143-1) UNRELEASED; urgency=low
   [ Félix Arreola Rodríguez ]
   * Remove kfreebsd-build.patch (fixed upstream)
 
- -- Emmanuel Kasper <emmanuel@libera.cc>  Mon, 11 Jul 2011 21:10:32 +0200
+ -- Jordi Mallach <jordi@debian.org>  Wed, 13 Jul 2011 23:45:22 +0200
 
-mame (0.142-2) UNRELEASED; urgency=low
+mame (0.142-2) unstable; urgency=low
 
   [ Jordi Mallach ]
   * Add the necessary variables to fix s390 and sparc builds (they are big
