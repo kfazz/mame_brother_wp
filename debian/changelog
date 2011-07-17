@@ -1,8 +1,9 @@
 mame (0.143-2) unstable; urgency=low
 
   * Fix builds on MIPS, adding -Umips to ARCHOPTS (Emmanuel Kasper).
+  * Make xmess-sdl and xmess-x Architecture: all.
 
- -- Jordi Mallach <jordi@debian.org>  Sun, 17 Jul 2011 15:45:27 +0200
+ -- Jordi Mallach <jordi@debian.org>  Mon, 18 Jul 2011 00:50:07 +0200
 
 mame (0.143-1) unstable; urgency=low
 

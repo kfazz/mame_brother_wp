@@ -126,14 +126,14 @@ Description: Transitional package for mame-tools
 
 Package: xmess-sdl
 Depends: mess, ${misc:Depends}
-Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
+Architecture: all
 Description: Transitional package for xmess-sdl
  This is a transitional package for xmess-sdl, and can be safely removed
  after the installation is complete.
 
 Package: xmess-x
 Depends: mess, ${misc:Depends}
-Architecture: amd64 i386 kfreebsd-amd64 kfreebsd-i386 powerpc s390
+Architecture: all
 Description: Transitional package for xmess-x
  This is a transitional package for xmess-x, and can be safely removed
  after the installation is complete.
