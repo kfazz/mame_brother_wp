@@ -1,3 +1,9 @@
+mame (0.143-2) unstable; urgency=low
+
+  * Fix builds on MIPS, adding -Umips to ARCHOPTS (Emmanuel Kasper).
+
+ -- Jordi Mallach <jordi@debian.org>  Sun, 17 Jul 2011 15:45:27 +0200
+
 mame (0.143-1) unstable; urgency=low
 
   [ Emmanuel Kasper ]
