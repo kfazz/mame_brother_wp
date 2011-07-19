@@ -158,7 +158,7 @@ override_dh_auto_clean:
 	echo "Starting clean process..."
 	$(MAKE) $(DEB_MAME_OPTS) clean
 	# target may fail if the symlinks have not been created
-	-$(MAKE) $(DEB_MESS_OPTS) clean
+	[ ! -L src/mess ] || $(MAKE) $(DEB_MESS_OPTS) clean
 	-rm prepare_mess_dirs
 	[ ! -f default.mame.ini ] || rm default.mame.ini
 	[ ! -f default.mess.ini ] || rm default.mess.ini
