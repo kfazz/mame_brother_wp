@@ -189,9 +189,6 @@ override_dh_install:
 	chmod 644 messdir/hash/*
 	dh_install --exclude=OSX.txt
 
-override_dh_builddeb:
-	dh_builddeb -- -Zbzip2
-
 
 # Convert upstream sources from zip to tar.bz2
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
