@@ -27,7 +27,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Suggests: mame-tools, gnome-video-arcade
 Provides: xmame-common, xmame-sdl, xmame-svga, xmame-x
 Replaces: xmame-common (<< 0.140), xmame-sdl (<< 0.140), xmame-svga (<< 0.140), xmame-x (<< 0.140)
-Breaks: xmame-common (<< 0.140), xmame-sdl (<< 0.140), xmame-svga (<< 0.140), xmame-x (<< 0.140)
+Breaks: xmame-common (<< 0.140), xmame-sdl (<< 0.140), xmame-svga (<< 0.140), xmame-x (<< 0.140), sdlmame (<< 0.143)
 Description: Multiple Arcade Machine Emulator (MAME)
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can
@@ -42,7 +42,7 @@ Section: non-free/utils
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Recommends: mame (= ${source:Version})
-Breaks: xmame-tools (<< 0.140)
+Breaks: xmame-tools (<< 0.140), sdlmame-tools (<< 0.143)
 Description: Tools for Multiple Arcade Machine Emulator (MAME)
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can

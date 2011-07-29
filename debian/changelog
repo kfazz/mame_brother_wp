@@ -3,6 +3,8 @@ mame (0.143-3) UNRELEASED; urgency=low
   * Avoid ignoring "make clean" errors.
   * There is no need to override dh_builddeb: debian/source/options
     already does it for us.
+  * Add necessary Breaks for sdlmame and sdlmame-tools to ensure smooth
+    upgrades from Ubuntu and other unofficial repositories.
 
  -- Jordi Mallach <jordi@debian.org>  Tue, 19 Jul 2011 09:14:50 +0200
 
