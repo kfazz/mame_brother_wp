@@ -1,6 +1,8 @@
 Format-Specification: http://dep.debian.net/deps/dep5/
 Upstream-Name: MAME
 Source: http://mamedev.org and http://mess.redump.net. The mess source code is a source code layer which is added to the mame source code for building.
+The mame icons are part of the hydroxygen icon set, downloaded from 
+http://deviantdark.deviantart.com/art/hydroxygen-iconset-100826865
 Disclaimer: 
  This package is not part of the GNU/Linux Debian distribution.  It is
  provided in the non-free archive area as a convenience to Debian users.
@@ -16,6 +18,10 @@ Copyright: Cesare Falco <cesare.falco@gmail.com>
            Ludovic Lechapt <ludomatic@gmail.com>
            Mamedeb team <mame@packages.debian.org>
 License: GPL-2+
+
+Files: debian/install/hicolor/*
+Copyright: deviantdark [www.deviantdark.com]
+License: GPL-3+
 
 Files: *
 Copyright: Nicola Salmoria and the MAME team
@@ -835,6 +841,10 @@ License: MAME
 
 License: GPL-2
  See the file /usr/share/common-licenses/GPL-2.
+ .
+
+License: GPL-3
+ See the file /usr/share/common-licenses/GPL-3.
  .
 
 License: LGPL-2.1
