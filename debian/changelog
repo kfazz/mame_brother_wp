@@ -1,3 +1,10 @@
+mame (0.143-4) UNRELEASED; urgency=low
+
+  * Add Free Desktop compliant png icons of various sizes taken from
+  the hydroxygen iconset
+
+ -- Emmanuel Kasper <emmanuel@libera.cc>  Tue, 30 Aug 2011 18:55:12 +0200
+
 mame (0.143-3) unstable; urgency=low
 
   * Avoid ignoring "make clean" errors.
