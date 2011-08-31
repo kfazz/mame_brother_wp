@@ -55,7 +55,7 @@ in {{{/etc/mame/mame.ini}}}
 
 If you need to change the location of the roms folder or tweak something like 
 video or cheats you can either:
-  * make your own copy of {{{/etc/mame/mame.ini}}} in your home at {{{$HOME/.mame/mame.ini}}} and edit that file (recommended)
+  * make your own copy of {{{/etc/mame/mame.ini}}} in {{{$HOME/.mame/mame.ini}}} and edit that file (recommended)
   * edit directly {{{/etc/mame/mame.ini}}} 
 
 You can verify that MAME have read the correct options with "{{{mame -showconfig}}}"
@@ -75,3 +75,10 @@ This package uses quilt to manage all modifications to the upstream source.
 Changes are stored in the source package as diffs in debian/patches and applied
 during the build. See {{{/usr/share/doc/quilt/README.source}}} for a detailed
 explanation.
+
+== ARTWORK ==
+
+Backdrop, overlay and bezel artwork can be downloaded from http://mirror.xmission.com/mame/ individually or globally with the following command ( provided your artwork search path is {{{$HOME/mame/artwork}}}, which is the default )
+{{{
+wget --no-directories --recursive --reject *.html  --directory-prefix $HOME/mame/artwork http://mirror.xmission.com/mame/artwork/
+}}}
