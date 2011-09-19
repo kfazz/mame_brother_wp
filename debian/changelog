@@ -1,9 +1,13 @@
 mame (0.143-4) UNRELEASED; urgency=low
 
+  [ Emmanuel Kasper ]
   * Add Free Desktop compliant png icons of various sizes taken from
   the hydroxygen iconset
 
- -- Emmanuel Kasper <emmanuel@libera.cc>  Tue, 30 Aug 2011 18:55:12 +0200
+  [ Jordi Mallach ]
+  * Fix syntax errors in DEP5 copyright file (lintian).
+
+ -- Jordi Mallach <jordi@debian.org>  Mon, 19 Sep 2011 11:59:21 +0200
 
 mame (0.143-3) unstable; urgency=low
 
