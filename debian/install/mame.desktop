@@ -1,10 +1,10 @@
 [Desktop Entry]
 Name=MAME™ Arcade Emulator
 Name[ca]=Emulador de jocs arcade MAME™
-Name[fr]=MAME™ arcade emulator
+Name[fr]=Emulateur arcade MAME™
 GenericName=Arcade Emulator
 GenericName[ca]=Emulador de jocs arcade
-GenericName[fr]=Arcade emulator
+GenericName[fr]=Emulateur arcade
 Comment=Play vintage arcade games using the MAME emulator
 Comment[ca]=Jugueu a jocs d'arcade antics emprant l'emulador MAME
 Exec=/usr/games/mame
