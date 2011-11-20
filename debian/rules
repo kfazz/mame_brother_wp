@@ -162,8 +162,6 @@ override_dh_installdocs:
 
 # Remove OSX specific keymaps
 override_dh_install:
-	# some data files created on windows show up as executables: fix it
-	chmod 644 messdir/hash/*
 	dh_install --exclude=OSX.txt
 
 
