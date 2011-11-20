@@ -132,21 +132,7 @@ endif
 %:
 	dh $@
 
-prepare_mess_dirs:
-	# MESS is an overlay of the MAME source code, but we need to have
-	# the code in a mess directory, as that's how dpkg components
-	# work. Move dirs and create symlinks for MESS stuff outside its
-	# component directory to enable its build.
-	[ -d mess ] && mv mess messdir
-	[ -d hash ] && mv hash hash.mame
-	[ -d artwork ] && mv artwork artwork.mame
-	[ ! -L hash ] && ln -s messdir/hash hash
-	[ ! -L artwork ] && ln -s messdir/artwork artwork
-	[ ! -L sysinfo.dat ] && ln -s messdir/sysinfo.dat sysinfo.dat
-	[ ! -L src/mess ] && ln -s ../messdir/src/mess src/mess
-	touch $@
-
-override_dh_auto_build: prepare_mess_dirs
+override_dh_auto_build:
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
@@ -158,18 +144,9 @@ override_dh_auto_clean:
 	echo "Starting clean process..."
 	$(MAKE) $(DEB_MAME_OPTS) clean
 	# target may fail if the symlinks have not been created
-	[ ! -L src/mess ] || $(MAKE) $(DEB_MESS_OPTS) clean
-	-rm prepare_mess_dirs
+	$(MAKE) $(DEB_MESS_OPTS) clean
 	[ ! -f default.mame.ini ] || rm default.mame.ini
 	[ ! -f default.mess.ini ] || rm default.mess.ini
-	# Undo MESS modifications.
-	[ ! -L artwork ] || rm artwork
-	[ ! -L hash ] || rm hash
-	[ ! -L sysinfo.dat ] || rm sysinfo.dat
-	[ ! -L src/mess ] || rm src/mess
-	[ ! -d hash.mame ] || mv hash.mame hash
-	[ ! -d artwork.mame ] || mv artwork.mame artwork
-	[ ! -d messdir ] || mv messdir mess
 
 # dh_installchangelogs doesn't know about whatsnew.txt,
 # so we need to make an explicit call
