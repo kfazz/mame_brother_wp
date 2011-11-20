@@ -1,3 +1,9 @@
+mame (0.144-1) UNRELEASED; urgency=low
+
+  * New upstream release, handling of mess commented out
+
+ -- Emmanuel Kasper <emmanuel@libera.cc>  Sun, 20 Nov 2011 23:44:36 +0100
+
 mame (0.143-4) UNRELEASED; urgency=low
 
   [ Emmanuel Kasper ]
