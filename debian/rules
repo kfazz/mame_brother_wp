@@ -244,7 +244,7 @@ get-orig-source: $(MAME_FILEBASE)s.zip $(MESS_FILEBASE)s.zip
 	    | sed 's/\ /\\\ /g' \
 	    | xargs sed -i "s/\r$$//"
 	tar -C $(TMPDIR) -cvf - $(MESS_PACKAGE)-$(VERSION) | \
-	    bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig-$(MESS_PACKAGE).tar.bz2
+	    bzip2 -c9  > ../$(MESS_PACKAGE)_$(VERSION).orig.tar.bz2
 	rm -f $(MESS_FILEBASE)s.zip
 
 	rm -rf $(TMPDIR)
