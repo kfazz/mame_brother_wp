@@ -234,7 +234,7 @@ get-orig-source: $(MAME_FILEBASE)s.zip $(MESS_FILEBASE)s.zip
 	    bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig.tar.bz2
 	rm -f $(MAME_FILEBASE)s.zip
 
-	# Create an orig-mess.tar.bz2 component tarball for MESS
+	# Create an orig.tar.bz2 tarball for MESS
 	mkdir -p $(TMPDIR)/$(MESS_PACKAGE)-$(VERSION)
 	unzip $(MESS_FILEBASE)s.zip -d $(TMPDIR)/$(MESS_PACKAGE)-$(VERSION)
 	# Strip trailing CR
