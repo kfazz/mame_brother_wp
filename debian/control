@@ -1,4 +1,4 @@
-Source: mame
+Source: mess
 Section: non-free/games
 Priority: optional
 Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
@@ -18,7 +18,7 @@ Build-Depends: debhelper (>= 8),
 Standards-Version: 3.9.2
 Vcs-Git: git://git.debian.org/pkg-games/mame.git
 Vcs-Browser: http://git.debian.org/?p=pkg-games/mame.git
-Homepage: http://mamedev.org/
+Homepage: http://mess.org/
 XS-Autobuild: yes
 
 Package: mame

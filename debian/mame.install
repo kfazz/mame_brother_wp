@@ -2,7 +2,7 @@ mame usr/games
 debian/install/mame.xpm usr/share/pixmaps
 debian/install/mame.desktop usr/share/applications
 debian/mame.ini etc/mame
-hash.mame/* usr/share/games/mame/hash
+#hash.mame/* usr/share/games/mame/hash
 src/osd/sdl/keymaps/*.txt usr/share/games/mame/keymaps
 
 debian/install/hicolor/16x16/apps/mame.png usr/share/icons/hicolor/16x16/apps
