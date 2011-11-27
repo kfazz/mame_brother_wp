@@ -2,6 +2,7 @@ mess (0.144-1) UNRELEASED; urgency=low
 
   [ Jordi Mallach ]
   * Fix syntax errors in DEP5 copyright file (lintian).
+  * Use a versioned copyright Format specification field.
 
   [ Emmanuel Kasper ]
   * Add Free Desktop compliant png icons of various sizes taken from
