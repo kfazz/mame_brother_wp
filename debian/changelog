@@ -1,20 +1,15 @@
 mess (0.144-1) UNRELEASED; urgency=low
 
+  [ Jordi Mallach ]
+  * Fix syntax errors in DEP5 copyright file (lintian).
+
+  [ Emmanuel Kasper ]
+  * Add Free Desktop compliant png icons of various sizes taken from
+    the hydroxygen iconset
   * New upstream release, switching to mess.org zipfile as upstream
     tarball
 
  -- Emmanuel Kasper <emmanuel@libera.cc>  Sun, 20 Nov 2011 12:02:16 +0100
-
-mame (0.143-4) UNRELEASED; urgency=low
-
-  [ Emmanuel Kasper ]
-  * Add Free Desktop compliant png icons of various sizes taken from
-  the hydroxygen iconset
-
-  [ Jordi Mallach ]
-  * Fix syntax errors in DEP5 copyright file (lintian).
-
- -- Jordi Mallach <jordi@debian.org>  Mon, 19 Sep 2011 11:59:21 +0200
 
 mame (0.143-3) unstable; urgency=low
 
