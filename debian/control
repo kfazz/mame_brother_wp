@@ -21,28 +21,12 @@ Vcs-Browser: http://git.debian.org/?p=pkg-games/mame.git
 Homepage: http://mess.org/
 XS-Autobuild: yes
 
-Package: mame
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Suggests: mame-tools, gnome-video-arcade
-Provides: xmame-common, xmame-sdl, xmame-svga, xmame-x
-Replaces: xmame-common (<< 0.140), xmame-sdl (<< 0.140), xmame-svga (<< 0.140), xmame-x (<< 0.140)
-Breaks: xmame-common (<< 0.140), xmame-sdl (<< 0.140), xmame-svga (<< 0.140), xmame-x (<< 0.140), sdlmame (<< 0.143)
-Description: Multiple Arcade Machine Emulator (MAME)
- MAME is a hardware emulator: it faithfully reproduces the behavior of many
- arcade machines (it is not a simulation). This program is not a game but can
- directly, through ROM images, run the complete system of these old arcade
- machines. These ROMs are subject to copyright and it is in most of the cases
- illegal to use them if you do not own the arcade machine.
- .
- This package provides the MAME binary and configuration files.
-
 Package: mess-tools
 Section: non-free/utils
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Recommends: mess (= ${source:Version})
-Breaks: xmame-tools (<< 0.140), sdlmame-tools (<< 0.143), mame-tools (<< 0.143)
+Breaks: xmame-tools (<< 0.140), sdlmame-tools (<< 0.143), mame-tools (<< 0.144)
 Description: Tools for Multiple Arcade Machine Emulator (MAME)
  MESS is an emulator for various consoles and computing systems, sharing a
  lot of codebase with the MAME project.
@@ -93,27 +77,6 @@ Description: Data files for the Multi Emulator Super System (MESS)
  .
  This package provides the MESS hash files, keymaps and artwork.
 
-Package: xmame-sdl
-Depends: mame, ${misc:Depends}
-Architecture: all
-Description: Transitional package for xmame-sdl
- This is a transitional package for xmame-sdl, and can be safely removed
- after the installation is complete.
-
-Package: xmame-svga
-Depends: mame, ${misc:Depends}
-Architecture: i386
-Description: Transitional package for xmame-svga
- This is a transitional package for xmame-svga, and can be safely removed
- after the installation is complete.
-
-Package: xmame-x
-Depends: mame, ${misc:Depends}
-Architecture: all
-Description: Transitional package for xmame-x
- This is a transitional package for xmame-x, and can be safely removed
- after the installation is complete.
-
 Package: xmame-tools
 Depends: mame, ${misc:Depends}
 Architecture: all
@@ -135,16 +98,17 @@ Description: Transitional package for xmess-x
  This is a transitional package for xmess-x, and can be safely removed
  after the installation is complete.
 
-Package: sdlmame
-Depends: mame, ${misc:Depends}
-Architecture: amd64 i386
-Description: Transitional package for sdlmame
- This is a transitional package for sdlmame, and can be safely removed
- after the installation is complete.
-
 Package: sdlmame-tools
 Depends: mame-tools, ${misc:Depends}
 Architecture: amd64 i386
 Description: Transitional package for sdlmame-tools
  This is a transitional package for sdlmame-tools, and can be safely removed
  after the installation is complete.
+
+Package: mame-tools
+Depends: mess-tools, ${misc:Depends}
+Architecture: amd64 i386
+Description: Transitional package for sdlmame-tools
+ This is a transitional package for sdlmame-tools, and can be safely removed
+ after the installation is complete.
+
