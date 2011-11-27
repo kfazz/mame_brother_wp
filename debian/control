@@ -37,15 +37,18 @@ Description: Multiple Arcade Machine Emulator (MAME)
  .
  This package provides the MAME binary and configuration files.
 
-Package: mess-tools
+Package: mame-tools
 Section: non-free/utils
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Recommends: mess (= ${source:Version})
-Breaks: xmame-tools (<< 0.140), sdlmame-tools (<< 0.143), mame-tools (<< 0.143)
+Recommends: mame (= ${source:Version})
+Breaks: xmame-tools (<< 0.140), sdlmame-tools (<< 0.143)
 Description: Tools for Multiple Arcade Machine Emulator (MAME)
- MESS is an emulator for various consoles and computing systems, sharing a
- lot of codebase with the MAME project.
+ MAME is a hardware emulator: it faithfully reproduces the behavior of many
+ arcade machines (it is not a simulation). This program is not a game but can
+ directly, through ROM images, run the complete system of these old arcade
+ machines. These ROMs are subject to copyright and it is in most of the cases
+ illegal to use them if you do not own the arcade machine.
  .
  This package provides tools to be used with MAME and MESS. It currently
  contains:
