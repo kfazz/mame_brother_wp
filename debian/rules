@@ -132,21 +132,7 @@ endif
 %:
 	dh $@
 
-prepare_mess_dirs:
-	# MESS is an overlay of the MAME source code, but we need to have
-	# the code in a mess directory, as that's how dpkg components
-	# work. Move dirs and create symlinks for MESS stuff outside its
-	# component directory to enable its build.
-	[ -d mess ] && mv mess messdir
-	[ -d hash ] && mv hash hash.mame
-	[ -d artwork ] && mv artwork artwork.mame
-	[ ! -L hash ] && ln -s messdir/hash hash
-	[ ! -L artwork ] && ln -s messdir/artwork artwork
-	[ ! -L sysinfo.dat ] && ln -s messdir/sysinfo.dat sysinfo.dat
-	[ ! -L src/mess ] && ln -s ../messdir/src/mess src/mess
-	touch $@
-
-override_dh_auto_build: prepare_mess_dirs
+override_dh_auto_build:
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
@@ -158,24 +144,15 @@ override_dh_auto_clean:
 	echo "Starting clean process..."
 	$(MAKE) $(DEB_MAME_OPTS) clean
 	# target may fail if the symlinks have not been created
-	[ ! -L src/mess ] || $(MAKE) $(DEB_MESS_OPTS) clean
-	-rm prepare_mess_dirs
+	$(MAKE) $(DEB_MESS_OPTS) clean
 	[ ! -f default.mame.ini ] || rm default.mame.ini
 	[ ! -f default.mess.ini ] || rm default.mess.ini
-	# Undo MESS modifications.
-	[ ! -L artwork ] || rm artwork
-	[ ! -L hash ] || rm hash
-	[ ! -L sysinfo.dat ] || rm sysinfo.dat
-	[ ! -L src/mess ] || rm src/mess
-	[ ! -d hash.mame ] || mv hash.mame hash
-	[ ! -d artwork.mame ] || mv artwork.mame artwork
-	[ ! -d messdir ] || mv messdir mess
 
 # dh_installchangelogs doesn't know about whatsnew.txt,
 # so we need to make an explicit call
 override_dh_installchangelogs:
 	dh_installchangelogs whatsnew.txt
-	dh_installchangelogs -pmess messdir/docs/messnew.txt
+	dh_installchangelogs -pmess docs/messnew.txt
 
 # Remove Windows specific documentation
 override_dh_installdocs:
@@ -185,56 +162,31 @@ override_dh_installdocs:
 
 # Remove OSX specific keymaps
 override_dh_install:
-	# some data files created on windows show up as executables: fix it
-	chmod 644 messdir/hash/*
 	dh_install --exclude=OSX.txt
 
 
 # Convert upstream sources from zip to tar.bz2
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
-MAME_PACKAGE = mame
-MAME_FILEBASE = $(MAME_PACKAGE)$(VERSION)
-MAME_URL = http://mamedev.org/downloader.php?file=releases/
+
 MESS_PACKAGE = mess
 MESS_FILEBASE = $(MESS_PACKAGE)$(VERSION)
 MESS_URL = http://mess.redump.net/_media/downloads:
 
-AGENT = Debian MAME Packagers <mame@packages.debian.org>
+AGENT = Debian MAME/MESS Packagers <mame@packages.debian.org>
 TMPDIR := $(shell mktemp --dry-run --directory -p .)
 
 # Upstream zip file does not have a dot in its name, so we have to cut it out
 UPSTREAM_VERSION := $(shell echo $(VERSION) | sed -e 's/\.//' )
-
-$(MAME_FILEBASE)s.zip:
-	wget -U '$(AGENT)' \
-        "$(MAME_URL)$(MAME_PACKAGE)$(UPSTREAM_VERSION)s.zip" \
-        -O $(MAME_FILEBASE)s.zip
 
 $(MESS_FILEBASE)s.zip:
 	wget -U '$(AGENT)' \
         "$(MESS_URL)$(MESS_PACKAGE)$(UPSTREAM_VERSION)s.zip" \
         -O $(MESS_FILEBASE)s.zip
 
-get-orig-source: $(MAME_FILEBASE)s.zip $(MESS_FILEBASE)s.zip
+get-orig-source: $(MESS_FILEBASE)s.zip
 	mkdir $(TMPDIR)
 
-	# Create an orig.tar.bz2 tarball for MAME
-	unzip $(MAME_FILEBASE)s.zip -d $(TMPDIR)
-	mkdir -p $(TMPDIR)/sub/$(MAME_PACKAGE)-$(VERSION)
-	# Not a bug: Mame source needs to be unzipped twice
-	unzip $(TMPDIR)/$(MAME_PACKAGE).zip \
-	    -d $(TMPDIR)/sub/$(MAME_PACKAGE)-$(VERSION)
-	# Strip trailing CR
-	find $(TMPDIR)/sub/$(MAME_PACKAGE)-$(VERSION) \
-	    -type f -regextype posix-egrep \
-	    ! -regex ".*(zip|gif|png|bmp|ico)" \
-	    | sed 's/\ /\\\ /g' \
-	    | xargs sed -i "s/\r$$//"
-	tar -C $(TMPDIR)/sub -cvf - $(MAME_PACKAGE)-$(VERSION) | \
-	    bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig.tar.bz2
-	rm -f $(MAME_FILEBASE)s.zip
-
-	# Create an orig-mess.tar.bz2 component tarball for MESS
+	# Create an orig.tar.bz2 tarball for MESS
 	mkdir -p $(TMPDIR)/$(MESS_PACKAGE)-$(VERSION)
 	unzip $(MESS_FILEBASE)s.zip -d $(TMPDIR)/$(MESS_PACKAGE)-$(VERSION)
 	# Strip trailing CR
@@ -244,7 +196,7 @@ get-orig-source: $(MAME_FILEBASE)s.zip $(MESS_FILEBASE)s.zip
 	    | sed 's/\ /\\\ /g' \
 	    | xargs sed -i "s/\r$$//"
 	tar -C $(TMPDIR) -cvf - $(MESS_PACKAGE)-$(VERSION) | \
-	    bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig-$(MESS_PACKAGE).tar.bz2
+	    bzip2 -c9  > ../$(MESS_PACKAGE)_$(VERSION).orig.tar.bz2
 	rm -f $(MESS_FILEBASE)s.zip
 
 	rm -rf $(TMPDIR)
