@@ -1,5 +1,9 @@
 mame (0.144-1) UNRELEASED; urgency=low
+  [ Jordi Mallach ]
+    * Use a versioned copyright Format specification field.
+    * Update Vcs-* URLs.
 
+    [Emmanuel Kasper]
   * New upstream release, handling of mess commented out
 
  -- Emmanuel Kasper <emmanuel@libera.cc>  Sun, 20 Nov 2011 23:44:36 +0100

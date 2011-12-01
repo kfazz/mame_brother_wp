@@ -16,8 +16,8 @@ Build-Depends: debhelper (>= 8),
                libxinerama-dev,
                zlib1g-dev
 Standards-Version: 3.9.2
-Vcs-Git: git://git.debian.org/pkg-games/mame.git
-Vcs-Browser: http://git.debian.org/?p=pkg-games/mame.git
+Vcs-Git: git://anonscm.debian.org/pkg-games/mame.git
+Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-games/mame.git
 Homepage: http://mamedev.org/
 XS-Autobuild: yes
 
