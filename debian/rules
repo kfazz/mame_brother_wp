@@ -136,23 +136,17 @@ override_dh_auto_build:
 	$(MAKE) -j3 $(DEB_MAME_OPTS) all
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
-	$(MAKE) -j3 $(DEB_MESS_OPTS) all
-	$(CURDIR)/mess -createconfig
-	mv mess.ini default.mess.ini
 
 override_dh_auto_clean:
 	echo "Starting clean process..."
 	$(MAKE) $(DEB_MAME_OPTS) clean
 	# target may fail if the symlinks have not been created
-	$(MAKE) $(DEB_MESS_OPTS) clean
 	[ ! -f default.mame.ini ] || rm default.mame.ini
-	[ ! -f default.mess.ini ] || rm default.mess.ini
 
 # dh_installchangelogs doesn't know about whatsnew.txt,
 # so we need to make an explicit call
 override_dh_installchangelogs:
 	dh_installchangelogs whatsnew.txt
-	dh_installchangelogs -pmess messdir/docs/messnew.txt
 
 # Remove Windows specific documentation
 override_dh_installdocs:
@@ -163,7 +157,6 @@ override_dh_installdocs:
 # Remove OSX specific keymaps
 override_dh_install:
 	# some data files created on windows show up as executables: fix it
-	chmod 644 messdir/hash/*
 	dh_install --exclude=OSX.txt
 
 
@@ -187,12 +180,7 @@ $(MAME_FILEBASE)s.zip:
         "$(MAME_URL)$(MAME_PACKAGE)$(UPSTREAM_VERSION)s.zip" \
         -O $(MAME_FILEBASE)s.zip
 
-$(MESS_FILEBASE)s.zip:
-	wget -U '$(AGENT)' \
-        "$(MESS_URL)$(MESS_PACKAGE)$(UPSTREAM_VERSION)s.zip" \
-        -O $(MESS_FILEBASE)s.zip
-
-get-orig-source: $(MAME_FILEBASE)s.zip $(MESS_FILEBASE)s.zip
+get-orig-source: $(MAME_FILEBASE)s.zip
 	mkdir $(TMPDIR)
 
 	# Create an orig.tar.bz2 tarball for MAME
@@ -210,18 +198,5 @@ get-orig-source: $(MAME_FILEBASE)s.zip $(MESS_FILEBASE)s.zip
 	tar -C $(TMPDIR)/sub -cvf - $(MAME_PACKAGE)-$(VERSION) | \
 	    bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig.tar.bz2
 	rm -f $(MAME_FILEBASE)s.zip
-
-	# Create an orig-mess.tar.bz2 component tarball for MESS
-	mkdir -p $(TMPDIR)/$(MESS_PACKAGE)-$(VERSION)
-	unzip $(MESS_FILEBASE)s.zip -d $(TMPDIR)/$(MESS_PACKAGE)-$(VERSION)
-	# Strip trailing CR
-	find $(TMPDIR)/$(MESS_PACKAGE)-$(VERSION) \
-	    -type f -regextype posix-egrep \
-	    ! -regex ".*(zip|gif|png|bmp|ico)" \
-	    | sed 's/\ /\\\ /g' \
-	    | xargs sed -i "s/\r$$//"
-	tar -C $(TMPDIR) -cvf - $(MESS_PACKAGE)-$(VERSION) | \
-	    bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig-$(MESS_PACKAGE).tar.bz2
-	rm -f $(MESS_FILEBASE)s.zip
 
 	rm -rf $(TMPDIR)
