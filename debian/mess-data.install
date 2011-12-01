@@ -1,4 +1,4 @@
-artwork/* usr/share/games/mess/artwork
-hash/* usr/share/games/mess/hash
-sysinfo.dat usr/share/games/mess
+messdir/artwork/* usr/share/games/mess/artwork
+messdir/hash/* usr/share/games/mess/hash
+messdir/sysinfo.dat usr/share/games/mess
 src/osd/sdl/keymaps/*.txt usr/share/games/mess/keymaps
