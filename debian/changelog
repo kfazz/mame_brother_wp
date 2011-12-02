@@ -5,6 +5,8 @@ mame (0.144-1) UNRELEASED; urgency=low
 
     [Emmanuel Kasper]
   * New upstream release, handling of mess commented out
+  * Mame-tools are not built from the mame source package anymore, but from the
+  mess source package
 
  -- Emmanuel Kasper <emmanuel@libera.cc>  Sun, 20 Nov 2011 23:44:36 +0100
 
