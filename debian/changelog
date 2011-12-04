@@ -6,6 +6,7 @@ mame (0.144-1) UNRELEASED; urgency=low
   * Update Vcs-* URLs.
   * Move transitional packages to the new metapackages section, and make
     them priority extra.
+  * Remove references to GNU/Linux and MESS sources from copyright.
 
   [ Emmanuel Kasper ]
   * Add Free Desktop compliant png icons of various sizes taken from
