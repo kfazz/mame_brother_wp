@@ -38,7 +38,7 @@ Description: Multiple Arcade Machine Emulator (MAME)
  This package provides the MAME binary and configuration files.
 
 Package: xmame-sdl
-Section: non-free/oldlibs
+Section: non-free/metapackages
 Priority: extra
 Depends: mame, ${misc:Depends}
 Architecture: all
@@ -47,7 +47,7 @@ Description: Transitional package for xmame-sdl
  after the installation is complete.
 
 Package: xmame-svga
-Section: non-free/oldlibs
+Section: non-free/metapackages
 Priority: extra
 Depends: mame, ${misc:Depends}
 Architecture: i386
@@ -56,7 +56,7 @@ Description: Transitional package for xmame-svga
  after the installation is complete.
 
 Package: xmame-x
-Section: non-free/oldlibs
+Section: non-free/metapackages
 Priority: extra
 Depends: mame, ${misc:Depends}
 Architecture: all
@@ -65,7 +65,7 @@ Description: Transitional package for xmame-x
  after the installation is complete.
 
 Package: sdlmame
-Section: non-free/oldlibs
+Section: non-free/metapackages
 Priority: extra
 Depends: mame, ${misc:Depends}
 Architecture: amd64 i386

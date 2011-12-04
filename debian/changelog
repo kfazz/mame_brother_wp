@@ -1,23 +1,18 @@
 mame (0.144-1) UNRELEASED; urgency=low
-  [ Jordi Mallach ]
-    * Use a versioned copyright Format specification field.
-    * Update Vcs-* URLs.
-
-    [Emmanuel Kasper]
-  * New upstream release, handling of mess commented out
-  * Mame-tools are not built from the mame source package anymore, but from the
-  mess source package
-
- -- Emmanuel Kasper <emmanuel@libera.cc>  Sun, 20 Nov 2011 23:44:36 +0100
-
-mame (0.143-4) UNRELEASED; urgency=low
-
-  [ Emmanuel Kasper ]
-  * Add Free Desktop compliant png icons of various sizes taken from
-  the hydroxygen iconset
 
   [ Jordi Mallach ]
   * Fix syntax errors in DEP5 copyright file (lintian).
+  * Use a versioned copyright Format specification field.
+  * Update Vcs-* URLs.
+  * Move transitional packages to the new metapackages section, and make
+    them priority extra.
+
+  [ Emmanuel Kasper ]
+  * Add Free Desktop compliant png icons of various sizes taken from
+    the hydroxygen iconset
+  * New upstream release, handling of mess commented out
+  * Mame-tools are not built from the mame source package anymore, but
+    from the mess source package
 
  -- Jordi Mallach <jordi@debian.org>  Mon, 19 Sep 2011 11:59:21 +0200
 
