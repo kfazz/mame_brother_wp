@@ -12,7 +12,9 @@ mame (0.144-1) UNRELEASED; urgency=low
   [ Emmanuel Kasper ]
   * Add Free Desktop compliant png icons of various sizes taken from
     the hydroxygen iconset
-  * New upstream release, handling of mess commented out
+  * New upstream release. Closes: #651538.
+  * Mess is now built from a new source package, to avoid possible source
+    incompatibilities between mame and the mess overlay.
   * Mame-tools are not built from the mame source package anymore, but
     from the mess source package
 
