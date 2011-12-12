@@ -104,6 +104,13 @@ DEB_MAME_OPTS += \
     BIGENDIAN=1
 endif
 
+ifeq ($(DEB_HOST_ARCH),s390x)
+DEB_MAME_OPTS += \
+    FORCE_DRC_C_BACKEND=1 \
+    PTR64=1 \
+    BIGENDIAN=1
+endif
+
 ifeq ($(DEB_HOST_ARCH),sparc)
 DEB_MAME_OPTS += \
     FORCE_DRC_C_BACKEND=1 \
