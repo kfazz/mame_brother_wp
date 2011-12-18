@@ -501,6 +501,11 @@ Files: src/osd/osdepend.c,
  src/version.c,
  src/emu/cothread.c,
  src/emu/cothread.h,
+ src/build/makedev.c,
+ src/emu/device.c,
+ src/emu/device.h,
+ src/mame/tiny_dev.lst,
+ src/mame/mame_dev.lst,
 Copyright: Aaron Giles
 License: BSD-3-clause
     Copyright Aaron Giles
