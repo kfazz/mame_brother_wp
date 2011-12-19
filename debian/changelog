@@ -9,6 +9,7 @@ mame (0.144-1) UNRELEASED; urgency=low
   * Remove references to GNU/Linux and MESS sources from copyright.
   * Add build variables for s390x.
   * Use .xz tarballs as it cuts 4MB for the upstream sources.
+  * Add nplayers.ini as a patch. Update copyright file to add CC-BY-SA-3.0.
 
   [ Emmanuel Kasper ]
   * New upstream release. Closes: #651538.
