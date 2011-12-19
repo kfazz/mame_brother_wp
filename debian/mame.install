@@ -6,7 +6,7 @@ debian/mame.ini etc/mame
 hash/* usr/share/games/mame/hash
 src/osd/sdl/keymaps/*.txt usr/share/games/mame/keymaps
 
-nplayers/nplayers.ini usr/share/games/mame/nplayers.ini
+nplayers/nplayers.ini usr/share/games/mame/data
 
 debian/mame.ini etc/mame
 debian/install/hicolor/16x16/apps/mame.png usr/share/icons/hicolor/16x16/apps
