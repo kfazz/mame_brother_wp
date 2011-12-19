@@ -166,7 +166,7 @@ override_dh_install:
 	dh_install --exclude=OSX.txt
 
 
-# Convert upstream sources from zip to tar.bz2
+# Convert upstream sources from zip to tar.xz
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
 MAME_PACKAGE = mame
 MAME_FILEBASE = $(MAME_PACKAGE)$(VERSION)
@@ -189,7 +189,7 @@ $(MAME_FILEBASE)s.zip:
 get-orig-source: $(MAME_FILEBASE)s.zip
 	mkdir $(TMPDIR)
 
-	# Create an orig.tar.bz2 tarball for MAME
+	# Create an orig.tar.xz tarball for MAME
 	unzip $(MAME_FILEBASE)s.zip -d $(TMPDIR)
 	mkdir -p $(TMPDIR)/sub/$(MAME_PACKAGE)-$(VERSION)
 	# Not a bug: Mame source needs to be unzipped twice
@@ -202,7 +202,7 @@ get-orig-source: $(MAME_FILEBASE)s.zip
 	    | sed 's/\ /\\\ /g' \
 	    | xargs sed -i "s/\r$$//"
 	tar -C $(TMPDIR)/sub -cvf - $(MAME_PACKAGE)-$(VERSION) | \
-	    bzip2 -c9  > ../$(MAME_PACKAGE)_$(VERSION).orig.tar.bz2
+	    xz > ../$(MAME_PACKAGE)_$(VERSION).orig.tar.xz
 	rm -f $(MAME_FILEBASE)s.zip
 
 	rm -rf $(TMPDIR)

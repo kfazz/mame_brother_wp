@@ -8,6 +8,7 @@ mame (0.144-1) UNRELEASED; urgency=low
     them priority extra.
   * Remove references to GNU/Linux and MESS sources from copyright.
   * Add build variables for s390x.
+  * Use .xz tarballs as it cuts 4MB for the upstream sources.
 
   [ Emmanuel Kasper ]
   * New upstream release. Closes: #651538.
@@ -18,7 +19,7 @@ mame (0.144-1) UNRELEASED; urgency=low
   * Mame-tools are not built from the mame source package anymore, but
     from the mess source package
 
- -- Jordi Mallach <jordi@debian.org>  Mon, 19 Sep 2011 11:59:21 +0200
+ -- Jordi Mallach <jordi@debian.org>  Mon, 19 Dec 2011 21:56:07 +0100
 
 mame (0.143-3) unstable; urgency=low
 
