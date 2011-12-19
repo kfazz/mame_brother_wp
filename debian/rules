@@ -147,7 +147,6 @@ override_dh_auto_build:
 override_dh_auto_clean:
 	echo "Starting clean process..."
 	$(MAKE) $(DEB_MAME_OPTS) clean
-	# target may fail if the symlinks have not been created
 	[ ! -f default.mame.ini ] || rm default.mame.ini
 
 # dh_installchangelogs doesn't know about whatsnew.txt,
