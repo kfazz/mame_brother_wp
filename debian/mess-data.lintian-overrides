@@ -1,9 +1,0 @@
-# Allow empty folders for MESS
-# http://lintian.debian.org/manual/ch2.html
-mess-data: package-contains-empty-directory usr/share/games/mess/cheat/
-mess-data: package-contains-empty-directory usr/share/games/mess/crosshair/
-mess-data: package-contains-empty-directory usr/share/games/mess/ctrlr/
-mess-data: package-contains-empty-directory usr/share/games/mess/fonts/
-mess-data: package-contains-empty-directory usr/share/games/mess/roms/
-mess-data: package-contains-empty-directory usr/share/games/mess/samples/
-
