@@ -1,4 +1,4 @@
-mame (0.144-1) UNRELEASED; urgency=low
+mame (0.144-1) unstable; urgency=low
 
   [ Jordi Mallach ]
   * Fix syntax errors in DEP5 copyright file (lintian).
@@ -20,7 +20,7 @@ mame (0.144-1) UNRELEASED; urgency=low
   * Mame-tools are not built from the mame source package anymore, but
     from the mess source package
 
- -- Jordi Mallach <jordi@debian.org>  Mon, 19 Dec 2011 21:56:07 +0100
+ -- Jordi Mallach <jordi@debian.org>  Mon, 19 Dec 2011 22:56:27 +0100
 
 mame (0.143-3) unstable; urgency=low
 
