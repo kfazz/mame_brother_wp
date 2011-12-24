@@ -12,6 +12,7 @@ Disclaimer:
 Files: debian/*
 Copyright: Ludovic Lechapt <ludomatic@gmail.com>
            Mamedeb team <mame@packages.debian.org>
+License: GPL-2+
 
 Files: debian/rules
 Copyright: Cesare Falco <cesare.falco@gmail.com>
