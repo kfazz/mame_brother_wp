@@ -1,4 +1,4 @@
-Format-Specification: http://anonscm.debian.org/viewvc/dep/web/deps/dep5.mdwn?revision=208&view=co
+Format: http://anonscm.debian.org/viewvc/dep/web/deps/dep5.mdwn?revision=208&view=co
 Upstream-Name: MAME
 Source: http://mamedev.org/
  The mame icons are part of the hydroxygen icon set, downloaded from 
