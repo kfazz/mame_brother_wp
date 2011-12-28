@@ -1,3 +1,9 @@
+mame (0.144-2) UNRELEASED; urgency=low
+
+  * Yet another batch of syntax errors in DEP5 copyright file corrected
+
+ -- Emmanuel Kasper <emmanuel@libera.cc>  Wed, 28 Dec 2011 13:27:34 +0100
+
 mame (0.144-1) unstable; urgency=low
 
   [ Jordi Mallach ]
