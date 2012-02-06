@@ -152,7 +152,7 @@ override_dh_auto_clean:
 # dh_installchangelogs doesn't know about whatsnew.txt,
 # so we need to make an explicit call
 override_dh_installchangelogs:
-	dh_installchangelogs whatsnew.txt
+	dh_installchangelogs whatsnew_$(UPSTREAM_VERSION).txt
 
 # Remove Windows specific documentation
 override_dh_installdocs:
