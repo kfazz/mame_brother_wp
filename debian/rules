@@ -215,4 +215,4 @@ erase-upstream:
 	rm makefile
 	-rm -r obj
 	rm -r src
-	rm whatsnew_0145.txt
+	rm whatsnew_$(UPSTREAM_VERSION).txt
