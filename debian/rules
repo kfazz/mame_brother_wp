@@ -206,3 +206,13 @@ get-orig-source: $(MAME_FILEBASE)s.zip
 	rm -f $(MAME_FILEBASE)s.zip
 
 	rm -rf $(TMPDIR)
+
+erase-upstream:
+	rm -r artwork
+	rm -r docs
+	rm -r hash
+	rm -r hlsl
+	rm makefile
+	-rm -r obj
+	rm -r src
+	rm whatsnew_0145.txt
