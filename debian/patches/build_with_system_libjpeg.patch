@@ -1,8 +1,19 @@
 Description: WIP build with system libjpeg
-compile but does link properly at the momment
+only works on 64bits system right now
 Author: Emmanuel Kasper <emmanuel@libera.cc>
-Forwarded: <no|not-needed|url proving that it has been forwarded>
+Forwarded: No
 
+--- mame-0.145.orig/makefile
++++ mame-0.145/makefile
+@@ -628,7 +628,7 @@ SOFTFLOAT = $(OBJ)/libsoftfloat.a
+ # add formats emulation library
+ FORMATS_LIB = $(OBJ)/libformats.a
+ 
+-JPEG_LIB = $(OBJ)/libjpeg.a
++LIBS += -ljpeg
+ 
+ #-------------------------------------------------
+ # 'default' target needs to go here, before the 
 --- mame-0.145.orig/src/osd/osdcomm.h
 +++ mame-0.145/src/osd/osdcomm.h
 @@ -45,6 +45,7 @@
