@@ -11,6 +11,7 @@ Build-Depends: debhelper (>= 8),
                libexpat1-dev,
                libgconf2-dev,
                libgtk2.0-dev,
+               libjpeg8-dev,
                libsdl1.2-dev,
                libsdl-ttf2.0-dev,
                zlib1g-dev

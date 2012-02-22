@@ -1,3 +1,4 @@
 nplayers.ini.patch
 fix_mame_manpage_section.patch
 gnu_fixes.patch
+build_with_system_libjpeg.patch
