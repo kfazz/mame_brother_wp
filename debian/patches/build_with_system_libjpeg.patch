@@ -16,18 +16,25 @@ Forwarded: Yes
  # 'default' target needs to go here, before the 
 --- a/src/mame/drivers/sliver.c
 +++ b/src/mame/drivers/sliver.c
-@@ -67,7 +67,13 @@
+@@ -67,7 +67,7 @@
  #include "sound/okim6295.h"
  #include "cpu/mcs51/mcs51.h"
  #include "video/ramdac.h"
 -#include "../../lib/libjpeg/jpeglib.h"
-+
-+/* This should prevent libjpeg of typedef'ing INT32 */
-+#ifndef XMD_H
-+#  define XMD_H
-+#endif
-+
 +#include <jpeglib.h>
  
  
  #define FIFO_SIZE 1024
+--- a/src/osd/osdcomm.h
++++ b/src/osd/osdcomm.h
+@@ -143,6 +143,10 @@
+ 
+ #endif
+ 
++/* This should prevent libjpeg of typedef'ing INT32 */
++#ifndef XMD_H
++#define XMD_H
++#endif
+ 
+ 
+ /***************************************************************************
