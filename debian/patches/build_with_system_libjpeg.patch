@@ -3,55 +3,32 @@ only works on 64bits system right now
 Author: Emmanuel Kasper <emmanuel@libera.cc>
 Forwarded: No
 
---- mame-0.145.orig/makefile
-+++ mame-0.145/makefile
-@@ -628,7 +628,7 @@ SOFTFLOAT = $(OBJ)/libsoftfloat.a
+--- a/makefile
++++ b/makefile
+@@ -628,7 +628,8 @@
  # add formats emulation library
  FORMATS_LIB = $(OBJ)/libformats.a
  
 -JPEG_LIB = $(OBJ)/libjpeg.a
++# Link with system jpeg
 +LIBS += -ljpeg
  
  #-------------------------------------------------
  # 'default' target needs to go here, before the 
---- mame-0.145.orig/src/osd/osdcomm.h
-+++ mame-0.145/src/osd/osdcomm.h
-@@ -45,6 +45,7 @@
- 
- #include <stdio.h>
- #include <string.h>
-+#include <inttypes.h>
- //#include <stdlib.h>
- 
- 
-@@ -143,7 +144,9 @@ __extension__ typedef signed long long
- 
- #endif
- 
--
-+/* avoid typedef conflicts when building with system libjpeg */
-+#define INT32 int32_t
-+#define INT64 int64_t
- 
- /***************************************************************************
-     FUNDAMENTAL CONSTANTS
---- mame-0.145.orig/src/mame/drivers/sliver.c
-+++ mame-0.145/src/mame/drivers/sliver.c
-@@ -62,12 +62,16 @@ Notes:
-       VSync    - 60Hz
- */
- 
-+
- #include "emu.h"
- #include "cpu/m68000/m68000.h"
+--- a/src/mame/drivers/sliver.c
++++ b/src/mame/drivers/sliver.c
+@@ -67,7 +67,13 @@
  #include "sound/okim6295.h"
  #include "cpu/mcs51/mcs51.h"
  #include "video/ramdac.h"
 -#include "../../lib/libjpeg/jpeglib.h"
-+#include <X11/Xmd.h>
++
++/* This should prevent libjpeg of typedef'ing INT32 */
++#ifndef XMD_H
++#  define XMD_H
++#endif
++
 +#include <jpeglib.h>
-+
-+
  
  
  #define FIFO_SIZE 1024
