@@ -1,7 +1,6 @@
-Description: WIP build with system libjpeg
-only works on 64bits system right now
+Description: build with system libjpeg8
 Author: Emmanuel Kasper <emmanuel@libera.cc>
-Forwarded: No
+Forwarded: Yes
 
 --- a/makefile
 +++ b/makefile
