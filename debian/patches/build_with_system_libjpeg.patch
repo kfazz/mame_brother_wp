@@ -1,21 +1,35 @@
-Description: build with system libjpeg8
-Author: Emmanuel Kasper <emmanuel@libera.cc>
-Forwarded: Yes
-
---- a/makefile
-+++ b/makefile
-@@ -628,7 +628,8 @@
+Index: mame/makefile
+===================================================================
+--- mame.orig/makefile	2012-02-26 00:12:39.000000000 +0100
++++ mame/makefile	2012-02-26 00:13:15.000000000 +0100
+@@ -214,6 +214,9 @@
+ # uncomment next line to include the symbols
+ # SYMBOLS = 1
+ 
++# uncomment next line to build jpeglib as part of MAME build
++BUILD_JPEGLIB = 1
++
+ # specify symbols level or leave commented to use the default
+ # (default is SYMLEVEL = 2 normally; use 1 if you only need backtrace)
+ # SYMLEVEL = 2
+@@ -628,7 +631,13 @@
  # add formats emulation library
  FORMATS_LIB = $(OBJ)/libformats.a
  
--JPEG_LIB = $(OBJ)/libjpeg.a
-+# Link with system jpeg
++# add jpeglib image library
++ifeq ($(BUILD_JPEGLIB),1)
+ JPEG_LIB = $(OBJ)/libjpeg.a
++else
 +LIBS += -ljpeg
++JPEG_LIB =
++endif
  
  #-------------------------------------------------
  # 'default' target needs to go here, before the 
---- a/src/mame/drivers/sliver.c
-+++ b/src/mame/drivers/sliver.c
+Index: mame/src/mame/drivers/sliver.c
+===================================================================
+--- mame.orig/src/mame/drivers/sliver.c	2012-02-26 00:12:39.000000000 +0100
++++ mame/src/mame/drivers/sliver.c	2012-02-26 00:13:15.000000000 +0100
 @@ -67,7 +67,7 @@
  #include "sound/okim6295.h"
  #include "cpu/mcs51/mcs51.h"
@@ -25,8 +39,10 @@ Forwarded: Yes
  
  
  #define FIFO_SIZE 1024
---- a/src/osd/osdcomm.h
-+++ b/src/osd/osdcomm.h
+Index: mame/src/osd/osdcomm.h
+===================================================================
+--- mame.orig/src/osd/osdcomm.h	2012-02-26 00:12:39.000000000 +0100
++++ mame/src/osd/osdcomm.h	2012-02-26 00:13:15.000000000 +0100
 @@ -143,6 +143,10 @@
  
  #endif

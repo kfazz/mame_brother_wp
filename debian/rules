@@ -31,6 +31,7 @@ DEB_MAME_OPTS = \
     MACOSX_USE_LIBSDL= \
     BUILD_EXPAT= \
     BUILD_ZLIB= \
+    BUILD_JPEGLIB= \
     SYMBOLS= \
     SYMLEVEL= \
     DUMPSYM= \
