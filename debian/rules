@@ -13,6 +13,12 @@ CFLAGS = -Wall -g
 
 DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
 
+# Number of make jobs = number of cores + 1
+NJOBS:=$(shell echo $$(($$(getconf _NPROCESSORS_ONLN 2>/dev/null) + 1)))
+ifdef SETNJOBS
+	NJOBS:=$(SETNJOBS)
+endif
+
 # Override relevant make variables in original makefile
 DEB_MAME_OPTS = \
     OPT_FLAGS="-D'INI_PATH=\"/etc/mame\"'" \
@@ -141,7 +147,7 @@ endif
 	dh $@
 
 override_dh_auto_build:
-	$(MAKE) -j3 $(DEB_MAME_OPTS) all
+	$(MAKE) -j$(NJOBS) $(DEB_MAME_OPTS) all
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
 
