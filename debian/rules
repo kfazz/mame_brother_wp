@@ -38,6 +38,7 @@ DEB_MAME_OPTS = \
     BUILD_EXPAT= \
     BUILD_ZLIB= \
     BUILD_JPEGLIB= \
+    BUILD_FLAC= \
     SYMBOLS= \
     SYMLEVEL= \
     DUMPSYM= \
