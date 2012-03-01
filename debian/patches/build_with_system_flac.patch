@@ -1,0 +1,70 @@
+--- a/makefile
++++ b/makefile
+@@ -217,6 +217,9 @@
+ # uncomment next line to build jpeglib as part of MAME build
+ BUILD_JPEGLIB = 1
+ 
++# uncomment next line to build libflac as part of MAME build
++BUILD_FLAC = 1
++
+ # specify symbols level or leave commented to use the default
+ # (default is SYMLEVEL = 2 normally; use 1 if you only need backtrace)
+ # SYMLEVEL = 2
+@@ -414,8 +417,9 @@
+ endif
+ 
+ # need to ensure FLAC functions are statically linked
++ifeq ($(BUILD_FLAC),1)
+ DEFS += -DFLAC__NO_DLL
+-
++endif
+ 
+ 
+ #-------------------------------------------------
+@@ -640,6 +644,15 @@
+ JPEG_LIB =
+ endif
+ 
++# add flac library
++ifeq ($(BUILD_FLAC),1)
++INCPATH += -I$(SRC)/lib/libflac/include
++FLAC_LIB = $(OBJ)/libflac.a
++else
++LIBS += -lFLAC
++FLAC_LIB =
++endif
++
+ #-------------------------------------------------
+ # 'default' target needs to go here, before the 
+ # include files which define additional targets
+@@ -649,8 +662,6 @@
+ 
+ all: default tools
+ 
+-FLAC_LIB = $(OBJ)/libflac.a 
+-# $(OBJ)/libflac++.a
+ 
+ 
+ #-------------------------------------------------
+--- a/src/emu/sound/samples.c
++++ b/src/emu/sound/samples.c
+@@ -16,7 +16,7 @@
+ #include "emu.h"
+ #include "emuopts.h"
+ #include "samples.h"
+-#include "../../lib/libflac/include/flac/all.h"
++#include <FLAC/all.h>
+ 
+ typedef struct _sample_channel sample_channel;
+ struct _sample_channel
+--- a/src/lib/util/chd.c
++++ b/src/lib/util/chd.c
+@@ -48,7 +48,7 @@
+ #include <stdlib.h>
+ #include <new>
+ 
+-#include "../../lib/libflac/include/flac/all.h"
++#include <FLAC/all.h>
+ 
+ 
+ /***************************************************************************
