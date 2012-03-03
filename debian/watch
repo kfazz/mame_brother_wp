@@ -1,6 +1,3 @@
 version=3
 opts="dversionmangle=s/u\d+//" \
  http://mamedev.org/release.html .*mame(\d)(\d+)s.zip
-# Commented out: it tries to download mess0621s.zip which is older
-#opts="dversionmangle=s/u\d+//" \
-# http://www.mess.org/download.php .*mess(\d)(\d+)s.zip

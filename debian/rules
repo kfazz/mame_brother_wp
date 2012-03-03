@@ -50,13 +50,6 @@ DEB_MAME_OPTS = \
     LDFLAGSEMULATOR="-Wl,--as-needed" \
     NOWERROR=1
 
-DEB_MESS_OPTS = \
-    $(DEB_MAME_OPTS) \
-    OPT_FLAGS="-D'INI_PATH=\"/etc/mess\"'" \
-    FULLNAME=mess \
-    TARGET=mess \
-    SUBTARGET=mess
-
 # Override make variables for specific archs
 # Linux architectures
 ifeq ($(DEB_HOST_ARCH),amd64)
@@ -179,9 +172,6 @@ VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
 MAME_PACKAGE = mame
 MAME_FILEBASE = $(MAME_PACKAGE)$(VERSION)
 MAME_URL = http://mamedev.org/downloader.php?file=releases/
-MESS_PACKAGE = mess
-MESS_FILEBASE = $(MESS_PACKAGE)$(VERSION)
-MESS_URL = http://mess.redump.net/_media/downloads:
 
 AGENT = Debian MAME Packagers <mame@packages.debian.org>
 TMPDIR := $(shell mktemp --dry-run --directory -p .)
