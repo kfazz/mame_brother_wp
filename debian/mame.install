@@ -1,13 +1,9 @@
 mame usr/games
 artwork/*.png usr/share/games/mame/artwork
-debian/install/mame.xpm usr/share/pixmaps
-debian/install/mame.desktop usr/share/applications
-debian/mame.ini etc/mame
-hash/* usr/share/games/mame/hash
+hash/*.dtd usr/share/games/mame/hash
+hash/*.xml usr/share/games/mame/hash
 src/osd/sdl/keymaps/*.txt usr/share/games/mame/keymaps
-
 nplayers/nplayers.ini usr/share/games/mame/data
-
 debian/mame.ini etc/mame
 debian/install/hicolor/16x16/apps/mame.png usr/share/icons/hicolor/16x16/apps
 debian/install/hicolor/22x22/apps/mame.png usr/share/icons/hicolor/22x22/apps
@@ -18,4 +14,3 @@ debian/install/hicolor/72x72/apps/mame.png usr/share/icons/hicolor/72x72/apps
 debian/install/hicolor/128x128/apps/mame.png usr/share/icons/hicolor/128x128/apps
 debian/install/mame.xpm usr/share/pixmaps
 debian/install/mame.desktop usr/share/applications
-
