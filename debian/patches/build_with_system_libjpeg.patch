@@ -1,3 +1,7 @@
+Author: Emmanuel Kasper <emmanuel@libera.cc>, Cesare Falco <cesare.falco@gmail.com>
+Description: Add new makefile switch to allow the use of jpeg system headers
+Forwarded: no
+
 Index: mame/makefile
 ===================================================================
 --- mame.orig/makefile	2012-02-26 22:21:48.000000000 +0100
