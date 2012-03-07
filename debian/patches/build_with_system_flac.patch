@@ -1,3 +1,7 @@
+Author: Emmanuel Kasper <emmanuel@libera.cc>
+Description: Add new makefile switch to allow the use of system flac headers
+Forwarded: no
+
 --- a/makefile
 +++ b/makefile
 @@ -217,6 +217,9 @@
