@@ -8,12 +8,12 @@ Uploaders: Félix Arreola Rodríguez <fgatuno.123@gmail.com>,
            Ludovic Lechapt <ludomatic@gmail.com>,
            Jordi Mallach <jordi@debian.org>
 Build-Depends: debhelper (>= 8),
-               libexpat1-dev,
+               libexpat1-dev (>= 2.0.1),
                libflac-dev,
                libgconf2-dev,
                libgtk2.0-dev,
                libjpeg8-dev,
-               libsdl1.2-dev,
+               libsdl1.2-dev (>= 1.2.11),
                libsdl-ttf2.0-dev,
                zlib1g-dev
 Standards-Version: 3.9.2
@@ -22,13 +22,14 @@ Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-games/mame.git
 Homepage: http://mamedev.org/
 XS-Autobuild: yes
 
+
 Package: mame
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Suggests: mame-tools, gnome-video-arcade
-Provides: xmame-common, xmame-sdl, xmame-svga, xmame-x
-Replaces: xmame-common (<< 0.140), xmame-sdl (<< 0.140), xmame-svga (<< 0.140), xmame-x (<< 0.140)
-Breaks: xmame-common (<< 0.140), xmame-sdl (<< 0.140), xmame-svga (<< 0.140), xmame-x (<< 0.140), sdlmame (<< 0.143)
+Provides: sdlmame, xmame-common, xmame-sdl, xmame-svga, xmame-x
+Replaces: sdlmame (<< 0.137), xmame-common (<< 0.140), xmame-sdl (<< 0.140), xmame-svga (<< 0.140), xmame-x (<< 0.140)
+Breaks: sdlmame (<< 0.137), xmame-common (<< 0.140), xmame-sdl (<< 0.140), xmame-svga (<< 0.140), xmame-x (<< 0.140)
 Description: Multiple Arcade Machine Emulator (MAME)
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can
@@ -37,6 +38,7 @@ Description: Multiple Arcade Machine Emulator (MAME)
  illegal to use them if you do not own the arcade machine.
  .
  This package provides the MAME binary and configuration files.
+
 
 Package: xmame-sdl
 Section: non-free/metapackages
@@ -47,6 +49,7 @@ Description: Transitional package for xmame-sdl
  This is a transitional package for xmame-sdl, and can be safely removed
  after the installation is complete.
 
+
 Package: xmame-svga
 Section: non-free/metapackages
 Priority: extra
@@ -56,6 +59,7 @@ Description: Transitional package for xmame-svga
  This is a transitional package for xmame-svga, and can be safely removed
  after the installation is complete.
 
+
 Package: xmame-x
 Section: non-free/metapackages
 Priority: extra
@@ -64,6 +68,7 @@ Architecture: all
 Description: Transitional package for xmame-x
  This is a transitional package for xmame-x, and can be safely removed
  after the installation is complete.
+
 
 Package: sdlmame
 Section: non-free/metapackages
