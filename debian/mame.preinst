@@ -1,7 +1,7 @@
 #! /bin/sh
 
 # preinst script for mame
-# (c) Copyright 2012 Cesare Falco
+# (c) Copyright 2012 Debian Games Team
 #
 # Licensed under the GNU General Public License, version 2.  See the file
 # /usr/share/common-licenses/GPL-2 or <http://www.gnu.org/copyleft/gpl.txt>.
@@ -31,7 +31,7 @@ case "$1" in
         fi
         # Avoid a dpkg prompt if mame.ini is what 0.141-2 generated in postinst
         if dpkg --compare-versions "$2" le "0.141-2"; then
-            if [ -a -f "$INI" ]; then
+            if [ -e -f "$INI" ]; then
                 curmd5="$(md5sum $INI | cut -d' ' -f 1)"
                 for md5sum in $OLDMD5; do
                     if [ "$curmd5" = "$md5sum" ]; then
