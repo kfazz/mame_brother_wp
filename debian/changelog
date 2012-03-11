@@ -1,6 +1,18 @@
 mame (0.145-1) UNRELEASED; urgency=low
 
+  [ Emmanuel Kasper ]
   * New upstream release
+
+  [ Cesare Falco ]
+  * Improve backward compatibility in Ubuntu:
+    * Updated mame.preinst and injected sdlmame.preinst from Ubuntu
+    * Added /usr/local/* paths in mame.ini
+    * Some cleanup and refactoring in control
+  * Make lintian happier:
+    * Included BSD licence in copyright
+    * Fixed Section: header in control
+    * Replaced -a with -e test in mame.preinst
+  * New patch: makefile switch to link system jpeg library
 
  -- Emmanuel Kasper <emmanuel@libera.cc>  Mon, 06 Feb 2012 11:19:26 +0100
 
