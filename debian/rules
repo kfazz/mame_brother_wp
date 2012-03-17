@@ -169,22 +169,24 @@ override_dh_install:
 
 # Convert upstream sources from zip to tar.xz
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
-MAME_PACKAGE = mame
-MAME_FILEBASE = $(MAME_PACKAGE)$(VERSION)
-MAME_URL = http://mamedev.org/downloader.php?file=releases/
+
+# Upstream zip file does not have a dot in its name, so we have to cut it out
+UPSTREAM_VERSION := $(shell echo $(VERSION) | sed -e 's/\.//' )
 
 AGENT = Debian MAME Packagers <mame@packages.debian.org>
 TMPDIR := $(shell mktemp --dry-run --directory -p .)
 
-# Upstream zip file does not have a dot in its name, so we have to cut it out
-UPSTREAM_VERSION := $(shell echo $(VERSION) | sed -e 's/\.//' )
+MAME_PACKAGE = mame
+MAME_FILEBASE = $(MAME_PACKAGE)$(VERSION)
+MAME_URL = http://mamedev.org/downloader.php?file=releases/
+MAME_TARBALL = $(MAME_PACKAGE)_$(VERSION).orig.tar.xz
 
 $(MAME_FILEBASE)s.zip:
 	wget -U '$(AGENT)' \
         "$(MAME_URL)$(MAME_PACKAGE)$(UPSTREAM_VERSION)s.zip" \
         -O $(MAME_FILEBASE)s.zip
 
-get-orig-source: $(MAME_FILEBASE)s.zip
+$(MAME_PACKAGE)_$(VERSION).orig.tar.xz: $(MAME_FILEBASE)s.zip
 	mkdir $(TMPDIR)
 
 	# Create an orig.tar.xz tarball for MAME
@@ -200,12 +202,33 @@ get-orig-source: $(MAME_FILEBASE)s.zip
 	    | sed 's/\ /\\\ /g' \
 	    | xargs sed -i "s/\r$$//"
 	tar -C $(TMPDIR)/sub -cvf - $(MAME_PACKAGE)-$(VERSION) | \
-	    xz > ../$(MAME_PACKAGE)_$(VERSION).orig.tar.xz
+	    xz > ../$(MAME_TARBALL)
 	rm -f $(MAME_FILEBASE)s.zip
 
 	rm -rf $(TMPDIR)
 
-erase-upstream:
+# FIXME: nplayers should go in the forthcoming mame-extra package
+NPLAYERS_PACKAGE = nplayers
+NPLAYERS_URL = http://nplayers.arcadebelgium.be/files/
+NPLAYERS_ZIPFILE = $(NPLAYERS_PACKAGE)$(UPSTREAM_VERSION).zip
+NPLAYERS_TARBALL = $(MAME_PACKAGE)_$(VERSION)-$(NPLAYERS_PACKAGE).orig.tar.xz
+
+$(NPLAYERS_ZIPFILE):
+	wget -U '$(AGENT)' \
+	    $(NPLAYERS_URL)$(NPLAYERS_ZIPFILE) \
+	    -O $(NPLAYERS_ZIPFILE)
+
+$(NPLAYERS_TARBALL): $(NPLAYERS_ZIPFILE)
+	unzip $(NPLAYERS_ZIPFILE) -d $(NPLAYERS_PACKAGE)
+	# Strip trailing CR
+	find $(NPLAYERS_PACKAGE) -type f | xargs sed -i "s/\r$$//"
+	tar -cvf - $(NPLAYERS_PACKAGE) | xz > ../$(NPLAYERS_TARBALL)
+	rm -f $(NPLAYERS_ZIPFILE)
+	rm -rf $(NPLAYERS_PACKAGE)
+
+get-orig-source: $(MAME_TARBALL) $(NPLAYERS_TARBALL)
+
+erase-upstream: clean
 	rm -rf artwork
 	rm -rf docs
 	rm -rf hash
@@ -213,5 +236,5 @@ erase-upstream:
 	rm -f makefile
 	rm -rf obj
 	rm -rf src
-	rm whatsnew*.txt
+	rm -f whatsnew*.txt
 	rm -rf nplayers

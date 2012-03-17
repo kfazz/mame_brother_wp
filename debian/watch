@@ -1,3 +1,5 @@
 version=3
 opts="dversionmangle=s/u\d+//" \
  http://mamedev.org/release.html .*mame(\d)(\d+)s.zip
+
+http://nplayers.arcadebelgium.be .*nplayers(\d)(\d+).zip

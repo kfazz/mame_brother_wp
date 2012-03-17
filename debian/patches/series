@@ -1,5 +1,5 @@
-nplayers.ini.patch
 fix_mame_manpage_section.patch
 gnu_fixes.patch
 build_with_system_libjpeg.patch
 build_with_system_flac.patch
+remove_tms57002_from_unidasm.patch

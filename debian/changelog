@@ -2,6 +2,7 @@ mame (0.145-1) UNRELEASED; urgency=low
 
   [ Emmanuel Kasper ]
   * New upstream release
+  * New patch: makefile switch to link system flac library
 
   [ Cesare Falco ]
   * Improve backward compatibility in Ubuntu:
@@ -13,6 +14,7 @@ mame (0.145-1) UNRELEASED; urgency=low
     * Fixed Section: header in control
     * Replaced -a with -e test in mame.preinst
   * New patch: makefile switch to link system jpeg library
+  * nplayers packaged is now a supplemental tarball
 
  -- Emmanuel Kasper <emmanuel@libera.cc>  Mon, 06 Feb 2012 11:19:26 +0100
 

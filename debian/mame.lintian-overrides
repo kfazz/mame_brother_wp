@@ -1,7 +1,7 @@
 # Allow empty folders for MAME
 # http://lintian.debian.org/manual/ch2.html
+mame binary: package-contains-empty-directory etc/mame/ctrlr/
 mame binary: package-contains-empty-directory usr/share/games/mame/cheat/
 mame binary: package-contains-empty-directory usr/share/games/mame/crosshair/
-mame binary: package-contains-empty-directory usr/share/games/mame/ctrlr/
 mame binary: package-contains-empty-directory usr/share/games/mame/roms/
 mame binary: package-contains-empty-directory usr/share/games/mame/samples/
