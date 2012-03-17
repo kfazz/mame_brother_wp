@@ -186,7 +186,7 @@ $(MAME_FILEBASE)s.zip:
         "$(MAME_URL)$(MAME_PACKAGE)$(UPSTREAM_VERSION)s.zip" \
         -O $(MAME_FILEBASE)s.zip
 
-$(MAME_PACKAGE)_$(VERSION).orig.tar.xz: $(MAME_FILEBASE)s.zip
+$(MAME_TARBALL): $(MAME_FILEBASE)s.zip
 	mkdir $(TMPDIR)
 
 	# Create an orig.tar.xz tarball for MAME
@@ -219,14 +219,16 @@ $(NPLAYERS_ZIPFILE):
 	    -O $(NPLAYERS_ZIPFILE)
 
 $(NPLAYERS_TARBALL): $(NPLAYERS_ZIPFILE)
-	unzip $(NPLAYERS_ZIPFILE) -d $(NPLAYERS_PACKAGE)
+	mkdir $(TMPDIR)
+	unzip $(NPLAYERS_ZIPFILE) -d $(TMPDIR)/$(NPLAYERS_PACKAGE)
 	# Strip trailing CR
-	find $(NPLAYERS_PACKAGE) -type f | xargs sed -i "s/\r$$//"
-	tar -cvf - $(NPLAYERS_PACKAGE) | xz > ../$(NPLAYERS_TARBALL)
+	find $(TMPDIR)/$(NPLAYERS_PACKAGE) -type f | xargs sed -i "s/\r$$//"
+	tar -C $(TMPDIR) -cvf - $(NPLAYERS_PACKAGE) | xz > ../$(NPLAYERS_TARBALL)
 	rm -f $(NPLAYERS_ZIPFILE)
-	rm -rf $(NPLAYERS_PACKAGE)
+	rm -rf $(TMPDIR)
 
 get-orig-source: $(MAME_TARBALL) $(NPLAYERS_TARBALL)
+	echo "tarballs created in parent directory!"
 
 erase-upstream: clean
 	rm -rf artwork
