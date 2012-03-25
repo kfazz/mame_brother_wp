@@ -14,7 +14,10 @@ mame (0.145-1) UNRELEASED; urgency=low
     * Fixed Section: header in control
     * Replaced -a with -e test in mame.preinst
   * New patch: makefile switch to link system jpeg library
-  * nplayers packaged is now a supplemental tarball
+  * Packaged nplayers as a supplemental tarball
+  * Removed references to mess
+    * Swept out any remaining debris in debian/*
+    * Don't compile tools, as mame-tools is now build by mess
 
  -- Emmanuel Kasper <emmanuel@libera.cc>  Mon, 06 Feb 2012 11:19:26 +0100
 

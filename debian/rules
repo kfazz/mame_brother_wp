@@ -141,7 +141,7 @@ endif
 	dh $@
 
 override_dh_auto_build:
-	$(MAKE) -j$(NJOBS) $(DEB_MAME_OPTS) all
+	$(MAKE) -j$(NJOBS) $(DEB_MAME_OPTS)
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
 
