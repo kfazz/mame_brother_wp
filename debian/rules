@@ -148,7 +148,8 @@ override_dh_auto_build:
 override_dh_auto_clean:
 	echo "Starting clean process..."
 	$(MAKE) $(DEB_MAME_OPTS) clean
-	[ ! -f default.mame.ini ] || rm default.mame.ini
+	rm -rf obj
+	rm -f default.mame.ini
 
 # dh_installchangelogs doesn't know about whatsnew.txt,
 # so we need to make an explicit call
