@@ -155,6 +155,10 @@ Files: src/emu/video/crt9007.h
  src/emu/machine/upd7201.c
  src/emu/machine/upd7201.h
  src/emu/machine/wd17xx.c
+ src/emu/machine/im6402.c
+ src/emu/machine/im6402.h
+ src/emu/machine/pls100.c
+ src/emu/machine/pls100.h
  src/emu/sound/lmc1992.c
  src/emu/sound/lmc1992.h
  src/emu/video/cdp1861.c
@@ -507,7 +511,26 @@ Files: src/osd/osdepend.c
  src/emu/device.h
  src/mame/tiny_dev.lst
  src/mame/mame_dev.lst
+ src/emu/drivers/testcpu.c
+ src/emu/machine/laserdsc.c
+ src/emu/machine/ldpr8210.h
+ src/emu/machine/ldstub.c
+ src/emu/machine/ldstub.h
+ src/emu/machine/ldv1000.h
+ src/emu/machine/ldvp931.h
+ src/ldplayer/ldplayer_dev.lst
 Copyright: Aaron Giles
+License: BSD-3-clause
+
+Files: src/emu/machine/amigafdc.c
+ src/lib/formats/hxcmfm_dsk.c
+ src/lib/formats/ami_dsk.c
+ src/lib/formats/dfi_dsk.c
+ src/lib/formats/st_dsk.c
+ src/lib/formats/flopimg.c
+ src/lib/formats/mfi_dsk.c
+ src/lib/formats/ap_dsk35.c
+Copyright: Olivier Galibert
 License: BSD-3-clause
 
 Files: src/lib/expat/*
