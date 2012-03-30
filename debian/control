@@ -8,12 +8,12 @@ Uploaders: Félix Arreola Rodríguez <fgatuno.123@gmail.com>,
            Ludovic Lechapt <ludomatic@gmail.com>,
            Jordi Mallach <jordi@debian.org>
 Build-Depends: debhelper (>= 8),
-               libexpat1-dev (>= 2.0.1),
+               libexpat1-dev,
                libflac-dev,
                libgconf2-dev,
                libgtk2.0-dev,
                libjpeg8-dev,
-               libsdl1.2-dev (>= 1.2.11),
+               libsdl1.2-dev,
                libsdl-ttf2.0-dev,
                zlib1g-dev
 Standards-Version: 3.9.2
