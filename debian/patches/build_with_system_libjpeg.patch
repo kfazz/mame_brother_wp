@@ -1,6 +1,6 @@
 Author: Emmanuel Kasper <emmanuel@libera.cc>, Cesare Falco <cesare.falco@gmail.com>
 Description: Add new makefile switch to allow the use of jpeg system headers
-Forwarded: no
+Forwarded: http://forums.bannister.org/ubbthreads.php?ubb=showflat&Number=76614&page=3
 
 Index: mame/makefile
 ===================================================================
