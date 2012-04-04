@@ -1,8 +1,9 @@
 mame (0.145-1) UNRELEASED; urgency=low
 
   [ Emmanuel Kasper ]
-  * New upstream release
+  * New upstream release (closes: #663429)
   * New patch: makefile switch to link system flac library
+  * Remove "all" from build target as we build the tools in mess package
 
   [ Cesare Falco ]
   * Improve backward compatibility in Ubuntu:
@@ -16,7 +17,7 @@ mame (0.145-1) UNRELEASED; urgency=low
   * New patch: makefile switch to link system jpeg library
   * nplayers packaged is now a supplemental tarball
 
- -- Emmanuel Kasper <emmanuel@libera.cc>  Mon, 06 Feb 2012 11:19:26 +0100
+ -- Emmanuel Kasper <emmanuel@libera.cc>  Wed, 04 Apr 2012 14:53:19 +0200
 
 mame (0.144-2) UNRELEASED; urgency=low
 
