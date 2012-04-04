@@ -24,6 +24,7 @@ mame (0.145-1) UNRELEASED; urgency=low
   * Make get-orig-source target drop tarballs in the current directory,
     as policy mandates.
   * Bump Standards-Version to 3.9.3.
+  * Remove leading slashes from mame.dirs.
 
  -- Jordi Mallach <jordi@debian.org>  Wed, 04 Apr 2012 17:13:35 +0200
 
