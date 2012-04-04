@@ -23,6 +23,9 @@ mame (0.145-1) UNRELEASED; urgency=low
     as policy mandates.
   * Bump Standards-Version to 3.9.3.
   * Remove leading slashes from mame.dirs.
+  * Add back Section field for transitional packages, but switch to oldlibs
+    (as opposed to metapackages), which apparently is what everyone is doing
+    due to lintian.
 
  -- Jordi Mallach <jordi@debian.org>  Wed, 04 Apr 2012 17:13:35 +0200
 
