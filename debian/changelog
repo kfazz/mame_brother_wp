@@ -21,8 +21,10 @@ mame (0.145-1) UNRELEASED; urgency=low
   [ Jordi Mallach ]
   * gnu_fixes.patch: Add a check for __GNU__ to fix builds on the Hurd.
   * Point to the 1.0 machine-readable copyright format spec.
+  * Make get-orig-source target drop tarballs in the current directory,
+    as policy mandates.
 
- -- Emmanuel Kasper <emmanuel@libera.cc>  Wed, 04 Apr 2012 14:53:19 +0200
+ -- Jordi Mallach <jordi@debian.org>  Wed, 04 Apr 2012 17:13:35 +0200
 
 mame (0.144-1) unstable; urgency=low
 

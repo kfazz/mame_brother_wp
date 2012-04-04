@@ -202,7 +202,7 @@ $(MAME_TARBALL): $(MAME_FILEBASE)s.zip
 	    | sed 's/\ /\\\ /g' \
 	    | xargs sed -i "s/\r$$//"
 	tar -C $(TMPDIR)/sub -cvf - $(MAME_PACKAGE)-$(VERSION) | \
-	    xz > ../$(MAME_TARBALL)
+	    xz > $(MAME_TARBALL)
 	rm -f $(MAME_FILEBASE)s.zip
 
 	rm -rf $(TMPDIR)
@@ -222,7 +222,7 @@ $(NPLAYERS_TARBALL): $(NPLAYERS_ZIPFILE)
 	unzip $(NPLAYERS_ZIPFILE) -d $(TMPDIR)/$(NPLAYERS_PACKAGE)
 	# Strip trailing CR
 	find $(TMPDIR)/$(NPLAYERS_PACKAGE) -type f | xargs sed -i "s/\r$$//"
-	tar -C $(TMPDIR) -cvf - $(NPLAYERS_PACKAGE) | xz > ../$(NPLAYERS_TARBALL)
+	tar -C $(TMPDIR) -cvf - $(NPLAYERS_PACKAGE) | xz > $(NPLAYERS_TARBALL)
 	rm -f $(NPLAYERS_ZIPFILE)
 	rm -rf $(TMPDIR)
 
