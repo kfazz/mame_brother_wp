@@ -16,7 +16,7 @@ Build-Depends: debhelper (>= 8),
                libsdl1.2-dev,
                libsdl-ttf2.0-dev,
                zlib1g-dev
-Standards-Version: 3.9.2
+Standards-Version: 3.9.3
 Vcs-Git: git://anonscm.debian.org/pkg-games/mame.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-games/mame.git
 Homepage: http://mamedev.org/
@@ -69,4 +69,3 @@ Architecture: amd64 i386
 Description: Transitional package for sdlmame
  This is a transitional package for sdlmame, and can be safely removed
  after the installation is complete.
-
