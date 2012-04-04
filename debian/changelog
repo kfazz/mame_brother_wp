@@ -4,6 +4,7 @@ mame (0.145-1) UNRELEASED; urgency=low
   * New upstream release (closes: #663429)
   * New patch: makefile switch to link system flac library
   * Remove "all" from build target as we build the tools in mess package
+  * Yet another batch of syntax errors in DEP5 copyright file corrected
 
   [ Cesare Falco ]
   * Improve backward compatibility in Ubuntu:
@@ -17,17 +18,10 @@ mame (0.145-1) UNRELEASED; urgency=low
   * New patch: makefile switch to link system jpeg library
   * nplayers packaged is now a supplemental tarball
 
- -- Emmanuel Kasper <emmanuel@libera.cc>  Wed, 04 Apr 2012 14:53:19 +0200
-
-mame (0.144-2) UNRELEASED; urgency=low
-
-  [ Emmanuel Kasper ]
-  * Yet another batch of syntax errors in DEP5 copyright file corrected
-
   [ Jordi Mallach ]
   * gnu_fixes.patch: Add a check for __GNU__ to fix builds on the Hurd.
 
- -- Jordi Mallach <jordi@debian.org>  Sun, 15 Jan 2012 23:14:16 +0100
+ -- Emmanuel Kasper <emmanuel@libera.cc>  Wed, 04 Apr 2012 14:53:19 +0200
 
 mame (0.144-1) unstable; urgency=low
 
