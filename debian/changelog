@@ -20,6 +20,7 @@ mame (0.145-1) UNRELEASED; urgency=low
 
   [ Jordi Mallach ]
   * gnu_fixes.patch: Add a check for __GNU__ to fix builds on the Hurd.
+  * Point to the 1.0 machine-readable copyright format spec.
 
  -- Emmanuel Kasper <emmanuel@libera.cc>  Wed, 04 Apr 2012 14:53:19 +0200
 
