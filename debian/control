@@ -8,15 +8,15 @@ Uploaders: Félix Arreola Rodríguez <fgatuno.123@gmail.com>,
            Ludovic Lechapt <ludomatic@gmail.com>,
            Jordi Mallach <jordi@debian.org>
 Build-Depends: debhelper (>= 8),
-               libexpat1-dev (>= 2.0.1),
+               libexpat1-dev,
                libflac-dev,
                libgconf2-dev,
                libgtk2.0-dev,
                libjpeg8-dev,
-               libsdl1.2-dev (>= 1.2.11),
+               libsdl1.2-dev,
                libsdl-ttf2.0-dev,
                zlib1g-dev
-Standards-Version: 3.9.2
+Standards-Version: 3.9.3
 Vcs-Git: git://anonscm.debian.org/pkg-games/mame.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-games/mame.git
 Homepage: http://mamedev.org/
@@ -39,6 +39,7 @@ Description: Multiple Arcade Machine Emulator (MAME)
  This package provides the MAME binary and configuration files.
 
 Package: xmame-sdl
+Section: non-free/oldlibs
 Priority: extra
 Depends: mame, ${misc:Depends}
 Architecture: all
@@ -47,6 +48,7 @@ Description: Transitional package for xmame-sdl
  after the installation is complete.
 
 Package: xmame-svga
+Section: non-free/oldlibs
 Priority: extra
 Depends: mame, ${misc:Depends}
 Architecture: i386
@@ -55,6 +57,7 @@ Description: Transitional package for xmame-svga
  after the installation is complete.
 
 Package: xmame-x
+Section: non-free/oldlibs
 Priority: extra
 Depends: mame, ${misc:Depends}
 Architecture: all
@@ -63,10 +66,10 @@ Description: Transitional package for xmame-x
  after the installation is complete.
 
 Package: sdlmame
+Section: non-free/oldlibs
 Priority: extra
 Depends: mame, ${misc:Depends}
 Architecture: amd64 i386
 Description: Transitional package for sdlmame
  This is a transitional package for sdlmame, and can be safely removed
  after the installation is complete.
-

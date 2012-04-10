@@ -203,7 +203,7 @@ $(MAME_TARBALL): $(MAME_FILEBASE)s.zip
 	    | sed 's/\ /\\\ /g' \
 	    | xargs sed -i "s/\r$$//"
 	tar -C $(TMPDIR)/sub -cvf - $(MAME_PACKAGE)-$(VERSION) | \
-	    xz > ../$(MAME_TARBALL)
+	    xz > $(MAME_TARBALL)
 	rm -f $(MAME_FILEBASE)s.zip
 
 	rm -rf $(TMPDIR)
@@ -212,19 +212,18 @@ $(MAME_TARBALL): $(MAME_FILEBASE)s.zip
 NPLAYERS_PACKAGE = nplayers
 NPLAYERS_URL = http://nplayers.arcadebelgium.be/files/
 NPLAYERS_ZIPFILE = $(NPLAYERS_PACKAGE)$(UPSTREAM_VERSION).zip
-NPLAYERS_TARBALL = $(MAME_PACKAGE)_$(VERSION)-$(NPLAYERS_PACKAGE).orig.tar.xz
+NPLAYERS_TARBALL = $(MAME_PACKAGE)_$(VERSION).orig-$(NPLAYERS_PACKAGE).tar.xz
 
 $(NPLAYERS_ZIPFILE):
 	wget -U '$(AGENT)' \
-	    $(NPLAYERS_URL)$(NPLAYERS_ZIPFILE) \
-	    -O $(NPLAYERS_ZIPFILE)
+	    $(NPLAYERS_URL)$(NPLAYERS_ZIPFILE)
 
 $(NPLAYERS_TARBALL): $(NPLAYERS_ZIPFILE)
 	mkdir $(TMPDIR)
 	unzip $(NPLAYERS_ZIPFILE) -d $(TMPDIR)/$(NPLAYERS_PACKAGE)
 	# Strip trailing CR
 	find $(TMPDIR)/$(NPLAYERS_PACKAGE) -type f | xargs sed -i "s/\r$$//"
-	tar -C $(TMPDIR) -cvf - $(NPLAYERS_PACKAGE) | xz > ../$(NPLAYERS_TARBALL)
+	tar -C $(TMPDIR) -cvf - $(NPLAYERS_PACKAGE) | xz > $(NPLAYERS_TARBALL)
 	rm -f $(NPLAYERS_ZIPFILE)
 	rm -rf $(TMPDIR)
 

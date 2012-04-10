@@ -1,35 +1,36 @@
 mame (0.145-1) UNRELEASED; urgency=low
 
   [ Emmanuel Kasper ]
-  * New upstream release
+  * New upstream release (closes: #663429)
   * New patch: makefile switch to link system flac library
+  * Remove "all" from build target as we build the tools in mess package
+  * Yet another batch of syntax errors in DEP5 copyright file corrected
 
   [ Cesare Falco ]
   * Improve backward compatibility in Ubuntu:
-    * Updated mame.preinst and injected sdlmame.preinst from Ubuntu
     * Added /usr/local/* paths in mame.ini
     * Some cleanup and refactoring in control
   * Make lintian happier:
     * Included BSD licence in copyright
     * Fixed Section: header in control
-    * Replaced -a with -e test in mame.preinst
   * New patch: makefile switch to link system jpeg library
   * Packaged nplayers as a supplemental tarball
   * Removed references to mess
     * Swept out any remaining debris in debian/*
     * Don't compile tools, as mame-tools is now build by mess
 
- -- Emmanuel Kasper <emmanuel@libera.cc>  Mon, 06 Feb 2012 11:19:26 +0100
-
-mame (0.144-2) UNRELEASED; urgency=low
-
-  [ Emmanuel Kasper ]
-  * Yet another batch of syntax errors in DEP5 copyright file corrected
-
   [ Jordi Mallach ]
   * gnu_fixes.patch: Add a check for __GNU__ to fix builds on the Hurd.
+  * Point to the 1.0 machine-readable copyright format spec.
+  * Make get-orig-source target drop tarballs in the current directory,
+    as policy mandates.
+  * Bump Standards-Version to 3.9.3.
+  * Remove leading slashes from mame.dirs.
+  * Add back Section field for transitional packages, but switch to oldlibs
+    (as opposed to metapackages), which apparently is what everyone is doing
+    due to lintian.
 
- -- Jordi Mallach <jordi@debian.org>  Sun, 15 Jan 2012 23:14:16 +0100
+ -- Jordi Mallach <jordi@debian.org>  Wed, 04 Apr 2012 17:13:35 +0200
 
 mame (0.144-1) unstable; urgency=low
 

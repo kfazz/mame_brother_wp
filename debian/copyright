@@ -1,4 +1,4 @@
-Format: http://anonscm.debian.org/viewvc/dep/web/deps/dep5.mdwn?revision=208&view=co
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: MAME
 Source: http://mamedev.org/
  The mame icons are part of the hydroxygen icon set, downloaded from 
@@ -19,6 +19,10 @@ Copyright: Cesare Falco <cesare.falco@gmail.com>
            Ludovic Lechapt <ludomatic@gmail.com>
            Mamedeb team <mame@packages.debian.org>
 License: GPL-2+
+
+Files: debian/patches/*
+Copyright: Mamedeb team <mame@packages.debian.org>
+License: GPL-2+ or MAME
 
 Files: debian/install/hicolor/*
 Copyright: deviantdark [www.deviantdark.com]
@@ -1025,13 +1029,13 @@ License: LGPL-2.1+
  the Free Software Foundation; either version 2.1 of the License, or (at your
  option) any later version.
  .
- The nettle library is distributed in the hope that it will be useful, but
+ This program is distributed in the hope that it will be useful, but
  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
  License for more details.
  .
  You should have received a copy of the GNU Lesser General Public License
- along with the nettle library; see the file COPYING.LIB.  If not, write to
+ along with this program; see the file COPYING.LIB.  If not, write to
  the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
  MA 02110-1301, USA.
  .
@@ -1087,4 +1091,3 @@ License: BSD-3-clause
  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
-
