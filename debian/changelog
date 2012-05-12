@@ -1,4 +1,4 @@
-mame (0.145-1) UNRELEASED; urgency=low
+mame (0.145-1) unstable; urgency=low
 
   [ Emmanuel Kasper ]
   * New upstream release (closes: #663429)
@@ -27,7 +27,7 @@ mame (0.145-1) UNRELEASED; urgency=low
     (as opposed to metapackages), which apparently is what everyone is doing
     due to lintian.
 
- -- Jordi Mallach <jordi@debian.org>  Wed, 04 Apr 2012 17:13:35 +0200
+ -- Jordi Mallach <jordi@debian.org>  Sat, 12 May 2012 11:01:21 +0200
 
 mame (0.144-1) unstable; urgency=low
 
