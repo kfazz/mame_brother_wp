@@ -227,7 +227,6 @@ $(NPLAYERS_TARBALL): $(NPLAYERS_ZIPFILE)
 	rm -rf $(TMPDIR)
 
 get-orig-source: $(MAME_TARBALL) $(NPLAYERS_TARBALL)
-	echo "tarballs created in parent directory!"
 
 erase-upstream: clean
 	rm -rf artwork
