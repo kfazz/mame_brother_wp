@@ -154,7 +154,7 @@ override_dh_auto_clean:
 # dh_installchangelogs doesn't know about whatsnew.txt,
 # so we need to make an explicit call
 override_dh_installchangelogs:
-	dh_installchangelogs whatsnew_$(UPSTREAM_VERSION).txt
+	dh_installchangelogs whatsnew.txt
 
 # Remove Windows specific documentation
 override_dh_installdocs:
@@ -228,7 +228,6 @@ $(NPLAYERS_TARBALL): $(NPLAYERS_ZIPFILE)
 	rm -rf $(TMPDIR)
 
 get-orig-source: $(MAME_TARBALL) $(NPLAYERS_TARBALL)
-	echo "tarballs created in parent directory!"
 
 erase-upstream: clean
 	rm -rf artwork
