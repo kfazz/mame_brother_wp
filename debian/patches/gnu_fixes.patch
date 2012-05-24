@@ -1,12 +1,13 @@
 Author: Jordi Mallach <jordi@debian.org>
 Description: Check for GNU.
- Fix builds on hurd-i386 by checking for __GNU__.
+ Fix builds on hurd-i386 by checking for __GNU__ and adding a gnu TARGETOS
+ that defines NO_AFFINITY_NP.
 Forwarded: no
 
-Index: mess-0.144/src/osd/sdl/sdlprefix.h
+Index: mess-0.145/src/osd/sdl/sdlprefix.h
 ===================================================================
---- mess-0.144.orig/src/osd/sdl/sdlprefix.h	2012-01-15 23:05:38.165375833 +0100
-+++ mess-0.144/src/osd/sdl/sdlprefix.h	2012-01-15 23:05:57.725376275 +0100
+--- mess-0.145.orig/src/osd/sdl/sdlprefix.h	2012-05-22 01:10:19.818402982 +0200
++++ mess-0.145/src/osd/sdl/sdlprefix.h	2012-05-22 01:10:24.134403145 +0200
 @@ -42,7 +42,7 @@
  /* Large file support on IRIX needs _SGI_SOURCE */
  #undef _POSIX_SOURCE
@@ -16,3 +17,35 @@ Index: mess-0.144/src/osd/sdl/sdlprefix.h
  #define SDLMAME_LINUX 1
  
  #elif defined(__FreeBSD__)
+Index: mess-0.145/makefile
+===================================================================
+--- mess-0.145.orig/makefile	2012-05-22 01:10:19.706402978 +0200
++++ mess-0.145/makefile	2012-05-22 01:23:19.302431871 +0200
+@@ -95,6 +95,9 @@
+ ifeq ($(firstword $(filter Darwin,$(UNAME))),Darwin)
+ TARGETOS = macosx
+ endif
++ifeq ($(firstword $(filter GNU,$(UNAME))),GNU)
++TARGETOS = gnu
++endif
+ 
+ ifndef TARGETOS
+ $(error Unable to detect TARGETOS from uname -a: $(UNAME))
+Index: mess-0.145/src/osd/sdl/sdl.mak
+===================================================================
+--- mess-0.145.orig/src/osd/sdl/sdl.mak	2012-05-22 00:57:29.000000000 +0200
++++ mess-0.145/src/osd/sdl/sdl.mak	2012-05-22 01:26:09.374438171 +0200
+@@ -201,6 +201,13 @@
+ 
+ endif
+ 
++ifeq ($(TARGETOS),gnu)
++BASE_TARGETOS = unix
++SYNC_IMPLEMENTATION = tc
++SDL_NETWORK = taptun
++DEFS += -DNO_AFFINITY_NP
++endif
++
+ ifeq ($(TARGETOS),win32)
+ BASE_TARGETOS = win32
+ SYNC_IMPLEMENTATION = win32
