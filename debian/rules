@@ -27,7 +27,6 @@ DEB_MAME_OPTS = \
     SUBTARGET=mame \
     OSD=sdl \
     CROSS_BUILD_OSD= \
-    TARGETOS=unix \
     NOASM=1 \
     PREFIX= \
     SUFFIX= \

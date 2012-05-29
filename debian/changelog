@@ -5,6 +5,11 @@ mame (0.146-1) UNRELEASED; urgency=low
   * Drop patch to fix man pages section and patches to link with flac 
     and jpeg system lib: all this has been pushed upstream by Cesare Falco
 
+  [ Jordi Mallach ]
+  * Create a "gnu" TARGETOS stanza that defines NO_AFFINITY_NP.
+  * Stop setting TARGETOS to "unix" in d/rules. It should be autodetected,
+    and set to the appropriate value.
+
  -- Emmanuel Kasper <emmanuel@libera.cc>  Mon, 21 May 2012 15:03:21 +0200
 
 mame (0.145-1) unstable; urgency=low
