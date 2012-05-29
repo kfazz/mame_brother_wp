@@ -14,12 +14,6 @@ Copyright: Ludovic Lechapt <ludomatic@gmail.com>
            Mamedeb team <mame@packages.debian.org>
 License: GPL-2+
 
-Files: debian/rules
-Copyright: Cesare Falco <cesare.falco@gmail.com>
-           Ludovic Lechapt <ludomatic@gmail.com>
-           Mamedeb team <mame@packages.debian.org>
-License: GPL-2+
-
 Files: debian/patches/*
 Copyright: Mamedeb team <mame@packages.debian.org>
 License: GPL-2+ or MAME
@@ -30,227 +24,48 @@ License: GPL-3+
 
 Files: *
 Copyright: Nicola Salmoria and the MAME team
+ Alex Pasadyn
+ Bryan McPhail
+ Dag Lem
+ Eric Smith
+ Frank Palazzolo
+ Grazvydas Ignotas
+ Jarek Burczynski
+ Jason Eckhardt
+ John Butler
+ John Weidman
+ Jonas Quinn
+ Jonathan Gevaryahu
+ Joseph Zbiciak
+ Juergen Buchmueller
+ J. Wallace
+ Karl Stenerud
+ Kris Bleakley
+ Lancer
+ Miodrag Milanovic
+ Mirko Buffoni
+ Nach
+ Peter J.C.Clare
+ Peter Trauner
+ Raphael Nabet
+ Ron Fries
+ smf
+ Steve Baines
+ Steve Ellenoff
+ Tatsuyuki Satoh
+ the AGEMAME Development Team
+ The MESS team
+ Tim Lindner
+ Tony La Porta
+ z80 gaiden
+ Zsolt Vasvari
 License: MAME
-
-Files: src/emu/cpu/alph8201/*
-Copyright: Tatsuyuki Satoh
-License: MAME
-
-Files: src/emu/cpu/arm7/*
- src/emu/cpu/mcs51/*
-Copyright: Steve Ellenoff
-License: MAME
-
-Files: src/emu/cpu/cdp1802/*
- src/emu/cpu/lh5801/*
- src/emu/cpu/saturn/*
- src/emu/cpu/sc61860/*
- src/emu/sound/sid.*
-Copyright: Peter Trauner
-License: MAME
-
-Files: src/emu/cpu/cp1610/*
-Copyright: Frank Palazzolo
-License: MAME
-
-Files: src/emu/cpu/f8/*
- src/emu/cpu/i8085/*
- src/emu/cpu/m6502/*
- src/emu/cpu/sh2/*
- src/emu/cpu/spc700/spc700ds.*
- src/emu/cpu/upd7810/*
- src/emu/cpu/z80/*
- src/emu/cpu/z180/*
- src/emu/cpu/z8000/*
-Copyright: Juergen Buchmueller
-License: MAME
-
-Files: src/emu/cpu/g65816/*
- src/emu/cpu/m68000/*
-Copyright: Karl Stenerud
-License: MAME
-
-Files: src/emu/cpu/h6280/*
-Copyright: Bryan McPhail
-License: MAME
-
-Files: src/emu/cpu/hd6309/*
-Copyright: John Butler, Tim Lindner
-License: MAME
-
-Files: src/emu/cpu/i860/*
-Copyright: Jason Eckhardt 
-License: MAME
-
-Files: src/emu/video/crt9007.h
- src/emu/video/crt9021.c
- src/emu/video/crt9212.c
- src/emu/video/msm6255.h
- src/emu/video/crt9212.h
- src/emu/video/msm6255.c
- src/emu/video/crt9007.c
- src/emu/video/hd61830.c
- src/emu/video/crt9021.h
- src/emu/video/hd61830.h
- src/emu/softlist.c
- src/emu/sound/cdp1864.c
- src/emu/sound/cdp1869.h
- src/emu/sound/cdp1863.h
- src/emu/sound/cdp1863.c
- src/emu/sound/cdp1864.h
- src/emu/sound/sp0256.h
- src/emu/sound/cdp1869.c
- src/emu/machine/e0516.h
- src/emu/machine/z8536.c
- src/emu/machine/mc68901.h
- src/emu/machine/z80sti.h
- src/emu/machine/cdp1871.c
- src/emu/machine/i8355.c
- src/emu/machine/i8255a.h
- src/emu/machine/z80sti.c
- src/emu/machine/upd1990a.c
- src/emu/machine/cdp1852.h
- src/emu/machine/nmc9306.c
- src/emu/machine/nmc9306.h
- src/emu/machine/e0516.c
- src/emu/machine/i8212.h
- src/emu/machine/i8155.c
- src/emu/machine/i8212.c
- src/emu/machine/cdp1871.h
- src/emu/machine/6526cia.h
- src/emu/machine/ram.c
- src/emu/machine/mc68901.c
- src/emu/machine/i8355.h
- src/emu/machine/i8155.h
- src/emu/machine/upd1990a.h
- src/emu/machine/z8536.h
- src/emu/machine/i8255a.c
- src/emu/cpu/cosmac/cosmac.h
- src/emu/cpu/cosmac/cosmac.c
- src/emu/cpu/z8/z8ops.c
- src/emu/cpu/z8/z8.c
- src/emu/cpu/z8/z8.h
- src/emu/machine/6525tpi.c
- src/emu/machine/adc0808.c
- src/emu/machine/adc0808.h
- src/emu/machine/com8116.c
- src/emu/machine/com8116.h
- src/emu/machine/ctronics.c
- src/emu/machine/i8214.c
- src/emu/machine/i8214.h
- src/emu/machine/i8255.c
- src/emu/machine/i8255.h
- src/emu/machine/mc6852.c
- src/emu/machine/mc6852.h
- src/emu/machine/mccs1850.c
- src/emu/machine/mccs1850.h
- src/emu/machine/mm74c922.c
- src/emu/machine/mm74c922.h
- src/emu/machine/mos6529.c
- src/emu/machine/mos6529.h
- src/emu/machine/msm5832.c
- src/emu/machine/msm5832.h
- src/emu/machine/msm58321.c
- src/emu/machine/msm58321.h
- src/emu/machine/rp5c01.c
- src/emu/machine/rp5c01.h
- src/emu/machine/rp5c15.c
- src/emu/machine/rp5c15.h
- src/emu/machine/upd7201.c
- src/emu/machine/upd7201.h
- src/emu/machine/wd17xx.c
- src/emu/machine/im6402.c
- src/emu/machine/im6402.h
- src/emu/machine/pls100.c
- src/emu/machine/pls100.h
- src/emu/sound/lmc1992.c
- src/emu/sound/lmc1992.h
- src/emu/video/cdp1861.c
- src/emu/video/cdp1861.h
- src/emu/video/cdp1862.c
- src/emu/video/cdp1862.h
- src/emu/video/dm9368.c
- src/emu/video/dm9368.h
- src/emu/video/hd44102.c
- src/emu/video/hd44102.h
- src/emu/video/i8275.c
- src/emu/video/i8275.c
- src/emu/video/i8275.h
- src/emu/video/sed1330.c
- src/emu/video/sed1330.h
- src/emu/video/upd3301.c
- src/emu/video/upd3301.h
-Copyright: The MESS team
-License: MAME
-
-Files: src/emu/cpu/m6809/*
-Copyright: John Butler
-License: MAME
-
-Files: src/emu/cpu/mcs48/*
-Copyright: Mirko Buffoni
-License: MAME
-
-Files: src/emu/cpu/pic16c5x/*
- src/emu/cpu/pic16c62x/*
- src/emu/cpu/tms32010/*
- src/emu/cpu/tms32025/*
-Copyright: Tony La Porta
-License: MAME
-
-Files: src/emu/cpu/ssp1601/*
- src/mame/drivers/megadriv.c
-Copyright: Grazvydas Ignotas
-License: MAME
-
-Files: src/emu/cpu/tms7000/*
-Copyright: Tim Lindner
-License: MAME
-
-Files: src/emu/cpu/tms9900/9900dasm.c
-Copyright: Raphael Nabet
-License: MAME
-
-Files: src/emu/cpu/tms34010/*
-Copyright: Alex Pasadyn, Zsolt Vasvari
-License: MAME
-
-Files: src/emu/sound/c6280.c
-Copyright: Charles MacDonald
-License: LGPL-2.1+
 
 Files: src/emu/sound/es5503.c
  src/emu/sound/ymf271.*
+ src/emu/sound/ymf278b.c
 Copyright: R. Belmont
-License: MAME or LGPL-2.1
-
-Files: src/emu/sound/fm.*
-Copyright: Jarek Burczynski, Tatsuyuki Satoh
-License: MAME
-
-Files: src/emu/sound/s14001a.*
-Copyright: Jonathan Gevaryahu
-License: MAME
-
-Files: src/emu/sound/sidw6581.h
-Copyright: Dag Lem
-License: MAME
-
-Files: src/emu/sound/sp0256.*
-Copyright: Joseph Zbiciak, Tim Lindner
-License: MAME
-
-Files: src/emu/sound/tiasound.*
-Copyright: Ron Fries
-License: MAME
-
-Files: src/emu/sound/ym2151.*
- src/emu/sound/ym2413.*
-Copyright: Jarek Burczynski
-License: MAME
-
-Files: src/emu/sound/ymf278b.c
-Copyright: R. Belmont and O. Galibert
+ O. Galibert
 License: MAME or LGPL-2.1
 
 Files: src/osd/osdepend.c
@@ -523,10 +338,6 @@ Files: src/osd/osdepend.c
  src/emu/machine/ldv1000.h
  src/emu/machine/ldvp931.h
  src/ldplayer/ldplayer_dev.lst
-Copyright: Aaron Giles
-License: BSD-3-clause
-
-Files: src/emu/machine/amigafdc.c
  src/lib/formats/hxcmfm_dsk.c
  src/lib/formats/ami_dsk.c
  src/lib/formats/dfi_dsk.c
@@ -534,8 +345,33 @@ Files: src/emu/machine/amigafdc.c
  src/lib/formats/flopimg.c
  src/lib/formats/mfi_dsk.c
  src/lib/formats/ap_dsk35.c
-Copyright: Olivier Galibert
+Copyright: Aaron Giles
+ Olivier Galibert
 License: BSD-3-clause
+
+Files: src/osd/sdl/gl_shader_tool.*
+Copyright: Sven Gothel
+License: MAME or GPL-2
+
+Files: src/osd/sdl/SDL1211_opengl.h
+Copyright: Sam Lantinga
+License: LGPL-2.1
+
+Files: nplayers/*
+Copyright: Nomax
+License: CC-BY-3.0
+
+Files: src/lib/util/md5.*
+Copyright: public-domain
+License: public-domain
+
+Files: src/lib/util/sha1.*
+ src/emu/sound/c6280.c
+Copyright: Peter Gutmann
+ Andrew Kuchling
+ Niels Moeller
+ Charles MacDonald
+License: LGPL-2.1+
 
 Files: src/lib/expat/*
 Copyright: 1998, 1999, 2000 Thai Open Source Software Center Ltd
@@ -588,14 +424,6 @@ License:
  that the minimal documentation requirements stated in the source code are
  satisfied.
 
-Files: src/lib/util/md5.*
-Copyright: public-domain
-License: public-domain
-
-Files: src/lib/util/sha1.*
-Copyright: 2001 Peter Gutmann, Andrew Kuchling, Niels Moeller
-License: LGPL-2.1+
-
 Files: src/lib/zlib/*
 Copyright: 1995-2005 Jean-loup Gailly and Mark Adler
 License:
@@ -623,67 +451,6 @@ License:
  The data format used by the zlib library is described by RFCs (Request for
  Comments) 1950 to 1952 in the files http://www.ietf.org/rfc/rfc1950.txt
  (zlib format), rfc1951.txt (deflate format) and rfc1952.txt (gzip format).
-
-Files: src/emu/video/psx.c
- src/emu/video/psx.h
-Copyright: smf
-License:MAME
-
-Files: src/emu/cpu/pps4/pps4.c
-Copyright: Miodrag Milanovic
-License: MAME
-
-Files: /src/mame/machine/megadriv.c
-Copyright: Grazvydas Ignotas and the MAME Team
-License: MAME
-
-Files: src/mame/audio/carnival.c
-Copyright: Peter J.C.Clare
-License: MAME
-
-Files: src/mame/audio/snes_snd.c
-Copyright: Brad Martin
-License: MAME
-
-Files: src/mame/audio/starwars.c
- src/mame/drivers/starwars.c
- src/mame/machine/starwars.c
-Copyright: Steve Baines
-License: MAME
-
-Files: src/mame/drivers/bfmsys85.c
- src/mame/drivers/bfm_sc1.c
- src/mame/drivers/maygay1b.c
- src/mame/video/awpvid.*
- src/mame/video/bfm_dm01.c
-Copyright: J. Wallace and the AGEMAME Development Team
-License: MAME
-
-Files: src/mame/machine/mathbox.*
-Copyright: Eric Smith
-License: MAME
-
-Files: src/mame/machine/snesdsp3.c
-Copyright: John Weidman, Kris Bleakley, Lancer, Nach, z80 gaiden,
- Jonas Quinn
-License: MAME
-
-Files: src/mame/machine/snesdsp4.c
-Copyright: Dreamer Nom, John Weidman, Kris Bleakley, Nach, z80 gaiden,
- Jonas Quinn
-License: MAME
-
-Files: src/osd/sdl/gl_shader_tool.*
-Copyright: Sven Gothel
-License: MAME or GPL-2
-
-Files: src/osd/sdl/SDL1211_opengl.h
-Copyright: Sam Lantinga
-License: LGPL-2.1
-
-Files: nplayers/*
-Copyright: Nomax
-License: CC-BY-3.0
 
 License: MAME
  Copyright (c) 1997-2007, Nicola Salmoria and the MAME team
