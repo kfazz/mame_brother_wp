@@ -4,6 +4,7 @@ mame (0.146-1) UNRELEASED; urgency=low
   * New upstream release
   * Drop patch to fix man pages section and patches to link with flac 
     and jpeg system lib: all this has been pushed upstream by Cesare Falco
+  * Add DM-Upload-Allowed: yes field.
 
   [ Jordi Mallach ]
   * Create a "gnu" TARGETOS stanza that defines NO_AFFINITY_NP.
