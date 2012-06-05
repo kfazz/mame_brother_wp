@@ -1,4 +1,4 @@
-mame (0.146-1) UNRELEASED; urgency=low
+mame (0.146-1) unstable; urgency=low
 
   [ Emmanuel Kasper ]
   * New upstream release
@@ -13,7 +13,7 @@ mame (0.146-1) UNRELEASED; urgency=low
   * mame_manpage_section.patch: Change mame's manpage section to 6 (games),
     in the TH declaration.
 
- -- Emmanuel Kasper <emmanuel@libera.cc>  Mon, 21 May 2012 15:03:21 +0200
+ -- Jordi Mallach <jordi@debian.org>  Tue, 05 Jun 2012 20:02:23 +0200
 
 mame (0.145-1) unstable; urgency=low
 
