@@ -10,6 +10,8 @@ mame (0.146-1) UNRELEASED; urgency=low
   * Create a "gnu" TARGETOS stanza that defines NO_AFFINITY_NP.
   * Stop setting TARGETOS to "unix" in d/rules. It should be autodetected,
     and set to the appropriate value.
+  * mame_manpage_section.patch: Change mame's manpage section to 6 (games),
+    in the TH declaration.
 
  -- Emmanuel Kasper <emmanuel@libera.cc>  Mon, 21 May 2012 15:03:21 +0200
 

@@ -1,0 +1,18 @@
+Author: Jordi Mallach <jordi@debian.org>
+Description: Change mame's manpage section to 6 (games), in the TH declaration.
+ Debhelper relies on this to resolve where to install the manpage.
+Forwarded: no
+
+Index: mame-0.146/src/osd/sdl/man/mame.6
+===================================================================
+--- mame-0.146.orig/src/osd/sdl/man/mame.6	2012-06-05 14:10:28.000000000 +0200
++++ mame-0.146/src/osd/sdl/man/mame.6	2012-06-05 19:58:11.543664575 +0200
+@@ -13,7 +13,7 @@
+ .\" and updated by Andrew Burton <burtona@gol.com>, July 2003
+ .\"
+ .\"
+-.TH MAME 1 2012-03-25 0.145u5 "MAME \- The Multiple Arcade Machine Emulator"
++.TH MAME 6 2012-03-25 0.145u5 "MAME \- The Multiple Arcade Machine Emulator"
+ .\"
+ .\"
+ .\" NAME chapter
