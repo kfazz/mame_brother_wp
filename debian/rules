@@ -44,12 +44,12 @@ DEB_MAME_OPTS = \
     PROFILE= \
     MAP= \
     VERBOSE= \
-    OPTIMIZE=3 \
+    OPTIMIZE=2 \
     LDFLAGS="-Wl,--as-needed" \
     LDFLAGSEMULATOR="-Wl,--as-needed" \
     NOWERROR=1 \
-    CC=@gcc-4.6 \
-    LD=@g++-4.6
+    CC=@gcc
+    LD=@g++
 
 # Override make variables for specific archs
 # Linux architectures
