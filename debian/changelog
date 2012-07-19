@@ -1,10 +1,13 @@
 mame (0.146-2) UNRELEASED; urgency=low
 
-  * Man page updated to 0.146 (Cesare Falco) 
+  [ Cesare Falco ] 
   * mame.ini: start mame in full screen until issue solved in Ubuntu, see:
     https://bugs.launchpad.net/ubuntu/+source/mame/+bug/994508
-    (Cesare Falco)
+  * Man page updated to 0.146
+  
+  [ Emmanuel Kasper ]
   * Default gcc optimize flag switched to -O2 (-O3 segfaults on arm and i386)
+
  -- Emmanuel Kasper <emmanuel@libera.cc>  Thu, 19 Jul 2012 22:15:16 +0200
 
 mame (0.146-1) unstable; urgency=low
