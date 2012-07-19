@@ -1,8 +1,12 @@
 mame (0.146-2) UNRELEASED; urgency=low
 
   * Recompile package with gcc-4.6, as gcc-4.7 segfaults the resulting binary
-  on some arches (workaround for #678249)
+    on some arches (workaround for #678249)
   * Man page updated to 0.146 (Cesare Falco) 
+  * mame.ini: start mame in full screen until issue solved in Ubuntu, see:
+    https://bugs.launchpad.net/ubuntu/+source/mame/+bug/994508
+    (Cesare Falco)
+
  -- Emmanuel Kasper <emmanuel@libera.cc>  Thu, 28 Jun 2012 12:26:38 +0200
 
 mame (0.146-1) unstable; urgency=low
