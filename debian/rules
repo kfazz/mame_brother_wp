@@ -48,8 +48,6 @@ DEB_MAME_OPTS = \
     LDFLAGS="-Wl,--as-needed" \
     LDFLAGSEMULATOR="-Wl,--as-needed" \
     NOWERROR=1 \
-    CC=@gcc
-    LD=@g++
 
 # Override make variables for specific archs
 # Linux architectures
