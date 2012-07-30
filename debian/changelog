@@ -1,4 +1,4 @@
-mame (0.146-2) UNRELEASED; urgency=low
+mame (0.146-2) unstable; urgency=low
 
   [ Cesare Falco ] 
   * mame.ini: start mame in full screen until issue solved in Ubuntu, see:
