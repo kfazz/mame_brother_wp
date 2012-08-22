@@ -2,10 +2,10 @@ Author: Cesare Falco <cesare.falco@gmail.com>
 Description: Fix mame.6 and jedutil.1, update chdman.1
 Forwarded: yes
 
-Index: mame-0.146u1/src/osd/sdl/man/mame.6
+Index: mame-0.146u4/src/osd/sdl/man/mame.6
 ===================================================================
---- mame-0.146u1.orig/src/osd/sdl/man/mame.6	2012-06-14 20:43:29.000000000 +0200
-+++ mame-0.146u1/src/osd/sdl/man/mame.6	2012-06-14 20:43:43.000000000 +0200
+--- mame-0.146u4.orig/src/osd/sdl/man/mame.6	2012-07-31 00:57:13.000000000 +0200
++++ mame-0.146u4/src/osd/sdl/man/mame.6	2012-07-31 00:57:52.000000000 +0200
 @@ -13,7 +13,7 @@
  .\" and updated by Andrew Burton <burtona@gol.com>, July 2003
  .\"
@@ -24,16 +24,26 @@ Index: mame-0.146u1/src/osd/sdl/man/mame.6
  Sets the audio sample rate. Smaller values (e.g. 11025) cause lower
  audio quality but faster emulation speed. Higher values (e.g. 48000)
  cause higher audio quality but slower emulation speed. The default is
-Index: mame-0.146u1/src/osd/sdl/man/chdman.1
+@@ -942,6 +942,9 @@
+ .B \-sixaxis
+ Use special handling for PS3 Sixaxis controllers.
+ .TP
++.B \-lightgun_index[1\-8]
++Map lightgun to specific index in MAME.
++.TP
+ .B \-videodriver, \-vd \fIx11\fR|\fIdirectfb\fR|\fIauto\fR
+ SDL video driver to use; auto selects SDL default.
+ .TP
+Index: mame-0.146u4/src/osd/sdl/man/chdman.1
 ===================================================================
---- mame-0.146u1.orig/src/osd/sdl/man/chdman.1	2012-06-14 20:43:29.000000000 +0200
-+++ mame-0.146u1/src/osd/sdl/man/chdman.1	2012-06-14 20:43:43.000000000 +0200
+--- mame-0.146u4.orig/src/osd/sdl/man/chdman.1	2012-07-31 00:57:13.000000000 +0200
++++ mame-0.146u4/src/osd/sdl/man/chdman.1	2012-07-31 00:58:23.000000000 +0200
 @@ -6,7 +6,7 @@
  .\" Ashley T. Howes <debiandev@ashleyhowes.com>, February 2005
  .\" updated by Cesare Falco <cesare.falco@gmail.com>, February 2007
  .\"
 -.TH CHDMAN 1 2012-03-25 0.145u5 "MAME Compressed Hunks of Data (CHD) manager"
-+.TH CHDMAN 1 2012-06-14 0.146u1 "MAME Compressed Hunks of Data (CHD) manager"
++.TH CHDMAN 1 2012-07-31 0.146u4 "MAME Compressed Hunks of Data (CHD) manager"
  .\"
  .\" NAME chapter
  .SH NAME
@@ -294,16 +304,16 @@ Index: mame-0.146u1/src/osd/sdl/man/chdman.1
 +.TP
 +.B \-\-verbose, \-v
 +Output additional information about the operation.
-Index: mame-0.146u1/src/osd/sdl/man/jedutil.1
+Index: mame-0.146u4/src/osd/sdl/man/jedutil.1
 ===================================================================
---- mame-0.146u1.orig/src/osd/sdl/man/jedutil.1	2012-05-21 19:49:28.000000000 +0200
-+++ mame-0.146u1/src/osd/sdl/man/jedutil.1	2012-06-14 21:44:11.000000000 +0200
+--- mame-0.146u4.orig/src/osd/sdl/man/jedutil.1	2012-07-31 00:57:13.000000000 +0200
++++ mame-0.146u4/src/osd/sdl/man/jedutil.1	2012-07-31 01:04:29.000000000 +0200
 @@ -8,7 +8,7 @@
  .\" References
  .\" http://aarongiles.com/?p=159
  .\"
 -.TH JEDUTIL 1 2012-03-25 0.145u5 "jedutil"
-+.TH JEDUTIL 1 2012-06-14 0.146u1 "jedutil"
++.TH JEDUTIL 1 2012-07-31 0.146u4 "MAME JED files manager"
  .\"
  .\" NAME chapter
  .SH NAME
@@ -316,3 +326,42 @@ Index: mame-0.146u1/src/osd/sdl/man/jedutil.1
  .\"
  .\" DESCRIPTION chapter
  .SH DESCRIPTION
+Index: mame-0.146u4/src/osd/sdl/man/ldverify.1
+===================================================================
+--- mame-0.146u4.orig/src/osd/sdl/man/ldverify.1	2012-05-21 19:49:28.000000000 +0200
++++ mame-0.146u4/src/osd/sdl/man/ldverify.1	2012-07-31 01:01:07.000000000 +0200
+@@ -5,7 +5,7 @@
+ .\" Man page created from source and usage information by 
+ .\" Cesare Falco <cesare.falco@gmail.com>, August 2008
+ .\"
+-.TH LDVERIFY 1 2012-03-25 0.145u5 "ldverify"
++.TH LDVERIFY 1 2012-07-31 0.146u4 "MAME laserdisc data checker"
+ .\"
+ .\" NAME chapter
+ .SH NAME
+Index: mame-0.146u4/src/osd/sdl/man/romcmp.1
+===================================================================
+--- mame-0.146u4.orig/src/osd/sdl/man/romcmp.1	2012-05-21 19:49:28.000000000 +0200
++++ mame-0.146u4/src/osd/sdl/man/romcmp.1	2012-07-31 01:05:38.000000000 +0200
+@@ -9,7 +9,7 @@
+ .\" References
+ .\" http://www.mame.net/mamefaq.html
+ .\"
+-.TH ROMCMP 1 2012-03-25 0.145u5 "romcmp"
++.TH ROMCMP 1 2012-07-31 0.146u4 "MAME romset checking tool"
+ .\"
+ .\" NAME chapter
+ .SH NAME
+Index: mame-0.146u4/src/osd/sdl/man/testkeys.1
+===================================================================
+--- mame-0.146u4.orig/src/osd/sdl/man/testkeys.1	2012-05-21 19:49:28.000000000 +0200
++++ mame-0.146u4/src/osd/sdl/man/testkeys.1	2012-07-31 01:03:18.000000000 +0200
+@@ -5,7 +5,7 @@
+ .\" Man page created from source and usage information
+ .\" Cesare Falco <cesare.falco@gmail.com>, February 2007
+ .\"
+-.TH TESTKEYS 1 2012-03-25 0.145u5 "testkeys"
++.TH TESTKEYS 1 2012-07-31 0.146u4 "MAME SDL keycode checker"
+ .\"
+ .\" NAME chapter
+ .SH NAME

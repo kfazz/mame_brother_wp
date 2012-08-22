@@ -32,7 +32,7 @@ DEB_MAME_OPTS = \
     SUFFIX= \
     DEBUG= \
     PROFILER= \
-    NOWERROR= \
+    NOWERROR=1 \
     MACOSX_USE_LIBSDL= \
     BUILD_EXPAT= \
     BUILD_ZLIB= \
@@ -46,8 +46,7 @@ DEB_MAME_OPTS = \
     VERBOSE= \
     OPTIMIZE=2 \
     LDFLAGS="-Wl,--as-needed" \
-    LDFLAGSEMULATOR="-Wl,--as-needed" \
-    NOWERROR=1 \
+    LDFLAGSEMULATOR="-Wl,--as-needed"
 
 # Override make variables for specific archs
 # Linux architectures
