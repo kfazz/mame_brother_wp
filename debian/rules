@@ -52,7 +52,7 @@ DEB_MAME_OPTS = \
 # Linux architectures
 ifeq ($(DEB_HOST_ARCH),amd64)
 DEB_MAME_OPTS += \
-    ARCHOPTS=-march=athlon64 \
+    ARCHOPTS=-mtune=generic \
     FORCE_DRC_C_BACKEND= \
     PTR64=1 \
     NOASM= \
@@ -61,7 +61,7 @@ endif
 
 ifeq ($(DEB_HOST_ARCH),i386)
 DEB_MAME_OPTS += \
-    ARCHOPTS=-march=pentium2 \
+    ARCHOPTS=-mtune=generic \
     FORCE_DRC_C_BACKEND= \
     PTR64= \
     NOASM= \
