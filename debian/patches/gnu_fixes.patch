@@ -4,10 +4,10 @@ Description: Check for GNU.
  that defines NO_AFFINITY_NP.
 Forwarded: no
 
-Index: mame-0.146u1/makefile
+Index: mame-0.147/makefile
 ===================================================================
---- mame-0.146u1.orig/makefile	2012-06-14 15:41:52.000000000 +0200
-+++ mame-0.146u1/makefile	2012-06-14 15:58:23.000000000 +0200
+--- mame-0.147.orig/makefile	2012-09-18 23:11:02.000000000 +0200
++++ mame-0.147/makefile	2012-09-18 23:12:02.000000000 +0200
 @@ -77,6 +77,9 @@
  ifeq ($(firstword $(filter Linux,$(UNAME))),Linux)
  TARGETOS = linux
@@ -18,11 +18,11 @@ Index: mame-0.146u1/makefile
  ifeq ($(firstword $(filter Solaris,$(UNAME))),Solaris)
  TARGETOS = solaris
  endif
-Index: mame-0.146u1/src/osd/sdl/sdl.mak
+Index: mame-0.147/src/osd/sdl/sdl.mak
 ===================================================================
---- mame-0.146u1.orig/src/osd/sdl/sdl.mak	2012-06-14 15:41:52.000000000 +0200
-+++ mame-0.146u1/src/osd/sdl/sdl.mak	2012-06-14 15:57:11.000000000 +0200
-@@ -241,6 +241,13 @@
+--- mame-0.147.orig/src/osd/sdl/sdl.mak	2012-09-18 23:11:02.000000000 +0200
++++ mame-0.147/src/osd/sdl/sdl.mak	2012-09-18 23:12:02.000000000 +0200
+@@ -259,6 +259,13 @@
  
  endif
  
@@ -36,10 +36,10 @@ Index: mame-0.146u1/src/osd/sdl/sdl.mak
  ifeq ($(TARGETOS),win32)
  BASE_TARGETOS = win32
  SYNC_IMPLEMENTATION = win32
-Index: mame-0.146u1/src/osd/sdl/sdlprefix.h
+Index: mame-0.147/src/osd/sdl/sdlprefix.h
 ===================================================================
---- mame-0.146u1.orig/src/osd/sdl/sdlprefix.h	2012-06-14 15:41:52.000000000 +0200
-+++ mame-0.146u1/src/osd/sdl/sdlprefix.h	2012-06-14 15:54:21.000000000 +0200
+--- mame-0.147.orig/src/osd/sdl/sdlprefix.h	2012-09-18 23:11:02.000000000 +0200
++++ mame-0.147/src/osd/sdl/sdlprefix.h	2012-09-18 23:12:02.000000000 +0200
 @@ -42,7 +42,7 @@
  /* Large file support on IRIX needs _SGI_SOURCE */
  #undef _POSIX_SOURCE
