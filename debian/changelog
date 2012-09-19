@@ -6,6 +6,7 @@ mame (0.147-1) unstable; urgency=low
     - Removed duplicate NOWERROR make variable in debian/rules
     - Replaced -march with -mtune=generic in i386/amd64 targets
       (fixes FTBFS for i386 with gcc 4.6.3)
+    - Changelog removed upstream
 
  -- Cesare Falco <cesare.falco@gmail.com>  Tue, 18 Sep 2012 22:33:53 +0200
 
