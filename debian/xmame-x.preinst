@@ -1,0 +1,16 @@
+#! /bin/sh
+#
+# xmame-x preinst
+#
+
+set -e
+case "$1" in
+  install|upgrade)
+    # /usr/share/doc/xmame-x used to be a symlink to xmame-common
+    # but xmame-common does not exist anymore
+	[ -L /usr/share/doc/xmame-x ] && rm -f /usr/share/doc/xmame-x
+	;;
+  abort-upgrade)
+	exit 0
+	;;
+esac
