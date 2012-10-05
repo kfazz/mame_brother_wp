@@ -1,14 +1,25 @@
-mame (0.147-1) unstable; urgency=low
+mame (0.147-1~ppa6~precise) precise; urgency=low
 
   * New upstream release
   * Updated quilt patches
+  * Mess source imported in Mame project; packages merged accordingly
+  * mame.ini: modified paths to search for mess-data directories
+  * New mame-extra packages for additional files:
+    - nplayers.ini (moved from mame)
+    - history.dat (new)
+  * debian/copyright: added history file
   * debian/rules:
     - Removed duplicate NOWERROR make variable in debian/rules
     - Replaced -march with -mtune=generic in i386/amd64 targets
       (fixes FTBFS for i386 with gcc 4.6.3)
-    - Changelog removed upstream
+    - Changelogs removed upstream
+    - Added targets for Mess and tools
+    - get-orig-source:
+      + retrieve .exe, significantly smaller than .zip
+      + added rules for history file
+  * debian/watch: added history file
 
- -- Cesare Falco <cesare.falco@gmail.com>  Tue, 18 Sep 2012 22:33:53 +0200
+ -- Cesare Falco <cesare.falco@gmail.com>  Fri, 05 Oct 2012 23:35:28 +0200
 
 mame (0.146-2) unstable; urgency=low
 

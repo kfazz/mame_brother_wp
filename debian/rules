@@ -20,11 +20,7 @@ ifdef SETNJOBS
 endif
 
 # Override relevant make variables in original makefile
-DEB_MAME_OPTS = \
-    OPT_FLAGS="-D'INI_PATH=\"/etc/mame\"'" \
-    FULLNAME=mame \
-    TARGET=mame \
-    SUBTARGET=mame \
+DEB_OPTS = \
     OSD=sdl \
     CROSS_BUILD_OSD= \
     NOASM=1 \
@@ -51,7 +47,7 @@ DEB_MAME_OPTS = \
 # Override make variables for specific archs
 # Linux architectures
 ifeq ($(DEB_HOST_ARCH),amd64)
-DEB_MAME_OPTS += \
+DEB_OPTS += \
     ARCHOPTS=-mtune=generic \
     FORCE_DRC_C_BACKEND= \
     PTR64=1 \
@@ -60,7 +56,7 @@ DEB_MAME_OPTS += \
 endif
 
 ifeq ($(DEB_HOST_ARCH),i386)
-DEB_MAME_OPTS += \
+DEB_OPTS += \
     ARCHOPTS=-mtune=generic \
     FORCE_DRC_C_BACKEND= \
     PTR64= \
@@ -69,7 +65,7 @@ DEB_MAME_OPTS += \
 endif
 
 ifeq ($(DEB_HOST_ARCH),ia64)
-DEB_MAME_OPTS += \
+DEB_OPTS += \
     FORCE_DRC_C_BACKEND=1 \
     PTR64=1 \
     NOASM=1 \
@@ -77,20 +73,20 @@ DEB_MAME_OPTS += \
 endif
 
 ifeq ($(DEB_HOST_ARCH),mips)
-DEB_MAME_OPTS += \
+DEB_OPTS += \
     ARCHOPTS=-Umips \
     FORCE_DRC_C_BACKEND=1 \
     BIGENDIAN=1
 endif
 
 ifeq ($(DEB_HOST_ARCH),mipsel)
-DEB_MAME_OPTS += \
+DEB_OPTS += \
     ARCHOPTS=-Umips \
     FORCE_DRC_C_BACKEND=1
 endif
 
 ifeq ($(DEB_HOST_ARCH),powerpc)
-DEB_MAME_OPTS += \
+DEB_OPTS += \
     ARCHOPTS=-Upowerpc \
     FORCE_DRC_C_BACKEND=1 \
     NOASM= \
@@ -98,27 +94,27 @@ DEB_MAME_OPTS += \
 endif
 
 ifeq ($(DEB_HOST_ARCH),s390)
-DEB_MAME_OPTS += \
+DEB_OPTS += \
     FORCE_DRC_C_BACKEND=1 \
     BIGENDIAN=1
 endif
 
 ifeq ($(DEB_HOST_ARCH),s390x)
-DEB_MAME_OPTS += \
+DEB_OPTS += \
     FORCE_DRC_C_BACKEND=1 \
     PTR64=1 \
     BIGENDIAN=1
 endif
 
 ifeq ($(DEB_HOST_ARCH),sparc)
-DEB_MAME_OPTS += \
+DEB_OPTS += \
     FORCE_DRC_C_BACKEND=1 \
     BIGENDIAN=1
 endif
 
 # kFreeBSD architectures
 ifeq ($(DEB_HOST_ARCH),kfreebsd-amd64)
-DEB_MAME_OPTS += \
+DEB_OPTS += \
     TARGETOS=freebsd \
     PTR64=1 \
     FORCE_DRC_C_BACKEND= \
@@ -127,7 +123,7 @@ DEB_MAME_OPTS += \
 endif
 
 ifeq ($(DEB_HOST_ARCH),kfreebsd-i386)
-DEB_MAME_OPTS += \
+DEB_OPTS += \
     TARGETOS=freebsd \
     FORCE_DRC_C_BACKEND= \
     PTR64= \
@@ -135,19 +131,35 @@ DEB_MAME_OPTS += \
     BIGENDIAN=
 endif
 
+DEB_MAME_OPTS = \
+    OPT_FLAGS="-D'INI_PATH=\"/etc/mame\"'" \
+    FULLNAME=mame \
+    TARGET=mame \
+    SUBTARGET=mame
+
+DEB_MESS_OPTS = \
+    OPT_FLAGS="-D'INI_PATH=\"/etc/mess\"'" \
+    FULLNAME=mess \
+    TARGET=mess \
+    SUBTARGET=mess
+
 %:
 	dh $@
 
 override_dh_auto_build:
-	$(MAKE) -j$(NJOBS) $(DEB_MAME_OPTS)
+	$(MAKE) -j$(NJOBS) $(DEB_MAME_OPTS) $(DEB_OPTS)
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
+	$(MAKE) -j$(NJOBS) $(DEB_MESS_OPTS) $(DEB_OPTS) all
+	$(CURDIR)/mess -createconfig
+	mv mess.ini default.mess.ini
 
 override_dh_auto_clean:
 	echo "Starting clean process..."
-	$(MAKE) $(DEB_MAME_OPTS) clean
+	$(MAKE) $(DEB_MAME_OPTS) $(DEB_OPTS) clean
+	$(MAKE) $(DEB_MESS_OPTS) $(DEB_OPTS) clean
 	rm -rf obj
-	rm -f default.mame.ini
+	rm -f default.mame.ini default.mess.ini
 
 # Remove Windows specific documentation
 override_dh_installdocs:
@@ -157,78 +169,85 @@ override_dh_installdocs:
 
 # Remove OSX specific keymaps
 override_dh_install:
-	# some data files created on windows show up as executables: fix it
 	dh_install --exclude=OSX.txt
 
 
 # Convert upstream sources from zip to tar.xz
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
 
-# Upstream zip file does not have a dot in its name, so we have to cut it out
-UPSTREAM_VERSION := $(shell echo $(VERSION) | sed -e 's/\.//' )
-
 AGENT = Debian MAME Packagers <mame@packages.debian.org>
 TMPDIR := $(shell mktemp --dry-run --directory -p .)
 
 MAME_PACKAGE = mame
-MAME_FILEBASE = $(MAME_PACKAGE)$(VERSION)
+# Upstream source has no dot in its name, so we have to cut it out
+MAME_VERSION := $(shell echo $(VERSION) | sed -e 's/\.//' )
 MAME_URL = http://mamedev.org/downloader.php?file=releases/
+MAME_SRCFILE = $(MAME_PACKAGE)$(MAME_VERSION)s.exe
 MAME_TARBALL = $(MAME_PACKAGE)_$(VERSION).orig.tar.xz
 
-$(MAME_FILEBASE)s.zip:
-	wget -U '$(AGENT)' \
-        "$(MAME_URL)$(MAME_PACKAGE)$(UPSTREAM_VERSION)s.zip" \
-        -O $(MAME_FILEBASE)s.zip
+$(MAME_SRCFILE):
+	wget -U '$(AGENT)' $(MAME_URL)$(MAME_SRCFILE) -O $(MAME_SRCFILE)
 
-$(MAME_TARBALL): $(MAME_FILEBASE)s.zip
+$(MAME_TARBALL): $(MAME_SRCFILE)
 	mkdir $(TMPDIR)
-
-	# Create an orig.tar.xz tarball for MAME
-	unzip $(MAME_FILEBASE)s.zip -d $(TMPDIR)
-	mkdir -p $(TMPDIR)/sub/$(MAME_PACKAGE)-$(VERSION)
-	# Not a bug: Mame source needs to be unzipped twice
-	unzip $(TMPDIR)/$(MAME_PACKAGE).zip \
-	    -d $(TMPDIR)/sub/$(MAME_PACKAGE)-$(VERSION)
+	7z x -o$(TMPDIR)/$(MAME_PACKAGE)-$(VERSION) $(MAME_SRCFILE)
 	# Strip trailing CR
-	find $(TMPDIR)/sub/$(MAME_PACKAGE)-$(VERSION) \
+	find $(TMPDIR)/$(MAME_PACKAGE)-$(VERSION) \
 	    -type f -regextype posix-egrep \
 	    ! -regex ".*(zip|gif|png|bmp|ico)" \
 	    | sed 's/\ /\\\ /g' \
 	    | xargs sed -i "s/\r$$//"
-	tar -C $(TMPDIR)/sub -cvf - $(MAME_PACKAGE)-$(VERSION) | \
-	    xz > $(MAME_TARBALL)
-	rm -f $(MAME_FILEBASE)s.zip
-
+	tar -C $(TMPDIR) -cvf - $(MAME_PACKAGE)-$(VERSION) | xz -9 > $(MAME_TARBALL)
 	rm -rf $(TMPDIR)
+	rm -f $(MAME_SRCFILE)
 
-# FIXME: nplayers should go in the forthcoming mame-extra package
+HISTORY_PACKAGE = mamehistory
+# Upstream source file has no leading zero in version number, so cut it out
+HISTORY_VERSION := $(shell echo $(VERSION) | sed -e 's/^0\.//' )
+HISTORY_URL = http://www.arcade-history.com/dats/
+HISTORY_SRCFILE = $(HISTORY_PACKAGE)$(HISTORY_VERSION).7z
+HISTORY_TARBALL = $(MAME_PACKAGE)_$(VERSION).orig-$(HISTORY_PACKAGE).tar.xz
+
+$(HISTORY_SRCFILE):
+	wget -U '$(AGENT)' $(HISTORY_URL)$(HISTORY_SRCFILE)
+
+$(HISTORY_TARBALL): $(HISTORY_SRCFILE)
+	mkdir $(TMPDIR)
+	7z x -o$(TMPDIR)/$(HISTORY_PACKAGE) $(HISTORY_SRCFILE)
+	# Strip trailing CR
+	find $(TMPDIR)/$(HISTORY_PACKAGE) -type f | xargs sed -i "s/\r$$//"
+	tar -C $(TMPDIR) -cvf - $(HISTORY_PACKAGE) | xz -9 > $(HISTORY_TARBALL)
+	rm -rf $(TMPDIR)
+	rm -f $(HISTORY_SRCFILE)
+
 NPLAYERS_PACKAGE = nplayers
 NPLAYERS_URL = http://nplayers.arcadebelgium.be/files/
-NPLAYERS_ZIPFILE = $(NPLAYERS_PACKAGE)$(UPSTREAM_VERSION).zip
+NPLAYERS_SRCFILE = $(NPLAYERS_PACKAGE)$(MAME_VERSION).zip
 NPLAYERS_TARBALL = $(MAME_PACKAGE)_$(VERSION).orig-$(NPLAYERS_PACKAGE).tar.xz
 
-$(NPLAYERS_ZIPFILE):
-	wget -U '$(AGENT)' \
-	    $(NPLAYERS_URL)$(NPLAYERS_ZIPFILE)
+$(NPLAYERS_SRCFILE):
+	wget -U '$(AGENT)' $(NPLAYERS_URL)$(NPLAYERS_SRCFILE)
 
-$(NPLAYERS_TARBALL): $(NPLAYERS_ZIPFILE)
+$(NPLAYERS_TARBALL): $(NPLAYERS_SRCFILE)
 	mkdir $(TMPDIR)
-	unzip $(NPLAYERS_ZIPFILE) -d $(TMPDIR)/$(NPLAYERS_PACKAGE)
+	unzip $(NPLAYERS_SRCFILE) -d $(TMPDIR)/$(NPLAYERS_PACKAGE)
 	# Strip trailing CR
 	find $(TMPDIR)/$(NPLAYERS_PACKAGE) -type f | xargs sed -i "s/\r$$//"
-	tar -C $(TMPDIR) -cvf - $(NPLAYERS_PACKAGE) | xz > $(NPLAYERS_TARBALL)
-	rm -f $(NPLAYERS_ZIPFILE)
+	tar -C $(TMPDIR) -cvf - $(NPLAYERS_PACKAGE) | xz -9 > $(NPLAYERS_TARBALL)
 	rm -rf $(TMPDIR)
+	rm -f $(NPLAYERS_SRCFILE)
 
-get-orig-source: $(MAME_TARBALL) $(NPLAYERS_TARBALL)
+get-orig-source: $(MAME_TARBALL) $(HISTORY_TARBALL) $(NPLAYERS_TARBALL)
 
 erase-upstream: clean
 	rm -rf artwork
 	rm -rf docs
 	rm -rf hash
 	rm -rf hlsl
+	rm -rf keymaps
 	rm -f makefile
 	rm -rf obj
 	rm -rf src
 	rm -f whatsnew*.txt
+	rm -rf mamehistory
 	rm -rf nplayers
