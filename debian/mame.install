@@ -1,11 +1,4 @@
 mame usr/games
-artwork/*.png usr/share/games/mame/artwork
-hash/softwarelist.dtd usr/share/games/mame/hash
-hash/megatech.xml usr/share/games/mame/hash
-hash/neogeo.xml usr/share/games/mame/hash
-hash/stv.xml usr/share/games/mame/hash
-src/osd/sdl/keymaps/*.txt usr/share/games/mame/keymaps
-nplayers/nplayers.ini usr/share/games/mame/data
 debian/mame.ini etc/mame
 debian/install/hicolor/16x16/apps/mame.png usr/share/icons/hicolor/16x16/apps
 debian/install/hicolor/22x22/apps/mame.png usr/share/icons/hicolor/22x22/apps
