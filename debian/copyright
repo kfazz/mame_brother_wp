@@ -10,23 +10,30 @@ Disclaimer:
  distribution because the Mame Software License does not allow commercial use.
 
 Files: debian/*
-Copyright: Ludovic Lechapt <ludomatic@gmail.com>
-           Mamedeb team <mame@packages.debian.org>
-License: GPL-2+
-
-Files: debian/patches/*
 Copyright: Mamedeb team <mame@packages.debian.org>
-License: GPL-2+ or MAME
+License: GPL-2+
 
 Files: debian/install/hicolor/*
 Copyright: deviantdark [www.deviantdark.com]
 License: GPL-3+
 
+Files: mamehistory/*
+Copyright: Alexis Bousiges
+License: MAME
+
+Files: nplayers/*
+Copyright: Nomax
+License: CC-BY-3.0
+
 Files: *
-Copyright: Nicola Salmoria and the MAME team
- Alex Pasadyn
+Copyright: Alex Pasadyn
+ Alex Wulms
+ Antoine Mine
+ Brad Martin
  Bryan McPhail
+ Chris Kirmse
  Dag Lem
+ Dreamer Nom
  Eric Smith
  Frank Palazzolo
  Grazvydas Ignotas
@@ -42,21 +49,27 @@ Copyright: Nicola Salmoria and the MAME team
  Karl Stenerud
  Kris Bleakley
  Lancer
+ MAME32/MAMEUI team
+ Michael Soderstrom
  Miodrag Milanovic
  Mirko Buffoni
  Nach
+ Nicola Salmoria
  Peter J.C.Clare
  Peter Trauner
  Raphael Nabet
  Ron Fries
+ Sean Young
  smf
  Steve Baines
  Steve Ellenoff
  Tatsuyuki Satoh
- the AGEMAME Development Team
+ The AGEMAME Development Team
+ The MAME team
  The MESS team
  Tim Lindner
  Tony La Porta
+ XelaSoft
  z80 gaiden
  Zsolt Vasvari
 License: MAME
@@ -68,7 +81,131 @@ Copyright: R. Belmont
  O. Galibert
 License: MAME or LGPL-2.1
 
-Files: src/emu/mconfig.c
+Files: src/build/makedep.c
+ src/build/makedev.c
+ src/build/makelist.c
+ src/emu/addrmap.c
+ src/emu/addrmap.h
+ src/emu/attotime.c
+ src/emu/attotime.h
+ src/emu/cheat.c
+ src/emu/cheat.h
+ src/emu/clifront.c
+ src/emu/clifront.h
+ src/emu/cothread.c
+ src/emu/cothread.h
+ src/emu/cpu/adsp2100/adsp2100.c
+ src/emu/cpu/adsp2100/adsp2100.h
+ src/emu/cpu/asap/asap.c
+ src/emu/cpu/asap/asap.h
+ src/emu/cpu/ccpu/ccpu.c
+ src/emu/cpu/drcbec.c
+ src/emu/cpu/drcbec.h
+ src/emu/cpu/drcbeut.c
+ src/emu/cpu/drcbeut.h
+ src/emu/cpu/drcbex64.c
+ src/emu/cpu/drcbex64.h
+ src/emu/cpu/drcbex86.c
+ src/emu/cpu/drcbex86.h
+ src/emu/cpu/drccache.c
+ src/emu/cpu/drccache.h
+ src/emu/cpu/drcfe.c
+ src/emu/cpu/drcfe.h
+ src/emu/cpu/drcuml.c
+ src/emu/cpu/drcuml.h
+ src/emu/cpu/drcumlsh.h
+ src/emu/cpu/dsp32/dsp32.c
+ src/emu/cpu/dsp32/dsp32.h
+ src/emu/cpu/dsp32/dsp32ops.c
+ src/emu/cpu/jaguar/jaguar.c
+ src/emu/cpu/mips/mips3com.c
+ src/emu/cpu/mips/mips3drc.c
+ src/emu/cpu/mips/mips3fe.c
+ src/emu/cpu/mips/mips3fe.h
+ src/emu/cpu/mips/mips3.h
+ src/emu/cpu/mips/r3000.c
+ src/emu/cpu/powerpc/ppccom.c
+ src/emu/cpu/powerpc/ppcdrc.c
+ src/emu/cpu/powerpc/ppcfe.c
+ src/emu/cpu/powerpc/ppcfe.h
+ src/emu/cpu/powerpc/ppc.h
+ src/emu/cpu/t11/t11.c
+ src/emu/cpu/t11/t11ops.c
+ src/emu/cpu/t11/t11table.c
+ src/emu/cpu/tms32031/32031ops.c
+ src/emu/cpu/tms32031/tms32031.c
+ src/emu/cpu/tms32031/tms32031.h
+ src/emu/cpu/uml.c
+ src/emu/cpu/uml.h
+ src/emu/cpu/vtlb.c
+ src/emu/cpu/vtlb.h
+ src/emu/cpu/x86emit.h
+ src/emu/cpu/x86log.c
+ src/emu/cpu/x86log.h
+ src/emu/debug/debugcpu.c
+ src/emu/debug/debugcpu.h
+ src/emu/debug/debugvw.c
+ src/emu/debug/debugvw.h
+ src/emu/debug/dvdisasm.c
+ src/emu/debug/dvdisasm.h
+ src/emu/debug/dvmemory.c
+ src/emu/debug/dvmemory.h
+ src/emu/debug/dvstate.c
+ src/emu/debug/dvstate.h
+ src/emu/debug/dvtext.c
+ src/emu/debug/dvtext.h
+ src/emu/debug/express.c
+ src/emu/debug/express.h
+ src/emu/delegate.c
+ src/emu/delegate.h
+ src/emu/devcpu.c
+ src/emu/devcpu.h
+ src/emu/device.c
+ src/emu/device.h
+ src/emu/devlegcy.c
+ src/emu/devlegcy.h
+ src/emu/didisasm.c
+ src/emu/didisasm.h
+ src/emu/diexec.c
+ src/emu/diexec.h
+ src/emu/dimemory.c
+ src/emu/dimemory.h
+ src/emu/dinvram.c
+ src/emu/dinvram.h
+ src/emu/disound.c
+ src/emu/disound.h
+ src/emu/distate.c
+ src/emu/distate.h
+ src/emu/drivenum.c
+ src/emu/drivenum.h
+ src/emu/drivers/emudummy.c
+ src/emu/drivers/testcpu.c
+ src/emu/emualloc.c
+ src/emu/emualloc.h
+ src/emu/emu.h
+ src/emu/emuopts.c
+ src/emu/emuopts.h
+ src/emu/emutempl.h
+ src/emu/fileio.c
+ src/emu/fileio.h
+ src/emu/gamedrv.h
+ src/emu/hash.c
+ src/emu/hash.h
+ src/emu/machine.c
+ src/emu/machine/er2055.c
+ src/emu/machine/er2055.h
+ src/emu/machine.h
+ src/emu/machine/i8243.c
+ src/emu/machine/i8243.h
+ src/emu/machine/laserdsc.c
+ src/emu/machine/ldpr8210.h
+ src/emu/machine/ldstub.c
+ src/emu/machine/ldstub.h
+ src/emu/machine/ldv1000.h
+ src/emu/machine/ldvp931.h
+ src/emu/machine/nvram.c
+ src/emu/machine/nvram.h
+ src/emu/mconfig.c
  src/emu/mconfig.h
  src/emu/memory.c
  src/emu/memory.h
@@ -171,6 +308,10 @@ Files: src/emu/mconfig.c
  src/mame/machine/atarigen.h
  src/mame/mame_dev.lst
  src/mame/tiny_dev.lst
+ src/mess/mess_dev.lst
+ src/mess/mess.lst
+ src/mess/tiny_dev.lst
+ src/mess/tiny.lst
  src/osd/osdcomm.h
  src/osd/osdcore.h
  src/osd/osdepend.c
@@ -252,13 +393,39 @@ Files: src/osd/sdl/SDL1211_opengl.h
 Copyright: Sam Lantinga
 License: LGPL-2.1
 
-Files: mamehistory/*
-Copyright: Alexis Bousiges
-License: MAME
+Files: src/osd/sdl/gl_shader_tool.*
+Copyright: Sven Gothel
+License: MAME or GPL-2
 
-Files: nplayers/*
-Copyright: Nomax
-License: CC-BY-3.0
+Files: src/osd/sdl/SDL1211_opengl.h
+Copyright: Sam Lantinga
+License: LGPL-2.1
+
+Files: src/mess/video/vic6567.c
+Copyright: Christian Bauer
+License:
+ The rights on the source code remain at the author.
+ It may not - not even in parts - used for commercial purposes without
+ explicit written permission by the author.
+ Permission to use it for non-commercial purposes is hereby granted als long
+ as my copyright notice remains in the program.
+ You are not allowed to use the source to create and distribute a modified
+ version of Frodo.
+
+Files: src/mess/video/pc1403.c
+Copyright: Peter Trauner
+License:
+ *   Copyright (c) 2001 Peter Trauner, all rights reserved.
+ *
+ *   - This source code is released as freeware for non-commercial purposes.
+ *   - You are free to use and redistribute this code in modified or
+ *     unmodified form, provided you list me in the credits.
+ *   - If you modify this source code, you must add a notice to each modified
+ *     source file that it has been changed.  If you're a nice person, you
+ *     will clearly mark each change too.  :)
+ *   - If you wish to use this for commercial purposes, please contact me at
+ *     peter.trauner@jk.uni-linz.ac.at
+ *   - The author of this copywritten work reserves the right to change the
 
 Files: src/lib/util/md5.*
 Copyright: public-domain
