@@ -1,3 +1,9 @@
+mame (0.146-3) experimental; urgency=low
+
+  * Add preinst script for xmame-x,xmame-sdl,xmame-svga as a fix for #687654
+
+ -- Emmanuel Kasper <emmanuel@libera.cc>  Mon, 08 Oct 2012 15:27:37 +0200
+
 mame (0.146-2) unstable; urgency=low
 
   [ Cesare Falco ] 
