@@ -5,7 +5,7 @@ set -e
 
 #DEBHELPER#
 
-DOCLNK=/usr/share/doc/xmame-common
+DOCLNK=/usr/share/doc/xmame-x
 if test "$1" = upgrade \
     -a -L $DOCLNK \
     && dpkg --compare-versions "$2" lt-nl 0.146-3
