@@ -1,4 +1,4 @@
-mame (0.146-4) UNRELEASED; urgency=low
+mame (0.146-4) unstable; urgency=low
 
   * Removes danglink symlink after xmame-sdl,xmame-x,xmame-svga update.
     closes: bug#687654, #689718
