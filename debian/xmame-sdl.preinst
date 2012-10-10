@@ -8,7 +8,7 @@ set -e
 DOCLNK=/usr/share/doc/xmame-sdl
 if test "$1" = upgrade \
     -a -L $DOCLNK \
-    && dpkg --compare-versions "$2" lt-nl 0.146-3
+    && dpkg --compare-versions "$2" lt-nl 0.146-4
 then
     rm $DOCLNK
 fi
