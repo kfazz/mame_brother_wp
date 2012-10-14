@@ -74,14 +74,8 @@ Copyright: Alex Pasadyn
  Zsolt Vasvari
 License: MAME
 
-Files: src/emu/sound/es5503.c
- src/emu/sound/ymf271.*
- src/emu/sound/ymf278b.c
-Copyright: R. Belmont
- O. Galibert
-License: MAME or LGPL-2.1
-
 Files: src/build/makedep.c
+ src/version.c
  src/build/makedev.c
  src/build/makelist.c
  src/emu/addrmap.c
@@ -380,64 +374,16 @@ Files: src/build/makedep.c
  src/tools/srcclean.c
  src/tools/tools.mak
  src/tools/unidasm.c
- src/version.c
 Copyright: Aaron Giles
  Olivier Galibert
 License: BSD-3-clause
 
-Files: src/osd/sdl/gl_shader_tool.*
-Copyright: Sven Gothel
-License: MAME or GPL-2
-
-Files: src/osd/sdl/SDL1211_opengl.h
-Copyright: Sam Lantinga
-License: LGPL-2.1
-
-Files: src/osd/sdl/gl_shader_tool.*
-Copyright: Sven Gothel
-License: MAME or GPL-2
-
-Files: src/osd/sdl/SDL1211_opengl.h
-Copyright: Sam Lantinga
-License: LGPL-2.1
-
-Files: src/mess/video/vic6567.c
-Copyright: Christian Bauer
-License:
- The rights on the source code remain at the author.
- It may not - not even in parts - used for commercial purposes without
- explicit written permission by the author.
- Permission to use it for non-commercial purposes is hereby granted als long
- as my copyright notice remains in the program.
- You are not allowed to use the source to create and distribute a modified
- version of Frodo.
-
-Files: src/mess/video/pc1403.c
-Copyright: Peter Trauner
-License:
- *   Copyright (c) 2001 Peter Trauner, all rights reserved.
- *
- *   - This source code is released as freeware for non-commercial purposes.
- *   - You are free to use and redistribute this code in modified or
- *     unmodified form, provided you list me in the credits.
- *   - If you modify this source code, you must add a notice to each modified
- *     source file that it has been changed.  If you're a nice person, you
- *     will clearly mark each change too.  :)
- *   - If you wish to use this for commercial purposes, please contact me at
- *     peter.trauner@jk.uni-linz.ac.at
- *   - The author of this copywritten work reserves the right to change the
-
-Files: src/lib/util/md5.*
-Copyright: public-domain
-License: public-domain
-
-Files: src/lib/util/sha1.*
- src/emu/sound/c6280.c
-Copyright: Peter Gutmann
- Andrew Kuchling
- Niels Moeller
- Charles MacDonald
-License: LGPL-2.1+
+Files: src/emu/sound/es5503.c
+ src/emu/sound/ymf271.*
+ src/emu/sound/ymf278b.c
+Copyright: R. Belmont
+ O. Galibert
+License: MAME or LGPL-2.1
 
 Files: src/lib/expat/*
 Copyright: 1998, 1999, 2000 Thai Open Source Software Center Ltd
@@ -490,6 +436,18 @@ License:
  that the minimal documentation requirements stated in the source code are
  satisfied.
 
+Files: src/lib/util/md5.*
+Copyright: public-domain
+License: public-domain
+
+Files: src/lib/util/sha1.*
+ src/emu/sound/c6280.c
+Copyright: Peter Gutmann
+ Andrew Kuchling
+ Niels Moeller
+ Charles MacDonald
+License: LGPL-2.1+
+
 Files: src/lib/zlib/*
 Copyright: 1995-2005 Jean-loup Gailly and Mark Adler
 License:
@@ -517,6 +475,40 @@ License:
  The data format used by the zlib library is described by RFCs (Request for
  Comments) 1950 to 1952 in the files http://www.ietf.org/rfc/rfc1950.txt
  (zlib format), rfc1951.txt (deflate format) and rfc1952.txt (gzip format).
+
+Files: src/mess/video/pc1403.c
+Copyright: Peter Trauner
+License:
+ *   Copyright (c) 2001 Peter Trauner, all rights reserved.
+ *
+ *   - This source code is released as freeware for non-commercial purposes.
+ *   - You are free to use and redistribute this code in modified or
+ *     unmodified form, provided you list me in the credits.
+ *   - If you modify this source code, you must add a notice to each modified
+ *     source file that it has been changed.  If you're a nice person, you
+ *     will clearly mark each change too.  :)
+ *   - If you wish to use this for commercial purposes, please contact me at
+ *     peter.trauner@jk.uni-linz.ac.at
+ *   - The author of this copywritten work reserves the right to change the
+
+Files: src/mess/video/vic6567.c
+Copyright: Christian Bauer
+License:
+ The rights on the source code remain at the author.
+ It may not - not even in parts - used for commercial purposes without
+ explicit written permission by the author.
+ Permission to use it for non-commercial purposes is hereby granted als long
+ as my copyright notice remains in the program.
+ You are not allowed to use the source to create and distribute a modified
+ version of Frodo.
+
+Files: src/osd/sdl/gl_shader_tool.*
+Copyright: Sven Gothel
+License: MAME or GPL-2
+
+Files: src/osd/sdl/SDL1211_opengl.h
+Copyright: Sam Lantinga
+License: LGPL-2.1
 
 License: MAME
  Copyright (c) 1997-2007, Nicola Salmoria and the MAME team
