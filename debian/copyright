@@ -74,9 +74,8 @@ Copyright: Alex Pasadyn
  Zsolt Vasvari
 License: MAME
 
-Files: src/build/makedep.c
- src/version.c
- src/build/makedev.c
+Files: src/version.c
+ src/build/makedep.c
  src/build/makelist.c
  src/emu/addrmap.c
  src/emu/addrmap.h
@@ -88,68 +87,6 @@ Files: src/build/makedep.c
  src/emu/clifront.h
  src/emu/cothread.c
  src/emu/cothread.h
- src/emu/cpu/adsp2100/adsp2100.c
- src/emu/cpu/adsp2100/adsp2100.h
- src/emu/cpu/asap/asap.c
- src/emu/cpu/asap/asap.h
- src/emu/cpu/ccpu/ccpu.c
- src/emu/cpu/drcbec.c
- src/emu/cpu/drcbec.h
- src/emu/cpu/drcbeut.c
- src/emu/cpu/drcbeut.h
- src/emu/cpu/drcbex64.c
- src/emu/cpu/drcbex64.h
- src/emu/cpu/drcbex86.c
- src/emu/cpu/drcbex86.h
- src/emu/cpu/drccache.c
- src/emu/cpu/drccache.h
- src/emu/cpu/drcfe.c
- src/emu/cpu/drcfe.h
- src/emu/cpu/drcuml.c
- src/emu/cpu/drcuml.h
- src/emu/cpu/drcumlsh.h
- src/emu/cpu/dsp32/dsp32.c
- src/emu/cpu/dsp32/dsp32.h
- src/emu/cpu/dsp32/dsp32ops.c
- src/emu/cpu/jaguar/jaguar.c
- src/emu/cpu/mips/mips3com.c
- src/emu/cpu/mips/mips3drc.c
- src/emu/cpu/mips/mips3fe.c
- src/emu/cpu/mips/mips3fe.h
- src/emu/cpu/mips/mips3.h
- src/emu/cpu/mips/r3000.c
- src/emu/cpu/powerpc/ppccom.c
- src/emu/cpu/powerpc/ppcdrc.c
- src/emu/cpu/powerpc/ppcfe.c
- src/emu/cpu/powerpc/ppcfe.h
- src/emu/cpu/powerpc/ppc.h
- src/emu/cpu/t11/t11.c
- src/emu/cpu/t11/t11ops.c
- src/emu/cpu/t11/t11table.c
- src/emu/cpu/tms32031/32031ops.c
- src/emu/cpu/tms32031/tms32031.c
- src/emu/cpu/tms32031/tms32031.h
- src/emu/cpu/uml.c
- src/emu/cpu/uml.h
- src/emu/cpu/vtlb.c
- src/emu/cpu/vtlb.h
- src/emu/cpu/x86emit.h
- src/emu/cpu/x86log.c
- src/emu/cpu/x86log.h
- src/emu/debug/debugcpu.c
- src/emu/debug/debugcpu.h
- src/emu/debug/debugvw.c
- src/emu/debug/debugvw.h
- src/emu/debug/dvdisasm.c
- src/emu/debug/dvdisasm.h
- src/emu/debug/dvmemory.c
- src/emu/debug/dvmemory.h
- src/emu/debug/dvstate.c
- src/emu/debug/dvstate.h
- src/emu/debug/dvtext.c
- src/emu/debug/dvtext.h
- src/emu/debug/express.c
- src/emu/debug/express.h
  src/emu/delegate.c
  src/emu/delegate.h
  src/emu/devcpu.c
@@ -172,8 +109,6 @@ Files: src/build/makedep.c
  src/emu/distate.h
  src/emu/drivenum.c
  src/emu/drivenum.h
- src/emu/drivers/emudummy.c
- src/emu/drivers/testcpu.c
  src/emu/emualloc.c
  src/emu/emualloc.h
  src/emu/emu.h
@@ -186,19 +121,7 @@ Files: src/build/makedep.c
  src/emu/hash.c
  src/emu/hash.h
  src/emu/machine.c
- src/emu/machine/er2055.c
- src/emu/machine/er2055.h
  src/emu/machine.h
- src/emu/machine/i8243.c
- src/emu/machine/i8243.h
- src/emu/machine/laserdsc.c
- src/emu/machine/ldpr8210.h
- src/emu/machine/ldstub.c
- src/emu/machine/ldstub.h
- src/emu/machine/ldv1000.h
- src/emu/machine/ldvp931.h
- src/emu/machine/nvram.c
- src/emu/machine/nvram.h
  src/emu/mconfig.c
  src/emu/mconfig.h
  src/emu/memory.c
@@ -225,21 +148,92 @@ Files: src/build/makedep.c
  src/emu/state.h
  src/emu/timer.c
  src/emu/timer.h
- src/emu/video/bufsprite.c
- src/emu/video/bufsprite.h
  src/emu/video.c
  src/emu/video.h
+ src/emu/cpu/drcbec.c
+ src/emu/cpu/drcbec.h
+ src/emu/cpu/drcbeut.c
+ src/emu/cpu/drcbeut.h
+ src/emu/cpu/drcbex64.c
+ src/emu/cpu/drcbex64.h
+ src/emu/cpu/drcbex86.c
+ src/emu/cpu/drcbex86.h
+ src/emu/cpu/drccache.c
+ src/emu/cpu/drccache.h
+ src/emu/cpu/drcfe.c
+ src/emu/cpu/drcfe.h
+ src/emu/cpu/drcuml.c
+ src/emu/cpu/drcuml.h
+ src/emu/cpu/drcumlsh.h
+ src/emu/cpu/uml.c
+ src/emu/cpu/uml.h
+ src/emu/cpu/vtlb.c
+ src/emu/cpu/vtlb.h
+ src/emu/cpu/x86emit.h
+ src/emu/cpu/x86log.c
+ src/emu/cpu/x86log.h
+ src/emu/cpu/adsp2100/adsp2100.c
+ src/emu/cpu/adsp2100/adsp2100.h
+ src/emu/cpu/asap/asap.c
+ src/emu/cpu/asap/asap.h
+ src/emu/cpu/ccpu/ccpu.c
+ src/emu/cpu/dsp32/dsp32.c
+ src/emu/cpu/dsp32/dsp32.h
+ src/emu/cpu/dsp32/dsp32ops.c
+ src/emu/cpu/jaguar/jaguar.c
+ src/emu/cpu/mips/mips3com.c
+ src/emu/cpu/mips/mips3drc.c
+ src/emu/cpu/mips/mips3fe.c
+ src/emu/cpu/mips/mips3fe.h
+ src/emu/cpu/mips/mips3.h
+ src/emu/cpu/mips/r3000.c
+ src/emu/cpu/powerpc/ppccom.c
+ src/emu/cpu/powerpc/ppcdrc.c
+ src/emu/cpu/powerpc/ppcfe.c
+ src/emu/cpu/powerpc/ppcfe.h
+ src/emu/cpu/powerpc/ppc.h
+ src/emu/cpu/t11/t11.c
+ src/emu/cpu/t11/t11ops.c
+ src/emu/cpu/t11/t11table.c
+ src/emu/cpu/tms32031/32031ops.c
+ src/emu/cpu/tms32031/tms32031.c
+ src/emu/cpu/tms32031/tms32031.h
+ src/emu/debug/debugcpu.c
+ src/emu/debug/debugcpu.h
+ src/emu/debug/debugvw.c
+ src/emu/debug/debugvw.h
+ src/emu/debug/dvdisasm.c
+ src/emu/debug/dvdisasm.h
+ src/emu/debug/dvmemory.c
+ src/emu/debug/dvmemory.h
+ src/emu/debug/dvstate.c
+ src/emu/debug/dvstate.h
+ src/emu/debug/dvtext.c
+ src/emu/debug/dvtext.h
+ src/emu/debug/express.c
+ src/emu/debug/express.h
+ src/emu/drivers/emudummy.c
+ src/emu/drivers/testcpu.c
+ src/emu/machine/er2055.c
+ src/emu/machine/er2055.h
+ src/emu/machine/i8243.c
+ src/emu/machine/i8243.h
+ src/emu/machine/laserdsc.c
+ src/emu/machine/ldpr8210.h
+ src/emu/machine/ldstub.c
+ src/emu/machine/ldstub.h
+ src/emu/machine/ldv1000.h
+ src/emu/machine/ldvp931.h
+ src/emu/machine/nvram.c
+ src/emu/machine/nvram.h
+ src/emu/video/bufsprite.c
+ src/emu/video/bufsprite.h
  src/emu/video/vooddefs.h
  src/emu/video/voodoo.c
  src/emu/video/voodoo.h
- src/ldplayer/ldplayer_dev.lst
- src/lib/formats/ami_dsk.c
- src/lib/formats/ap_dsk35.c
- src/lib/formats/dfi_dsk.c
- src/lib/formats/flopimg.c
- src/lib/formats/hxcmfm_dsk.c
- src/lib/formats/mfi_dsk.c
- src/lib/formats/st_dsk.c
+ src/ldplayer/ldplayer.lst
+ src/lib/formats/imageutl.c
+ src/lib/formats/imageutl.h
  src/lib/util/astring.c
  src/lib/util/astring.h
  src/lib/util/avcomp.c
@@ -296,15 +290,21 @@ Files: src/build/makedep.c
  src/lib/util/vbiparse.h
  src/lib/util/xmlfile.c
  src/lib/util/xmlfile.h
+ src/mame/mame.lst
+ src/mame/tiny.lst
+ src/mame/audio/gottlieb.c
  src/mame/audio/midway.c
  src/mame/audio/midway.h
+ src/mame/audio/williams.c
+ src/mame/audio/williams.h
  src/mame/machine/atarigen.c
  src/mame/machine/atarigen.h
- src/mame/mame_dev.lst
- src/mame/tiny_dev.lst
- src/mess/mess_dev.lst
+ src/mame/machine/fddebug.c
+ src/mame/machine/segaic16.c
+ src/mame/machine/segaic16.h
+ src/mame/machine/ticket.c
+ src/mame/machine/ticket.h
  src/mess/mess.lst
- src/mess/tiny_dev.lst
  src/mess/tiny.lst
  src/osd/osdcomm.h
  src/osd/osdcore.h
@@ -375,14 +375,27 @@ Files: src/build/makedep.c
  src/tools/tools.mak
  src/tools/unidasm.c
 Copyright: Aaron Giles
- Olivier Galibert
+License: BSD-3-clause
+
+Files: src/emu/machine/amigafdc.c
+ src/lib/formats/ami_dsk.c
+ src/lib/formats/ap_dsk35.c
+ src/lib/formats/dfi_dsk.c
+ src/lib/formats/flopimg.c
+ src/lib/formats/hxcmfm_dsk.c
+ src/lib/formats/mfi_dsk.c
+ src/lib/formats/st_dsk.c
+ src/lib/formats/st_dsk.c
+ src/lib/formats/upd765_dsk.c
+ src/lib/formats/xdf_dsk.c
+Copyright: Olivier Galibert
 License: BSD-3-clause
 
 Files: src/emu/sound/es5503.c
  src/emu/sound/ymf271.*
  src/emu/sound/ymf278b.c
 Copyright: R. Belmont
- O. Galibert
+ Olivier Galibert
 License: MAME or LGPL-2.1
 
 Files: src/lib/expat/*
@@ -436,6 +449,12 @@ License:
  that the minimal documentation requirements stated in the source code are
  satisfied.
 
+Files: src/lib/formats/ap2_dsk.c
+Copyright: Olivier Galibert
+ Lord Nightmare
+ Balrog
+License: BSD-3-clause
+
 Files: src/lib/util/md5.*
 Copyright: public-domain
 License: public-domain
@@ -475,6 +494,12 @@ License:
  The data format used by the zlib library is described by RFCs (Request for
  Comments) 1950 to 1952 in the files http://www.ietf.org/rfc/rfc1950.txt
  (zlib format), rfc1951.txt (deflate format) and rfc1952.txt (gzip format).
+
+Files: src/mame/machine/amiga.c
+Copyright: Aaron Giles
+ Ernesto Corvi
+ Mariusz Wojcieszek
+License: BSD-3-clause
 
 Files: src/mess/video/pc1403.c
 Copyright: Peter Trauner
