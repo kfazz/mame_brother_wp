@@ -1,4 +1,4 @@
-mame (0.147-1~ppa7~precise) precise; urgency=low
+mame (0.147-1) UNRELEASED; urgency=low
 
   * New upstream release
   * Updated quilt patches
@@ -22,6 +22,19 @@ mame (0.147-1~ppa7~precise) precise; urgency=low
   * debian/watch: added history file
 
  -- Cesare Falco <cesare.falco@gmail.com>  Fri, 05 Oct 2012 23:35:28 +0200
+
+mame (0.146-4) unstable; urgency=low
+
+  * Removes danglink symlink after xmame-sdl,xmame-x,xmame-svga update.
+    closes: bug#687654, #689718
+
+ -- Emmanuel Kasper <emmanuel@libera.cc>  Tue, 09 Oct 2012 19:45:03 +0200
+
+mame (0.146-3) experimental; urgency=low
+
+  * Add preinst script for xmame-x,xmame-sdl,xmame-svga as a fix for #687654
+
+ -- Emmanuel Kasper <emmanuel@libera.cc>  Mon, 08 Oct 2012 15:27:37 +0200
 
 mame (0.146-2) unstable; urgency=low
 
