@@ -1,4 +1,4 @@
-mame (0.147-1~ppa6~precise) precise; urgency=low
+mame (0.147-1~ppa7~precise) precise; urgency=low
 
   * New upstream release
   * Updated quilt patches
@@ -7,7 +7,9 @@ mame (0.147-1~ppa6~precise) precise; urgency=low
   * New mame-extra packages for additional files:
     - nplayers.ini (moved from mame)
     - history.dat (new)
-  * debian/copyright: added history file
+  * debian/copyright:
+    - added history file
+    - various fixes
   * debian/rules:
     - Removed duplicate NOWERROR make variable in debian/rules
     - Replaced -march with -mtune=generic in i386/amd64 targets
