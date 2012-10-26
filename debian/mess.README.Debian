@@ -5,7 +5,7 @@ has been integrated in official mess since 0.136.
 
 == QUICK START ==
 
-1. Create a folder ".mess" and a subfolder ".mess/roms" in your home directory.
+1. Create a folder "mess" and a subfolder "mess/roms" in your home directory.
 
 2. For each emulated system, Mess needs a bios/romset to be put in this directory, plus some software to run (an exception is the famicom/Nintendo 
 Entertainment System where everything happens inside the cartridge)
@@ -51,8 +51,8 @@ in the mess configuration file.
 == DEFAULT FILES ==
 
   * mess binary: {{{/usr/games/mess}}}
-  * Configuration file: {{{$HOME/.mess/mess.ini}}} or {{{/etc/mess/mess.ini}}}
-  * Output folders: {{{$HOME/.mess}}} (memory cards, snapshots, ...)
+  * Configuration file: {{{$HOME/mess/mess.ini}}} or {{{/etc/mess/mess.ini}}}
+  * Output folders: {{{$HOME/mess}}} (memory cards, snapshots, ...)
   * Core folders: {{{/usr/share/games/mess}}} (roms, cheats, ...)
 
 == ROMS AND CONFIGURATION ==
@@ -62,7 +62,7 @@ in {{{/etc/mess/mess.ini}}}
 
 If you need to change the location of the roms folder or tweak something like 
 video or cheats you can either:
-  * make your own copy of {{{/etc/mess/mess.ini}}} in your home at {{{$HOME/.mess/mess.ini}}} and edit that file (recommended)
+  * make your own copy of {{{/etc/mess/mess.ini}}} in your home at {{{$HOME/mess/mess.ini}}} and edit that file (recommended)
   * edit directly {{{/etc/mess/mess.ini}}} 
 
 You can verify that mess have read the correct options with "{{{mess -showconfig}}}"

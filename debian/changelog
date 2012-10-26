@@ -3,6 +3,8 @@ mame (0.147-1) UNRELEASED; urgency=low
   * New upstream release
   * Updated quilt patches
   * Removed all transitional packages related to xmame and sdlmame
+  * Switched local folder from ~/.mame to ~/mame to ease personal files
+    (roms, samples etc.) handling with graphical file managers
   * Mess source imported in Mame project; packages merged accordingly
   * mame.ini: modified paths to search for mess-data directories
   * New mame-extra packages for additional files:
