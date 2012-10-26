@@ -32,21 +32,6 @@ Depends: ${misc:Depends},
 Suggests: gnome-video-arcade,
  mame-extra,
  mame-tools
-Provides: sdlmame,
- xmame-common,
- xmame-sdl,
- xmame-svga,
- xmame-x
-Replaces: sdlmame (<< 0.137),
- xmame-common (<< 0.140),
- xmame-sdl (<< 0.140),
- xmame-svga (<< 0.140),
- xmame-x (<< 0.140)
-Breaks: sdlmame (<< 0.137),
- xmame-common (<< 0.140),
- xmame-sdl (<< 0.140),
- xmame-svga (<< 0.140),
- xmame-x (<< 0.140)
 Description: Multiple Arcade Machine Emulator (MAME)
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can
@@ -74,12 +59,6 @@ Architecture: any
 Depends: ${misc:Depends},
  ${shlibs:Depends}
 Recommends: mame (= ${source:Version})
-Provides: sdlmame-tools,
- xmame-tools
-Replaces: sdlmame-tools (<< 0.143),
- xmame-tools (<< 0.140)
-Breaks: sdlmame-tools (<< 0.143),
- xmame-tools (<< 0.140)
 Description: Tools for MAME and MESS
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation).
@@ -104,15 +83,6 @@ Depends: ${misc:Depends},
  mess-data
 Recommends: mess-desktop-entries
 Suggests: mame-tools
-Provides: xmess-common,
- xmess-sdl,
- xmess-x
-Replaces: xmess-common (<< 0.142),
- xmess-sdl (<< 0.142),
- xmess-x (<< 0.142)
-Breaks: xmess-common (<< 0.142),
- xmess-sdl (<< 0.142),
- xmess-x (<< 0.142)
 Description: Multi Emulator Super System (MESS)
  MESS is an emulator for various consoles and computing systems, sharing a
  lot of codebase with the MAME project.
@@ -133,84 +103,3 @@ Description: Data files for the Multi Emulator Super System (MESS)
  lot of codebase with the MAME project.
  .
  This package provides the MESS hash files, keymaps and artwork.
-
-Package: sdlmame
-Section: non-free/oldlibs
-Priority: extra
-Depends: ${misc:Depends},
- mame
-Architecture: amd64 i386
-Description: Transitional package for sdlmame
- This is a transitional package for sdlmame, and can be safely removed
- after the installation is complete.
-
-Package: sdlmame-tools
-Section: non-free/oldlibs
-Priority: extra
-Depends: ${misc:Depends},
- mame-tools
-Architecture: amd64 i386
-Description: Transitional package for sdlmame-tools
- This is a transitional package for sdlmame-tools, and can be safely removed
- after the installation is complete.
-
-Package: xmame-sdl
-Section: non-free/oldlibs
-Priority: extra
-Depends: ${misc:Depends},
- mame
-Architecture: all
-Description: Transitional package for xmame-sdl
- This is a transitional package for xmame-sdl, and can be safely removed
- after the installation is complete.
-
-Package: xmame-svga
-Section: non-free/oldlibs
-Priority: extra
-Depends: ${misc:Depends},
- mame
-Architecture: i386
-Description: Transitional package for xmame-svga
- This is a transitional package for xmame-svga, and can be safely removed
- after the installation is complete.
-
-Package: xmame-tools
-Section: non-free/oldlibs
-Priority: extra
-Depends: ${misc:Depends},
- mame-tools
-Architecture: all
-Description: Transitional package for mame-tools
- This is a transitional package for mame-tools, and can be safely removed
- after the installation is complete.
-
-Package: xmame-x
-Section: non-free/oldlibs
-Priority: extra
-Depends:
- ${misc:Depends},
- mame
-Architecture: all
-Description: Transitional package for xmame-x
- This is a transitional package for xmame-x, and can be safely removed
- after the installation is complete.
-
-Package: xmess-sdl
-Section: non-free/oldlibs
-Priority: extra
-Depends:
- ${misc:Depends},
- mess
-Architecture: all
-Description: Transitional package for xmess-sdl
- This is a transitional package for xmess-sdl, and can be safely removed
- after the installation is complete.
-
-Package: xmess-x
-Section: non-free/oldlibs
-Priority: extra
-Depends: mess, ${misc:Depends}
-Architecture: all
-Description: Transitional package for xmess-x
- This is a transitional package for xmess-x, and can be safely removed
- after the installation is complete.
