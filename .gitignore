@@ -5,11 +5,14 @@ docs/
 gcc-4.2
 hlsl/
 jedutil
+keymaps/
 ldresample
 ldverify
 makefile
 mame
+mamehistory/
 mess/
+nplayers/
 nvram/
 obj/
 regrep
