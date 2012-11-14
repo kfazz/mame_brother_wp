@@ -13,11 +13,10 @@ CFLAGS = -Wall -g
 
 DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
 
-# Number of make jobs = number of cores + 1
-NJOBS:=$(shell echo $$(($$(getconf _NPROCESSORS_ONLN 2>/dev/null) + 1)))
-ifdef SETNJOBS
-	NJOBS:=$(SETNJOBS)
-endif
+# taken verbatim from debian policy
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+         NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+         MAKEFLAGS += -j$(NUMJOBS)
 
 # Override relevant make variables in original makefile
 DEB_OPTS = \
@@ -147,14 +146,14 @@ DEB_MESS_OPTS = \
 	dh $@
 
 override_dh_auto_build:
-	$(MAKE) -j$(NJOBS) $(DEB_MAME_OPTS) $(DEB_OPTS)
+	$(MAKE) $(DEB_MAME_OPTS) $(DEB_OPTS)
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
 # Force rebuild to allow Mess specific value for INI_PATH
 	find obj -type f \
              -not -name \*.lh -and -not -name drivlist.c \
              -exec rm {} \;
-	$(MAKE) -j$(NJOBS) $(DEB_MESS_OPTS) $(DEB_OPTS) all
+	$(MAKE) $(DEB_MESS_OPTS) $(DEB_OPTS) all
 	$(CURDIR)/mess -createconfig
 	mv mess.ini default.mess.ini
 

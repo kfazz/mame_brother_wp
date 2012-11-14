@@ -6,12 +6,8 @@ mame (0.147-1) UNRELEASED; urgency=low
   * Mess source imported in Mame project; packages merged accordingly
   * mame.ini:
     - pointed hash- and ctrlrpath entries to mess-data directories
-    - pointed rom- sample- art- cheat- and crosshairpath entries to ~/mame/*
-      directories to ease handling of personal files with GUI file managers
   * mess.ini:
     - added uimodekey entry (default doesn't work)
-    - pointed rom- sample- art- cheat- and crosshairpath entries to ~/mame/*
-      directories to ease handling of personal files with GUI file managers
   * New mame-extra packages for additional files:
     - nplayers.ini (moved from mame)
     - history.dat (new)
@@ -20,8 +16,6 @@ mame (0.147-1) UNRELEASED; urgency=low
     - various fixes
   * debian/rules:
     - Removed duplicate NOWERROR make variable in debian/rules
-    - Replaced -march with -mtune=generic in i386/amd64 targets
-      (fixes FTBFS for i386 with gcc 4.6.3)
     - Changelogs removed upstream
     - Added targets for Mess and tools
     - get-orig-source:
@@ -30,6 +24,20 @@ mame (0.147-1) UNRELEASED; urgency=low
   * debian/watch: added history file
 
  -- Cesare Falco <c.falco@ubuntu.com>  Wed, 14 Nov 2012 10:44:43 +0100
+
+mame (0.146-5) unstable; urgency=low
+
+  [ Cesare Falco ]
+  * Replace -march with -mtune=generic gcc flag for compatibility issues
+    with older CPUs (LP: #1063993)
+
+  [ Emmanuel Kasper ]
+  * Add support for parallel building using DEB_BUILD_OPTIONS
+  * Reorganize default paths:
+       $HOME/.mame for ini file and output files
+       $HOME/mame for data search paths
+
+ -- Emmanuel Kasper <emmanuel@libera.cc>  Tue, 13 Nov 2012 22:54:27 +0100
 
 mame (0.146-4) unstable; urgency=low
 
