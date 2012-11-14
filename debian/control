@@ -3,7 +3,7 @@ Section: non-free/games
 Priority: optional
 Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
 Uploaders: Félix Arreola Rodríguez <fgatuno.123@gmail.com>,
- Cesare Falco <cesare.falco@gmail.com>,
+ Cesare Falco <c.falco@ubuntu.com>,
  Emmanuel Kasper <emmanuel@libera.cc>,
  Ludovic Lechapt <ludomatic@gmail.com>,
  Jordi Mallach <jordi@debian.org>

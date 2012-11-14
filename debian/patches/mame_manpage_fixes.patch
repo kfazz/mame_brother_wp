@@ -1,4 +1,4 @@
-Author: Cesare Falco <cesare.falco@gmail.com>
+Author: Cesare Falco <c.falco@ubuntu.com>
 Description: Fix mame.6 and jedutil.1, update chdman.1
 Forwarded: yes
 
@@ -50,7 +50,7 @@ Index: mame-0.146u5/src/osd/sdl/man/chdman.1
 +++ mame-0.146u5/src/osd/sdl/man/chdman.1	2012-08-28 13:06:41.000000000 +0200
 @@ -6,7 +6,7 @@
  .\" Ashley T. Howes <debiandev@ashleyhowes.com>, February 2005
- .\" updated by Cesare Falco <cesare.falco@gmail.com>, February 2007
+ .\" updated by Cesare Falco <c.falco@ubuntu.com>, February 2007
  .\"
 -.TH CHDMAN 1 2012-03-25 0.145u5 "MAME Compressed Hunks of Data (CHD) manager"
 +.TH CHDMAN 1 2012-07-31 0.146u4 "MAME Compressed Hunks of Data (CHD) manager"
@@ -342,7 +342,7 @@ Index: mame-0.146u5/src/osd/sdl/man/ldverify.1
 +++ mame-0.146u5/src/osd/sdl/man/ldverify.1	2012-08-28 13:06:41.000000000 +0200
 @@ -5,7 +5,7 @@
  .\" Man page created from source and usage information by 
- .\" Cesare Falco <cesare.falco@gmail.com>, August 2008
+ .\" Cesare Falco <c.falco@ubuntu.com>, August 2008
  .\"
 -.TH LDVERIFY 1 2012-03-25 0.145u5 "ldverify"
 +.TH LDVERIFY 1 2012-07-31 0.146u4 "MAME laserdisc data checker"
@@ -368,7 +368,7 @@ Index: mame-0.146u5/src/osd/sdl/man/testkeys.1
 +++ mame-0.146u5/src/osd/sdl/man/testkeys.1	2012-08-28 13:06:41.000000000 +0200
 @@ -5,7 +5,7 @@
  .\" Man page created from source and usage information
- .\" Cesare Falco <cesare.falco@gmail.com>, February 2007
+ .\" Cesare Falco <c.falco@ubuntu.com>, February 2007
  .\"
 -.TH TESTKEYS 1 2012-03-25 0.145u5 "testkeys"
 +.TH TESTKEYS 1 2012-07-31 0.146u4 "MAME SDL keycode checker"
