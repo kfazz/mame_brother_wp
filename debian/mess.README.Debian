@@ -13,7 +13,8 @@ Entertainment System where everything happens inside the cartridge)
 3. Check the sanity of your roms. Mess is very picky about that.
 
 {{{
- mess -verifyroms | grep ^romset
+mess -verifyroms | grep ^romset
+
 romset famicom [nes] is best available
 romset fami_key [nes] is best available
 romset famitwin [nes] is best available

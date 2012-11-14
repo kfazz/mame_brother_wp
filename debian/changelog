@@ -3,10 +3,15 @@ mame (0.147-1) UNRELEASED; urgency=low
   * New upstream release
   * Updated quilt patches
   * Removed all transitional packages related to xmame and sdlmame
-  * Switched local folder from ~/.mame to ~/mame to ease personal files
-    (roms, samples etc.) handling with graphical file managers
   * Mess source imported in Mame project; packages merged accordingly
-  * mame.ini: modified paths to search for mess-data directories
+  * mame.ini:
+    - pointed hash- and ctrlrpath entries to mess-data directories
+    - pointed rom- sample- art- cheat- and crosshairpath entries to ~/mame/*
+      directories to ease handling of personal files with GUI file managers
+  * mess.ini:
+    - added uimodekey entry (default doesn't work)
+    - pointed rom- sample- art- cheat- and crosshairpath entries to ~/mame/*
+      directories to ease handling of personal files with GUI file managers
   * New mame-extra packages for additional files:
     - nplayers.ini (moved from mame)
     - history.dat (new)
@@ -24,7 +29,7 @@ mame (0.147-1) UNRELEASED; urgency=low
       + added rules for history file
   * debian/watch: added history file
 
- -- Cesare Falco <cesare.falco@gmail.com>  Fri, 05 Oct 2012 23:35:28 +0200
+ -- Cesare Falco <c.falco@ubuntu.com>  Wed, 14 Nov 2012 10:44:43 +0100
 
 mame (0.146-4) unstable; urgency=low
 
