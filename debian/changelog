@@ -1,5 +1,6 @@
 mame (0.147-1) UNRELEASED; urgency=low
 
+  [ Cesare Falco ]
   * New upstream release
   * Updated quilt patches
   * Removed all transitional packages related to xmame and sdlmame
@@ -23,7 +24,10 @@ mame (0.147-1) UNRELEASED; urgency=low
       + added rules for history file
   * debian/watch: added history file
 
- -- Cesare Falco <c.falco@ubuntu.com>  Thu, 15 Nov 2012 00:25:05 +0100
+  [ Jon Dowland ]
+  * Remove deprecated dm-upload-allowed from the control file.
+
+ -- Jon Dowland <jmtd@debian.org>  Mon, 26 Nov 2012 10:21:09 +0000
 
 mame (0.146-5) unstable; urgency=low
 

@@ -7,7 +7,6 @@ Uploaders: Félix Arreola Rodríguez <fgatuno.123@gmail.com>,
  Emmanuel Kasper <emmanuel@libera.cc>,
  Ludovic Lechapt <ludomatic@gmail.com>,
  Jordi Mallach <jordi@debian.org>
-DM-Upload-Allowed: yes
 Build-Depends: debhelper (>= 8),
  libexpat1-dev,
  libflac-dev,
