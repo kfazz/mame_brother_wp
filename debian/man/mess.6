@@ -13,10 +13,10 @@
 .\" and updated by Andrew Burton <burtona@gol.com>, July 2003
 .\"
 .\" Other info's taken from MESS Wiki as well:
-.\" http://mess.redump.net/
+.\" http://www.mess.org/
 .\"
 .\"
-.TH mess 6 2011-03-02 0.141 "The Multiple Emulator Super System (MESS)"
+.TH mess 6 2012-12-01 0.147u3 "The Multiple Emulator Super System (MESS)"
 .\"
 .\"
 .\" NAME chapter
@@ -59,7 +59,7 @@ the core system rules.
 .\" *******************************************************
 .TP
 .B \-createconfig, \-cc
-Creates the default 'mess.ini' file in the current directory. All the
+Creates the default \fBmess.ini\fR file in the current directory. All the
 configuration options (not commands) described below can be permanently
 changed by editing this configuration file.
 .TP
@@ -68,17 +68,17 @@ Displays the current configuration settings.
 .TP
 .B \-showusage, \-su
 Displays a summary of all the command line options. For options that
-are not mentioned here, the short summary given by \-showusage
+are not mentioned here, the short summary given by \fB\-showusage\fR
 is usually sufficient.
 .\"
 .\" *******************************************************
 .SS Frontend commands
 .\" *******************************************************
-All the '\-list' commands below write info to the screen.
+All the list commands below write info to the screen.
 If you wish to write the info to a textfile instead, use redirection.
 For example,
 .B mess \-listxml > ~/messlist.xml
-writes the full list of supported systems to 'messlist.xml' in your
+writes the full list of supported systems to \fBmesslist.xml\fR in your
 home directory.
 .TP
 .B \-listxml, \-lx \fR[\fIsystem\fR|\fIwildcard\fR]
@@ -133,29 +133,35 @@ Attempts to identify ROM files, if they are known to MESS, in the
 specified .zip file or directory. This command can be used to try and
 identify ROM sets taken from unknown boards. On exit, the errorlevel
 is returned as one of the following:
-.RS
-.TP
-.B 0
-all files were identified
-.TP
-.B 7
-all files were identified except for some "non\-ROM" files
-.TP
-.B 8
-some files were identified
-.TP
-.B 9
-no files were identified
-.RE
+.br
+\fB0\fR  all files were identified
+.br
+\fB7\fR  all files were identified except for some "non\-ROM" files
+.br
+\fB8\fR  some files were identified
+.br
+\fB9\fR  no files were identified
 .TP
 .B \-listdevices, \-ld
 Output the list of devices referenced by a given system or set of systems.
 .TP
+.B \-listslots, \-lslot
+Output the list of available slots and slot devices for the system.
+.TP
 .B \-listmedia, \-lm
 Output the list of available media for the system.
 .TP
-.B \-listsoftware
+.B \-listsoftware, \-lsoft
 Output the list of known software for the system.
+.TP
+.B \-verifysoftware, \-vsoft
+Verify known software for the system.
+.TP
+.B \-getsoftlist, \-glist
+Retrieve software list by name.
+.TP
+.B \-verifysoftlist, \-vlist
+Verify software list by name.
 .\"
 .\" *******************************************************
 .SS Configuration options
@@ -164,23 +170,28 @@ Output the list of known software for the system.
 .B \-[no]readconfig, \-[no]rc
 Enables or disables the reading of the config files. When enabled
 (which is the default), MESS reads the following config files in order:
-.RS
-.TP 15
-.B mess.ini
+.br
+1. \fBmess.ini\fR
+.br
 the main configuration file
-.TP
-.IB driver .ini
+.br
+2. \fI[driver]\fB.ini\fR
+.br
 based on the source file name of the system driver
-.TP
-.IB parent .ini
+.br
+3. \fI[parent]\fB.ini\fR
+.br
 for clones only, may be called recursively
-.TP
-.IB system .ini
+.br
+4. \fI[system]\fB.ini\fR
+.br
 note this sometimes resolves to the same of the source driver
 .P
 The settings in the later ini's override those in the earlier ini's.
 The default is ON (\-readconfig).
-.RE
+.TP
+.B \-writeconfig, \-wc
+Write configuration to \fI[driver]\fR.ini on exit.
 .\"
 .\" *******************************************************
 .SS Search path options
@@ -189,47 +200,47 @@ Be careful to use the path, directory and file options in
 mess.ini ONLY. Otherwise, the outcome may be unpredictable and not
 consistent across releases.
 .TP
-.B \-rompath, \-rp, \-biospath, \-bp \fIpath
+.B \-rompath, \-rp, \-biospath, \-bp \fIpathname
 Specifies a list of paths within which to find ROM or hard disk images.
 Multiple paths can be specified by separating them with semicolons.
 The default is 'roms' (that is, a directory 'roms' in the same directory
 as the MESS executable).
 .TP
-.B \-samplepath, \-sp \fIpath
+.B \-samplepath, \-sp \fIpathname
 Specifies a list of paths within which to find sample files. Multiple
 paths can be specified by separating them with semicolons. The default
 is 'samples' (that is, a directory 'samples' in the same directory as
 the MESS executable).
 .TP
-.B \-artpath, \-artwork_directory \fIpath
+.B \-artpath, \-artwork_directory \fIpathname
 Specifies a list of paths within which to find artwork files. Multiple
 paths can be specified by separating them with semicolons. The default
 is 'artwork' (that is, a directory 'artwork' in the same directory as
 the MESS executable).
 .TP
-.B \-ctrlrpath, \-ctrlr_directory \fIpath
+.B \-ctrlrpath, \-ctrlr_directory \fIpathname
 Specifies a list of paths within which to find controller\-specific
 configuration files. Multiple paths can be specified by separating
 them with semicolons. The default is 'ctrlr' (that is, a
 directory 'ctrlr' in the same directory as the MESS executable).
 .TP
-.B \-inipath \fIpath
+.B \-inipath \fIpathname
 Specifies a list of paths within which to find .ini files. Multiple
 paths can be specified by separating them with semicolons. The default
 is '/etc/mess'.
 .TP
-.B \-fontpath \fIpath
+.B \-fontpath \fIpathname
 Specifies a list of paths within which to find .bdf font files. Multiple
 paths can be specified by separating them with semicolons. The default
 is '.' (that is, search in the same directory as the MESS executable).
 .TP
-.B \-cheatpath \fIpath
+.B \-cheatpath \fIpathname
 Specifies a list of paths within which to find cheat files. Multiple
 paths can be specified by separating them with semicolons. The default
 is 'cheat' (that is, a directory 'cheat' in the same directory as
 the MESS executable).
 .TP
-.B \-crosshairpath \fIpath
+.B \-crosshairpath \fIpathname
 Specifies a list of paths within which to find crosshair files. Multiple
 paths can be specified by separating them with semicolons. The default
 is 'crosshair' (that is, a directory 'crosshair' in the same directory as
@@ -238,7 +249,7 @@ MESS will look for system/cross#.png and then cross#.png in the
 specified path, where # is the player number.  Failing that,
 MESS will use built\-in default crosshairs.
 .TP
-.B \-hashpath \fIpath
+.B \-hashpath \fIpathname
 Specifies a list of paths within which to search for software hash files.
 Multiple paths can be specified by separating them with semicolons.
 The default is 'hash' (that is, a directory 'hash' in the same directory
@@ -248,14 +259,14 @@ as the MESS executable).
 .SS Output Directory Options
 .\" *******************************************************
 .TP
-.B \-cfg_directory \fIpath
+.B \-cfg_directory \fIpathname
 Specifies a single directory where configuration files are stored.
 Configuration files store user configurable settings that are read at
 startup and written when MESS exits. The default is 'cfg' (that is,
 a directory 'cfg' in the same directory as the MESS executable). If this
 directory does not exist, it will be automatically created.
 .TP
-.B \-nvram_directory \fIpath
+.B \-nvram_directory \fIpathname
 Specifies a single directory where NVRAM files are stored. NVRAM files
 store the contents of EEPROM and non\-volatile RAM (NVRAM) for systems
 which used this type of hardware. This data is read at startup and
@@ -263,7 +274,7 @@ written when MESS exits. The default is 'nvram' (that is, a
 directory 'nvram' in the same directory as the MESS executable). If this
 directory does not exist, it will be automatically created.
 .TP
-.B \-memcard_directory \fIpath
+.B \-memcard_directory \fIpathname
 Specifies a single directory where memory card files are stored. Memory
 card files store the contents of removable memory cards for systems which
 used this type of hardware. This data is read and written under control
@@ -272,27 +283,27 @@ default is 'memcard' (that is, a directory 'memcard' in the same
 directory as the MESS executable). If this directory does not exist,
 it will be automatically created.
 .TP
-.B \-input_directory \fIpath
+.B \-input_directory \fIpathname
 Specifies a single directory where input recording files are stored.
 Input recordings are created via the \-record option and played back via
 the \-playback option. The default is 'inp' (that is, a directory 'inp'
 in the same directory as the MESS executable). If this directory
 does not exist, it will be automatically created.
 .TP
-.B \-state_directory \fIpath
+.B \-state_directory \fIpathname
 Specifies a single directory where save state files are stored. Save
 state files are read and written either upon user request, or when using
 the \-autosave option. The default is 'sta' (that is, a directory 'sta'
 in the same directory as the MESS executable). If this directory does
 not exist, it will be automatically created.
 .TP
-.B \-snapshot_directory \fIpath
+.B \-snapshot_directory \fIpathname
 Specifies a single directory where screen snapshots are stored, when
 requested by the user. The default is 'snap' (that is, a directory 'snap'
 in the same directory as the MESS executable). If this directory
 does not exist, it will be automatically created.
 .TP
-.B \-diff_directory \fIpath
+.B \-diff_directory \fIpathname
 Specifies a single directory where hard drive differencing files are
 stored. Hard drive differencing files store any data that is written
 back to a hard disk image, in order to preserve the original image. The
@@ -301,7 +312,7 @@ image. The default is 'diff' (that is, a directory 'diff' in the same
 directory as the MESS executable). If this directory does not exist,
 it will be automatically created.
 .TP
-.B \-comment_directory \fIpath
+.B \-comment_directory \fIpathname
 Specifies a single directory where debugger comment files are stored.
 Debugger comment files are written by the debugger when comments are
 added to the disassembly for a system. The default is 'comments' (that is,
@@ -322,7 +333,7 @@ and automatically attempts to reload it when later starting MESS with
 the same system. This only works for systems that have explicitly enabled
 save state support in their driver. The default is OFF (\-noautosave).
 .TP
-.B \-playback, \-pb \fIfile
+.B \-playback, \-pb \fIfilename
 Specifies a file from which to play back a series of system inputs. This
 feature does not work reliably for all systems, but can be used to watch
 a previously recorded system session from start to finish. In order to
@@ -330,7 +341,7 @@ make things consistent, you should only record and playback with all
 configuration (.cfg), NVRAM (.nv), and memory card files deleted. The
 default is NULL (no playback).
 .TP
-.B \-record, \-rec \fIfile
+.B \-record, \-rec \fIfilename
 Specifies a file to record all input from a system session. This can be
 used to record a system session for later playback. This feature does not
 work reliably for all systems, but can be used to watch a previously
@@ -340,27 +351,17 @@ consistent, you should only record and playback with all configuration
 (no recording).
 .TP
 .B \-snapname \fIname
-Describes how MESS should name files for snapshots.
-.I name
-is a string that provides a template that is used to generate a file name.
-Three simple substitutions are provided:
-.RS
-.TP
-.B /
-represents the path separator on any target platform (even Windows)
-.TP
-.B %g
-represents the driver name of the current system
-.TP
-.B %i
-represents an incrementing index. If omitted, then each snapshot taken
-will overwrite the previous one; otherwise, MESS will find the next
-empty value for %i and use that for a file name.
-.P
-The default is '%g/%i', which creates a separate folder for each system,
+Describes how MESS should name files for snapshots. \fIname\fP is a string
+that provides a template that is used to generate a filename. Three
+simple substitutions are provided: the / character represents the
+path separator on any target platform (even Windows); the string \fI%g\fP
+represents the driver name of the current system; and the string \fI%i\fP
+represents an incrementing index. If \fI%i\fP is omitted, then each
+snapshot taken will overwrite the previous one; otherwise, MESS will
+find the next empty value for \fI%i\fP and use that for a filename. The
+default is \fI%g/%i\fP, which creates a separate folder for each game,
 and names the snapshots under it starting with 0000 and increasing
 from there.
-.RE
 .TP
 .B \-snapsize \fIwidth\fRx\fIheight
 Hard\-codes the size for snapshots and movie recording. By default,
@@ -371,40 +372,32 @@ snapshots and movies at the size specified, and will bilinear filter
 the result. Note that this size does not automatically rotate if the
 system is vertically oriented. The default is 'auto'.
 .TP
-.B \-snapview internal\fR|\fBauto\fR|\fIview
-Specifies the view to use when rendering snapshots and movies.
-.RS
-.TP 12
-.B internal
-renders a separate snapshot per screen or renders movies only of the
-first screen using the special 'internal' view.
+.B \-snapview internal\fR|\fBauto\fR|\fIviewname
+Specifies the view to use when rendering snapshots and movies. By
+default, both use a special 'internal' view, which renders a separate
+snapshot per screen or renders movies only of the first screen. By
+specifying this option, you can override this default behavior and
+select a single view that will apply to all snapshots and movies.
+Note that \fIviewname\fP does not need to be a perfect match; rather, it
+will select the first view whose name matches all the characters
+specified by \fIviewname\fP. For example, \-snapview native will match the
+"Native (15:14)" view even though it is not a perfect match.
+\fIviewname\fP can also be 'auto', which selects the first view with all
+screens present. The default value is 'internal'.
 .TP
-.B auto
-selects the first view with all screens present
-.TP
-.I view
-select the first view whose name matches all the characters.
-For example,
-.B mame \-snapview native
-will match the "Native (15:14)" view even though it is not a perfect
-match.
-.P
-The default value is 'internal'.
-.RE
-.TP
-.B \-mngwrite \fIfile
+.B \-mngwrite \fIfilename
 Writes each video frame to the given file in MNG format, producing
 an animation of the system session.
 Note that \-mngwrite only writes video frames; it does not save any audio
 data. Use \-wavwrite for that, and reassemble the audio/video using
 offline tools. The default is NULL (no recording).
 .TP
-.B \-aviwrite \fIfile
+.B \-aviwrite \fIfilename
 Stream video and sound data to the given file
 in AVI format, producing an animation of the system session complete
 with sound. The default is NULL (no recording).
 .TP
-.B \-wavwrite \fIfile
+.B \-wavwrite \fIfilename
 Writes the final mixer output to the given file
 in WAV format, producing an audio recording of the system session.
 The default is NULL (no recording).
@@ -493,26 +486,20 @@ correctly without the need to rotate your monitor. If you want to keep
 the system displaying 'raw' on the screen the way the actual machine would
 have, turn this option off. The default is ON (\-rotate).
 .TP
-.B \-[no]ror
-.TP
-.B \-[no]rol
+.B \-[no]ror \-[no]rol
 Rotate the system screen to the right (clockwise) or left
 (counter\-clockwise) relative to either its normal state (if \-rotate
 is specified) or its native state (if \-norotate is specified). The
 default for both of these options is OFF (\-noror \-norol).
 .TP
-.B \-[no]autoror
-.TP
-.B \-[no]autorol
+.B \-[no]autoror \-[no]autorol
 These options are designed for use with pivoting screens that only
 pivot in a single direction. If your screen only pivots clockwise,
 use \-autorol to ensure that the system will fill the screen either
 horizontally or vertically in one of the directions you can handle.
 If your screen only pivots counter\-clockwise, use \-autoror.
 .TP
-.B \-[no]flipx
-.TP
-.B \-[no]flipy
+.B \-[no]flipx \-[no]flipy
 Flip (mirror) the system screen either horizontally (\-flipx) or
 vertically (\-flipy). The flips are applied after the \-rotate and
 \-ror/\-rol options are applied. The default for both of these options
@@ -537,6 +524,14 @@ Enables/disables the display of overlays. The default is ON
 .TP
 .B \-[no]use_bezels, \-[no]bezel
 Enables/disables the display of bezels. The default is ON
+(\-use_bezels).
+.TP
+.B \-[no]use_cpanels, \-[no]cpanel
+Enables/disables the display of cpanels. The default is ON
+(\-use_bezels).
+.TP
+.B \-[no]use_marquees, \-[no]marquee
+Enables/disables the display of marquees. The default is ON
 (\-use_bezels).
 .\"
 .\" *******************************************************
@@ -602,27 +597,21 @@ needs adjustment. This option requires a float argument in the range of
 .\" SDL specific
 .\" +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 .TP
-.B \-video soft\fR|\fBopengl\fR|\fBopengl16\fR|\fBnone
+.B \-video\fR [\fIsoft\fR|\fIopengl\fR|\fIopengl16\fR|\fInone\fR]
 Specifies which video subsystem to use for drawing:
-.RS
-.TP 12
-.B soft
-uses software rendering, which is slower but more compatible.
-.TP
-.B opengl
-uses OpenGL and your graphics accelerator to speed up many
+.br
+\fBsoft\fR  uses software rendering, which is slower but more compatible.
+.br
+\fBopengl\fR  uses OpenGL and your graphics accelerator to speed up many
 aspects of drawing MESS including compositing artwork, overlays, and
 bezels, as well as stretching the image to fit your screen.
-.TP
-.B opengl16
-uses alternate OpenGL code, which should provide faster
+.br
+\fBopengl16\fR  uses alternate OpenGL code, which should provide faster
 output on some cards.
-.TP
-.B none
-does no drawing and is intended for CPU benchmarking.
-.P
-Default is 'soft'.
-.RE
+.br
+\fBnone\fR  does no drawing and is intended for CPU benchmarking.
+.br
+Default is SOFT.
 .TP
 .B \-[no]window, \-[no]w
 Run MESS in either full screen or a window. This is a fully\-featured window
@@ -649,7 +638,7 @@ Allow non\-integer stretch factors. Video purists should stay far, far away
 from this option, while everyone else will be happy to know that it lets you
 fill the screen properly in full\-screen mode. Default is ON (\-unevenstretch).
 .TP
-.B \-effect none\fR|\fIfile
+.B \-effect none\fR|\fIfilename
 Name of a PNG file to use for visual effects, or 'none'. Default is 'none'.
 .TP
 .B \-centerh
@@ -674,31 +663,22 @@ rendering subsystem (\-video soft).
 .B \-prescale \fIvalue
 Scale screen rendering by this amount in software. Default is 1.
 .TP
-.B \-scalemode, \-sm none\fR|\fBasync\fR|\fByv12\fR|\fByuy2\fR\
-|\fByv12x2\fR|\fByuy2x2
+.B \-scalemode, \-sm \fR[\fInone\fR|\fIasync\fR|\fIyv12\fR|\fIyuy2\fR|\fIyv12x2\fR|\fIyuy2x2\fR]
 Hardware scaling mode.
-.RS
-.TP 12
-.B none
-use software rendering
-.TP
-.B async
-async overlay
-.TP
-.B yv12
-yv12 overlay
-.TP
-.B yuy2
-yuy2 overlay
-.TP
-.B yv12x2
-yv12 overlay using x2 prescaling
-.TP
-.B yuy2x2
-yuy2 overlay using x2 prescaling
-.P
-Default is 'none'.
-.RE
+.br
+\fBnone\fR    use software rendering.
+.br
+\fBasync\fR   async overlay.
+.br
+\fByv12\fR    yv12 overlay.
+.br
+\fByuy2\fR    yuy2 overlay.
+.br
+\fByv12x2\fR  yv12 overlay using x2 prescaling.
+.br
+\fByuy2x2\fR  yuy2 overlay using x2 prescaling.
+.br
+Default is NONE.
 .\"
 .\" *******************************************************
 .SS OpenGL video rendering subsystem options
@@ -732,33 +712,46 @@ Default is ON: turn off (set this to 0) if corruption occurs.
 Enable OpenGL GLSL, if available, for a performance increase.
 .TP
 .B \-gl_glsl_filter \fIvalue
-Enable OpenGL GLSL filtering instead of FF filtering. Allowed values are
-.RS
-.TP 8
-.B 0
-plain
+Enable OpenGL GLSL filtering instead of FF filtering 0=plain, 1=bilinear.
+Default is 1: bilinear.
 .TP
-.B 1
-bilinear
-.P
-Default is 1.
-.RE
+.BR \-glsl_shader_mame[0\-9]
+Preferred custom OpenGL GLSL shader set mame bitmap (from 0 to 9).
 .TP
-.BR \-glsl_shader_mame #
-Preferred custom OpenGL GLSL shader set mame bitmap, with # ranging
-from 0 to 9.
-.TP
-.BR \-glsl_shader_screen #
-Preferred custom OpenGL GLSL shader screen bitmap, with # ranging
-from 0 to 9.
+.BR \-glsl_shader_screen[0\-9]
+Preferred custom OpenGL GLSL shader screen bitmap (from 0 to 9).
 .TP
 .B \-gl_glsl_vid_attr
 Enable OpenGL GLSL handling of brightness and contrast. Better RGB system
 performance for free. Default is ON.
 .TP
+.B \-screen
+Explicit name for all screens; 'auto' here will try to make a best guess.
+.TP
+.B \-aspect, \-screen_aspect
+Aspect ratio for all screens; 'auto' here will try to make a best guess.
+.TP
 .B \-resolution, \-r
-Select the resolution to use in full\-screen mode; \-switchres must
-be enabled for this to work.
+Preferred resolution for all screens;
+format is \fIwidth\fRx\fIheight\fR[@\fIrefreshrate\fR] or 'auto'.
+.TP
+.B \-view
+Preferred view for all screens
+.TP
+.B \-screen[0\-3]
+Explicit name of the first|second|third|fourth screen; 'auto' here will try
+to make a best guess.
+.TP
+.B \-aspect[0\-3]
+Aspect ratio of the first|second|third|fourth screen; 'auto' here will try
+to make a best guess.
+.TP
+.B \-resolution[0\-3], \-r[0\-3]
+Preferred resolution for the first|second|third|fourth screen;
+format is \fIwidth\fRx\fIheight\fR[@\fIrefreshrate\fR] or 'auto'.
+.TP
+.B \-view[0\-3]
+Preferred view for the first|second|third|fourth screen.
 .\"
 .\" *******************************************************
 .SS Full screen options
@@ -899,7 +892,7 @@ The default is 0.85.
 .B \-natural, \-nat
 Specifies whether to use a natural keyboard or not.
 .TP
-.B \-uimodekey
+.B \-uimodekey, \-umk
 Specifies the key used to toggle between full and partial UI mode.
 .\" +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 .\" SDL specific
@@ -907,36 +900,24 @@ Specifies the key used to toggle between full and partial UI mode.
 .TP
 .B \-keymap
 Enable keymap for non\-QWERTY keyboards. Used in conjunction
-with \-keymap_file.
+with \fB\-keymap_file\fR.
 .TP
-.B \-keymap_file \fIfile
+.B \-keymap_file \fIkeymap_file
 Specifies the full path to the keymap file to be used. A few
-keymap files are available in /usr/share/games/mame\-common/keymaps.
+keymap files are available in /usr/share/games/mess/keymaps.
 .TP
-.B \-joy_idx1 \fIjoystick
-.TP
-.B \-joy_idx2 \fIjoystick
-.TP
-.B \-joy_idx3 \fIjoystick
-.TP
-.B \-joy_idx4 \fIjoystick
-.TP
-.B \-joy_idx5 \fIjoystick
-.TP
-.B \-joy_idx6 \fIjoystick
-.TP
-.B \-joy_idx7 \fIjoystick
-.TP
-.B \-joy_idx8 \fIjoystick
+.B \-joy_idx[0\-8] \fIjoystick
 With these options you can assign a joystick to a
 specific index in MESS. Even if the kernel will list the joysticks
 in a different order on the next boot, MESS will still see the joystick
-as e.g. 'Joystick 2'. Use
-.B mess \-v
-to see which joysticks are recognized. Default is AUTO.
+as e.g. "Joystick 2". Use mame \-v to see which joysticks are recognized.
+Default is 'auto'.
 .TP
 .B \-sixaxis
 Use special handling for PS3 Sixaxis controllers.
+.TP
+.B \-lightgun_index[1\-8]
+Map lightgun to specific index in MESS.
 .TP
 .B \-videodriver, \-vd x11\fR|\fBdirectfb\fR|\fBauto
 SDL video driver to use; auto selects SDL default.
@@ -951,29 +932,21 @@ Alternative libGL.so to use; auto selects SDL default.
 .SS Input automatic enable options
 .\" *******************************************************
 .TP
-.B \-paddle_device, \-paddle none\fR|\fBkeyboard\fR|\fBmouse\fR\
-|\fBlightgun\fR|\fBjoystick
+.B \-paddle_device, \-paddle \fR[\fInone\fR|\fIkeyboard\fR|\fImouse\fR|\fIlightgun\fR|\fIjoystick\fR]
 .TP
-.B \-adstick_device, \-adstick none\fR|\fBkeyboard\fR|\fBmouse\fR\
-|\fBlightgun\fR|\fBjoystick
+.B \-adstick_device, \-adstick \fR[\fInone\fR|\fIkeyboard\fR|\fImouse\fR|\fIlightgun\fR|\fIjoystick\fR]
 .TP
-.B \-pedal_device, \-pedal none\fR|\fBkeyboard\fR|\fBmouse\fR\
-|\fBlightgun\fR|\fBjoystick
+.B \-pedal_device, \-pedal \fR[\fInone\fR|\fIkeyboard\fR|\fImouse\fR|\fIlightgun\fR|\fIjoystick\fR]
 .TP
-.B \-dial_device, \-dial none\fR|\fBkeyboard\fR|\fBmouse\fR\
-|\fBlightgun\fR|\fBjoystick
+.B \-dial_device, \-dial \fR[\fInone\fR|\fIkeyboard\fR|\fImouse\fR|\fIlightgun\fR|\fIjoystick\fR]
 .TP
-.B \-trackball_device, \-trackball none\fR|\fBkeyboard\fR|\fBmouse\fR\
-|\fBlightgun\fR|\fBjoystick
+.B \-trackball_device, \-trackball \fR[\fInone\fR|\fIkeyboard\fR|\fImouse\fR|\fIlightgun\fR|\fIjoystick\fR]
 .TP
-.B \-lightgun_device none\fR|\fBkeyboard\fR|\fBmouse\fR\
-|\fBlightgun\fR|\fBjoystick
+.B \-lightgun_device \fR[\fInone\fR|\fIkeyboard\fR|\fImouse\fR|\fIlightgun\fR|\fIjoystick\fR]
 .TP
-.B \-positional_device none\fR|\fBkeyboard\fR|\fBmouse\fR\
-|\fBlightgun\fR|\fBjoystick
+.B \-positional_device \fR[\fInone\fR|\fIkeyboard\fR|\fImouse\fR|\fIlightgun\fR|\fIjoystick\fR]
 .TP
-.B \-mouse_device none\fR|\fBkeyboard\fR|\fBmouse\fR\
-|\fBlightgun\fR|\fBjoystick
+.B \-mouse_device \fR[\fInone\fR|\fIkeyboard\fR|\fImouse\fR|\fIlightgun\fR|\fIjoystick\fR]
 Each of these options controls auto\-enabling the mouse, or joystick
 depending on the presence of a particular class of analog
 control for a particular system. For example, if you specify the option
@@ -1006,7 +979,7 @@ Activates the integrated debugger. By default, the debugger is entered
 by pressing the tilde (~) key during emulation. It is also entered
 immediately at startup. The default is OFF (\-nodebug).
 .TP
-.B \-debugscript \fIfile
+.B \-debugscript \fIfilename
 Specifies a file that contains a list of debugger commands to execute
 immediately upon startup. The default is NULL (no commands).
 .TP
@@ -1022,20 +995,10 @@ the same time as \-log to output the log data to both targets as well.
 Default is OFF (\-nooslog).
 .\"
 .\" *******************************************************
-.SS UI options
-.\" *******************************************************
-.TP
-.B \-uifont
-Specify a font to use.
-.TP
-.B \-newui, \-nu
-Use the new MESS UI.
-.\"
-.\" *******************************************************
 .SS Misc options
 .\" *******************************************************
 .TP
-.B \-bios default\fR|\fIbios
+.B \-bios \fIbiosname
 Specifies the specific BIOS to use with the current system, for
 systems that make use of a BIOS. The \-listxml output will list all of
 the possible BIOS names for a system. The default is 'default'.
@@ -1048,17 +1011,32 @@ menu in the user interface. The	default is OFF (\-nocheat).
 Forces MESS to skip displaying the system info screen. The default is OFF
 (\-noskip_gameinfo).
 .TP
+.B \-uifont \fIfontname
+Specifies the name of a BDF font file to use for the UI font. If this
+font cannot be found or cannot be loaded, the system will fall back
+to its built\-in UI font. On some platforms \fIfontname\fP can be a system
+font name instead of a BDF font file. The default is 'default' (use
+the OSD\-determined default font).
+.TP
 .B \-ramsize, \-ram
 Size of RAM (if supported by driver).
 .TP
-.B \-writeconfig, \-wc
-Writes configuration to
-.IB driver .ini
-on exit.
-.\"
-.\"
-.\" FILES chapter
-.SH FILES
+.B \-confirm_quit
+Display confirm quit screen on exit.
 .TP
-.B /etc/mess/mess.ini
-Main configuration file
+.B \-ui_mouse
+Display UI mouse cursor.
+.TP
+.B \-newui, \-nu
+Use the new MESS UI.
+.TP
+.B \-watchdog
+Specifies a number of seconds after which MESS should automatically exit
+if it detects that the emulation has locked up.
+.\"
+.\"
+.\" LEGAL NOTICE chapter
+.SH LEGAL NOTICE
+Please visit the MAME website for some important legal information:
+.PP
+http://mamedev.org/legal.html

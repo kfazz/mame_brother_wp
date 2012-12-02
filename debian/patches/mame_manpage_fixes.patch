@@ -1,21 +1,145 @@
 Author: Cesare Falco <c.falco@ubuntu.com>
-Description: Fix mame.6 and jedutil.1, update chdman.1
+Description: Fix mame.6 and jedutil.1, update chdman.1. Changed e-mail address on all man pages.
 Forwarded: yes
 
-Index: mame-0.146u5/src/osd/sdl/man/mame.6
+Index: mame-0.147u3/src/osd/sdl/man/mame.6
 ===================================================================
---- mame-0.146u5.orig/src/osd/sdl/man/mame.6	2012-08-28 13:03:49.000000000 +0200
-+++ mame-0.146u5/src/osd/sdl/man/mame.6	2012-08-28 13:08:54.000000000 +0200
-@@ -13,7 +13,7 @@
+--- mame-0.147u3.orig/src/osd/sdl/man/mame.6	2012-09-18 22:35:07.000000000 +0200
++++ mame-0.147u3/src/osd/sdl/man/mame.6	2012-12-02 02:12:13.000000000 +0100
+@@ -6,14 +6,14 @@
+ .\" * commands: see src/emu/clifront.c clifront.h
+ .\" * options: core entries, see src/emu/emuopts.c emuopts.h
+ .\"            SDL-specific entries, see src/osd/sdl/sdlmain.c osdsdl.h
+-.\" Cesare Falco <cesare.falco@gmail.com>, February 2007
++.\" Cesare Falco <c.falco@ubuntu.com>, February 2007
+ .\"
+ .\" Also, some text borrowed from the xmame 0.106 man page,
+ .\" done by Rene Herrmann <rene.herrmann@berlin.de>, September 2000
  .\" and updated by Andrew Burton <burtona@gol.com>, July 2003
  .\"
  .\"
 -.TH MAME 1 2012-03-25 0.145u5 "MAME \- The Multiple Arcade Machine Emulator"
-+.TH MAME 6 2012-08-28 0.146u5 "MAME \- The Multiple Arcade Machine Emulator"
++.TH MAME 6 2012-12-01 0.147u3 "MAME \- The Multiple Arcade Machine Emulator"
  .\"
  .\"
  .\" NAME chapter
-@@ -795,7 +795,7 @@
+@@ -56,7 +56,7 @@
+ .\" *******************************************************
+ .TP
+ .B \-createconfig, \-cc
+-Creates the default \fBmame.ini\fP file in the current directory. All the
++Creates the default \fBmame.ini\fR file in the current directory. All the
+ configuration options (not commands) described below can be permanently
+ changed by editing this configuration file.
+ .TP
+@@ -65,15 +65,15 @@
+ .TP
+ .B \-showusage, \-su
+ Displays a summary of all the command line options. For options that
+-are not mentioned here, the short summary given by
+-\fBmame \-showusage\fR is usually sufficient.
++are not mentioned here, the short summary given by \fB\-showusage\fR
++is usually sufficient.
+ .\"
+ .\" *******************************************************
+ .SS Frontend commands
+ .\" *******************************************************
+-.B NOTE:
+-By default, all the '\-list' commands below write info to the screen.
+-If you wish to write the info to a textfile instead, use redirection, e.g.
++All the list commands below write info to the screen.
++If you wish to write the info to a textfile instead, use redirection.
++For example,
+ .B mame \-listxml > ~/mamelist.xml
+ writes the full list of supported game to file \fImamelist.xml\fR in your home
+ directory.
+@@ -155,8 +155,14 @@
+ .B \-listsoftware, \-lsoft
+ Output the list of known software for the system.
+ .TP
++.B \-verifysoftware, \-vsoft
++Verify known software for the system.
++.TP
+ .B \-getsoftlist, \-glist
+ Retrieve software list by name.
++.TP
++.B \-verifysoftlist, \-vlist
++Verify software list by name.
+ .\"
+ .\" *******************************************************
+ .SS Configuration options
+@@ -204,11 +210,11 @@
+ .\" *******************************************************
+ .SS Search path options
+ .\" *******************************************************
+-.B IMPORTANT\fR: Please use the path, directory and file options in
++Be careful to use the path, directory and file options in
+ mame.ini \fBONLY\fR. Otherwise, the outcome may be unpredictable and not
+ consistent across releases.
+ .TP
+-.B \-rompath, \-rp, \-biospath, \-bp, \fIpathname
++.B \-rompath, \-rp, \-biospath, \-bp \fIpathname
+ Specifies a list of paths within which to find ROM or hard disk images.
+ Multiple paths can be specified by separating them with semicolons.
+ The default is 'roms' (that is, a directory "roms" in the same directory
+@@ -245,7 +251,7 @@
+ .B \-cheatpath \fIpathname
+ Specifies a list of paths within which to find cheat files. Multiple
+ paths can be specified by separating them with semicolons. The default
+-is 'cheat' (that is, a directory "cheat" in the same directory as
++is 'cheat' (that is, a directory 'cheat' in the same directory as
+ the MAME executable).
+ .TP
+ .B \-crosshairpath \fIpathname
+@@ -365,7 +371,7 @@
+ and names the snapshots under it starting with 0000 and increasing
+ from there.
+ .TP
+-.B \-snapsize \fIwidth\fPx\fIheight\fP
++.B \-snapsize \fIwidth\fPx\fIheight
+ Hard\-codes the size for snapshots and movie recording. By default,
+ MAME will create snapshots at the game's current resolution in raw
+ pixels, and will create movies at the game's starting resolution in
+@@ -374,7 +380,7 @@
+ the result. Note that this size does not automatically rotate if the 
+ game is vertically oriented. The default is 'auto'.
+ .TP
+-.B \-snapview \fIviewname\fP
++.B \-snapview internal\fR|\fBauto\fR|\fIviewname
+ Specifies the view to use when rendering snapshots and movies. By
+ default, both use a special 'internal' view, which renders a separate
+ snapshot per screen or renders movies only of the first screen. By
+@@ -505,9 +511,7 @@
+ horizontally or vertically in one of the directions you can handle.
+ If your screen only pivots counter\-clockwise, use \-autoror.
+ .TP
+-.B \-[no]flipx
+-.TP
+-.B \-[no]flipy
++.B \-[no]flipx \-[no]flipy
+ Flip (mirror) the game screen either horizontally (\-flipx) or
+ vertically (\-flipy). The flips are applied after the \-rotate and
+ \-ror/\-rol options are applied. The default for both of these options
+@@ -621,9 +625,6 @@
+ .br
+ Default is SOFT.
+ .TP
+-.B \-numscreens
+-Reserved for future use.
+-.TP
+ .B \-[no]window, \-[no]w
+ Run MAME in either full screen or a window. This is a fully\-featured window
+ mode where the window resizes as necessary to track what the game does.
+@@ -730,7 +731,7 @@
+ .B \-gl_glsl
+ Enable OpenGL GLSL, if available, for a performance increase.
+ .TP
+-.B \-gl_glsl_filter
++.B \-gl_glsl_filter \fIvalue
+ Enable OpenGL GLSL filtering instead of FF filtering 0=plain, 1=bilinear.
+ Default is 1: bilinear.
+ .TP
+@@ -795,7 +796,7 @@
  .B \-[no]sound
  Enable or disable sound altogether. The default is ON (\-sound).
  .TP
@@ -24,7 +148,18 @@ Index: mame-0.146u5/src/osd/sdl/man/mame.6
  Sets the audio sample rate. Smaller values (e.g. 11025) cause lower
  audio quality but faster emulation speed. Higher values (e.g. 48000)
  cause higher audio quality but slower emulation speed. The default is
-@@ -942,6 +942,9 @@
+@@ -929,8 +930,8 @@
+ \fB\-keymap_file\fR.
+ .TP
+ .B \-keymap_file \fIkeymap_file\fR
+-Specifies the full path to the keymap file to be used. Shipped keymap files lie
+-in \fB/usr/share/games/mame/keymaps\fR.
++Specifies the full path to the keymap file to be used. A few
++keymap files are available in \fB/usr/share/games/mess/keymaps\fR.
+ .TP
+ .B \-joy_idx[0\-8] \fIjoystick
+ With these options you can assign a joystick to a 
+@@ -942,6 +943,9 @@
  .B \-sixaxis
  Use special handling for PS3 Sixaxis controllers.
  .TP
@@ -34,7 +169,7 @@ Index: mame-0.146u5/src/osd/sdl/man/mame.6
  .B \-videodriver, \-vd \fIx11\fR|\fIdirectfb\fR|\fIauto\fR
  SDL video driver to use; auto selects SDL default.
  .TP
-@@ -1045,6 +1048,9 @@
+@@ -1045,6 +1049,9 @@
  .TP
  .B \-confirm_quit
  Display confirm quit screen on exit.
@@ -44,16 +179,19 @@ Index: mame-0.146u5/src/osd/sdl/man/mame.6
  .\" +++++++++++++++++++++++++++++++++++++++++++++++++++++++
  .\" SDL specific
  .\" +++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Index: mame-0.146u5/src/osd/sdl/man/chdman.1
+Index: mame-0.147u3/src/osd/sdl/man/chdman.1
 ===================================================================
---- mame-0.146u5.orig/src/osd/sdl/man/chdman.1	2012-08-28 13:03:49.000000000 +0200
-+++ mame-0.146u5/src/osd/sdl/man/chdman.1	2012-08-28 13:06:41.000000000 +0200
-@@ -6,7 +6,7 @@
+--- mame-0.147u3.orig/src/osd/sdl/man/chdman.1	2012-09-18 22:35:07.000000000 +0200
++++ mame-0.147u3/src/osd/sdl/man/chdman.1	2012-12-02 02:12:13.000000000 +0100
+@@ -4,9 +4,9 @@
+ .\"
+ .\" Man page created from source and usage information by 
  .\" Ashley T. Howes <debiandev@ashleyhowes.com>, February 2005
- .\" updated by Cesare Falco <cesare.falco@gmail.com>, February 2007
+-.\" updated by Cesare Falco <cesare.falco@gmail.com>, February 2007
++.\" updated by Cesare Falco <c.falco@ubuntu.com>, February 2007
  .\"
 -.TH CHDMAN 1 2012-03-25 0.145u5 "MAME Compressed Hunks of Data (CHD) manager"
-+.TH CHDMAN 1 2012-07-31 0.146u4 "MAME Compressed Hunks of Data (CHD) manager"
++.TH CHDMAN 1 2012-12-01 0.147u3 "MAME Compressed Hunks of Data (CHD) manager"
  .\"
  .\" NAME chapter
  .SH NAME
@@ -314,16 +452,22 @@ Index: mame-0.146u5/src/osd/sdl/man/chdman.1
 +.TP
 +.B \-\-verbose, \-v
 +Output additional information about the operation.
-Index: mame-0.146u5/src/osd/sdl/man/jedutil.1
+Index: mame-0.147u3/src/osd/sdl/man/jedutil.1
 ===================================================================
---- mame-0.146u5.orig/src/osd/sdl/man/jedutil.1	2012-08-28 13:03:49.000000000 +0200
-+++ mame-0.146u5/src/osd/sdl/man/jedutil.1	2012-08-28 13:06:41.000000000 +0200
-@@ -8,7 +8,7 @@
+--- mame-0.147u3.orig/src/osd/sdl/man/jedutil.1	2012-09-18 22:35:07.000000000 +0200
++++ mame-0.147u3/src/osd/sdl/man/jedutil.1	2012-12-02 02:12:13.000000000 +0100
+@@ -3,12 +3,12 @@
+ .\" jedutil.1
+ .\"
+ .\" Man page created from source and usage information
+-.\" Cesare Falco <cesare.falco@gmail.com>, February 2007
++.\" Cesare Falco <c.falco@ubuntu.com>, February 2007
+ .\" 
  .\" References
  .\" http://aarongiles.com/?p=159
  .\"
 -.TH JEDUTIL 1 2012-03-25 0.145u5 "jedutil"
-+.TH JEDUTIL 1 2012-07-31 0.146u4 "MAME JED files manager"
++.TH JEDUTIL 1 2012-12-01 0.147u3 "MAME JED files manager"
  .\"
  .\" NAME chapter
  .SH NAME
@@ -336,42 +480,67 @@ Index: mame-0.146u5/src/osd/sdl/man/jedutil.1
  .\"
  .\" DESCRIPTION chapter
  .SH DESCRIPTION
-Index: mame-0.146u5/src/osd/sdl/man/ldverify.1
+Index: mame-0.147u3/src/osd/sdl/man/ldverify.1
 ===================================================================
---- mame-0.146u5.orig/src/osd/sdl/man/ldverify.1	2012-08-28 13:03:49.000000000 +0200
-+++ mame-0.146u5/src/osd/sdl/man/ldverify.1	2012-08-28 13:06:41.000000000 +0200
-@@ -5,7 +5,7 @@
+--- mame-0.147u3.orig/src/osd/sdl/man/ldverify.1	2012-09-18 22:35:07.000000000 +0200
++++ mame-0.147u3/src/osd/sdl/man/ldverify.1	2012-12-02 02:12:13.000000000 +0100
+@@ -3,9 +3,9 @@
+ .\" ldverify.1
+ .\"
  .\" Man page created from source and usage information by 
- .\" Cesare Falco <cesare.falco@gmail.com>, August 2008
+-.\" Cesare Falco <cesare.falco@gmail.com>, August 2008
++.\" Cesare Falco <c.falco@ubuntu.com>, August 2008
  .\"
 -.TH LDVERIFY 1 2012-03-25 0.145u5 "ldverify"
-+.TH LDVERIFY 1 2012-07-31 0.146u4 "MAME laserdisc data checker"
++.TH LDVERIFY 1 2012-12-01 0.147u3 "MAME laserdisc data checker"
  .\"
  .\" NAME chapter
  .SH NAME
-Index: mame-0.146u5/src/osd/sdl/man/romcmp.1
+Index: mame-0.147u3/src/osd/sdl/man/romcmp.1
 ===================================================================
---- mame-0.146u5.orig/src/osd/sdl/man/romcmp.1	2012-08-28 13:03:49.000000000 +0200
-+++ mame-0.146u5/src/osd/sdl/man/romcmp.1	2012-08-28 13:06:41.000000000 +0200
-@@ -9,7 +9,7 @@
+--- mame-0.147u3.orig/src/osd/sdl/man/romcmp.1	2012-09-18 22:35:07.000000000 +0200
++++ mame-0.147u3/src/osd/sdl/man/romcmp.1	2012-12-02 02:12:13.000000000 +0100
+@@ -4,12 +4,12 @@
+ .\"
+ .\" Man page created from FAQs, source and usage information by 
+ .\" Ashley T. Howes <debiandev@ashleyhowes.com>, February 2005
+-.\" updated by Cesare Falco <cesare.falco@gmail.com>, February 2007
++.\" updated by Cesare Falco <c.falco@ubuntu.com>, February 2007
+ .\" 
  .\" References
  .\" http://www.mame.net/mamefaq.html
  .\"
 -.TH ROMCMP 1 2012-03-25 0.145u5 "romcmp"
-+.TH ROMCMP 1 2012-07-31 0.146u4 "MAME romset checking tool"
++.TH ROMCMP 1 2012-12-01 0.147u3 "MAME romset checking tool"
  .\"
  .\" NAME chapter
  .SH NAME
-Index: mame-0.146u5/src/osd/sdl/man/testkeys.1
+Index: mame-0.147u3/src/osd/sdl/man/testkeys.1
 ===================================================================
---- mame-0.146u5.orig/src/osd/sdl/man/testkeys.1	2012-08-28 13:03:49.000000000 +0200
-+++ mame-0.146u5/src/osd/sdl/man/testkeys.1	2012-08-28 13:06:41.000000000 +0200
-@@ -5,7 +5,7 @@
+--- mame-0.147u3.orig/src/osd/sdl/man/testkeys.1	2012-09-18 22:35:07.000000000 +0200
++++ mame-0.147u3/src/osd/sdl/man/testkeys.1	2012-12-02 02:12:13.000000000 +0100
+@@ -3,9 +3,9 @@
+ .\" testkeys.1
+ .\"
  .\" Man page created from source and usage information
- .\" Cesare Falco <cesare.falco@gmail.com>, February 2007
+-.\" Cesare Falco <cesare.falco@gmail.com>, February 2007
++.\" Cesare Falco <c.falco@ubuntu.com>, February 2007
  .\"
 -.TH TESTKEYS 1 2012-03-25 0.145u5 "testkeys"
-+.TH TESTKEYS 1 2012-07-31 0.146u4 "MAME SDL keycode checker"
++.TH TESTKEYS 1 2012-12-01 0.147u3 "MAME SDL keycode checker"
  .\"
  .\" NAME chapter
  .SH NAME
+Index: mame-0.147u3/src/osd/sdl/man/ldplayer.1
+===================================================================
+--- mame-0.147u3.orig/src/osd/sdl/man/ldplayer.1	2012-09-18 22:35:07.000000000 +0200
++++ mame-0.147u3/src/osd/sdl/man/ldplayer.1	2012-12-02 02:12:43.000000000 +0100
+@@ -3,7 +3,7 @@
+ .\" ldplayer.1
+ .\"
+ .\" Man page created from source and usage information by 
+-.\" Cesare Falco <cesare.falco@gmail.com>, August 2008
++.\" Cesare Falco <c.falco@ubuntu.com>, August 2008
+ .\"
+ .TH LDPLAYER 1 2012-03-25 0.145u5 "ldplayer"
+ .\"
