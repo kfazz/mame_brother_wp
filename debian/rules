@@ -251,6 +251,6 @@ erase-upstream: clean
 	rm -f makefile
 	rm -rf obj
 	rm -rf src
-	rm -f whatsnew*.txt
+	rm -f *.txt
 	rm -rf mamehistory
 	rm -rf nplayers
