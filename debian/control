@@ -14,7 +14,6 @@ Build-Depends: debhelper (>= 8),
  libjpeg8-dev,
  libsdl-ttf2.0-dev,
  libsdl1.2-dev,
- p7zip,
  zlib1g-dev
 Standards-Version: 3.9.3
 Vcs-Git: git://anonscm.debian.org/pkg-games/mame.git
