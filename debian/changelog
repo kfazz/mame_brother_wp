@@ -1,4 +1,4 @@
-mame (0.147-1) UNRELEASED; urgency=low
+mame (0.147-1) experimental; urgency=low
 
   [ Cesare Falco ]
   * New upstream release
@@ -29,8 +29,9 @@ mame (0.147-1) UNRELEASED; urgency=low
 
   [ Emmanuel Kasper ]
   * Remove Felix from Uploaders, following his request in private mail.
+  * Bump Standards-Version to 3.9.4
 
- -- Jon Dowland <jmtd@debian.org>  Mon, 26 Nov 2012 10:21:09 +0000
+ -- Emmanuel Kasper <emmanuel@libera.cc>  Thu, 13 Dec 2012 21:42:58 +0100
 
 mame (0.146-5) unstable; urgency=low
 
