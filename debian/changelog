@@ -27,6 +27,9 @@ mame (0.147-1) UNRELEASED; urgency=low
   [ Jon Dowland ]
   * Remove deprecated dm-upload-allowed from the control file.
 
+  [ Emmanuel Kasper ]
+  * Remove Felix from Uploaders, following his request in private mail.
+
  -- Jon Dowland <jmtd@debian.org>  Mon, 26 Nov 2012 10:21:09 +0000
 
 mame (0.146-5) unstable; urgency=low
