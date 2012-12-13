@@ -76,8 +76,8 @@ Architecture: any
 Depends: ${misc:Depends},
  ${shlibs:Depends},
  mess-data
-Recommends: mess-desktop-entries
-Suggests: mame-tools
+Suggests: mame-tools,
+ mess-desktop-entries
 Description: Multi Emulator Super System (MESS)
  MESS is an emulator for various consoles and computing systems, sharing a
  lot of codebase with the MAME project.
