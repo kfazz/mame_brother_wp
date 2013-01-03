@@ -4,7 +4,6 @@ Priority: optional
 Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
 Uploaders: Cesare Falco <c.falco@ubuntu.com>,
  Emmanuel Kasper <emmanuel@libera.cc>,
- Ludovic Lechapt <ludomatic@gmail.com>,
  Jordi Mallach <jordi@debian.org>
 Build-Depends: debhelper (>= 8),
  libexpat1-dev,
