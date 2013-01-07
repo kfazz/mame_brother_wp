@@ -31,7 +31,11 @@ mame (0.147-1) experimental; urgency=low
   * Remove Felix and Ludo from Uploaders, following request in private mail.
   * Bump Standards-Version to 3.9.4
 
- -- Emmanuel Kasper <emmanuel@libera.cc>  Thu, 13 Dec 2012 21:42:58 +0100
+  [ Jordi Mallach ]
+  * Avoid using xz -9, both for generated tarballs and binaries; gains us
+    little and is a big burden for some buidds.
+
+ -- Jordi Mallach <jordi@debian.org>  Mon, 07 Jan 2013 16:35:27 +0100
 
 mame (0.146-5) unstable; urgency=low
 

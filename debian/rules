@@ -200,7 +200,7 @@ $(MAME_TARBALL): $(MAME_SRCFILE)
 	    ! -regex ".*(zip|gif|png|bmp|ico)" \
 	    | sed 's/\ /\\\ /g' \
 	    | xargs sed -i "s/\r$$//"
-	tar -C $(TMPDIR) -cvf - $(MAME_PACKAGE)-$(VERSION) | xz -9 > $(MAME_TARBALL)
+	tar -C $(TMPDIR) -acvf $(MAME_TARBALL) $(MAME_PACKAGE)-$(VERSION)
 	rm -rf $(TMPDIR)
 	rm -f $(MAME_SRCFILE)
 
@@ -219,7 +219,7 @@ $(HISTORY_TARBALL): $(HISTORY_SRCFILE)
 	7z x -o$(TMPDIR)/$(HISTORY_PACKAGE) $(HISTORY_SRCFILE)
 	# Strip trailing CR
 	find $(TMPDIR)/$(HISTORY_PACKAGE) -type f | xargs sed -i "s/\r$$//"
-	tar -C $(TMPDIR) -cvf - $(HISTORY_PACKAGE) | xz -9 > $(HISTORY_TARBALL)
+	tar -C $(TMPDIR) -acvf $(HISTORY_TARBALL) $(HISTORY_PACKAGE)
 	rm -rf $(TMPDIR)
 	rm -f $(HISTORY_SRCFILE)
 
@@ -236,7 +236,7 @@ $(NPLAYERS_TARBALL): $(NPLAYERS_SRCFILE)
 	unzip $(NPLAYERS_SRCFILE) -d $(TMPDIR)/$(NPLAYERS_PACKAGE)
 	# Strip trailing CR
 	find $(TMPDIR)/$(NPLAYERS_PACKAGE) -type f | xargs sed -i "s/\r$$//"
-	tar -C $(TMPDIR) -cvf - $(NPLAYERS_PACKAGE) | xz -9 > $(NPLAYERS_TARBALL)
+	tar -C $(TMPDIR) -acvf $(NPLAYERS_TARBALL) $(NPLAYERS_PACKAGE)
 	rm -rf $(TMPDIR)
 	rm -f $(NPLAYERS_SRCFILE)
 
