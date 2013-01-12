@@ -2,10 +2,8 @@ Source: mame
 Section: non-free/games
 Priority: optional
 Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
-Uploaders: Félix Arreola Rodríguez <fgatuno.123@gmail.com>,
- Cesare Falco <c.falco@ubuntu.com>,
+Uploaders: Cesare Falco <c.falco@ubuntu.com>,
  Emmanuel Kasper <emmanuel@libera.cc>,
- Ludovic Lechapt <ludomatic@gmail.com>,
  Jordi Mallach <jordi@debian.org>
 Build-Depends: debhelper (>= 8),
  libexpat1-dev,
@@ -15,9 +13,8 @@ Build-Depends: debhelper (>= 8),
  libjpeg8-dev,
  libsdl-ttf2.0-dev,
  libsdl1.2-dev,
- p7zip,
  zlib1g-dev
-Standards-Version: 3.9.3
+Standards-Version: 3.9.4
 Vcs-Git: git://anonscm.debian.org/pkg-games/mame.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-games/mame.git
 Homepage: http://mamedev.org/
@@ -43,6 +40,8 @@ Description: Multiple Arcade Machine Emulator (MAME)
 Package: mame-extra
 Architecture: all
 Depends: ${misc:Depends}
+Breaks: mame (<< 0.147-1)
+Replaces: mame (<< 0.147-1)
 Description: Additional files for the Multiple Arcade Machine Emulator (MAME)
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can
@@ -50,7 +49,9 @@ Description: Additional files for the Multiple Arcade Machine Emulator (MAME)
  machines. These ROMs are subject to copyright and it is in most of the cases
  illegal to use them if you do not own the arcade machine.
  .
- This package provides additional data files for the emulator.
+ This package provides additional data files for the MAME arcade emulator:
+  nplayers.ini -- provide information about multi-player support 
+  history.dat -- provides a brief historical overview of each game
 
 Package: mame-tools
 Section: non-free/utils
@@ -80,8 +81,8 @@ Architecture: any
 Depends: ${misc:Depends},
  ${shlibs:Depends},
  mess-data
-Recommends: mess-desktop-entries
-Suggests: mame-tools
+Suggests: mame-tools,
+ mess-desktop-entries
 Description: Multi Emulator Super System (MESS)
  MESS is an emulator for various consoles and computing systems, sharing a
  lot of codebase with the MAME project.
@@ -101,4 +102,4 @@ Description: Data files for the Multi Emulator Super System (MESS)
  MESS is an emulator for various consoles and computing systems, sharing a
  lot of codebase with the MAME project.
  .
- This package provides the MESS hash files, keymaps and artwork.
+ This package provides the MESS and MAME hash files, keymaps and artwork.

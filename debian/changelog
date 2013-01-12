@@ -1,4 +1,12 @@
-mame (0.147-1) UNRELEASED; urgency=low
+mame (0.147-2) UNRELEASED; urgency=low
+
+  [ Jordi Mallach ]
+  * Fix mame-extra's description.
+  * Add necessary Breaks/Replaces for the nplayers.ini move to mame-extra.
+
+ -- Jordi Mallach <jordi@debian.org>  Tue, 08 Jan 2013 00:40:39 +0100
+
+mame (0.147-1) experimental; urgency=low
 
   [ Cesare Falco ]
   * New upstream release
@@ -27,7 +35,15 @@ mame (0.147-1) UNRELEASED; urgency=low
   [ Jon Dowland ]
   * Remove deprecated dm-upload-allowed from the control file.
 
- -- Jon Dowland <jmtd@debian.org>  Mon, 26 Nov 2012 10:21:09 +0000
+  [ Emmanuel Kasper ]
+  * Remove Felix and Ludo from Uploaders, following request in private mail.
+  * Bump Standards-Version to 3.9.4
+
+  [ Jordi Mallach ]
+  * Avoid using xz -9, both for generated tarballs and binaries; gains us
+    little and is a big burden for some buidds.
+
+ -- Jordi Mallach <jordi@debian.org>  Mon, 07 Jan 2013 16:35:27 +0100
 
 mame (0.146-5) unstable; urgency=low
 
