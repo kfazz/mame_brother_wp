@@ -1,7 +1,7 @@
 version=3
 # Mame source
 opts="dversionmangle=s/u\d+//" \
- http://mamedev.org/release.html .*mame(\d)(\d+)s.zip
+ http://mamedev.org/release.html .*mame(\d)(\d+)s.exe
 # nplayers.ini
 http://nplayers.arcadebelgium.be .*nplayers(\d)(\d+).zip
 # history.dat
