@@ -6,6 +6,8 @@ Uploaders: Cesare Falco <c.falco@ubuntu.com>,
  Emmanuel Kasper <emmanuel@libera.cc>,
  Jordi Mallach <jordi@debian.org>
 Build-Depends: debhelper (>= 8),
+ gcc-4.6,
+ g++-4.6,
  libexpat1-dev,
  libflac-dev,
  libgconf2-dev,
