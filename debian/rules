@@ -204,7 +204,7 @@ $(MAME_TARBALL): $(MAME_SRCFILE)
 	rm -rf $(TMPDIR)
 	rm -f $(MAME_SRCFILE)
 
-HISTORY_PACKAGE = mamehistory
+HISTORY_PACKAGE = history
 # Upstream source file has no leading zero in version number, so cut it out
 HISTORY_VERSION := $(shell echo $(VERSION) | sed -e 's/^0\.//' )
 HISTORY_URL = http://www.arcade-history.com/dats/
@@ -252,5 +252,5 @@ erase-upstream: clean
 	rm -rf obj
 	rm -rf src
 	rm -f *.txt
-	rm -rf mamehistory
+	rm -rf history
 	rm -rf nplayers

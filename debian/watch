@@ -6,4 +6,4 @@ opts="dversionmangle=s/u\d+//" \
 http://nplayers.arcadebelgium.be .*nplayers(\d)(\d+).zip
 # history.dat
 opts="uversionmangle=s/^/0./" \
- http://www.arcade-history.com/index.php?page=download .*mamehistory(\d+).zip
+ http://www.arcade-history.com/index.php?page=download .*history(\d+).7z

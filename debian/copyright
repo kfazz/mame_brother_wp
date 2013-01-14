@@ -17,7 +17,7 @@ Files: debian/install/hicolor/*
 Copyright: deviantdark [www.deviantdark.com]
 License: GPL-3+
 
-Files: mamehistory/*
+Files: history/*
 Copyright: Alexis Bousiges
 License: MAME
 
