@@ -15,8 +15,8 @@ DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
 
 # taken verbatim from debian policy
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
-         NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
-         MAKEFLAGS += -j$(NUMJOBS)
+NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+MAKEFLAGS += -j$(NUMJOBS)
 endif
 
 # Override relevant make variables in original makefile
@@ -33,6 +33,7 @@ DEB_OPTS = \
     BUILD_EXPAT= \
     BUILD_ZLIB= \
     BUILD_JPEGLIB= \
+    BUILD_MIDILIB= \
     BUILD_FLAC= \
     SYMBOLS= \
     SYMLEVEL= \
