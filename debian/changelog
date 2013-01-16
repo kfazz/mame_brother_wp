@@ -4,6 +4,10 @@ mame (0.147-2) UNRELEASED; urgency=low
   * Fix mame-extra's description.
   * Add necessary Breaks/Replaces for the nplayers.ini move to mame-extra.
 
+  [ Emmanuel Kasper ]
+  * Removing -mtune=generic build options: optimizing gain is minimal
+    and segfault on i386 may occured if we use it
+
  -- Jordi Mallach <jordi@debian.org>  Tue, 08 Jan 2013 00:40:39 +0100
 
 mame (0.147-1) experimental; urgency=low
