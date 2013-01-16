@@ -48,7 +48,6 @@ DEB_OPTS = \
 # Linux architectures
 ifeq ($(DEB_HOST_ARCH),amd64)
 DEB_OPTS += \
-    ARCHOPTS=-mtune=generic \
     FORCE_DRC_C_BACKEND= \
     PTR64=1 \
     NOASM= \
@@ -57,7 +56,6 @@ endif
 
 ifeq ($(DEB_HOST_ARCH),i386)
 DEB_OPTS += \
-    ARCHOPTS=-mtune=generic \
     FORCE_DRC_C_BACKEND= \
     PTR64= \
     NOASM= \
