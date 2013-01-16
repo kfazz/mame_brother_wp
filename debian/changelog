@@ -1,4 +1,4 @@
-mame (0.148-1~ppa3~quantal) quantal; urgency=low
+mame (0.148-1~ppa4~quantal) quantal; urgency=low
 
   [ Cesare Falco ]
   * New upstream release
@@ -12,7 +12,7 @@ mame (0.148-1~ppa3~quantal) quantal; urgency=low
     + Unset BUILD_MIDILIB flag to allow linking system Portmidi library
   * Removed mess-related man pages, accepted upstream
 
- -- Cesare Falco <c.falco@ubuntu.com>  Tue, 15 Jan 2013 22:56:12 +0100
+ -- Cesare Falco <c.falco@ubuntu.com>  Wed, 16 Jan 2013 23:12:49 +0100
 
 mame (0.147-2) UNRELEASED; urgency=low
 
