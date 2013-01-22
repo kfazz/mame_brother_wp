@@ -1,4 +1,4 @@
-mame (0.148-1~ppa4~quantal) quantal; urgency=low
+mame (0.148-1~ppa5~quantal) quantal; urgency=low
 
   [ Cesare Falco ]
   * New upstream release
@@ -6,13 +6,15 @@ mame (0.148-1~ppa4~quantal) quantal; urgency=low
     + Reworked updates to man pages, removed those previously accepted upstream
     + Fix check for gcc 4.6 in makefile
   * debian/watch
-    + Fixed URL for history.dat
     + Download mamexxxs.exe, smaller than mamexxxs.zip
   * debian/rules:
     + Unset BUILD_MIDILIB flag to allow linking system Portmidi library
+    + Removed trailing CR stripping, not needed any more by gcc/g++/patch
+    + Reworked get-orig-source for main mame tarball
   * Removed mess-related man pages, accepted upstream
+  * Updated history.dat references: tarball filename changed upstream
 
- -- Cesare Falco <c.falco@ubuntu.com>  Wed, 16 Jan 2013 23:12:49 +0100
+ -- Cesare Falco <c.falco@ubuntu.com>  Tue, 22 Jan 2013 21:33:53 +0100
 
 mame (0.147-2) UNRELEASED; urgency=low
 
