@@ -163,12 +163,6 @@ override_dh_auto_clean:
 	rm -rf obj
 	rm -f default.mame.ini default.mess.ini
 
-# Remove Windows specific documentation
-override_dh_installdocs:
-	dh_installdocs --exclude=license.txt \
-                   --exclude=windows.txt \
-                   --exclude=newvideo.txt
-
 # Remove OSX specific keymaps
 override_dh_install:
 	dh_install --exclude=OSX.txt

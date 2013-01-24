@@ -13,6 +13,7 @@ mame (0.148-1~ppa5~quantal) quantal; urgency=low
     + Reworked get-orig-source for main mame tarball
   * Removed mess-related man pages, accepted upstream
   * Updated history.dat references: tarball filename changed upstream
+  * Rearranged distribution of documentation in binary packages
 
  -- Cesare Falco <c.falco@ubuntu.com>  Tue, 22 Jan 2013 21:33:53 +0100
 
