@@ -191,39 +191,7 @@ $(MAME_TARBALL): $(MAME_SRCFILE)
 	rm -rf $(TMPDIR)
 	rm -f $(MAME_SRCFILE)
 
-HISTORY_PACKAGE = history
-# Upstream source file has no leading zero in version number, so cut it out
-HISTORY_VERSION := $(shell echo $(VERSION) | sed -e 's/^0\.//' )
-HISTORY_URL = http://www.arcade-history.com/dats/
-HISTORY_SRCFILE = $(HISTORY_PACKAGE)$(HISTORY_VERSION).7z
-HISTORY_TARBALL = $(MAME_PACKAGE)_$(VERSION).orig-$(HISTORY_PACKAGE).tar.xz
-
-$(HISTORY_SRCFILE):
-	wget -U '$(AGENT)' $(HISTORY_URL)$(HISTORY_SRCFILE)
-
-$(HISTORY_TARBALL): $(HISTORY_SRCFILE)
-	mkdir $(TMPDIR)
-	7z x -o$(TMPDIR)/$(HISTORY_PACKAGE) $(HISTORY_SRCFILE)
-	tar -C $(TMPDIR) -acvf $(HISTORY_TARBALL) $(HISTORY_PACKAGE)
-	rm -rf $(TMPDIR)
-	rm -f $(HISTORY_SRCFILE)
-
-NPLAYERS_PACKAGE = nplayers
-NPLAYERS_URL = http://nplayers.arcadebelgium.be/files/
-NPLAYERS_SRCFILE = $(NPLAYERS_PACKAGE)$(MAME_VERSION).zip
-NPLAYERS_TARBALL = $(MAME_PACKAGE)_$(VERSION).orig-$(NPLAYERS_PACKAGE).tar.xz
-
-$(NPLAYERS_SRCFILE):
-	wget -U '$(AGENT)' $(NPLAYERS_URL)$(NPLAYERS_SRCFILE)
-
-$(NPLAYERS_TARBALL): $(NPLAYERS_SRCFILE)
-	mkdir $(TMPDIR)
-	unzip $(NPLAYERS_SRCFILE) -d $(TMPDIR)/$(NPLAYERS_PACKAGE)
-	tar -C $(TMPDIR) -acvf $(NPLAYERS_TARBALL) $(NPLAYERS_PACKAGE)
-	rm -rf $(TMPDIR)
-	rm -f $(NPLAYERS_SRCFILE)
-
-get-orig-source: $(MAME_TARBALL) $(HISTORY_TARBALL) $(NPLAYERS_TARBALL)
+get-orig-source: $(MAME_TARBALL)
 
 erase-upstream: clean
 	rm -rf artwork
@@ -235,5 +203,3 @@ erase-upstream: clean
 	rm -rf obj
 	rm -rf src
 	rm -f *.txt
-	rm -rf history
-	rm -rf nplayers

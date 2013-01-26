@@ -17,14 +17,6 @@ Files: debian/install/hicolor/*
 Copyright: deviantdark [www.deviantdark.com]
 License: GPL-3+
 
-Files: history/*
-Copyright: Alexis Bousiges
-License: MAME
-
-Files: nplayers/*
-Copyright: Nomax
-License: CC-BY-3.0
-
 Files: *
 Copyright: Alex Pasadyn
  Alex Wulms
