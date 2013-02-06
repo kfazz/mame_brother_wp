@@ -28,8 +28,6 @@ Architecture: any
 Depends: ${misc:Depends},
  ${shlibs:Depends},
  mess-data
-Replaces: mame-extra (<< 0.148)
-Breaks: mame-extra (<< 0.148)
 Suggests: gnome-video-arcade,
  mame-extra,
  mame-tools
