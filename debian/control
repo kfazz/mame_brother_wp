@@ -27,7 +27,7 @@ Package: mame
 Architecture: any
 Depends: ${misc:Depends},
  ${shlibs:Depends},
- mess-data
+ mess-data (= ${source:Version})
 Suggests: gnome-video-arcade,
  mame-extra,
  mame-tools
@@ -67,7 +67,7 @@ Package: mess
 Architecture: any
 Depends: ${misc:Depends},
  ${shlibs:Depends},
- mess-data
+ mess-data (= ${source:Version})
 Suggests: mame-tools,
  mess-desktop-entries
 Description: Multi Emulator Super System (MESS)

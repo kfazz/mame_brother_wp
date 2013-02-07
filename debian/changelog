@@ -1,4 +1,4 @@
-mame (0.148-1~ppa9~quantal) quantal; urgency=low
+mame (0.148-1) UNRELEASED; urgency=low
 
   [ Cesare Falco ]
   * New upstream release
@@ -15,7 +15,7 @@ mame (0.148-1~ppa9~quantal) quantal; urgency=low
   * Split mame-extra stuff into a separate source package
   * Rearranged distribution of documentation in binary packages
 
- -- Cesare Falco <c.falco@ubuntu.com>  Sun, 27 Jan 2013 23:02:23 +0100
+ -- Cesare Falco <c.falco@ubuntu.com>  Thu, 07 Feb 2013 21:46:26 +0100
 
 mame (0.147-2) UNRELEASED; urgency=low
 
