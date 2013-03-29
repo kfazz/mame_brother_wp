@@ -17,7 +17,7 @@ mame (0.148-1) UNRELEASED; urgency=low
 
  -- Cesare Falco <c.falco@ubuntu.com>  Thu, 07 Feb 2013 21:46:26 +0100
 
-mame (0.147-2) UNRELEASED; urgency=low
+mame (0.147-2) experimental; urgency=low
 
   [ Jordi Mallach ]
   * Fix mame-extra's description.
