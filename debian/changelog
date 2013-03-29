@@ -15,6 +15,9 @@ mame (0.148-1) experimental; urgency=low
   * Split mame-extra stuff into a separate source package
   * Rearranged distribution of documentation in binary packages
 
+  [ Jordi Mallach ]
+  * Add get-orig-source to PHONY.
+
  -- Jordi Mallach <jordi@debian.org>  Thu, 28 Mar 2013 23:51:51 -0500
 
 mame (0.147-2) experimental; urgency=low
