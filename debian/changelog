@@ -17,6 +17,7 @@ mame (0.148-1) experimental; urgency=low
 
   [ Jordi Mallach ]
   * Add get-orig-source to PHONY.
+  * Use default compression for the debian tar.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 28 Mar 2013 23:51:51 -0500
 
