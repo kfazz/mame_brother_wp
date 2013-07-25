@@ -1,3 +1,16 @@
+mame (0.149-1) UNRELEASED; urgency=low
+
+  * New upstream release
+  * debian/control: updated deps according to new debugger based on QT
+  * debian/patches:
+    + updated gnu fixes
+    + removed check for gcc 4.6 fix, accepted upstream
+    + reworked manpages after forwarding previous patch upstream
+  * debian/rules: removed erase-upstream target
+  * mess-data: updated keymap files location
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Wed, 12 Jun 2013 09:54:12 +0200
+
 mame (0.148-1) experimental; urgency=low
 
   [ Cesare Falco ]

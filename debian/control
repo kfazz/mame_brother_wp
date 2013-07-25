@@ -10,12 +10,14 @@ Build-Depends: debhelper (>= 8),
  g++-4.6,
  libexpat1-dev,
  libflac-dev,
- libgconf2-dev,
- libgtk2.0-dev,
+ libfontconfig1-dev,
  libjpeg8-dev,
  libportmidi-dev,
+ libqt4-dev,
  libsdl-ttf2.0-dev,
  libsdl1.2-dev,
+ libxinerama-dev,
+ python-dev,
  zlib1g-dev
 Standards-Version: 3.9.4
 Vcs-Git: git://anonscm.debian.org/pkg-games/mame.git

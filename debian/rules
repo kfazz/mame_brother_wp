@@ -193,15 +193,4 @@ $(MAME_TARBALL): $(MAME_SRCFILE)
 
 get-orig-source: $(MAME_TARBALL)
 
-erase-upstream: clean
-	rm -rf artwork
-	rm -rf docs
-	rm -rf hash
-	rm -rf hlsl
-	rm -rf keymaps
-	rm -f makefile
-	rm -rf obj
-	rm -rf src
-	rm -f *.txt
-
 .PHONY: get-orig-source
