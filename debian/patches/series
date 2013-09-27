@@ -1,2 +1,3 @@
 gnu_fixes.patch
+set_webserver_document_root.patch
 fix_manpages.patch
