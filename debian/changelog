@@ -1,3 +1,13 @@
+mame (0.150-1) UNRELEASED; urgency=low
+
+  * New upstream release
+  * debian/patches:
+    + updated gnu fixes
+    + updated man pages
+    + new: set the internal webserver document root
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Sun, 23 Sep 2013 15:35:55 +0200
+
 mame (0.149-1) UNRELEASED; urgency=low
 
   * New upstream release
