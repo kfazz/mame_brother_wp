@@ -1,3 +1,12 @@
+mame (0.151-1) UNRELEASED; urgency=low
+
+  * New upstream release 
+  * debian/patches:
+    - removed manpages updates, accepted upstream
+    - removed hack to set document root, now read from ini files
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Tue, 05 Nov 2013 22:12:38 +0100
+
 mame (0.150-1) UNRELEASED; urgency=low
 
   * New upstream release
