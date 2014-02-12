@@ -5,18 +5,17 @@ Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
 Uploaders: Cesare Falco <c.falco@ubuntu.com>,
  Emmanuel Kasper <emmanuel@libera.cc>,
  Jordi Mallach <jordi@debian.org>
-Build-Depends: debhelper (>= 8),
- gcc-4.6,
- g++-4.6,
+Build-Depends: debhelper (>= 9),
  libexpat1-dev,
  libflac-dev,
  libfontconfig1-dev,
  libjpeg8-dev,
  libportmidi-dev,
- libqt4-dev,
+ libqt4-dev (>= 4.7),
  libsdl-ttf2.0-dev,
  libsdl1.2-dev,
  libxinerama-dev,
+ subversion,
  python-dev,
  zlib1g-dev
 Standards-Version: 3.9.4
