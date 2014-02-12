@@ -1,3 +1,16 @@
+mame (0.152-1) UNRELEASED; urgency=low
+
+  * New upstream release 
+  * debian/control:
+    + Bump debhelper version
+    + Remove dep on gcc 4.6 (use distro default)
+    + Make dep on QT stricter, 4.7 or more (upstream recommendation)
+    + Add dep on subversion, used by get-orig-source
+  * debian/rules:
+    + get-orig-source: retrieve source from svn (upstream recommendation)
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Tue, 11 Feb 2014 00:05:14 +0100
+
 mame (0.151-1) UNRELEASED; urgency=low
 
   * New upstream release 
