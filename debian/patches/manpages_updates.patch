@@ -5,8 +5,8 @@ Forwarded: no
 
 Index: mame/src/osd/sdl/man/mame.6
 ===================================================================
---- mame.orig/src/osd/sdl/man/mame.6	2014-04-14 22:40:33.000000000 +0200
-+++ mame/src/osd/sdl/man/mame.6	2014-04-14 22:43:44.000000000 +0200
+--- mame.orig/src/osd/sdl/man/mame.6	2014-04-15 21:57:35.000000000 +0200
++++ mame/src/osd/sdl/man/mame.6	2014-04-15 21:57:35.000000000 +0200
 @@ -13,7 +13,7 @@
  .\" and updated by Andrew Burton <burtona@gol.com>, July 2003
  .\"
@@ -40,8 +40,8 @@ Index: mame/src/osd/sdl/man/mame.6
  Display UI mouse cursor.
 Index: mame/src/osd/sdl/man/castool.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/castool.1	2013-12-30 19:15:58.000000000 +0100
-+++ mame/src/osd/sdl/man/castool.1	2014-04-14 22:41:29.000000000 +0200
+--- mame.orig/src/osd/sdl/man/castool.1	2014-04-15 21:57:35.000000000 +0200
++++ mame/src/osd/sdl/man/castool.1	2014-04-15 21:57:35.000000000 +0200
 @@ -6,7 +6,7 @@
  .\" Cesare Falco <c.falco@ubuntu.com>, February 2011
  .\"
@@ -53,8 +53,8 @@ Index: mame/src/osd/sdl/man/castool.1
  .\" NAME chapter
 Index: mame/src/osd/sdl/man/chdman.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/chdman.1	2013-12-30 19:15:58.000000000 +0100
-+++ mame/src/osd/sdl/man/chdman.1	2014-04-14 22:41:50.000000000 +0200
+--- mame.orig/src/osd/sdl/man/chdman.1	2014-04-15 21:57:35.000000000 +0200
++++ mame/src/osd/sdl/man/chdman.1	2014-04-15 21:57:35.000000000 +0200
 @@ -6,7 +6,7 @@
  .\" Ashley T. Howes <debiandev@ashleyhowes.com>, February 2005
  .\" updated by Cesare Falco <c.falco@ubuntu.com>, February 2007
@@ -66,8 +66,8 @@ Index: mame/src/osd/sdl/man/chdman.1
  .SH NAME
 Index: mame/src/osd/sdl/man/imgtool.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/imgtool.1	2013-12-30 19:15:58.000000000 +0100
-+++ mame/src/osd/sdl/man/imgtool.1	2014-04-14 22:42:07.000000000 +0200
+--- mame.orig/src/osd/sdl/man/imgtool.1	2014-04-15 21:57:35.000000000 +0200
++++ mame/src/osd/sdl/man/imgtool.1	2014-04-15 21:57:35.000000000 +0200
 @@ -6,7 +6,7 @@
  .\" Cesare Falco <c.falco@ubuntu.com>, February 2011
  .\"
@@ -79,8 +79,8 @@ Index: mame/src/osd/sdl/man/imgtool.1
  .\" NAME chapter
 Index: mame/src/osd/sdl/man/jedutil.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/jedutil.1	2013-12-30 19:15:58.000000000 +0100
-+++ mame/src/osd/sdl/man/jedutil.1	2014-04-14 22:42:27.000000000 +0200
+--- mame.orig/src/osd/sdl/man/jedutil.1	2014-04-15 21:57:35.000000000 +0200
++++ mame/src/osd/sdl/man/jedutil.1	2014-04-15 21:57:35.000000000 +0200
 @@ -8,7 +8,7 @@
  .\" References
  .\" http://aarongiles.com/?p=159
@@ -92,8 +92,8 @@ Index: mame/src/osd/sdl/man/jedutil.1
  .SH NAME
 Index: mame/src/osd/sdl/man/ldresample.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/ldresample.1	2013-12-30 19:15:58.000000000 +0100
-+++ mame/src/osd/sdl/man/ldresample.1	2014-04-14 22:42:49.000000000 +0200
+--- mame.orig/src/osd/sdl/man/ldresample.1	2014-04-15 21:57:35.000000000 +0200
++++ mame/src/osd/sdl/man/ldresample.1	2014-04-15 21:57:35.000000000 +0200
 @@ -3,7 +3,7 @@
  .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
  .\" other parameters are allowed: see man(7), man(1)
@@ -105,8 +105,8 @@ Index: mame/src/osd/sdl/man/ldresample.1
  .\"
 Index: mame/src/osd/sdl/man/ldverify.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/ldverify.1	2013-12-30 19:15:58.000000000 +0100
-+++ mame/src/osd/sdl/man/ldverify.1	2014-04-14 22:43:15.000000000 +0200
+--- mame.orig/src/osd/sdl/man/ldverify.1	2014-04-15 21:57:35.000000000 +0200
++++ mame/src/osd/sdl/man/ldverify.1	2014-04-15 21:57:35.000000000 +0200
 @@ -5,7 +5,7 @@
  .\" Man page created from source and usage information by 
  .\" Cesare Falco <c.falco@ubuntu.com>, August 2008
@@ -118,8 +118,8 @@ Index: mame/src/osd/sdl/man/ldverify.1
  .SH NAME
 Index: mame/src/osd/sdl/man/mess.6
 ===================================================================
---- mame.orig/src/osd/sdl/man/mess.6	2013-12-30 19:15:58.000000000 +0100
-+++ mame/src/osd/sdl/man/mess.6	2014-04-14 22:44:00.000000000 +0200
+--- mame.orig/src/osd/sdl/man/mess.6	2014-04-15 21:57:35.000000000 +0200
++++ mame/src/osd/sdl/man/mess.6	2014-04-15 21:57:35.000000000 +0200
 @@ -16,7 +16,7 @@
  .\" http://www.mess.org/
  .\"
@@ -131,8 +131,8 @@ Index: mame/src/osd/sdl/man/mess.6
  .\" NAME chapter
 Index: mame/src/osd/sdl/man/romcmp.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/romcmp.1	2013-12-30 19:15:58.000000000 +0100
-+++ mame/src/osd/sdl/man/romcmp.1	2014-04-14 22:44:26.000000000 +0200
+--- mame.orig/src/osd/sdl/man/romcmp.1	2014-04-15 21:57:35.000000000 +0200
++++ mame/src/osd/sdl/man/romcmp.1	2014-04-15 21:57:35.000000000 +0200
 @@ -9,7 +9,7 @@
  .\" References
  .\" http://www.mame.net/mamefaq.html
@@ -144,8 +144,8 @@ Index: mame/src/osd/sdl/man/romcmp.1
  .SH NAME
 Index: mame/src/osd/sdl/man/testkeys.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/testkeys.1	2013-12-30 19:15:58.000000000 +0100
-+++ mame/src/osd/sdl/man/testkeys.1	2014-04-14 22:44:42.000000000 +0200
+--- mame.orig/src/osd/sdl/man/testkeys.1	2014-04-15 21:57:35.000000000 +0200
++++ mame/src/osd/sdl/man/testkeys.1	2014-04-15 21:57:35.000000000 +0200
 @@ -5,7 +5,7 @@
  .\" Man page created from source and usage information
  .\" Cesare Falco <c.falco@ubuntu.com>, February 2007
@@ -155,3 +155,55 @@ Index: mame/src/osd/sdl/man/testkeys.1
  .\"
  .\" NAME chapter
  .SH NAME
+Index: mame/src/osd/sdl/man/floptool.1
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ mame/src/osd/sdl/man/floptool.1	2014-04-15 22:42:26.000000000 +0200
+@@ -0,0 +1,47 @@
++.\"  -*- nroff -*-
++.\"
++.\" floptool.1
++.\"
++.\" Man page created from usage info
++.\" Cesare Falco <c.falco@ubuntu.com>, April 2014
++.\"
++.\"
++.TH FLOPTOOL 1 2014-04-14 0.153 "MESS Generic floppy manipulation tool"
++.\"
++.\"
++.\" NAME chapter
++.SH NAME
++floptool \- MESS Generic floppy image manipulation tool
++.\"
++.\"
++.\" SYNOPSIS chapter
++.SH SYNOPSIS
++.B floptool
++.I option
++.\"
++.\"
++.\" DESCRIPTION chapter
++.SH DESCRIPTION
++.B floptool
++is a tool for the maintenance and manipulation of floppy disk
++images that MESS users need to deal with.
++.\"
++.\"
++.\" COMMANDS chapter
++.SH COMMANDS
++.TP
++.B identify \fIinputfile\fR [\fIinputfile \fR... ]
++Determine the format of a floppy disk image.
++.TP
++.B convert [\fIinputformat\fR|\fIauto\fR] \fIoutputformat inputfile outputfile
++Convert a floppy disk image to a different format.
++.\"
++.\"
++.\" EXAMPLES chapter
++.SH EXAMPLES
++.B floptool identify image.dsk
++.\"
++.\"
++.\" SEE ALSO chapter
++.SH SEE ALSO
++mess(6)

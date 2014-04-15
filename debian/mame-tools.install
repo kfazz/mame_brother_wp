@@ -1,5 +1,6 @@
 castool usr/bin/
 chdman usr/bin/
+floptool usr/bin/
 imgtool usr/bin/
 jedutil usr/bin/
 ldresample usr/bin/
