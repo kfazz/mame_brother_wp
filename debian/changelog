@@ -1,3 +1,11 @@
+mame (0.153-1) UNRELEASED; urgency=low
+
+  * New upstream release
+  * mame-tools: added floptool utility
+  * debian/patches: update manpages
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Mon, 14 Apr 2014 22:46:19 +0200
+
 mame (0.152-1) UNRELEASED; urgency=low
 
   * New upstream release 
