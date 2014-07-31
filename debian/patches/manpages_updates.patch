@@ -1,22 +1,38 @@
 Author: Cesare Falco <c.falco@ubuntu.com>
-Description: Update manpages to 0.153
- Update manpages to 0.153.
+Description: Update manpages to 0.154
+ Update manpages to 0.154.
 Forwarded: no
 
 Index: mame/src/osd/sdl/man/mame.6
 ===================================================================
---- mame.orig/src/osd/sdl/man/mame.6	2014-04-15 21:57:35.000000000 +0200
-+++ mame/src/osd/sdl/man/mame.6	2014-04-15 21:57:35.000000000 +0200
+--- mame.orig/src/osd/sdl/man/mame.6	2014-08-12 19:53:30.000000000 +0200
++++ mame/src/osd/sdl/man/mame.6	2014-08-12 19:53:30.000000000 +0200
 @@ -13,7 +13,7 @@
  .\" and updated by Andrew Burton <burtona@gol.com>, July 2003
  .\"
  .\"
 -.TH MAME 6 2013-09-23 0.150 "MAME \- The Multiple Arcade Machine Emulator"
-+.TH MAME 6 2014-04-14 0.153 "MAME \- The Multiple Arcade Machine Emulator"
++.TH MAME 6 2014-07-31 0.154 "MAME \- The Multiple Arcade Machine Emulator"
  .\"
  .\"
  .\" NAME chapter
-@@ -606,6 +606,12 @@
+@@ -292,15 +292,6 @@
+ "nvram" in the same directory as the MAME executable). If this directory
+ does not exist, it will be automatically created.
+ .TP
+-.B \-memcard_directory \fIpathname
+-Specifies a single directory where memory card files are stored. Memory
+-card files store the contents of removable memory cards for games which
+-used this type of hardware. This data is read and written under control
+-of the user via the "Memory Card" menu in the user interface. The
+-default is 'memcard' (that is, a directory "memcard" in the same
+-directory as the MAME executable). If this directory does not exist,
+-it will be automatically created.
+-.TP
+ .B \-input_directory \fIpathname
+ Specifies a single directory where input recording files are stored.
+ Input recordings are created via the \-record option and played back via
+@@ -606,6 +597,12 @@
  .B \-pause_brightness \fIvalue
  This controls the brightness level when MAME is paused. The default
  value is 0.65.
@@ -29,7 +45,17 @@ Index: mame/src/osd/sdl/man/mame.6
  .\"
  .\" *******************************************************
  .SS Vector rendering options
-@@ -1081,7 +1087,7 @@
+@@ -1035,9 +1032,6 @@
+ .B \-debugscript \fIfilename
+ Specifies a file that contains a list of debugger commands to execute
+ immediately upon startup. The default is NULL (no commands).
+-.TP
+-.B \-debug_internal, \-di
+-Use the internal debugger for debugging.
+ .\" +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ .\" SDL specific
+ .\" +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+@@ -1081,7 +1075,7 @@
  Size of RAM (if supported by driver).
  .TP
  .B \-confirm_quit
@@ -38,127 +64,219 @@ Index: mame/src/osd/sdl/man/mame.6
  .TP
  .B \-ui_mouse
  Display UI mouse cursor.
+@@ -1108,6 +1102,9 @@
+ .TP
+ .B \-http_path \fIpath
+ Path to web files. Default is /usr/share/games/mess/web.
++.TP
++.B \-console
++Enable emulator LUA console.
+ .\" +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ .\" SDL specific
+ .\" +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Index: mame/src/osd/sdl/man/castool.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/castool.1	2014-04-15 21:57:35.000000000 +0200
-+++ mame/src/osd/sdl/man/castool.1	2014-04-15 21:57:35.000000000 +0200
+--- mame.orig/src/osd/sdl/man/castool.1	2014-08-12 19:53:30.000000000 +0200
++++ mame/src/osd/sdl/man/castool.1	2014-08-12 19:53:30.000000000 +0200
 @@ -6,7 +6,7 @@
  .\" Cesare Falco <c.falco@ubuntu.com>, February 2011
  .\"
  .\"
 -.TH CASTOOL 1 2013-09-23 0.150 "MESS Generic cassette manipulation tool"
-+.TH CASTOOL 1 2014-04-14 0.153 "MESS Generic cassette manipulation tool"
++.TH CASTOOL 1 2014-07-31 0.154 "MESS Generic cassette manipulation tool"
  .\"
  .\"
  .\" NAME chapter
 Index: mame/src/osd/sdl/man/chdman.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/chdman.1	2014-04-15 21:57:35.000000000 +0200
-+++ mame/src/osd/sdl/man/chdman.1	2014-04-15 21:57:35.000000000 +0200
+--- mame.orig/src/osd/sdl/man/chdman.1	2014-08-12 19:53:30.000000000 +0200
++++ mame/src/osd/sdl/man/chdman.1	2014-08-12 19:53:30.000000000 +0200
 @@ -6,7 +6,7 @@
  .\" Ashley T. Howes <debiandev@ashleyhowes.com>, February 2005
  .\" updated by Cesare Falco <c.falco@ubuntu.com>, February 2007
  .\"
 -.TH CHDMAN 1 2013-09-23 0.150 "MAME Compressed Hunks of Data (CHD) manager"
-+.TH CHDMAN 1 2014-04-14 0.153 "MAME Compressed Hunks of Data (CHD) manager"
++.TH CHDMAN 1 2014-07-31 0.154 "MAME Compressed Hunks of Data (CHD) manager"
  .\"
  .\" NAME chapter
  .SH NAME
 Index: mame/src/osd/sdl/man/imgtool.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/imgtool.1	2014-04-15 21:57:35.000000000 +0200
-+++ mame/src/osd/sdl/man/imgtool.1	2014-04-15 21:57:35.000000000 +0200
+--- mame.orig/src/osd/sdl/man/imgtool.1	2014-08-12 19:53:30.000000000 +0200
++++ mame/src/osd/sdl/man/imgtool.1	2014-08-12 19:53:30.000000000 +0200
 @@ -6,7 +6,7 @@
  .\" Cesare Falco <c.falco@ubuntu.com>, February 2011
  .\"
  .\"
 -.TH IMGTOOL 1 2013-09-23 0.150 "MESS media image manipulation tool"
-+.TH IMGTOOL 1 2014-04-14 0.153 "MESS media image manipulation tool"
++.TH IMGTOOL 1 2014-07-31 0.154 "MESS media image manipulation tool"
  .\"
  .\"
  .\" NAME chapter
 Index: mame/src/osd/sdl/man/jedutil.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/jedutil.1	2014-04-15 21:57:35.000000000 +0200
-+++ mame/src/osd/sdl/man/jedutil.1	2014-04-15 21:57:35.000000000 +0200
+--- mame.orig/src/osd/sdl/man/jedutil.1	2014-08-12 19:53:30.000000000 +0200
++++ mame/src/osd/sdl/man/jedutil.1	2014-08-12 19:53:30.000000000 +0200
 @@ -8,7 +8,7 @@
  .\" References
  .\" http://aarongiles.com/?p=159
  .\"
 -.TH JEDUTIL 1 2013-09-23 0.150 "MAME JEDEC file utilities"
-+.TH JEDUTIL 1 2014-04-14 0.153 "MAME JEDEC file utilities"
++.TH JEDUTIL 1 2014-07-31 0.154 "MAME JEDEC file utilities"
  .\"
  .\" NAME chapter
  .SH NAME
 Index: mame/src/osd/sdl/man/ldresample.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/ldresample.1	2014-04-15 21:57:35.000000000 +0200
-+++ mame/src/osd/sdl/man/ldresample.1	2014-04-15 21:57:35.000000000 +0200
+--- mame.orig/src/osd/sdl/man/ldresample.1	2014-08-12 19:53:30.000000000 +0200
++++ mame/src/osd/sdl/man/ldresample.1	2014-08-12 19:53:30.000000000 +0200
 @@ -3,7 +3,7 @@
  .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
  .\" other parameters are allowed: see man(7), man(1)
  .\"
 -.TH LDRESAMPLE 1 2013-09-23 0.150 "MAME laserdisc audio manipulation tool"
-+.TH LDRESAMPLE 1 2014-04-14 0.153 "MAME laserdisc audio manipulation tool"
++.TH LDRESAMPLE 1 2014-07-31 0.154 "MAME laserdisc audio manipulation tool"
  .\"
  .\" Please adjust this date whenever revising the manpage.
  .\"
 Index: mame/src/osd/sdl/man/ldverify.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/ldverify.1	2014-04-15 21:57:35.000000000 +0200
-+++ mame/src/osd/sdl/man/ldverify.1	2014-04-15 21:57:35.000000000 +0200
+--- mame.orig/src/osd/sdl/man/ldverify.1	2014-08-12 19:53:30.000000000 +0200
++++ mame/src/osd/sdl/man/ldverify.1	2014-08-12 19:53:30.000000000 +0200
 @@ -5,7 +5,7 @@
  .\" Man page created from source and usage information by 
  .\" Cesare Falco <c.falco@ubuntu.com>, August 2008
  .\"
 -.TH LDVERIFY 1 2013-09-23 0.150 "MAME laserdisc data checker"
-+.TH LDVERIFY 1 2014-04-14 0.153 "MAME laserdisc data checker"
++.TH LDVERIFY 1 2014-07-31 0.154 "MAME laserdisc data checker"
  .\"
  .\" NAME chapter
  .SH NAME
 Index: mame/src/osd/sdl/man/mess.6
 ===================================================================
---- mame.orig/src/osd/sdl/man/mess.6	2014-04-15 21:57:35.000000000 +0200
-+++ mame/src/osd/sdl/man/mess.6	2014-04-15 21:57:35.000000000 +0200
+--- mame.orig/src/osd/sdl/man/mess.6	2014-08-12 19:53:30.000000000 +0200
++++ mame/src/osd/sdl/man/mess.6	2014-08-12 20:25:36.000000000 +0200
 @@ -16,7 +16,7 @@
  .\" http://www.mess.org/
  .\"
  .\"
 -.TH MESS 6 2013-09-23 0.150 "The Multiple Emulator Super System (MESS)"
-+.TH MESS 6 2014-04-14 0.153 "The Multiple Emulator Super System (MESS)"
++.TH MESS 6 2014-07-31 0.154 "The Multiple Emulator Super System (MESS)"
  .\"
  .\"
  .\" NAME chapter
+@@ -27,8 +27,9 @@
+ .\" SYNOPSIS chapter
+ .SH SYNOPSIS
+ .B mess
+-.RI [ options ]
+ .I system
++.RI [ "media software" ]
++.RI [ options ]
+ .\"
+ .\"
+ .\" DESCRIPTION chapter
+@@ -39,6 +40,25 @@
+ to run on modern PCs.
+ .\"
+ .\"
++.\" SOFTWARE chapter
++.SH SOFTWARE
++A \fIsoftware\fR entry may be specified to attach an image file to the
++emulated system. In such a case, the appropriate \fImedia\fR switch
++is also required:
++.TP
++.B \-cart, \-cart1
++Cartrigde, used mainly by game consoles
++.TP
++.B \-cass
++Cassette (tape), widely used by old home computers
++.TP
++.B \-flop, -flop1
++Floppy disk
++.TP
++.B \-cdrom
++CD-Rom
++.\"
++.\"
+ .\" OPTIONS chapter
+ .SH OPTIONS
+ .\"
+@@ -283,15 +303,6 @@
+ directory 'nvram' in the same directory as the MESS executable). If this
+ directory does not exist, it will be automatically created.
+ .TP
+-.B \-memcard_directory \fIpathname
+-Specifies a single directory where memory card files are stored. Memory
+-card files store the contents of removable memory cards for systems which
+-used this type of hardware. This data is read and written under control
+-of the user via the 'Memory Card' menu in the user interface. The
+-default is 'memcard' (that is, a directory 'memcard' in the same
+-directory as the MESS executable). If this directory does not exist,
+-it will be automatically created.
+-.TP
+ .B \-input_directory \fIpathname
+ Specifies a single directory where input recording files are stored.
+ Input recordings are created via the \-record option and played back via
+@@ -1017,9 +1028,6 @@
+ .B \-debugscript \fIfilename
+ Specifies a file that contains a list of debugger commands to execute
+ immediately upon startup. The default is NULL (no commands).
+-.TP
+-.B \-debug_internal, \-di
+-Use the internal debugger for debugging.
+ .\" +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ .\" SDL specific
+ .\" +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+@@ -1091,6 +1099,9 @@
+ .B \-http_path \fIpath
+ Path to web files. Default is /usr/share/games/mess/web.
+ .TP
++.B \-console
++Enable emulator LUA console.
++.TP
+ .B \-newui, \-nu
+ Use the new MESS UI.
+ .TP
+@@ -1101,7 +1112,7 @@
+ .\"
+ .\" SEE ALSO chapter
+ .SH SEE ALSO
+-castool(1), chdman(1), imgtool(1), testkeys(1)
++castool(1), chdman(1), floptool(1), imgtool(1), testkeys(1)
+ .\"
+ .\"
+ .\" LEGAL NOTICE chapter
 Index: mame/src/osd/sdl/man/romcmp.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/romcmp.1	2014-04-15 21:57:35.000000000 +0200
-+++ mame/src/osd/sdl/man/romcmp.1	2014-04-15 21:57:35.000000000 +0200
+--- mame.orig/src/osd/sdl/man/romcmp.1	2014-08-12 19:53:30.000000000 +0200
++++ mame/src/osd/sdl/man/romcmp.1	2014-08-12 19:53:30.000000000 +0200
 @@ -9,7 +9,7 @@
  .\" References
  .\" http://www.mame.net/mamefaq.html
  .\"
 -.TH ROMCMP 1 2013-09-23 0.150 "MAME romset checking tool"
-+.TH ROMCMP 1 2014-04-14 0.153 "MAME romset checking tool"
++.TH ROMCMP 1 2014-07-31 0.154 "MAME romset checking tool"
  .\"
  .\" NAME chapter
  .SH NAME
 Index: mame/src/osd/sdl/man/testkeys.1
 ===================================================================
---- mame.orig/src/osd/sdl/man/testkeys.1	2014-04-15 21:57:35.000000000 +0200
-+++ mame/src/osd/sdl/man/testkeys.1	2014-04-15 21:57:35.000000000 +0200
+--- mame.orig/src/osd/sdl/man/testkeys.1	2014-08-12 19:53:30.000000000 +0200
++++ mame/src/osd/sdl/man/testkeys.1	2014-08-12 19:53:30.000000000 +0200
 @@ -5,7 +5,7 @@
  .\" Man page created from source and usage information
  .\" Cesare Falco <c.falco@ubuntu.com>, February 2007
  .\"
 -.TH TESTKEYS 1 2013-09-23 0.150 "MAME SDL keycode scanner"
-+.TH TESTKEYS 1 2014-04-14 0.153 "MAME SDL keycode scanner"
++.TH TESTKEYS 1 2014-07-31 0.154 "MAME SDL keycode scanner"
  .\"
  .\" NAME chapter
  .SH NAME
 Index: mame/src/osd/sdl/man/floptool.1
 ===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ mame/src/osd/sdl/man/floptool.1	2014-04-15 22:42:26.000000000 +0200
++++ mame/src/osd/sdl/man/floptool.1	2014-08-12 19:53:30.000000000 +0200
 @@ -0,0 +1,47 @@
 +.\"  -*- nroff -*-
 +.\"
@@ -168,7 +286,7 @@ Index: mame/src/osd/sdl/man/floptool.1
 +.\" Cesare Falco <c.falco@ubuntu.com>, April 2014
 +.\"
 +.\"
-+.TH FLOPTOOL 1 2014-04-14 0.153 "MESS Generic floppy manipulation tool"
++.TH FLOPTOOL 1 2014-07-31 0.154 "MESS Generic floppy manipulation tool"
 +.\"
 +.\"
 +.\" NAME chapter
