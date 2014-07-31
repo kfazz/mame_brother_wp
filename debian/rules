@@ -33,6 +33,7 @@ DEB_OPTS = \
     BUILD_EXPAT= \
     BUILD_ZLIB= \
     BUILD_JPEGLIB= \
+    BUILD_SQLITE3= \
     BUILD_MIDILIB= \
     BUILD_FLAC= \
     SYMBOLS= \
