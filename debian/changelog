@@ -1,14 +1,24 @@
+mame (0.154-1) UNRELEASED; urgency=medium
+
+  * New upstream release
+  * debian/control:
+    + Bump debhelper version
+    + Added dep on libsqlite3
+  * debian/patches: updated manpages
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Tue, 12 Aug 2014 20:34:04 +0200
+
 mame (0.153-1) UNRELEASED; urgency=low
 
   * New upstream release
   * mame-tools: added floptool utility
-  * debian/patches: update manpages
+  * debian/patches: updated manpages
 
  -- Cesare Falco <c.falco@ubuntu.com>  Mon, 14 Apr 2014 22:46:19 +0200
 
 mame (0.152-1) UNRELEASED; urgency=low
 
-  * New upstream release 
+  * New upstream release
   * debian/control:
     + Bump debhelper version
     + Remove dep on gcc 4.6 (use distro default)
@@ -21,7 +31,7 @@ mame (0.152-1) UNRELEASED; urgency=low
 
 mame (0.151-1) UNRELEASED; urgency=low
 
-  * New upstream release 
+  * New upstream release
   * debian/patches:
     - removed manpages updates, accepted upstream
     - removed hack to set document root, now read from ini files
