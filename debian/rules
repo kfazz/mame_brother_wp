@@ -68,7 +68,6 @@ ifeq ($(DEB_HOST_ARCH),ia64)
 DEB_OPTS += \
     FORCE_DRC_C_BACKEND=1 \
     PTR64=1 \
-    NOASM=1 \
     BIGENDIAN=
 endif
 
