@@ -23,11 +23,14 @@ endif
 DEB_OPTS = \
     OSD=sdl \
     CROSS_BUILD_OSD= \
+    BIGENDIAN= \
     NOASM=1 \
     PREFIX= \
     SUFFIX= \
     DEBUG= \
+    NO_USE_QTDEBUG=1 \
     PROFILER= \
+    FORCE_DRC_C_BACKEND=1 \
     NOWERROR=1 \
     MACOSX_USE_LIBSDL= \
     BUILD_EXPAT= \
@@ -52,62 +55,63 @@ ifeq ($(DEB_HOST_ARCH),amd64)
 DEB_OPTS += \
     FORCE_DRC_C_BACKEND= \
     PTR64=1 \
-    NOASM= \
-    BIGENDIAN=
+    NOASM=
+endif
+
+ifeq ($(DEB_HOST_ARCH),arm64)
+DEB_OPTS += \
+    PTR64=1
 endif
 
 ifeq ($(DEB_HOST_ARCH),i386)
 DEB_OPTS += \
     FORCE_DRC_C_BACKEND= \
     PTR64= \
-    NOASM= \
-    BIGENDIAN=
+    NOASM=
 endif
 
 ifeq ($(DEB_HOST_ARCH),ia64)
 DEB_OPTS += \
-    FORCE_DRC_C_BACKEND=1 \
-    PTR64=1 \
-    BIGENDIAN=
+    PTR64=1
 endif
 
 ifeq ($(DEB_HOST_ARCH),mips)
 DEB_OPTS += \
     ARCHOPTS=-Umips \
-    FORCE_DRC_C_BACKEND=1 \
     BIGENDIAN=1
 endif
 
 ifeq ($(DEB_HOST_ARCH),mipsel)
 DEB_OPTS += \
-    ARCHOPTS=-Umips \
-    FORCE_DRC_C_BACKEND=1
+    ARCHOPTS=-Umips
 endif
 
 ifeq ($(DEB_HOST_ARCH),powerpc)
 DEB_OPTS += \
     ARCHOPTS=-Upowerpc \
-    FORCE_DRC_C_BACKEND=1 \
     NOASM= \
     BIGENDIAN=1
 endif
 
+ifeq ($(DEB_HOST_ARCH),ppc64el)
+DEB_OPTS += \
+    PTR64=1 \
+    NOASM=
+endif
+
 ifeq ($(DEB_HOST_ARCH),s390)
 DEB_OPTS += \
-    FORCE_DRC_C_BACKEND=1 \
     BIGENDIAN=1
 endif
 
 ifeq ($(DEB_HOST_ARCH),s390x)
 DEB_OPTS += \
-    FORCE_DRC_C_BACKEND=1 \
     PTR64=1 \
     BIGENDIAN=1
 endif
 
 ifeq ($(DEB_HOST_ARCH),sparc)
 DEB_OPTS += \
-    FORCE_DRC_C_BACKEND=1 \
     BIGENDIAN=1
 endif
 
@@ -117,8 +121,7 @@ DEB_OPTS += \
     TARGETOS=freebsd \
     PTR64=1 \
     FORCE_DRC_C_BACKEND= \
-    NOASM= \
-    BIGENDIAN=
+    NOASM=
 endif
 
 ifeq ($(DEB_HOST_ARCH),kfreebsd-i386)
@@ -126,8 +129,7 @@ DEB_OPTS += \
     TARGETOS=freebsd \
     FORCE_DRC_C_BACKEND= \
     PTR64= \
-    NOASM= \
-    BIGENDIAN=
+    NOASM=
 endif
 
 DEB_MAME_OPTS = \
