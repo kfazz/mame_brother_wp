@@ -117,17 +117,25 @@ endif
 ifeq ($(DEB_HOST_ARCH),kfreebsd-amd64)
 DEB_OPTS += \
     TARGETOS=freebsd \
-    PTR64=1 \
+    BUILD_MIDILIB=1 \
     FORCE_DRC_C_BACKEND= \
+    PTR64=1 \
     NOASM=
 endif
 
 ifeq ($(DEB_HOST_ARCH),kfreebsd-i386)
 DEB_OPTS += \
     TARGETOS=freebsd \
+    BUILD_MIDILIB=1 \
     FORCE_DRC_C_BACKEND= \
     PTR64= \
     NOASM=
+endif
+
+# kFreeBSD architecture
+ifeq ($(DEB_HOST_ARCH),hurd-i386)
+DEB_OPTS += \
+    BUILD_MIDILIB=1
 endif
 
 DEB_MAME_OPTS = \
