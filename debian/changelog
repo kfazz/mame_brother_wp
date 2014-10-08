@@ -1,3 +1,18 @@
+mame (0.154-3) unstable; urgency=medium
+
+  * Build embedded libportmidi for kfreebsd and hurd archs
+    (libportmidi-dev not available)
+  * Removed lintian warnings:
+    + Fixed License: headers in debian/copyright:
+      - Added some short names
+      - Removed unused paragraph CC-BY-3.0
+    + Improved hardening:
+      - Use dpkg-buildflags in debian/rules
+      - Bump to level 9 in debian/compat
+  * Make specific build options override general ones
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Wed, 09 Oct 2014 19:42:34 +0200
+
 mame (0.154-2) UNRELEASED; urgency=medium
 
   * debian/rules: Reworked arch specific variables (FTBFS arm64 ppc64el)
