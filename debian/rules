@@ -6,12 +6,12 @@
 # This special exception was added by Craig Small in version 0.37 of dh-make.
 # Default/i386/amd64 options from sdlmame rules file by Cesare Falco.
 
-# Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
-
-CFLAGS = -Wall -g
-
 DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+
+export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
+
+# add c++ hardening options (upstream makefile doesn't use CPPFLAGS)
+export DEB_CFLAGS_MAINT_APPEND = $(shell dpkg-buildflags --get CPPFLAGS)
 
 # taken verbatim from debian policy
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
@@ -45,9 +45,7 @@ DEB_OPTS = \
     PROFILE= \
     MAP= \
     VERBOSE= \
-    OPTIMIZE= \
-    LDFLAGS="-Wl,--as-needed" \
-    LDFLAGSEMULATOR="-Wl,--as-needed"
+    OPTIMIZE=
 
 # Override make variables for specific archs
 # Linux architectures
