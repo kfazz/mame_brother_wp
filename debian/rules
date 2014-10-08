@@ -148,20 +148,20 @@ DEB_MESS_OPTS = \
 	dh $@
 
 override_dh_auto_build:
-	$(MAKE) $(DEB_MAME_OPTS) $(DEB_OPTS)
+	$(MAKE) $(DEB_OPTS) $(DEB_MAME_OPTS)
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
 # Force rebuild to allow Mess specific value for INI_PATH
 	find obj -type f \
              -not -name \*.lh -and -not -name drivlist.c \
              -exec rm {} \;
-	$(MAKE) $(DEB_MESS_OPTS) $(DEB_OPTS) all
+	$(MAKE) $(DEB_OPTS) $(DEB_MESS_OPTS) all
 	$(CURDIR)/mess -createconfig
 	mv mess.ini default.mess.ini
 
 override_dh_auto_clean:
-	$(MAKE) $(DEB_MAME_OPTS) $(DEB_OPTS) clean
-	$(MAKE) $(DEB_MESS_OPTS) $(DEB_OPTS) clean
+	$(MAKE) $(DEB_OPTS) $(DEB_MAME_OPTS) clean
+	$(MAKE) $(DEB_OPTS) $(DEB_MESS_OPTS) clean
 	rm -rf obj
 	rm -f default.mame.ini default.mess.ini
 
