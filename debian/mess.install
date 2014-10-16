@@ -1,5 +1,11 @@
 mess usr/games
 debian/mess.ini etc/mess
+debian/install/hicolor/16x16/apps/mess.png usr/share/icons/hicolor/16x16/apps
+debian/install/hicolor/22x22/apps/mess.png usr/share/icons/hicolor/22x22/apps
+debian/install/hicolor/24x24/apps/mess.png usr/share/icons/hicolor/24x24/apps
+debian/install/hicolor/32x32/apps/mess.png usr/share/icons/hicolor/32x32/apps
+debian/install/hicolor/48x48/apps/mess.png usr/share/icons/hicolor/48x48/apps
+debian/install/hicolor/72x72/apps/mess.png usr/share/icons/hicolor/72x72/apps
+debian/install/hicolor/128x128/apps/mess.png usr/share/icons/hicolor/128x128/apps
 debian/install/mess.xpm usr/share/pixmaps
 debian/install/mess.desktop usr/share/applications
-
