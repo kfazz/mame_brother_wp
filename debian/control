@@ -86,7 +86,8 @@ Description: Multi Emulator Super System (MESS)
 
 Package: mess-data
 Architecture: all
-Depends: ${misc:Depends}
+Depends: ${misc:Depends},
+ libjs-jquery-mobile
 Description: Data files for the Multi Emulator Super System (MESS)
  MESS is an emulator for various consoles and computing systems, sharing a
  lot of codebase with the MAME project.

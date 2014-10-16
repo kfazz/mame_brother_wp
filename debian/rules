@@ -171,9 +171,10 @@ override_dh_auto_clean:
 	rm -rf obj
 	rm -f default.mame.ini default.mess.ini
 
-# Remove OSX specific keymaps
+# Exclude embedded jQuery library
 override_dh_install:
-	dh_install --exclude=OSX.txt
+	dh_install --list-missing \
+               --exclude=js/jquery*.js
 
 
 # Retrieve source from svn repo (recommended by upstream developers)
