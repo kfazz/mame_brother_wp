@@ -1,5 +1,6 @@
 mame (0.154-3) unstable; urgency=medium
 
+  [ Cesare Falco ]
   * Build embedded libportmidi for kfreebsd and hurd archs
     (libportmidi-dev not available)
   * Removed lintian warnings:
@@ -10,6 +11,9 @@ mame (0.154-3) unstable; urgency=medium
       - Use dpkg-buildflags in debian/rules
       - Bump to level 9 in debian/compat
   * Make specific build options override general ones
+
+  [ Jordi Mallach ]
+  * Switch to libjpeg-dev Build-Dep for the libjpeg-turbo transition.
 
  -- Cesare Falco <c.falco@ubuntu.com>  Wed, 09 Oct 2014 19:42:34 +0200
 
