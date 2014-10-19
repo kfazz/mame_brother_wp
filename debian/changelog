@@ -13,7 +13,8 @@ mame (0.154-3) unstable; urgency=medium
   * Make specific build options override general ones
 
   [ Jordi Mallach ]
-  * Switch to libjpeg-dev Build-Dep for the libjpeg-turbo transition.
+  * Switch to libjpeg-dev Build-Dep for the libjpeg-turbo transition
+    (closes: #708716).
 
  -- Cesare Falco <c.falco@ubuntu.com>  Wed, 09 Oct 2014 19:42:34 +0200
 
