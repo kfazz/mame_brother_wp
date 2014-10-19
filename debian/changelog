@@ -17,7 +17,7 @@ mame (0.154-3) unstable; urgency=medium
 
  -- Cesare Falco <c.falco@ubuntu.com>  Wed, 09 Oct 2014 19:42:34 +0200
 
-mame (0.154-2) UNRELEASED; urgency=medium
+mame (0.154-2) unstable; urgency=medium
 
   * debian/rules: Reworked arch specific variables (FTBFS arm64 ppc64el)
 
