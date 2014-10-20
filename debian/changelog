@@ -1,3 +1,16 @@
+mame (0.155-1) unstable; urgency=medium
+
+  * New upstream release
+  * Removed old patches accepted upstream
+  * New patch: fix typos and bump version in manpages
+  * Use system jQuery lib instead of embedded one
+  * Improved menu entries:
+    + Added Keywords= entry in desktop files
+    + Reworked and translated text into italian in desktop files
+    + Added icons and menu file for Mess
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Sat, 18 Oct 2014 09:42:15 +0200
+
 mame (0.154-3) unstable; urgency=medium
 
   [ Cesare Falco ]

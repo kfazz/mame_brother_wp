@@ -1,0 +1,6 @@
+?package(mess):	needs="X11" \
+		section="Games/Tools" \
+		title="MESS" \
+		command="/usr/games/mess" \
+		icon="/usr/share/pixmaps/mess.xpm" \
+		longtitle="MESS home systems emulator"
