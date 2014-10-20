@@ -16,7 +16,7 @@ mame (0.154-3) unstable; urgency=medium
   * Switch to libjpeg-dev Build-Dep for the libjpeg-turbo transition
     (closes: #708716).
 
- -- Cesare Falco <c.falco@ubuntu.com>  Wed, 09 Oct 2014 19:42:34 +0200
+ -- Jordi Mallach <jordi@debian.org>  Mon, 20 Oct 2014 11:30:12 +0200
 
 mame (0.154-2) unstable; urgency=medium
 
