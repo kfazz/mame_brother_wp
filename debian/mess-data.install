@@ -1,4 +1,5 @@
-artwork/*.png usr/share/games/mess/artwork
+artwork/* usr/share/games/mess/artwork
+ctrlr/* usr/share/games/mess/ctrlr
 hash/* usr/share/games/mess/hash
 keymaps/*LINUX.map usr/share/games/mess/keymaps
 web/* /usr/share/games/mess/web
