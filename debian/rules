@@ -184,18 +184,22 @@ TMPDIR := $(shell mktemp --dry-run --directory -p .)
 MAME_PACKAGE = mame
 # Upstream source has no dot in its name, so we have to cut it out
 MAME_VERSION := $(shell echo $(VERSION) | sed -e 's/\.//' )
-MAME_URL = svn://dspnet.fr/mame/
-MAME_TAG = tags/$(MAME_PACKAGE)$(MAME_VERSION)
 MAME_SRCDIR = $(MAME_PACKAGE)-$(VERSION)
 MAME_TARBALL = $(MAME_PACKAGE)_$(VERSION).orig.tar.xz
 
 get-orig-source:
-	mkdir $(TMPDIR)
-	svn export $(MAME_URL)$(MAME_TAG) $(TMPDIR)/$(MAME_SRCDIR)
-	svn export $(MAME_URL)build/whatsnew/whatsnew_$(MAME_VERSION).txt \
+	mkdir -p $(TMPDIR)/$(MAME_SRCDIR)
+	wget -O source.tar.gz \
+        https://github.com/mamedev/mame/tarball/$(MAME_PACKAGE)$(MAME_VERSION)
+	tar -xzf source.tar.gz --strip-component=1 -C $(TMPDIR)/$(MAME_SRCDIR)/ \
+        --exclude=\.*
+	wget -O build.tar.gz https://github.com/mamedev/build/tarball/master
+	tar -xzf build.tar.gz --strip-component=1 -C $(TMPDIR)/
+	mv $(TMPDIR)/whatsnew/whatsnew_$(MAME_VERSION).txt \
         $(TMPDIR)/$(MAME_SRCDIR)/whatsnew.txt
-	svn export $(MAME_URL)build/messnew/messnew_$(MAME_VERSION).txt \
+	mv $(TMPDIR)/messnew/messnew_$(MAME_VERSION).txt \
         $(TMPDIR)/$(MAME_SRCDIR)/messnew.txt
+	unzip -od $(TMPDIR)/$(MAME_SRCDIR)/ $(TMPDIR)/mamedirs.zip
 	tar -C $(TMPDIR) -cf - $(MAME_SRCDIR) | xz -9c > $(MAME_TARBALL)
 	rm -rf $(TMPDIR)
 
