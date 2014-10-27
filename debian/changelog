@@ -8,8 +8,10 @@ mame (0.155-1) unstable; urgency=medium
     + Added Keywords= entry in desktop files
     + Reworked and translated text into italian in desktop files
     + Added icons and menu file for Mess
+  * Updated get-orig-source, upstream repo moved to Github
+  * Reworked ctrlr dir, including cfg files now distributed upstream
 
- -- Cesare Falco <c.falco@ubuntu.com>  Sat, 18 Oct 2014 09:42:15 +0200
+ -- Cesare Falco <c.falco@ubuntu.com>  Mon, 27 Oct 2014 08:25:54 +0100
 
 mame (0.154-3) unstable; urgency=medium
 
