@@ -202,6 +202,6 @@ get-orig-source:
         $(TMPDIR)/$(MAME_SRCDIR)/messnew.txt
 	unzip -od $(TMPDIR)/$(MAME_SRCDIR)/ $(TMPDIR)/mamedirs.zip
 	tar -C $(TMPDIR) -cf - $(MAME_SRCDIR) | xz -9c > $(MAME_TARBALL)
-	rm -rf $(TMPDIR)
+	rm -rf $(TMPDIR) source.tar.gz build.tar.gz
 
 .PHONY: get-orig-source
