@@ -39,6 +39,7 @@ DEB_OPTS = \
     BUILD_SQLITE3= \
     BUILD_MIDILIB= \
     BUILD_FLAC= \
+    SDL_LIBVER=sdl2 \
     SYMBOLS= \
     SYMLEVEL= \
     DUMPSYM= \
