@@ -1,3 +1,13 @@
+mame (0.156-1) unstable; urgency=medium
+
+  * New upstream release
+  * Updated man pages patch
+  * Switch to SDL 2.0 on upstream recommendation
+  * Improved mame.ini consistency by simlinking
+    /usr/share/games/mess/* directories in /usr/share/games/mame/
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Mon, 08 Dec 2014 22:14:47 +0100
+
 mame (0.155-1) unstable; urgency=medium
 
   * New upstream release
