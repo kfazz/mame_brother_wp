@@ -178,6 +178,13 @@ override_dh_install:
                --exclude=dir.txt \
                --exclude=js/jquery*.js
 
+override_dh_fixperms-indep:
+	dh_fixperms
+	chmod 644 debian/mess-data/usr/share/games/mess/artwork/*
+	chmod 644 debian/mess-data/usr/share/games/mess/ctrlr/*
+	chmod 644 debian/mess-data/usr/share/games/mess/hash/*
+	chmod 644 debian/mess-data/usr/share/games/mess/keymaps/*
+
 
 # Retrieve source from svn repo (recommended by upstream developers)
 VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
