@@ -1,3 +1,11 @@
+mame (0.158-1) unstable; urgency=medium
+
+  * New upstream release
+  * Fix permissions in mess-data resource files
+  * debian/patches: fix tools linkage against system libraries
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Thu, 05 Feb 2015 09:31:58 +0100
+
 mame (0.157-1) unstable; urgency=medium
 
   * New upstream release
