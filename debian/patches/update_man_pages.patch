@@ -1,0 +1,143 @@
+Index: mame/src/osd/sdl/man/castool.1
+===================================================================
+--- mame.orig/src/osd/sdl/man/castool.1	2015-02-25 08:09:13.000000000 +0100
++++ mame/src/osd/sdl/man/castool.1	2015-02-27 09:27:52.161489000 +0100
+@@ -6,7 +6,7 @@
+ .\" Cesare Falco <c.falco@ubuntu.com>, February 2011
+ .\"
+ .\"
+-.TH CASTOOL 1 2015-01-18 0.158 "MESS Generic cassette manipulation tool"
++.TH CASTOOL 1 2015-02-28 0.159 "MESS Generic cassette manipulation tool"
+ .\"
+ .\"
+ .\" NAME chapter
+Index: mame/src/osd/sdl/man/chdman.1
+===================================================================
+--- mame.orig/src/osd/sdl/man/chdman.1	2015-02-25 08:09:13.000000000 +0100
++++ mame/src/osd/sdl/man/chdman.1	2015-02-27 09:28:10.945489000 +0100
+@@ -6,7 +6,7 @@
+ .\" Ashley T. Howes <debiandev@ashleyhowes.com>, February 2005
+ .\" updated by Cesare Falco <c.falco@ubuntu.com>, February 2007
+ .\"
+-.TH CHDMAN 1 2015-01-18 0.158 "MAME Compressed Hunks of Data (CHD) manager"
++.TH CHDMAN 1 2015-02-28 0.159 "MAME Compressed Hunks of Data (CHD) manager"
+ .\"
+ .\" NAME chapter
+ .SH NAME
+Index: mame/src/osd/sdl/man/floptool.1
+===================================================================
+--- mame.orig/src/osd/sdl/man/floptool.1	2015-02-25 08:09:13.000000000 +0100
++++ mame/src/osd/sdl/man/floptool.1	2015-02-27 09:29:00.513489000 +0100
+@@ -6,7 +6,7 @@
+ .\" Cesare Falco <c.falco@ubuntu.com>, April 2014
+ .\"
+ .\"
+-.TH FLOPTOOL 1 2015-01-18 0.158 "MESS Generic floppy manipulation tool"
++.TH FLOPTOOL 1 2015-02-28 0.159 "MESS Generic floppy manipulation tool"
+ .\"
+ .\"
+ .\" NAME chapter
+Index: mame/src/osd/sdl/man/imgtool.1
+===================================================================
+--- mame.orig/src/osd/sdl/man/imgtool.1	2015-02-25 08:09:13.000000000 +0100
++++ mame/src/osd/sdl/man/imgtool.1	2015-02-27 09:29:13.777489000 +0100
+@@ -6,7 +6,7 @@
+ .\" Cesare Falco <c.falco@ubuntu.com>, February 2011
+ .\"
+ .\"
+-.TH IMGTOOL 1 2015-01-18 0.158 "MESS media image manipulation tool"
++.TH IMGTOOL 1 2015-02-28 0.159 "MESS media image manipulation tool"
+ .\"
+ .\"
+ .\" NAME chapter
+Index: mame/src/osd/sdl/man/jedutil.1
+===================================================================
+--- mame.orig/src/osd/sdl/man/jedutil.1	2015-02-25 08:09:13.000000000 +0100
++++ mame/src/osd/sdl/man/jedutil.1	2015-02-27 09:29:29.893489000 +0100
+@@ -8,7 +8,7 @@
+ .\" References
+ .\" http://aarongiles.com/?p=159
+ .\"
+-.TH JEDUTIL 1 2015-01-18 0.158 "MAME JEDEC file utilities"
++.TH JEDUTIL 1 2015-02-28 0.159 "MAME JEDEC file utilities"
+ .\"
+ .\" NAME chapter
+ .SH NAME
+Index: mame/src/osd/sdl/man/ldresample.1
+===================================================================
+--- mame.orig/src/osd/sdl/man/ldresample.1	2015-02-25 08:09:13.000000000 +0100
++++ mame/src/osd/sdl/man/ldresample.1	2015-02-27 09:29:45.797489000 +0100
+@@ -3,7 +3,7 @@
+ .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+ .\" other parameters are allowed: see man(7), man(1)
+ .\"
+-.TH LDRESAMPLE 1 2015-01-18 0.158 "MAME laserdisc audio manipulation tool"
++.TH LDRESAMPLE 1 2015-02-28 0.159 "MAME laserdisc audio manipulation tool"
+ .\"
+ .\" Please adjust this date whenever revising the manpage.
+ .\"
+Index: mame/src/osd/sdl/man/ldverify.1
+===================================================================
+--- mame.orig/src/osd/sdl/man/ldverify.1	2015-02-25 08:09:13.000000000 +0100
++++ mame/src/osd/sdl/man/ldverify.1	2015-02-27 09:29:58.881489000 +0100
+@@ -5,7 +5,7 @@
+ .\" Man page created from source and usage information by 
+ .\" Cesare Falco <c.falco@ubuntu.com>, August 2008
+ .\"
+-.TH LDVERIFY 1 2015-01-18 0.158 "MAME laserdisc data checker"
++.TH LDVERIFY 1 2015-02-28 0.159 "MAME laserdisc data checker"
+ .\"
+ .\" NAME chapter
+ .SH NAME
+Index: mame/src/osd/sdl/man/mame.6
+===================================================================
+--- mame.orig/src/osd/sdl/man/mame.6	2015-02-25 08:09:13.000000000 +0100
++++ mame/src/osd/sdl/man/mame.6	2015-02-27 09:25:14.205489000 +0100
+@@ -13,7 +13,7 @@
+ .\" and updated by Andrew Burton <burtona@gol.com>, July 2003
+ .\"
+ .\"
+-.TH MAME 6 2015-01-18 0.158 "MAME \- The Multiple Arcade Machine Emulator"
++.TH MAME 6 2015-02-28 0.159 "MAME \- The Multiple Arcade Machine Emulator"
+ .\"
+ .\"
+ .\" NAME chapter
+Index: mame/src/osd/sdl/man/mess.6
+===================================================================
+--- mame.orig/src/osd/sdl/man/mess.6	2015-02-25 08:09:13.000000000 +0100
++++ mame/src/osd/sdl/man/mess.6	2015-02-27 09:25:29.405489000 +0100
+@@ -16,7 +16,7 @@
+ .\" http://www.mess.org/
+ .\"
+ .\"
+-.TH MESS 6 2015-01-18 0.158 "The Multiple Emulator Super System (MESS)"
++.TH MESS 6 2015-02-28 0.159 "The Multiple Emulator Super System (MESS)"
+ .\"
+ .\"
+ .\" NAME chapter
+Index: mame/src/osd/sdl/man/romcmp.1
+===================================================================
+--- mame.orig/src/osd/sdl/man/romcmp.1	2015-02-25 08:09:13.000000000 +0100
++++ mame/src/osd/sdl/man/romcmp.1	2015-02-27 09:30:15.525489000 +0100
+@@ -9,7 +9,7 @@
+ .\" References
+ .\" http://www.mame.net/mamefaq.html
+ .\"
+-.TH ROMCMP 1 2015-01-18 0.158 "MAME romset checking tool"
++.TH ROMCMP 1 2015-02-28 0.159 "MAME romset checking tool"
+ .\"
+ .\" NAME chapter
+ .SH NAME
+Index: mame/src/osd/sdl/man/testkeys.1
+===================================================================
+--- mame.orig/src/osd/sdl/man/testkeys.1	2015-02-25 08:09:13.000000000 +0100
++++ mame/src/osd/sdl/man/testkeys.1	2015-02-27 09:30:30.453489000 +0100
+@@ -5,7 +5,7 @@
+ .\" Man page created from source and usage information
+ .\" Cesare Falco <c.falco@ubuntu.com>, February 2007
+ .\"
+-.TH TESTKEYS 1 2015-01-18 0.158 "MAME SDL keycode scanner"
++.TH TESTKEYS 1 2015-02-28 0.159 "MAME SDL keycode scanner"
+ .\"
+ .\" NAME chapter
+ .SH NAME
