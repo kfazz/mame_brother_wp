@@ -1,3 +1,12 @@
+mame (0.159-1) unstable; urgency=medium
+
+  * New upstream release
+  * debian/patches:
+    - removed tools linkage fix
+    - added man pages updates
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Fri, 27 Feb 2015 08:29:26 +0100
+
 mame (0.158-1) unstable; urgency=medium
 
   * New upstream release
