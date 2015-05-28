@@ -33,12 +33,6 @@ DEB_OPTS = \
     FORCE_DRC_C_BACKEND=1 \
     NOWERROR=1 \
     MACOSX_USE_LIBSDL= \
-    BUILD_EXPAT= \
-    BUILD_ZLIB= \
-    BUILD_JPEGLIB= \
-    BUILD_SQLITE3= \
-    BUILD_MIDILIB= \
-    BUILD_FLAC= \
     SDL_LIBVER=sdl2 \
     SYMBOLS= \
     SYMLEVEL= \
@@ -118,7 +112,6 @@ endif
 ifeq ($(DEB_HOST_ARCH),kfreebsd-amd64)
 DEB_OPTS += \
     TARGETOS=freebsd \
-    BUILD_MIDILIB=1 \
     FORCE_DRC_C_BACKEND= \
     PTR64=1 \
     NOASM=
@@ -127,16 +120,9 @@ endif
 ifeq ($(DEB_HOST_ARCH),kfreebsd-i386)
 DEB_OPTS += \
     TARGETOS=freebsd \
-    BUILD_MIDILIB=1 \
     FORCE_DRC_C_BACKEND= \
     PTR64= \
     NOASM=
-endif
-
-# kFreeBSD architecture
-ifeq ($(DEB_HOST_ARCH),hurd-i386)
-DEB_OPTS += \
-    BUILD_MIDILIB=1
 endif
 
 DEB_MAME_OPTS = \

@@ -6,19 +6,13 @@ Uploaders: Cesare Falco <c.falco@ubuntu.com>,
  Emmanuel Kasper <emmanuel@libera.cc>,
  Jordi Mallach <jordi@debian.org>
 Build-Depends: debhelper (>= 9),
- libexpat1-dev,
- libflac-dev,
  libfontconfig1-dev,
- libjpeg-dev,
- libportmidi-dev [!hurd-any !kfreebsd-any],
  libqt4-dev (>= 4.7),
  libsdl2-ttf-dev,
  libsdl2-dev,
- libsqlite3-dev,
  libxinerama-dev,
  subversion,
- python-dev,
- zlib1g-dev
+ python-dev
 Standards-Version: 3.9.5
 Vcs-Git: git://anonscm.debian.org/pkg-games/mame.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-games/mame.git
