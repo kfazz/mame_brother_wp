@@ -8,7 +8,7 @@
 
 DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
 
-export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
+export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed,--no-keep-memory
 
 # add c++ hardening options (upstream makefile doesn't use CPPFLAGS)
 export DEB_CFLAGS_MAINT_APPEND = $(shell dpkg-buildflags --get CPPFLAGS)
@@ -21,26 +21,16 @@ endif
 
 # Override relevant make variables in original makefile
 DEB_OPTS = \
+    NOWERROR=1 \
     OSD=sdl \
-    CROSS_BUILD_OSD= \
+    DEBUG= \
+    SDL_LIBVER=sdl2 \
+    TARGETOS=linux \
+    FORCE_DRC_C_BACKEND=1 \
+    PTR64= \
     BIGENDIAN= \
     NOASM=1 \
-    PREFIX= \
-    SUFFIX= \
-    DEBUG= \
-    NO_USE_QTDEBUG=1 \
-    PROFILER= \
-    FORCE_DRC_C_BACKEND=1 \
-    NOWERROR=1 \
-    MACOSX_USE_LIBSDL= \
-    SDL_LIBVER=sdl2 \
-    SYMBOLS= \
-    SYMLEVEL= \
-    DUMPSYM= \
-    PROFILE= \
-    MAP= \
-    VERBOSE= \
-    OPTIMIZE=
+    OPTIMIZE=0
 
 # Override make variables for specific archs
 # Linux architectures
@@ -129,7 +119,8 @@ DEB_MAME_OPTS = \
     OPT_FLAGS="-D'INI_PATH=\"/etc/mame\"'" \
     FULLNAME=mame \
     TARGET=mame \
-    SUBTARGET=mame
+    SUBTARGET=mame \
+    TOOLS=1
 
 DEB_MESS_OPTS = \
     OPT_FLAGS="-D'INI_PATH=\"/etc/mess\"'" \
@@ -142,6 +133,7 @@ DEB_MESS_OPTS = \
 
 override_dh_auto_build:
 	$(MAKE) $(DEB_OPTS) $(DEB_MAME_OPTS)
+	-mv mame64 mame #FIXME
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
 # Force rebuild to allow Mess specific value for INI_PATH
@@ -153,10 +145,24 @@ override_dh_auto_build:
 	mv mess.ini default.mess.ini
 
 override_dh_auto_clean:
-	$(MAKE) $(DEB_OPTS) $(DEB_MAME_OPTS) clean
-	$(MAKE) $(DEB_OPTS) $(DEB_MESS_OPTS) clean
-	rm -rf obj
-	rm -f default.mame.ini default.mess.ini
+	dh_auto_clean
+	rm -f castool
+	rm -f chdman
+	rm -f floptool
+	rm -f imgtool
+	rm -f jedutil
+	rm -f ldresample
+	rm -f ldverify
+	rm -f nltool
+	rm -f pngcmp
+	rm -f regrep
+	rm -f romcmp
+	rm -f split
+	rm -f src2html
+	rm -f srcclean
+	rm -f testkeys
+	rm -f unidasm
+	rm -f default.mame.ini
 
 # Exclude embedded jQuery library
 override_dh_install:
