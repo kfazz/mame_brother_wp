@@ -122,12 +122,6 @@ DEB_MAME_OPTS = \
     SUBTARGET=mame \
     TOOLS=1
 
-DEB_MESS_OPTS = \
-    OPT_FLAGS="-D'INI_PATH=\"/etc/mess\"'" \
-    FULLNAME=mess \
-    TARGET=mess \
-    SUBTARGET=mess
-
 %:
 	dh $@
 
@@ -136,13 +130,6 @@ override_dh_auto_build:
 	-mv mame64 mame #FIXME
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
-# Force rebuild to allow Mess specific value for INI_PATH
-	find obj -type f \
-             -not -name \*.lh -and -not -name drivlist.c \
-             -exec rm {} \;
-	$(MAKE) $(DEB_OPTS) $(DEB_MESS_OPTS) all
-	$(CURDIR)/mess -createconfig
-	mv mess.ini default.mess.ini
 
 override_dh_auto_clean:
 	dh_auto_clean
@@ -198,8 +185,6 @@ get-orig-source:
 	tar -xzf build.tar.gz --strip-component=1 -C $(TMPDIR)/
 	mv $(TMPDIR)/whatsnew/whatsnew_$(MAME_VERSION).txt \
         $(TMPDIR)/$(MAME_SRCDIR)/whatsnew.txt
-	mv $(TMPDIR)/messnew/messnew_$(MAME_VERSION).txt \
-        $(TMPDIR)/$(MAME_SRCDIR)/messnew.txt
 	unzip -od $(TMPDIR)/$(MAME_SRCDIR)/ $(TMPDIR)/mamedirs.zip
 	tar -C $(TMPDIR) -cf - $(MAME_SRCDIR) | xz -9c > $(MAME_TARBALL)
 	rm -rf $(TMPDIR) source.tar.gz build.tar.gz

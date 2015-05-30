@@ -24,6 +24,8 @@ Architecture: any
 Depends: ${misc:Depends},
  ${shlibs:Depends},
  mess-data (= ${source:Version})
+Replaces: mess (<< 0.162)
+Breaks: mess (<< 0.162)
 Suggests: gnome-video-arcade,
  mame-extra,
  mame-tools
@@ -59,25 +61,6 @@ Description: Tools for MAME and MESS
   romcmp -- ROM comparison utility program
   testkeys -- keyboard code viewer
 
-Package: mess
-Architecture: any
-Depends: ${misc:Depends},
- ${shlibs:Depends},
- mess-data (= ${source:Version})
-Suggests: mame-tools,
- mess-desktop-entries
-Description: Multi Emulator Super System (MESS)
- MESS is an emulator for various consoles and computing systems, sharing a
- lot of codebase with the MAME project.
- .
- Some of the well known consoles and computers emulated are the Atari 2600,
- Lynx, NES, SNES, Nintendo 64, GameBoy, Sega Master System, Sega Megadrive,
- Game Gear, Colecovision, Vectrex, Apple II, Atari 400/800, Commodore 64/128,
- IBM PC XT and AT (MDA and CGA), ZX80, ZX Spectrum, TI99/4, TRS-80, and the
- MSX.
- .
- This package provides the MESS binary and configuration files.
-
 Package: mess-data
 Architecture: all
 Depends: ${misc:Depends},
@@ -87,3 +70,11 @@ Description: Data files for the Multi Emulator Super System (MESS)
  lot of codebase with the MAME project.
  .
  This package provides the MESS and MAME hash files, keymaps and artwork.
+
+Package: mess
+Depends: mame, ${misc:Depends}
+Architecture: all
+Priority: extra
+Section: oldlibs
+Description: Transitional dummy package
+ This is a transitional dummy package. It can safely be removed.
