@@ -116,7 +116,7 @@ DEB_OPTS += \
 endif
 
 DEB_MAME_OPTS = \
-    OPT_FLAGS="-D'INI_PATH=\"/etc/mame\"'" \
+    SDL_INI_PATH=/etc/mame \
     FULLNAME=mame \
     TARGET=mame \
     SUBTARGET=mame \
