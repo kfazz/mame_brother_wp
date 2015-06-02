@@ -159,10 +159,10 @@ override_dh_install:
 
 override_dh_fixperms-indep:
 	dh_fixperms
-	chmod 644 debian/mess-data/usr/share/games/mess/artwork/*
-	chmod 644 debian/mess-data/usr/share/games/mess/ctrlr/*
-	chmod 644 debian/mess-data/usr/share/games/mess/hash/*
-	chmod 644 debian/mess-data/usr/share/games/mess/keymaps/*
+	chmod 644 debian/mame-data/usr/share/games/mame/artwork/*
+	chmod 644 debian/mame-data/usr/share/games/mame/ctrlr/*
+	chmod 644 debian/mame-data/usr/share/games/mame/hash/*
+	chmod 644 debian/mame-data/usr/share/games/mame/keymaps/*
 
 
 # Retrieve source from svn repo (recommended by upstream developers)

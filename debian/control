@@ -23,7 +23,7 @@ Package: mame
 Architecture: any
 Depends: ${misc:Depends},
  ${shlibs:Depends},
- mess-data (= ${source:Version})
+ mame-data (= ${source:Version})
 Replaces: mess (<< 0.162)
 Breaks: mess (<< 0.162)
 Suggests: gnome-video-arcade,
@@ -37,6 +37,21 @@ Description: Multiple Arcade Machine Emulator (MAME)
  illegal to use them if you do not own the arcade machine.
  .
  This package provides the MAME binary and configuration files.
+
+Package: mame-data
+Architecture: all
+Depends: ${misc:Depends},
+ libjs-jquery-mobile
+Replaces: mess-data (<< 0.162)
+Breaks: mess-data (<< 0.162)
+Description: Multiple Arcade Machine Emulator (MAME)
+ MAME is a hardware emulator: it faithfully reproduces the behavior of many
+ arcade machines (it is not a simulation). This program is not a game but can
+ directly, through ROM images, run the complete system of these old arcade
+ machines. These ROMs are subject to copyright and it is in most of the cases
+ illegal to use them if you do not own the arcade machine.
+ .
+ This package provides MAME hash files, keymaps and artwork.
 
 Package: mame-tools
 Section: non-free/utils
@@ -61,18 +76,16 @@ Description: Tools for MAME and MESS
   romcmp -- ROM comparison utility program
   testkeys -- keyboard code viewer
 
-Package: mess-data
-Architecture: all
-Depends: ${misc:Depends},
- libjs-jquery-mobile
-Description: Data files for the Multi Emulator Super System (MESS)
- MESS is an emulator for various consoles and computing systems, sharing a
- lot of codebase with the MAME project.
- .
- This package provides the MESS and MAME hash files, keymaps and artwork.
-
 Package: mess
 Depends: mame, ${misc:Depends}
+Architecture: all
+Priority: extra
+Section: oldlibs
+Description: Transitional dummy package
+ This is a transitional dummy package. It can safely be removed.
+
+Package: mess-data
+Depends: mame-data, ${misc:Depends}
 Architecture: all
 Priority: extra
 Section: oldlibs
