@@ -30,7 +30,13 @@ DEB_OPTS = \
     PTR64= \
     BIGENDIAN= \
     NOASM=1 \
-    OPTIMIZE=0
+    OPTIMIZE=0 \
+    USE_SYSTEM_LIB_EXPAT=1 \
+    USE_SYSTEM_LIB_ZLIB=1 \
+    USE_SYSTEM_LIB_JPEG=1 \
+    USE_SYSTEM_LIB_FLAC=1 \
+    USE_SYSTEM_LIB_PORTMIDI=1 \
+    USE_SYSTEM_LIB_PORTAUDIO=1
 
 # Override make variables for specific archs
 # Linux architectures
@@ -49,7 +55,6 @@ endif
 ifeq ($(DEB_HOST_ARCH),i386)
 DEB_OPTS += \
     FORCE_DRC_C_BACKEND= \
-    PTR64= \
     NOASM=
 endif
 
