@@ -1,4 +1,4 @@
-mame (0.164-1) unstable ; urgency=medium
+mame (0.164-1) unstable; urgency=medium
 
   * New upstream release
   * Accomodate to massive upstream make process refactoring:
