@@ -13,6 +13,7 @@ mame (0.171-1) UNRELEASED; urgency=medium
   * Add lua_pkgconfig.patch: make the build system use Lua 5.2 if requested.
     Currently, the build fails if system Lua is used along with system
     libsqlite3, though.
+  * Don't try to install web/* data in mame-data, it no longer exists.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 10 Mar 2016 23:38:43 +0100
 
