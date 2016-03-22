@@ -1,6 +1,7 @@
 mame (0.171-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Update MESS references in mame-tools' description.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 10 Mar 2016 23:38:43 +0100
 

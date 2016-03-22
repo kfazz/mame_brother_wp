@@ -68,14 +68,11 @@ Recommends: mame (= ${source:Version})
 Description: Tools for MAME and MESS
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation).
- MESS is an emulator for various consoles and computing systems, sharing a
- lot of codebase with the MAME project.
  .
- This package provides tools to be used with MAME and MESS. It currently
- contains:
-  castool -- generic cassette manipulation tool for MESS
+ This package provides tools to be used with MAME. It currently contains:
+  castool -- generic cassette manipulation tool for MAME
   chdman -- MAME Compressed Hunks of Data CHD manager
-  imgtool -- generic image manipulation tool for MESS
+  imgtool -- generic image manipulation tool for MAME
   jedutil -- binary to/from JEDEC file converter
   ldresample -- Laserdisc audio synchronizer and resampler
   ldverify -- Laserdisc AVI/CHD verifier
