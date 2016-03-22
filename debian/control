@@ -51,7 +51,7 @@ Depends: ${misc:Depends},
  libjs-jquery-mobile
 Replaces: mess-data (<< 0.162)
 Breaks: mess-data (<< 0.162)
-Description: Multiple Arcade Machine Emulator (MAME)
+Description: Multiple Arcade Machine Emulator (MAME) -- data files
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can
  directly, through ROM images, run the complete system of these old arcade
