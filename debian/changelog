@@ -17,6 +17,7 @@ mame (0.171-1) UNRELEASED; urgency=medium
   * Add some extra info to mame-tools' short description.
   * Use secure URLs for Vcs-* fields, and point to cgit instead of gitweb.
   * Remove mame.menu and install/mame.xpm.
+  * Update Standards-Version to 3.9.7, no changes needed.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 10 Mar 2016 23:38:43 +0100
 
