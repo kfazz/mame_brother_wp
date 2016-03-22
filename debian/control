@@ -22,8 +22,8 @@ Build-Depends: debhelper (>= 9),
  python-dev,
  zlib1g-dev
 Standards-Version: 3.9.5
-Vcs-Git: git://anonscm.debian.org/pkg-games/mame.git
-Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-games/mame.git
+Vcs-Git: https://anonscm.debian.org/git/pkg-games/mame.git
+Vcs-Browser: https://anonscm.debian.org/cgit/pkg-games/mame.git
 Homepage: http://mamedev.org/
 XS-Autobuild: yes
 
