@@ -24,7 +24,6 @@ DEB_OPTS = \
     NOWERROR=1 \
     OSD=sdl \
     DEBUG= \
-    SDL_LIBVER=sdl2 \
     TARGETOS=linux \
     FORCE_DRC_C_BACKEND=1 \
     PTR64= \
@@ -37,7 +36,8 @@ DEB_OPTS = \
     USE_SYSTEM_LIB_FLAC=1 \
     USE_SYSTEM_LIB_SQLITE3=1 \
     USE_SYSTEM_LIB_PORTMIDI=1 \
-    USE_SYSTEM_LIB_PORTAUDIO=1
+    USE_SYSTEM_LIB_PORTAUDIO=1 \
+    VERBOSE=1
 
 # Override make variables for specific archs
 # Linux architectures
