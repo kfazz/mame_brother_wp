@@ -1,0 +1,14 @@
+Author: Jordi Mallach <jordi@debian.org>
+Description: Remove date of build to ensure binary reproducibility.
+Forwarded: no
+
+Index: mame-0.171/src/version.cpp
+===================================================================
+--- mame-0.171.orig/src/version.cpp
++++ mame-0.171/src/version.cpp
+@@ -13,4 +13,4 @@
+ extern const char bare_build_version[];
+ extern const char build_version[];
+ const char bare_build_version[] = BARE_BUILD_VERSION;
+-const char build_version[] = BARE_BUILD_VERSION " (" __DATE__")";
++const char build_version[] = BARE_BUILD_VERSION;

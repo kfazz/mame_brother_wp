@@ -7,6 +7,8 @@ mame (0.171-1) UNRELEASED; urgency=medium
     - libqt4-dev → qt5-default
   * Build against system sqlite3. Define USE_SYSTEM_LIB_SQLITE3=1 and
     add libsqlite3-dev to B-Ds.
+  * Add date_timestamp.patch: remove date of build, which is pointless and
+    makes the binary non-reproducible.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 10 Mar 2016 23:38:43 +0100
 
