@@ -16,6 +16,7 @@ mame (0.171-1) UNRELEASED; urgency=medium
   * Don't try to install web/* data in mame-data, it no longer exists.
   * Add some extra info to mame-tools' short description.
   * Use secure URLs for Vcs-* fields, and point to cgit instead of gitweb.
+  * Remove mame.menu and install/mame.xpm.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 10 Mar 2016 23:38:43 +0100
 
