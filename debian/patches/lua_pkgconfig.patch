@@ -1,0 +1,27 @@
+Author: Jordi Mallach <jordi@debian.org>
+Description: Adapt to versioned Lua pkg-config files in Debian
+ MAME assumes lua's pkg-config modules are named "lua", unversioned.
+ Hardcode lua5.2 for now.
+
+--- mame-0.171.orig/3rdparty/lsqlite3/Makefile
++++ mame-0.171/3rdparty/lsqlite3/Makefile
+@@ -3,8 +3,8 @@
+ ifneq "$(shell pkg-config --version)" ""
+   # automagic setup (OS X fink, Linux apt-get, ..)
+   #
+-  LUAINC= $(shell pkg-config --cflags lua)
+-  LUALIB= $(shell pkg-config --libs lua)
++  LUAINC= $(shell pkg-config --cflags lua5.2)
++  LUALIB= $(shell pkg-config --libs lua5.2)
+   LUAEXE= lua
+   # Now, we actually want to _not_ push in stuff to the distro Lua CMOD directory,
+   # way better to play within /usr/local/lib/lua/5.1/
+@@ -22,7 +22,7 @@ else
+ #  LUALIB= -L$(BASE)/lib -llua51
+ #  LUACMOD= $(BASE)/lib/lua/5.1/
+ #  Windows' LUA_CDIR and LUALIB are both the same as the Lua executable's directory...
+-  LUALIB= -L$(BASE)/bin -llua51
++  LUALIB= -L$(BASE)/bin -llua52
+   LUACMOD= $(BASE)/bin
+   #
+   SQLITE3INC= -I$(BASE)/include

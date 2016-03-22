@@ -10,6 +10,9 @@ mame (0.171-1) UNRELEASED; urgency=medium
   * Add date_timestamp.patch: remove date of build, which is pointless and
     makes the binary non-reproducible.
   * Make the build verbose and remove obsolete define SDL_LIBVER.
+  * Add lua_pkgconfig.patch: make the build system use Lua 5.2 if requested.
+    Currently, the build fails if system Lua is used along with system
+    libsqlite3, though.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 10 Mar 2016 23:38:43 +0100
 
