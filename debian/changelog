@@ -4,7 +4,7 @@ mame (0.171-1) UNRELEASED; urgency=medium
   * Update MESS references in mame-tools' description.
   * Update Build-Depends:
     - libportaudio-dev → portaudio19-dev
-    - libqt4-dev → qtbase5-dev, qtchooser
+    - libqt4-dev → qtbase5-dev
   * Build against system sqlite3. Define USE_SYSTEM_LIB_SQLITE3=1 and
     add libsqlite3-dev to B-Ds.
   * Add date_timestamp.patch: remove date of build, which is pointless and
@@ -18,6 +18,8 @@ mame (0.171-1) UNRELEASED; urgency=medium
   * Use secure URLs for Vcs-* fields, and point to cgit instead of gitweb.
   * Remove mame.menu and install/mame.xpm.
   * Update Standards-Version to 3.9.7, no changes needed.
+  * Add qt5_build.patch: add -qt5 parametres to all calls of moc and qmake.
+    Patch by Sune Vuorela, thanks!
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 10 Mar 2016 23:38:43 +0100
 

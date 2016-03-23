@@ -1,2 +1,3 @@
 date_timestamp.patch
 lua_pkgconfig.patch
+qt5_build.patch
