@@ -1,18 +1,20 @@
-mame (0.171-1) UNRELEASED; urgency=medium
+mame (0.172-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+    - MAME is now licensed under the GPL-2
+  * Move to main section.
   * Update MESS references in mame-tools' description.
   * Update Build-Depends:
     - libportaudio-dev → portaudio19-dev
     - libqt4-dev → qtbase5-dev
   * Build against system sqlite3. Define USE_SYSTEM_LIB_SQLITE3=1 and
     add libsqlite3-dev to B-Ds.
+  * Build against system lua5.3. Define USE_SYSTEM_LIB_LUA passing Debian's
+    Lua5.3 path to the build system, and add liblua5.3-dev to B-Ds
+    (lua-zlib and lua-filesystem still unsupported).
   * Add date_timestamp.patch: remove date of build, which is pointless and
     makes the binary non-reproducible.
   * Make the build verbose and remove obsolete define SDL_LIBVER.
-  * Add lua_pkgconfig.patch: make the build system use Lua 5.2 if requested.
-    Currently, the build fails if system Lua is used along with system
-    libsqlite3, though.
   * Don't try to install web/* data in mame-data, it no longer exists.
   * Add some extra info to mame-tools' short description.
   * Use secure URLs for Vcs-* fields, and point to cgit instead of gitweb.

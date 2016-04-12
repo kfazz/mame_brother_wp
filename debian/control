@@ -1,5 +1,5 @@
 Source: mame
-Section: non-free/games
+Section: games
 Priority: optional
 Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
 Uploaders: Cesare Falco <c.falco@ubuntu.com>,
@@ -61,7 +61,7 @@ Description: Multiple Arcade Machine Emulator (MAME) -- data files
  This package provides MAME hash files, keymaps and artwork.
 
 Package: mame-tools
-Section: non-free/utils
+Section: utils
 Architecture: any
 Depends: ${misc:Depends},
  ${shlibs:Depends}
