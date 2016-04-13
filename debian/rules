@@ -188,6 +188,22 @@ get-orig-source:
         https://github.com/mamedev/mame/tarball/$(MAME_PACKAGE)$(MAME_VERSION)
 	tar -xzf source.tar.gz --strip-component=1 -C $(TMPDIR)/$(MAME_SRCDIR)/ \
         --exclude=\.*
+	# Remove non-free rapidjson subdir
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/rapidjson/bin/jsonchecker
+	# Remove binaries and other cruft
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/zlib/contrib/dotzlib/DotZLib.chm
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bx/tools/bin/linux/genie
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bx/tools/bin/windows/genie.exe
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/lzma/7zr.exe
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/lzma/lzma.exe
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_java/JavaExe.exe
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_java/UpdateRsrcJavaExe.exe
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_csharp/pm_managed/app.rc
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_csharp/pm_managed/resource.h
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_java/pmjni/pmjni.rc
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_java/setup/pmdefaults-setup.exe
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/android-project/gradle/wrapper/gradle-wrapper.jar
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/zlib/contrib/dotzlib/DotZLib.chm
 	wget -O build.tar.gz https://github.com/mamedev/build/tarball/master
 	tar -xzf build.tar.gz --strip-component=1 -C $(TMPDIR)/
 	mv $(TMPDIR)/whatsnew/whatsnew_$(MAME_VERSION).txt \

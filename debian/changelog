@@ -23,6 +23,8 @@ mame (0.172-1) UNRELEASED; urgency=medium
   * Update Standards-Version to 3.9.7, no changes needed.
   * Add qt5_build.patch: add -qt5 parametres to all calls of moc and qmake.
     Patch by Sune Vuorela, thanks!
+  * Remove non-free bits of rapidjson and all generated binaries and files
+    from the orig tarball at get-orig-source rule to appease lintian.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 10 Mar 2016 23:38:43 +0100
 
