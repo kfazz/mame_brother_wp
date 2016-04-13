@@ -3,6 +3,7 @@ mame (0.172-1) UNRELEASED; urgency=medium
   * New upstream release.
     - MAME is now licensed under the GPL-2
   * Move to main section.
+  * Massive update of debian/copyright to adapt to licensing changes.
   * Update MESS references in mame-tools' description.
   * Update Build-Depends:
     - libportaudio-dev → portaudio19-dev
