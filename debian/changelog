@@ -1,9 +1,10 @@
-mame (0.172-1) UNRELEASED; urgency=medium
+mame (0.172-1) unstable; urgency=medium
 
   * New upstream release.
     - MAME is now licensed under the GPL-2
   * Move to main section.
   * Massive update of debian/copyright to adapt to licensing changes.
+  * Add License paragraphs for all minor variants of BSD and custom licenses.
   * Update MESS references in mame-tools' description.
   * Update Build-Depends:
     - libportaudio-dev → portaudio19-dev
@@ -26,7 +27,7 @@ mame (0.172-1) UNRELEASED; urgency=medium
   * Remove non-free bits of rapidjson and all generated binaries and files
     from the orig tarball at get-orig-source rule to appease lintian.
 
- -- Jordi Mallach <jordi@debian.org>  Thu, 10 Mar 2016 23:38:43 +0100
+ -- Jordi Mallach <jordi@debian.org>  Thu, 14 Apr 2016 09:06:47 +0200
 
 mame (0.164-1) unstable; urgency=medium
 
