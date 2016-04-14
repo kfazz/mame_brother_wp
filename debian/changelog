@@ -26,6 +26,7 @@ mame (0.172-1) unstable; urgency=medium
     Patch by Sune Vuorela, thanks!
   * Remove non-free bits of rapidjson and all generated binaries and files
     from the orig tarball at get-orig-source rule to appease lintian.
+  * Update debian/mame.ini with some upstream changes to config.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 14 Apr 2016 09:06:47 +0200
 
