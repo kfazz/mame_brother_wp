@@ -33,7 +33,7 @@ mame (0.172-1) unstable; urgency=medium
   * Add another source lintian override for a false positive on rapidjson's
     "The Software shall be used for Good, not Evil" clause.
 
- -- Jordi Mallach <jordi@debian.org>  Thu, 14 Apr 2016 14:12:21 +0200
+ -- Jordi Mallach <jordi@debian.org>  Thu, 14 Apr 2016 22:26:53 +0200
 
 mame (0.164-1) unstable; urgency=medium
 
