@@ -28,6 +28,10 @@ mame (0.172-1) unstable; urgency=medium
   * Remove non-free bits of rapidjson and all generated binaries and files
     from the orig tarball at get-orig-source rule to appease lintian.
   * Update debian/mame.ini with some upstream changes to config.
+  * Add lintian overrides for all source issues on 3rdparty modules we don't
+    compile.
+  * Add another source lintian override for a false positive on rapidjson's
+    "The Software shall be used for Good, not Evil" clause.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 14 Apr 2016 14:12:21 +0200
 
