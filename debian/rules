@@ -162,7 +162,8 @@ override_dh_auto_clean:
 override_dh_install:
 	dh_install --list-missing \
                --exclude=dir.txt \
-               --exclude=js/jquery*.js
+               --exclude=js/jquery*.js \
+               --exclude=LICENSE
 
 override_dh_fixperms-indep:
 	dh_fixperms

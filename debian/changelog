@@ -18,6 +18,7 @@ mame (0.172-1) unstable; urgency=medium
     makes the binary non-reproducible.
   * Make the build verbose and remove obsolete define SDL_LIBVER.
   * Don't try to install web/* data in mame-data, it no longer exists.
+  * Avoid installing LICENSE files for CC0-1.0.
   * Add some extra info to mame-tools' short description.
   * Use secure URLs for Vcs-* fields, and point to cgit instead of gitweb.
   * Remove mame.menu and install/mame.xpm.
@@ -28,7 +29,7 @@ mame (0.172-1) unstable; urgency=medium
     from the orig tarball at get-orig-source rule to appease lintian.
   * Update debian/mame.ini with some upstream changes to config.
 
- -- Jordi Mallach <jordi@debian.org>  Thu, 14 Apr 2016 09:06:47 +0200
+ -- Jordi Mallach <jordi@debian.org>  Thu, 14 Apr 2016 14:12:21 +0200
 
 mame (0.164-1) unstable; urgency=medium
 
