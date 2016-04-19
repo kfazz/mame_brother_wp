@@ -1,11 +1,21 @@
 mame (0.172-2) UNRELEASED; urgency=medium
 
+  [ Cesare Falco ]
+  * debian/rules
+    - Remove dh_override_autoclean, use external debian/clean file instead
+    - Update get-orig-source to better fit upstream repository structure
+    - Now full build log can be requested by setting DH_VERBOSE
+    - Enable build optimizations, they increase performance greatly
+    - Some arch-specific tuning
+  * Removed refs to jquery library, no longer needed
+
+  [ Jordi Mallach ]
   * Add an additional source lintian override.
   * Bump Standards-Version to 3.9.8.
   * Define QT_HOME to /usr/lib/<triplet>/qt5/ and drop qt5_build.patch.
     Thanks again to Sune Vuorela.
 
- -- Jordi Mallach <jordi@debian.org>  Fri, 15 Apr 2016 10:07:59 +0200
+ -- Cesare Falco <c.falco@ubuntu.com>  Tue, 19 Apr 2016 12:32:27 +0200
 
 mame (0.172-1) unstable; urgency=medium
 
