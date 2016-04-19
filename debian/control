@@ -48,8 +48,7 @@ Description: Multiple Arcade Machine Emulator (MAME)
 
 Package: mame-data
 Architecture: all
-Depends: ${misc:Depends},
- libjs-jquery-mobile
+Depends: ${misc:Depends}
 Replaces: mess-data (<< 0.162)
 Breaks: mess-data (<< 0.162)
 Description: Multiple Arcade Machine Emulator (MAME) -- data files
