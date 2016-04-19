@@ -8,6 +8,9 @@
 
 DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
 
+# Define DEB_HOST_MULTIARCH for QT prefix handling
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+
 export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed,--no-keep-memory
 
 # add c++ hardening options (upstream makefile doesn't use CPPFLAGS)
@@ -30,6 +33,7 @@ DEB_OPTS = \
     BIGENDIAN= \
     NOASM=1 \
     OPTIMIZE=0 \
+    QT_HOME=/usr/lib/$(DEB_HOST_MULTIARCH)/qt5/ \
     USE_SYSTEM_LIB_EXPAT=1 \
     USE_SYSTEM_LIB_ZLIB=1 \
     USE_SYSTEM_LIB_JPEG=1 \
