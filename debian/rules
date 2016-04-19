@@ -142,26 +142,6 @@ override_dh_auto_build:
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
 
-override_dh_auto_clean:
-	dh_auto_clean
-	rm -f castool
-	rm -f chdman
-	rm -f floptool
-	rm -f imgtool
-	rm -f jedutil
-	rm -f ldresample
-	rm -f ldverify
-	rm -f nltool
-	rm -f pngcmp
-	rm -f regrep
-	rm -f romcmp
-	rm -f split
-	rm -f src2html
-	rm -f srcclean
-	rm -f testkeys
-	rm -f unidasm
-	rm -f default.mame.ini
-
 # Exclude embedded jQuery library
 override_dh_install:
 	dh_install --list-missing \
