@@ -170,12 +170,13 @@ MAME_TARBALL = $(MAME_PACKAGE)_$(VERSION).orig.tar.xz
 get-orig-source:
 	mkdir -p $(TMPDIR)/$(MAME_SRCDIR)
 	wget -O source.tar.gz \
-        https://github.com/mamedev/mame/tarball/$(MAME_PACKAGE)$(MAME_VERSION)
+        https://github.com/mamedev/mame/archive/$(MAME_PACKAGE)$(MAME_VERSION).tar.gz
 	tar -xzf source.tar.gz --strip-component=1 -C $(TMPDIR)/$(MAME_SRCDIR)/ \
         --exclude=\.*
 	# Remove non-free rapidjson subdir
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/rapidjson/bin/jsonchecker
 	# Remove binaries and other cruft
+	cd $(TMPDIR)/$(MAME_SRCDIR) && make clean && make cleansrc
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/zlib/contrib/dotzlib/DotZLib.chm
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bx/tools/bin/linux/genie
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bx/tools/bin/windows/genie.exe
@@ -189,12 +190,13 @@ get-orig-source:
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_java/setup/pmdefaults-setup.exe
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/android-project/gradle/wrapper/gradle-wrapper.jar
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/zlib/contrib/dotzlib/DotZLib.chm
-	wget -O build.tar.gz https://github.com/mamedev/build/tarball/master
-	tar -xzf build.tar.gz --strip-component=1 -C $(TMPDIR)/
-	mv $(TMPDIR)/whatsnew/whatsnew_$(MAME_VERSION).txt \
+	wget https://github.com/mamedev/build/archive/master.zip
+	unzip -oqjd $(TMPDIR) master.zip \
+        *mamedirs.zip *whatsnew_$(MAME_VERSION).txt
+	mv $(TMPDIR)/whatsnew_$(MAME_VERSION).txt \
         $(TMPDIR)/$(MAME_SRCDIR)/whatsnew.txt
-	unzip -od $(TMPDIR)/$(MAME_SRCDIR)/ $(TMPDIR)/mamedirs.zip
+	unzip -oqd $(TMPDIR)/$(MAME_SRCDIR)/ $(TMPDIR)/mamedirs.zip
 	tar -C $(TMPDIR) -cf - $(MAME_SRCDIR) | xz -9c > $(MAME_TARBALL)
-	rm -rf $(TMPDIR) source.tar.gz build.tar.gz
+	rm -rf $(TMPDIR) source.tar.gz master.zip
 
 .PHONY: get-orig-source
