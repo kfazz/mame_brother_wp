@@ -11,15 +11,15 @@ Build-Depends: debhelper (>= 9),
  libfontconfig1-dev,
  libjpeg-dev,
  liblua5.3-dev,
- portaudio19-dev,
  libportmidi-dev,
- qtbase5-dev,
  libsdl2-ttf-dev,
  libsdl2-dev,
  libsqlite3-dev,
  libxinerama-dev,
- subversion,
+ portaudio19-dev,
  python-dev,
+ qtbase5-dev,
+ subversion,
  zlib1g-dev
 Standards-Version: 3.9.8
 Vcs-Git: https://anonscm.debian.org/git/pkg-games/mame.git
