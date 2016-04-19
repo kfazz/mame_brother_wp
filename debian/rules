@@ -6,6 +6,8 @@
 # This special exception was added by Craig Small in version 0.37 of dh-make.
 # Default/i386/amd64 options from sdlmame rules file by Cesare Falco.
 
+export DH_VERBOSE = 1
+
 DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
 
 # Define DEB_HOST_MULTIARCH for QT prefix handling
@@ -41,8 +43,7 @@ DEB_OPTS = \
     USE_SYSTEM_LIB_LUA=lua5.3:/usr/include/lua5.3 \
     USE_SYSTEM_LIB_SQLITE3=1 \
     USE_SYSTEM_LIB_PORTMIDI=1 \
-    USE_SYSTEM_LIB_PORTAUDIO=1 \
-    VERBOSE=1
+    USE_SYSTEM_LIB_PORTAUDIO=1
 
 # Override make variables for specific archs
 # Linux architectures
@@ -124,6 +125,11 @@ DEB_OPTS += \
     FORCE_DRC_C_BACKEND= \
     PTR64= \
     NOASM=
+endif
+
+# Enable full building log when verbose output required
+ifdef DH_VERBOSE
+DEB_OPTS += VERBOSE=1
 endif
 
 DEB_MAME_OPTS = \
