@@ -309,7 +309,7 @@ Files: src/devices/machine/pdc.*
  src/mame/audio/vc4000snd.*
  src/mame/audio/geebee.*
  src/mame/audio/vc4000snd.*
- src/mame/audio/warpwarp.* 
+ src/mame/audio/warpwarp.*
 Copyright: Barry Rodewald
  Brandon Munger
  Brett Wyer
@@ -778,7 +778,7 @@ License: Custom-IJG
  GIF decoders.
  .
  We are required to state that
- . 
+ .
  "The Graphics Interchange Format(c) is the Copyright property of
  CompuServe Incorporated.  GIF(sm) is a Service Mark property of
  CompuServe Incorporated."
