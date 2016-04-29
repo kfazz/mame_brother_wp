@@ -11,6 +11,7 @@ mame (0.173-1) UNRELEASED; urgency=medium
 
   [ Jordi Mallach ]
   * New upstream release.
+  * Drop date_timestamp.patch, fixed upstream.
   * Add an additional source lintian override.
   * Bump Standards-Version to 3.9.8.
   * Define QT_HOME to /usr/lib/<triplet>/qt5/ and drop qt5_build.patch.
