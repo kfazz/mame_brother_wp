@@ -12,6 +12,5 @@ romcmp
 split
 src2html
 srcclean
-testkeys
 unidasm
 default.mame.ini
