@@ -18,6 +18,7 @@ mame (0.173-1) UNRELEASED; urgency=medium
     Thanks again to Sune Vuorela.
   * Update copyright file for new sources.
   * Don't install testkeys, as it no longer exists.
+  * Don't try to cleanup rapidjson non-free bits that are now gone upstream.
 
  -- Cesare Falco <c.falco@ubuntu.com>  Tue, 19 Apr 2016 12:32:27 +0200
 

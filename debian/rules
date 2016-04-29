@@ -176,8 +176,6 @@ get-orig-source:
         https://github.com/mamedev/mame/archive/$(MAME_PACKAGE)$(MAME_VERSION).tar.gz
 	tar -xzf source.tar.gz --strip-component=1 -C $(TMPDIR)/$(MAME_SRCDIR)/ \
         --exclude=\.*
-	# Remove non-free rapidjson subdir
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/rapidjson/bin/jsonchecker
 	# Remove binaries and other cruft
 	cd $(TMPDIR)/$(MAME_SRCDIR) && make clean && make cleansrc
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/zlib/contrib/dotzlib/DotZLib.chm
