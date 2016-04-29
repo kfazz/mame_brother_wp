@@ -1,4 +1,4 @@
-mame (0.172-2) UNRELEASED; urgency=medium
+mame (0.173-1) UNRELEASED; urgency=medium
 
   [ Cesare Falco ]
   * debian/rules
@@ -10,6 +10,7 @@ mame (0.172-2) UNRELEASED; urgency=medium
   * Removed refs to jquery library, no longer needed
 
   [ Jordi Mallach ]
+  * New upstream release.
   * Add an additional source lintian override.
   * Bump Standards-Version to 3.9.8.
   * Define QT_HOME to /usr/lib/<triplet>/qt5/ and drop qt5_build.patch.
