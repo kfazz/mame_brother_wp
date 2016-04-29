@@ -25,9 +25,12 @@ Copyright:
  Dreamer Nom
  Eric Smith
  Ernesto Corvi
+ Fabio Priuli
  Frank Palazzolo
+ F. Ulivi
  Grazvydas Ignotas
  hap
+ Igor
  Jarek Burczynski
  Jason Eckhardt
  John Butler
@@ -109,6 +112,7 @@ Files: src/devices/machine/pdc.*
  src/devices/bus/ti99_peb/*
  src/devices/bus/ti99x/*
  src/devices/bus/apricot/*
+ src/devices/bus/vtech/*
  src/devices/video/mos6566.*
  src/devices/video/i82730.*
  src/devices/video/dl1416.*
@@ -321,6 +325,7 @@ Copyright: Barry Rodewald
  Curt Coder
  Dag Lem
  Dan Boris
+ David Viens
  DICE Team
  Dirk Best
  Fabio Priuli
@@ -344,6 +349,7 @@ Copyright: Barry Rodewald
  Ron Fries
  Sandro Ronco
  Tatsuyuki Satoh
+ Vas Crabb
  Wilbert Pol
 License: GPL-2+
 
@@ -458,6 +464,7 @@ Files: src/devices/machine/tc009xlvc.*
  src/mame/{drivers,includes,video}/ti99_4p.*
  src/mame/{drivers,includes,video}/seibu_crtc.*
  src/mame/{drivers,includes,video}/crt.*
+ src/mame/{drivers,includes,video}/tmc0430.*
  src/mame/audio/snes_snd.*
 Copyright:  Andrew Gardner
  Angelo Salese
