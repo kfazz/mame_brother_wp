@@ -178,9 +178,13 @@ get-orig-source:
         --exclude=\.*
 	# Remove binaries and other cruft
 	cd $(TMPDIR)/$(MAME_SRCDIR) && make clean && make cleansrc
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/.mame_version
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/zlib/contrib/dotzlib/DotZLib.chm
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bx/tools/bin/linux/genie
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bx/tools/bin/linux/ninja
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bx/tools/bin/windows/genie.exe
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bx/tools/bin/windows/ninja.exe
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bgfx/3rdparty/remotery/vis/extern/BrowserLib/Core/Code/Convert.js
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/lzma/7zr.exe
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/lzma/lzma.exe
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_java/JavaExe.exe
