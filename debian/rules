@@ -185,6 +185,8 @@ get-orig-source:
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bx/tools/bin/windows/genie.exe
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bx/tools/bin/windows/ninja.exe
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bgfx/3rdparty/remotery/vis/extern/BrowserLib/Core/Code/Convert.js
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bgfx/3rdparty/scintilla/src/Editor.cxx.orig
+	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bgfx/3rdparty/scintilla/gtk/makefile.orig
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/lzma/7zr.exe
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/lzma/lzma.exe
 	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_java/JavaExe.exe
