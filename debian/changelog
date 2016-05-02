@@ -1,4 +1,4 @@
-mame (0.173-1) UNRELEASED; urgency=medium
+mame (0.173-1) unstable; urgency=medium
 
   [ Cesare Falco ]
   * debian/rules
@@ -24,7 +24,7 @@ mame (0.173-1) UNRELEASED; urgency=medium
     avoid installing dirs with wrong perms.
   * Remove new binaries and cruft from upstream sources.
 
- -- Cesare Falco <c.falco@ubuntu.com>  Tue, 19 Apr 2016 12:32:27 +0200
+ -- Jordi Mallach <jordi@debian.org>  Mon, 02 May 2016 14:20:14 +0200
 
 mame (0.172-1) unstable; urgency=medium
 
