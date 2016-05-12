@@ -110,6 +110,12 @@ DEB_OPTS += \
     BIGENDIAN=1
 endif
 
+ifeq ($(DEB_HOST_ARCH),sparc64)
+DEB_OPTS += \
+    PTR64=1 \
+    BIGENDIAN=1
+endif
+
 # kFreeBSD architectures
 ifeq ($(DEB_HOST_ARCH),kfreebsd-amd64)
 DEB_OPTS += \

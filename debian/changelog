@@ -2,6 +2,7 @@ mame (0.173-2) UNRELEASED; urgency=medium
 
   * Add ftbfs_v60_m_fetch_xor.patch: cherrypick from git to fix a compile
     error on several Debian architectures.
+  * Define PTR64 and BIGENDIAN for sparc64.
 
  -- Jordi Mallach <jordi@debian.org>  Fri, 13 May 2016 00:15:16 +0200
 
