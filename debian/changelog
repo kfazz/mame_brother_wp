@@ -1,4 +1,4 @@
-mame (0.173-3) UNRELEASED; urgency=medium
+mame (0.173-3) experimental; urgency=medium
 
   * Define DEB_HOST_ARCH_BITS and, if the build is for a 32 bit arch,
     - pass -g0 as CFLAGS.
