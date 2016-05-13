@@ -1,3 +1,12 @@
+mame (0.173-3) UNRELEASED; urgency=medium
+
+  * Define DEB_HOST_ARCH_BITS and, if the build is for a 32 bit arch,
+    - pass -g0 as CFLAGS.
+    - pass -Wl,--no-keep-memory to the linker.
+    Hopefully this fixes the build on 32 bit architectures.
+
+ -- Jordi Mallach <jordi@debian.org>  Sat, 14 May 2016 00:06:00 +0200
+
 mame (0.173-2) experimental; urgency=medium
 
   * Add ftbfs_v60_m_fetch_xor.patch: cherrypick from git to fix a compile

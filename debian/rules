@@ -9,14 +9,22 @@
 export DH_VERBOSE = 1
 
 DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+DEB_HOST_ARCH_BITS ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_BITS)
 
 # Define DEB_HOST_MULTIARCH for QT prefix handling
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
-export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed,--no-keep-memory
-
 # add c++ hardening options (upstream makefile doesn't use CPPFLAGS)
 export DEB_CFLAGS_MAINT_APPEND = $(shell dpkg-buildflags --get CPPFLAGS)
+
+# Try to deal with mame's linking requiring huge amounts of memory and
+# causing problems on 32 bit architectures
+# Sacrifice linking speed to avoid using so much memory
+ifeq ($(DEB_HOST_ARCH_BITS),32)
+export DEB_LDFLAGS_MAINT_APPEND = -Wl,--no-keep-memory
+# Disable -g entirely
+CFLAGS := $(CFLAGS:-g=-g0)
+endif
 
 # taken verbatim from debian policy
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
