@@ -1,6 +1,8 @@
 mame (0.173-4) UNRELEASED; urgency=medium
 
   * Define arch bits for ppc64 and mips64el.
+  * Add arch_ppc_fixes.patch: cherrypick from git to fix compilation on
+    Little Endian PPC targets.
 
  -- Jordi Mallach <jordi@debian.org>  Sun, 15 May 2016 00:16:30 +0200
 
