@@ -1,4 +1,4 @@
-mame (0.173-4) UNRELEASED; urgency=medium
+mame (0.173-4) unstable; urgency=medium
 
   * Define arch bits for alpha, ppc64 and mips64el.
   * Add arch_ppc_fixes.patch: cherrypick from git to fix compilation on
