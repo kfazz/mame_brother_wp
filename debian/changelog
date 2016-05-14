@@ -1,3 +1,9 @@
+mame (0.173-4) UNRELEASED; urgency=medium
+
+  * Define arch bits for ppc64 and mips64el.
+
+ -- Jordi Mallach <jordi@debian.org>  Sun, 15 May 2016 00:16:30 +0200
+
 mame (0.173-3) experimental; urgency=medium
 
   * Define DEB_HOST_ARCH_BITS and, if the build is for a 32 bit arch,

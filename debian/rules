@@ -89,9 +89,22 @@ DEB_OPTS += \
     ARCHOPTS=-Umips
 endif
 
+ifeq ($(DEB_HOST_ARCH),mips64el)
+DEB_OPTS += \
+    PTR64=1 \
+    NOASM=
+endif
+
 ifeq ($(DEB_HOST_ARCH),powerpc)
 DEB_OPTS += \
     ARCHOPTS=-Upowerpc \
+    NOASM= \
+    BIGENDIAN=1
+endif
+
+ifeq ($(DEB_HOST_ARCH),ppc64)
+DEB_OPTS += \
+    PTR64=1 \
     NOASM= \
     BIGENDIAN=1
 endif
