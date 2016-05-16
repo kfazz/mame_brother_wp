@@ -1,3 +1,9 @@
+mame (0.173-5) UNRELEASED; urgency=medium
+
+  * Fix syntax error in arch_ppc_fixes.patch. Fixes ppc64el build.
+
+ -- Jordi Mallach <jordi@debian.org>  Mon, 16 May 2016 11:49:00 +0200
+
 mame (0.173-4) unstable; urgency=medium
 
   * Define arch bits for alpha, ppc64 and mips64el.
