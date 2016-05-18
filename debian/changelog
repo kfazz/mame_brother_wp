@@ -1,6 +1,6 @@
-mame (0.173-5) UNRELEASED; urgency=medium
+mame (0.173-5) unstable; urgency=medium
 
-  * Fix syntax error in arch_ppc_fixes.patch. Fixes ppc64el build.
+  * Fix syntax error in arch_ppc_fixes.patch. Hopefully fixes ppc64el build.
   * Try to fix x32 by defining PTR64 as in amd64.
 
  -- Jordi Mallach <jordi@debian.org>  Mon, 16 May 2016 11:49:00 +0200
