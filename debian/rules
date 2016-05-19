@@ -8,7 +8,7 @@
 
 export DH_VERBOSE = 1
 
-DEB_HOST_ARCH ?= $(shell dpkg-architecture -qDEB_HOST_ARCH)
+DEB_BUILD_ARCH ?= $(shell dpkg-architecture -qDEB_BUILD_ARCH)
 DEB_HOST_ARCH_BITS ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_BITS)
 
 # Define DEB_HOST_MULTIARCH for QT prefix handling
@@ -55,95 +55,95 @@ DEB_OPTS = \
 
 # Override make variables for specific archs
 # Linux architectures
-ifeq ($(DEB_HOST_ARCH),alpha)
+ifeq ($(DEB_BUILD_ARCH),alpha)
 DEB_OPTS += \
     PTR64=1
 endif
 
-ifeq ($(DEB_HOST_ARCH),amd64 x32)
+ifeq (,$(filter $(DEB_BUILD_ARCH),amd64 x32))
 DEB_OPTS += \
     FORCE_DRC_C_BACKEND= \
     PTR64=1 \
     NOASM=
 endif
 
-ifeq ($(DEB_HOST_ARCH),arm64)
+ifeq ($(DEB_BUILD_ARCH),arm64)
 DEB_OPTS += \
     ARCHOPTS=-mabi=lp64
 endif
 
-ifeq ($(DEB_HOST_ARCH),i386)
+ifeq ($(DEB_BUILD_ARCH),i386)
 DEB_OPTS += \
     FORCE_DRC_C_BACKEND= \
     NOASM=
 endif
 
-ifeq ($(DEB_HOST_ARCH),ia64)
+ifeq ($(DEB_BUILD_ARCH),ia64)
 DEB_OPTS += \
     PTR64=1
 endif
 
-ifeq ($(DEB_HOST_ARCH),mips)
+ifeq ($(DEB_BUILD_ARCH),mips)
 DEB_OPTS += \
     ARCHOPTS=-Umips \
     BIGENDIAN=1
 endif
 
-ifeq ($(DEB_HOST_ARCH),mipsel)
+ifeq ($(DEB_BUILD_ARCH),mipsel)
 DEB_OPTS += \
     ARCHOPTS=-Umips
 endif
 
-ifeq ($(DEB_HOST_ARCH),mips64el)
+ifeq ($(DEB_BUILD_ARCH),mips64el)
 DEB_OPTS += \
     PTR64=1 \
     NOASM=
 endif
 
-ifeq ($(DEB_HOST_ARCH),powerpc)
+ifeq ($(DEB_BUILD_ARCH),powerpc)
 DEB_OPTS += \
     ARCHOPTS=-Upowerpc \
     NOASM= \
     BIGENDIAN=1
 endif
 
-ifeq ($(DEB_HOST_ARCH),ppc64)
+ifeq ($(DEB_BUILD_ARCH),ppc64)
 DEB_OPTS += \
     PTR64=1 \
     NOASM= \
     BIGENDIAN=1
 endif
 
-ifeq ($(DEB_HOST_ARCH),ppc64el)
+ifeq ($(DEB_BUILD_ARCH),ppc64el)
 DEB_OPTS += \
     PTR64=1 \
     NOASM=
 endif
 
-ifeq ($(DEB_HOST_ARCH),s390)
+ifeq ($(DEB_BUILD_ARCH),s390)
 DEB_OPTS += \
     BIGENDIAN=1
 endif
 
-ifeq ($(DEB_HOST_ARCH),s390x)
+ifeq ($(DEB_BUILD_ARCH),s390x)
 DEB_OPTS += \
     PTR64=1 \
     BIGENDIAN=1
 endif
 
-ifeq ($(DEB_HOST_ARCH),sparc)
+ifeq ($(DEB_BUILD_ARCH),sparc)
 DEB_OPTS += \
     BIGENDIAN=1
 endif
 
-ifeq ($(DEB_HOST_ARCH),sparc64)
+ifeq ($(DEB_BUILD_ARCH),sparc64)
 DEB_OPTS += \
     PTR64=1 \
     BIGENDIAN=1
 endif
 
 # kFreeBSD architectures
-ifeq ($(DEB_HOST_ARCH),kfreebsd-amd64)
+ifeq ($(DEB_BUILD_ARCH),kfreebsd-amd64)
 DEB_OPTS += \
     TARGETOS=freebsd \
     FORCE_DRC_C_BACKEND= \
@@ -151,7 +151,7 @@ DEB_OPTS += \
     NOASM=
 endif
 
-ifeq ($(DEB_HOST_ARCH),kfreebsd-i386)
+ifeq ($(DEB_BUILD_ARCH),kfreebsd-i386)
 DEB_OPTS += \
     TARGETOS=freebsd \
     FORCE_DRC_C_BACKEND= \
