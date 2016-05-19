@@ -1,4 +1,4 @@
-mame (0.173-6) UNRELEASED; urgency=medium
+mame (0.173-6) unstable; urgency=medium
 
   * Brown paper bag release.
   * Fix logic in ifeq clause to fix amd64 build.
