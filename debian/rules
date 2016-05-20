@@ -142,6 +142,12 @@ DEB_OPTS += \
     BIGENDIAN=1
 endif
 
+ifeq ($(DEB_BUILD_ARCH),x32)
+DEB_OPTS += \
+    FORCE_DRC_C_BACKEND= \
+    NOASM=
+endif
+
 # kFreeBSD architectures
 ifeq ($(DEB_BUILD_ARCH),kfreebsd-amd64)
 DEB_OPTS += \
