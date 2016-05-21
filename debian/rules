@@ -60,7 +60,7 @@ DEB_OPTS += \
     PTR64=1
 endif
 
-ifeq (,$(filter $(DEB_BUILD_ARCH),amd64 x32))
+ifeq ($(DEB_BUILD_ARCH),amd64)
 DEB_OPTS += \
     FORCE_DRC_C_BACKEND= \
     PTR64=1 \
