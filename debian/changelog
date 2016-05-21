@@ -4,7 +4,7 @@ mame (0.173-6) unstable; urgency=medium
   * Revert x32 change in -5 that broke amd64 build.
   * Substitute all uses of DEB_HOST_ARCH with DEB_BUILD_ARCH.
 
- -- Jordi Mallach <jordi@debian.org>  Thu, 19 May 2016 16:05:51 +0200
+ -- Jordi Mallach <jordi@debian.org>  Sat, 21 May 2016 02:43:43 +0200
 
 mame (0.173-5) unstable; urgency=medium
 
