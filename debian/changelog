@@ -1,8 +1,10 @@
 mame (0.173-6) unstable; urgency=medium
 
   * Brown paper bag release.
-  * Revert x32 change in -5 that broke amd64 build.
-  * Substitute all uses of DEB_HOST_ARCH with DEB_BUILD_ARCH.
+  * debian/rules:
+    - x32 has 32bit pointers, split amd64 rule
+    - reduce memory required by ld on all archs (Ubuntu)
+    - remove -g gcc switch when no DEBUG required
 
  -- Jordi Mallach <jordi@debian.org>  Sat, 21 May 2016 02:43:43 +0200
 
