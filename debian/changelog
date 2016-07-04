@@ -1,19 +1,14 @@
 mame (0.174-1) UNRELEASED; urgency=medium
 
+  [ Cesare Falco ]
   * New upstream release (LP: #1590678) (LP: #1562705)
   * Removed patches now included upstream
-
- -- Cesare Falco <c.falco@ubuntu.com>  Sat, 04 Jun 2016 09:16:26 +0200
-
-mame (0.173-7) UNRELEASED; urgency=medium
-
-  [ Cesare Falco ]
   * debian/rules:
     - x32 has 32bit pointers, split amd64 rule
     - reduce memory required by ld on all archs (Ubuntu)
     - remove -g gcc switch when no DEBUG required
 
- -- Jordi Mallach <jordi@debian.org>  Mon, 23 May 2016 10:37:40 +0200
+ -- Cesare Falco <c.falco@ubuntu.com>  Sat, 04 Jun 2016 09:16:26 +0200
 
 mame (0.173-6) unstable; urgency=medium
 
