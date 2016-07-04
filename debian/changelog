@@ -1,4 +1,4 @@
-mame (0.174-1) UNRELEASED; urgency=medium
+mame (0.174-1) unstable; urgency=medium
 
   [ Cesare Falco ]
   * New upstream release (LP: #1590678) (LP: #1562705)
@@ -13,7 +13,7 @@ mame (0.174-1) UNRELEASED; urgency=medium
   * Add removing-m64_flag_for_mips64el.patch: avoid using -m64 on mips64el
     to fix a FTBFS. Thanks to Daniel Knezevic for the patch (closes: #827798).
 
- -- Cesare Falco <c.falco@ubuntu.com>  Sat, 04 Jun 2016 09:16:26 +0200
+ -- Jordi Mallach <jordi@debian.org>  Mon, 04 Jul 2016 16:05:33 +0200
 
 mame (0.173-6) unstable; urgency=medium
 
