@@ -1,0 +1,33 @@
+Index: mame-0.174/makefile
+===================================================================
+--- mame-0.174.orig/makefile
++++ mame-0.174/makefile
+@@ -150,6 +150,11 @@ endif
+ ifneq ($(filter powerpc,$(UNAME_P)),)
+ PLATFORM := powerpc
+ endif 
++ifneq ($(filter mips64%,$(UNAME_M)),)
++ifeq ($(shell getconf LONG_BIT),64)
++PLATFORM := mips64
++endif
++endif
+ ifeq ($(firstword $(filter Linux,$(UNAME))),Linux)
+ OS := linux
+ endif
+Index: mame-0.174/scripts/genie.lua
+===================================================================
+--- mame-0.174.orig/scripts/genie.lua
++++ mame-0.174/scripts/genie.lua
+@@ -1006,6 +1006,12 @@ if (_OPTIONS["PLATFORM"]=="arm64") then
+ 	}
+ end
+ 
++if (_OPTIONS["PLATFORM"]=="mips64") then
++	defines {
++		"PTR64=1",
++	}
++end
++
+ local subdir
+ if (_OPTIONS["target"] == _OPTIONS["subtarget"]) then
+ 	subdir = _OPTIONS["osd"] .. "/" .. _OPTIONS["target"]

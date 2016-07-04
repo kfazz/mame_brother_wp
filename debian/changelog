@@ -8,6 +8,11 @@ mame (0.174-1) UNRELEASED; urgency=medium
     - reduce memory required by ld on all archs (Ubuntu)
     - remove -g gcc switch when no DEBUG required
 
+  [ Jordi Mallach ]
+  * debian/rules: don't set PTR64 on mips64el.
+  * Add removing-m64_flag_for_mips64el.patch: avoid using -m64 on mips64el
+    to fix a FTBFS. Thanks to Daniel Knezevic for the patch (closes: #827798).
+
  -- Cesare Falco <c.falco@ubuntu.com>  Sat, 04 Jun 2016 09:16:26 +0200
 
 mame (0.173-6) unstable; urgency=medium
