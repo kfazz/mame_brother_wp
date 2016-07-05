@@ -3,6 +3,10 @@ mame (0.175-1) UNRELEASED; urgency=medium
   * New upstream release.
   * Rename and extend mips64el patch to attempt to fix alpha's similar
     build failure.
+  * Build with included portmidi on kfreebsd-* architectures, as system
+    libportmidi-dev is not available on these.
+  * Add -ldl to LDFLAGS on kFreeBSD to fix an early build failure.
+  * Make GENIEOS=freebsd so the actual genie binary is called.
 
  -- Jordi Mallach <jordi@debian.org>  Mon, 04 Jul 2016 16:52:51 +0200
 

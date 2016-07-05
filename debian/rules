@@ -137,14 +137,18 @@ DEB_OPTS += \
     TARGETOS=freebsd \
     FORCE_DRC_C_BACKEND= \
     PTR64=1 \
-    NOASM=
+    NOASM= \
+    USE_SYSTEM_LIB_PORTMIDI=
+export DEB_LDFLAGS_MAINT_APPEND = -ldl
 endif
 
 ifeq ($(DEB_HOST_ARCH),kfreebsd-i386)
 DEB_OPTS += \
     TARGETOS=freebsd \
     FORCE_DRC_C_BACKEND= \
-    NOASM=
+    NOASM= \
+    USE_SYSTEM_LIB_PORTMIDI=
+export DEB_LDFLAGS_MAINT_APPEND = -ldl
 endif
 
 # Enable full building log when verbose output required
