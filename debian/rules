@@ -49,11 +49,6 @@ DEB_OPTS = \
 
 # Override make variables for specific archs
 # Linux architectures
-ifeq ($(DEB_HOST_ARCH),alpha)
-DEB_OPTS += \
-    PTR64=1
-endif
-
 ifeq ($(DEB_HOST_ARCH),amd64)
 DEB_OPTS += \
     FORCE_DRC_C_BACKEND= \
