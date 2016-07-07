@@ -190,50 +190,56 @@ override_dh_fixperms-indep:
 	find debian/mame-data/usr/share/games/mame/keymaps -type f -execdir chmod 644 {} \;
 
 
-# Retrieve source from svn repo (recommended by upstream developers)
-VERSION := $(shell dpkg-parsechangelog | sed -ne 's/^Version: \(.*\)-.*/\1/p')
+PKD := $(abspath $(dir $(MAKEFILE_LIST)))
+PKG := $(shell dpkg-parsechangelog -l$(PKD)/changelog --show-field=Source)
+DTYPE :=
+VER ?= $(shell dpkg-parsechangelog -l$(PKD)/changelog --show-field=Version | sed -e 's/\(.*\)-.*/\1/')
+# Upstream source has no dot in its name, so we have to cut it out
+UVER := $(shell echo $(VER) | sed -e 's/\.//' )
 TMPDIR := $(shell mktemp --dry-run --directory -p .)
 
-MAME_PACKAGE = mame
-# Upstream source has no dot in its name, so we have to cut it out
-MAME_VERSION := $(shell echo $(VERSION) | sed -e 's/\.//' )
-MAME_SRCDIR = $(MAME_PACKAGE)-$(VERSION)
-MAME_TARBALL = $(MAME_PACKAGE)_$(VERSION).orig.tar.xz
+.PHONY: get-orig-source
+get-orig-source: $(PKG)_$(VER)$(DTYPE).orig.tar.xz $(info I: $(PKG)_$(VER)$(DTYPE))
+	@
 
-get-orig-source:
-	mkdir -p $(TMPDIR)/$(MAME_SRCDIR)
-	wget -O source.tar.gz \
-        https://github.com/mamedev/mame/archive/$(MAME_PACKAGE)$(MAME_VERSION).tar.gz
-	tar -xzf source.tar.gz --strip-component=1 -C $(TMPDIR)/$(MAME_SRCDIR)/ \
-        --exclude=\.*
+$(PKG)_$(VER)$(DTYPE).orig.tar.xz:
+	@echo "# Downloading..."
+	uscan --noconf --verbose --rename --destdir=$(CURDIR) \
+        --check-dirname-level=0 --force-download \
+        --download-version $(VER) $(PKD)
+	@echo "# Extracting..."
+	mkdir -p $(TMPDIR)/$(PKG)-$(VER)
+	tar -xzf $(PKG)_$(VER).orig.tar.gz --strip-component=1 \
+        -C $(TMPDIR)/$(PKG)-$(VER)/ --exclude=\.*
+	@echo "# Cleaning-up..."
 	# Remove binaries and other cruft
-	cd $(TMPDIR)/$(MAME_SRCDIR) && make clean && make cleansrc
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/.mame_version
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/zlib/contrib/dotzlib/DotZLib.chm
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bx/tools/bin/linux/genie
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bx/tools/bin/linux/ninja
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bx/tools/bin/windows/genie.exe
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bx/tools/bin/windows/ninja.exe
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bgfx/3rdparty/remotery/vis/extern/BrowserLib/Core/Code/Convert.js
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bgfx/3rdparty/scintilla/src/Editor.cxx.orig
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/bgfx/3rdparty/scintilla/gtk/makefile.orig
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/lzma/7zr.exe
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/lzma/lzma.exe
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_java/JavaExe.exe
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_java/UpdateRsrcJavaExe.exe
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_csharp/pm_managed/app.rc
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_csharp/pm_managed/resource.h
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_java/pmjni/pmjni.rc
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/portmidi/pm_java/setup/pmdefaults-setup.exe
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/android-project/gradle/wrapper/gradle-wrapper.jar
-	rm -rf $(TMPDIR)/$(MAME_SRCDIR)/3rdparty/zlib/contrib/dotzlib/DotZLib.chm
+	cd $(TMPDIR)/$(PKG)-$(VER) && make clean && make cleansrc
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/.mame_version
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/zlib/contrib/dotzlib/DotZLib.chm
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/linux/genie
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/linux/ninja
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/windows/genie.exe
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/windows/ninja.exe
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bgfx/3rdparty/remotery/vis/extern/BrowserLib/Core/Code/Convert.js
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bgfx/3rdparty/scintilla/src/Editor.cxx.orig
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bgfx/3rdparty/scintilla/gtk/makefile.orig
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/lzma/7zr.exe
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/lzma/lzma.exe
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/portmidi/pm_java/JavaExe.exe
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/portmidi/pm_java/UpdateRsrcJavaExe.exe
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/portmidi/pm_csharp/pm_managed/app.rc
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/portmidi/pm_csharp/pm_managed/resource.h
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/portmidi/pm_java/pmjni/pmjni.rc
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/portmidi/pm_java/setup/pmdefaults-setup.exe
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/android-project/gradle/wrapper/gradle-wrapper.jar
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/zlib/contrib/dotzlib/DotZLib.chm
+	# Add upstream changelog and other useful bits distributed separately
 	wget https://github.com/mamedev/build/archive/master.zip
 	unzip -oqjd $(TMPDIR) master.zip \
-        *mamedirs.zip *whatsnew_$(MAME_VERSION).txt
-	mv $(TMPDIR)/whatsnew_$(MAME_VERSION).txt \
-        $(TMPDIR)/$(MAME_SRCDIR)/whatsnew.txt
-	unzip -oqd $(TMPDIR)/$(MAME_SRCDIR)/ $(TMPDIR)/mamedirs.zip
-	tar -C $(TMPDIR) -cf - $(MAME_SRCDIR) | xz -9c > $(MAME_TARBALL)
-	rm -rf $(TMPDIR) source.tar.gz master.zip
-
-.PHONY: get-orig-source
+        *mamedirs.zip *whatsnew_$(UVER).txt
+	mv $(TMPDIR)/whatsnew_$(UVER).txt \
+        $(TMPDIR)/$(PKG)-$(VER)/whatsnew.txt
+	unzip -oqd $(TMPDIR)/$(PKG)-$(VER)/ $(TMPDIR)/mamedirs.zip
+	@echo "# Packing..."
+	tar -C $(TMPDIR) -cf - $(PKG)-$(VER) | xz -9c > $(PKG)_$(VER)$(DTYPE).orig.tar.xz
+	rm -rf $(TMPDIR) $(PKG)_$(VER).orig.tar.gz master.zip
