@@ -1,3 +1,9 @@
+mame (0.175-2) unstable ; urgency=medium
+
+  * Improved get-orig-source target
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Fri, 08 Jul 2016 13:08:40 +0200
+
 mame (0.175-1) unstable; urgency=medium
 
   * New upstream release.
