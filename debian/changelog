@@ -94,6 +94,7 @@ mame (0.173-1) unstable; urgency=medium
 
   [ Jordi Mallach ]
   * New upstream release.
+    - Shows MAME's program name in lowercase in help output (closes: #747859)
   * Drop date_timestamp.patch, fixed upstream.
   * Add an additional source lintian override.
   * Bump Standards-Version to 3.9.8.
@@ -111,9 +112,9 @@ mame (0.173-1) unstable; urgency=medium
 
 mame (0.172-1) unstable; urgency=medium
 
-  * New upstream release.
+  * New upstream release (closes: #794119).
     - MAME is now licensed under the GPL-2
-  * Move to main section.
+  * Move to main section (closes: #816831).
   * Massive update of debian/copyright to adapt to licensing changes.
   * Add License paragraphs for all minor variants of BSD and custom licenses.
   * Update MESS references in mame-tools' description.
