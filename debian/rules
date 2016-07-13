@@ -190,6 +190,7 @@ override_dh_fixperms-indep:
 	find debian/mame-data/usr/share/games/mame/hash -type f -execdir chmod 644 {} \;
 	find debian/mame-data/usr/share/games/mame/keymaps -type f -execdir chmod 644 {} \;
 	find debian/mame-data/usr/share/games/mame/language -type f -execdir chmod 644 {} \;
+	find debian/mame-data/usr/share/games/mame/language -type f -name "*.po" -delete
 	find debian/mame-data/usr/share/games/mame/plugins -type f -execdir chmod 644 {} \;
 	chmod 644 debian/mame-data/usr/share/games/mame/uismall.bdf
 
