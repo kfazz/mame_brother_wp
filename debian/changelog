@@ -1,4 +1,4 @@
-mame (0.175-2) unstable ; urgency=medium
+mame (0.175-2) unstable; urgency=medium
 
   * Improved get-orig-source target
 
