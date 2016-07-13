@@ -6,6 +6,8 @@ mame (0.175-2) unstable; urgency=medium
   [ Jordi Mallach ]
   * Install bgfx, language, plugins and uismall.bdf files in mame-tools.
     Thanks to Vas Crabb for pointing this out.
+  * Add a override_dh_auto_test that just runs "mame -valid" after the build.
+    For now, make it non-fatal.
 
  -- Cesare Falco <c.falco@ubuntu.com>  Fri, 08 Jul 2016 13:08:40 +0200
 

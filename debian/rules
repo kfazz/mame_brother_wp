@@ -177,6 +177,10 @@ override_dh_auto_build:
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
 
+override_dh_auto_test:
+	# Run MAME's internal validation tests
+	-mame -validate
+
 override_dh_install:
 	dh_install --fail-missing \
                --exclude=dir.txt \
