@@ -185,10 +185,12 @@ override_dh_install:
 override_dh_fixperms-indep:
 	dh_fixperms
 	find debian/mame-data/usr/share/games/mame/artwork -type f -execdir chmod 644 {} \;
+	find debian/mame-data/usr/share/games/mame/bgfx -type f -execdir chmod 644 {} \;
 	find debian/mame-data/usr/share/games/mame/ctrlr -type f -execdir chmod 644 {} \;
 	find debian/mame-data/usr/share/games/mame/hash -type f -execdir chmod 644 {} \;
 	find debian/mame-data/usr/share/games/mame/keymaps -type f -execdir chmod 644 {} \;
-
+	find debian/mame-data/usr/share/games/mame/plugins -type f -execdir chmod 644 {} \;
+	chmod 644 debian/mame-data/usr/share/games/mame/uismall.bdf
 
 PKD := $(abspath $(dir $(MAKEFILE_LIST)))
 PKG := $(shell dpkg-parsechangelog -l$(PKD)/changelog --show-field=Source)
