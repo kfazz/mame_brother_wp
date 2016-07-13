@@ -1,4 +1,8 @@
 docs/config.txt
+docs/emscripten.txt
+docs/floppy.txt
+docs/luaengine.md
+docs/m6502.txt
 docs/mame.txt
 docs/SDL.txt
 whatsnew.txt
