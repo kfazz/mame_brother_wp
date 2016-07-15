@@ -177,6 +177,8 @@ override_dh_auto_build:
 	-mv mame64 mame #FIXME
 	$(CURDIR)/mame -createconfig
 	mv mame.ini default.mame.ini
+	mv plugin.ini default.plugin.ini
+	mv ui.ini default.ui.ini
 
 override_dh_auto_test:
 	# Run MAME's internal validation tests

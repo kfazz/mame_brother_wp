@@ -12,6 +12,7 @@ mame (0.175-2) unstable; urgency=medium
     For now, make it non-fatal.
   * Add some additional docs to the mame binary.
   * Use system libuv.
+  * Install default plugin.ini and ui.ini files as examples.
 
  -- Cesare Falco <c.falco@ubuntu.com>  Fri, 08 Jul 2016 13:08:40 +0200
 
