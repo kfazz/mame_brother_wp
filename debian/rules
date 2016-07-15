@@ -172,7 +172,7 @@ endif
 %:
 	dh $@
 
-override_dh_auto_build:
+override_dh_auto_build-arch:
 	$(MAKE) $(DEB_OPTS) $(DEB_MAME_OPTS)
 	-mv mame64 mame #FIXME
 	$(CURDIR)/mame -createconfig
@@ -180,7 +180,9 @@ override_dh_auto_build:
 	mv plugin.ini default.plugin.ini
 	mv ui.ini default.ui.ini
 
-override_dh_auto_test:
+override_dh_auto_build-indep:
+
+override_dh_auto_test-arch:
 	# Run MAME's internal validation tests
 	-$(CURDIR)/mame -validate
 

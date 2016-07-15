@@ -13,6 +13,9 @@ mame (0.175-2) unstable; urgency=medium
   * Add some additional docs to the mame binary.
   * Use system libuv.
   * Install default plugin.ini and ui.ini files as examples.
+  * Add an empty override_dh_auto_build-indep rule, so arch-independent
+    don't actually build the whole thing. Also rename dh_auto_test to
+    their -arch variants.
 
  -- Cesare Falco <c.falco@ubuntu.com>  Fri, 08 Jul 2016 13:08:40 +0200
 
