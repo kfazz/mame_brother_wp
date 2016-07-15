@@ -16,6 +16,8 @@ mame (0.175-2) unstable; urgency=medium
   * Add an empty override_dh_auto_build-indep rule, so arch-independent
     don't actually build the whole thing. Also rename dh_auto_test to
     their -arch variants.
+  * Add kfreebsd.patch to solve a lot more build issues on kfreebsd-*.
+    Many thanks to Steven Chamberlain!
 
  -- Cesare Falco <c.falco@ubuntu.com>  Fri, 08 Jul 2016 13:08:40 +0200
 
