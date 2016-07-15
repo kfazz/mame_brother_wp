@@ -45,7 +45,8 @@ DEB_OPTS = \
     USE_SYSTEM_LIB_LUA=lua5.3:/usr/include/lua5.3 \
     USE_SYSTEM_LIB_SQLITE3=1 \
     USE_SYSTEM_LIB_PORTMIDI=1 \
-    USE_SYSTEM_LIB_PORTAUDIO=1
+    USE_SYSTEM_LIB_PORTAUDIO=1 \
+    USE_SYSTEM_LIB_UV=1
 
 # Override make variables for specific archs
 # Linux architectures
