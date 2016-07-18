@@ -2,9 +2,11 @@ mame (0.175-2) unstable; urgency=medium
 
   [ Cesare Falco ]
   * Improved get-orig-source target
+  * Updated mame.ini files to most recent *path entries
+  * Install samples and additional .ini files as well
 
   [ Jordi Mallach ]
-  * Install bgfx, language, plugins and uismall.bdf files in mame-tools.
+  * Install bgfx, language, plugins and uismall.bdf files in mame-data.
     Thanks to Vas Crabb for pointing this out.
   * Add a override_dh_auto_test that just runs "mame -valid" after the build.
     For now, make it non-fatal.
