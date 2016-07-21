@@ -1,3 +1,4 @@
 remove-m64_flag_for_mips64el_alpha.patch
 genie_freebsd_target.patch
 kfreebsd.patch
+hurd.patch

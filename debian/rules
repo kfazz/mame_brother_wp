@@ -152,6 +152,16 @@ DEB_OPTS += \
 export DEB_LDFLAGS_MAINT_APPEND = -ldl
 endif
 
+# GNU/Hurd architecture
+ifeq ($(DEB_HOST_ARCH),hurd-i386)
+DEB_OPTS += \
+    TARGETOS=gnu \
+    FORCE_DRC_C_BACKEND= \
+    NOASM= \
+    USE_SYSTEM_LIB_PORTMIDI= \
+    NO_USE_MIDI=1
+endif
+
 # Enable full building log when verbose output required
 ifdef DH_VERBOSE
 DEB_OPTS += VERBOSE=1
