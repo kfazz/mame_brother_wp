@@ -19,6 +19,7 @@ mame (0.175-2) unstable; urgency=medium
   * Add kfreebsd.patch to solve a lot more build issues on kfreebsd-*.
     Many thanks to Steven Chamberlain!
   * Add hurd.patch with some fixes to the build on hurd-i386 systems.
+  * Make mame build verbosely by default, without entangling it to DH_VERBOSE.
 
  -- Cesare Falco <c.falco@ubuntu.com>  Fri, 08 Jul 2016 13:08:40 +0200
 
