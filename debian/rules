@@ -244,6 +244,7 @@ $(PKG)_$(VER)$(DTYPE).orig.tar.xz:
 	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bgfx/3rdparty/remotery/vis/extern/BrowserLib/Core/Code/Convert.js
 	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bgfx/3rdparty/scintilla/src/Editor.cxx.orig
 	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bgfx/3rdparty/scintilla/gtk/makefile.orig
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/glm/doc/api
 	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/lzma/7zr.exe
 	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/lzma/lzma.exe
 	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/portmidi/pm_java/JavaExe.exe
