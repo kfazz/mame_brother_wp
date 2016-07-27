@@ -17,6 +17,7 @@ mame (0.176-1) UNRELEASED; urgency=medium
     their -arch variants.
   * Add libutil-freebsd-dev to Build-Depends for kfreebsd-any.
   * Add hurd.patch with some fixes to the build on hurd-i386 systems.
+  * Add a makefile hack to allow building on a "gnu" platform with genie.
   * Drop remove-m64_flag_for_mips64el_alpha.patch, merged upstream.
   * Make mame build verbosely by default, without entangling it to DH_VERBOSE.
 

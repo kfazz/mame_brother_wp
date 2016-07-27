@@ -12,6 +12,23 @@ Index: mame-0.176/makefile
  ifeq ($(firstword $(filter Darwin,$(UNAME))),Darwin)
  OS := macosx
  GENIEOS := darwin
+@@ -1204,6 +1207,16 @@ linux: generate $(PROJECTDIR)/$(MAKETYPE
+ 	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-linux config=$(CONFIG) precompile
+ 	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-linux config=$(CONFIG)
+ 
++.PHONY: gnu_x86
++gnu_x86: generate $(PROJECTDIR)/$(MAKETYPE)-linux/Makefile
++	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-linux config=$(CONFIG)32 precompile
++	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-linux config=$(CONFIG)32
++
++.PHONY: gnu
++gnu: generate $(PROJECTDIR)/$(MAKETYPE)-linux/Makefile
++	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-linux config=$(CONFIG) precompile
++	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-linux config=$(CONFIG)
++
+ #-------------------------------------------------
+ # gmake-linux-clang
+ #-------------------------------------------------
 Index: mame-0.176/scripts/src/osd/sdl.lua
 ===================================================================
 --- mame-0.176.orig/scripts/src/osd/sdl.lua
