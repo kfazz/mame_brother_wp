@@ -1,11 +1,10 @@
-mame (0.175-2) unstable; urgency=medium
-
-  [ Cesare Falco ]
-  * Improved get-orig-source target
-  * Updated mame.ini files to most recent *path entries
-  * Install samples and additional .ini files as well
+mame (0.176-1) UNRELEASED; urgency=medium
 
   [ Jordi Mallach ]
+  * New upstream release.
+    - Includes Steven Chamberlain's kfreebsd fixes for several build errors
+      on kfreebsd-*. Many thanks! (closes: #830974)
+    - Includes fixes for ppc64el builds (closes: #825483).
   * Install bgfx, language, plugins and uismall.bdf files in mame-data.
     Thanks to Vas Crabb for pointing this out.
   * Add a override_dh_auto_test that just runs "mame -valid" after the build.
@@ -16,10 +15,15 @@ mame (0.175-2) unstable; urgency=medium
   * Add an empty override_dh_auto_build-indep rule, so arch-independent
     don't actually build the whole thing. Also rename dh_auto_test to
     their -arch variants.
-  * Add kfreebsd.patch to solve a lot more build issues on kfreebsd-*.
-    Many thanks to Steven Chamberlain!
+  * Add libutil-freebsd-dev to Build-Depends for kfreebsd-any.
   * Add hurd.patch with some fixes to the build on hurd-i386 systems.
+  * Drop remove-m64_flag_for_mips64el_alpha.patch, merged upstream.
   * Make mame build verbosely by default, without entangling it to DH_VERBOSE.
+
+  [ Cesare Falco ]
+  * Improved get-orig-source target
+  * Updated mame.ini files to most recent *path entries
+  * Install samples and additional .ini files as well
 
  -- Cesare Falco <c.falco@ubuntu.com>  Fri, 08 Jul 2016 13:08:40 +0200
 

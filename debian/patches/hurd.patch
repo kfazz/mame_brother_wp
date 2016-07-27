@@ -1,7 +1,7 @@
-Index: mame-0.175/makefile
+Index: mame-0.176/makefile
 ===================================================================
---- mame-0.175.orig/makefile
-+++ mame-0.175/makefile
+--- mame-0.176.orig/makefile
++++ mame-0.176/makefile
 @@ -193,6 +193,9 @@ ifeq ($(firstword $(filter OpenBSD,$(UNA
  OS := openbsd
  GENIEOS := bsd
@@ -12,10 +12,10 @@ Index: mame-0.175/makefile
  ifeq ($(firstword $(filter Darwin,$(UNAME))),Darwin)
  OS := macosx
  GENIEOS := darwin
-Index: mame-0.175/scripts/src/osd/sdl.lua
+Index: mame-0.176/scripts/src/osd/sdl.lua
 ===================================================================
---- mame-0.175.orig/scripts/src/osd/sdl.lua
-+++ mame-0.175/scripts/src/osd/sdl.lua
+--- mame-0.176.orig/scripts/src/osd/sdl.lua
++++ mame-0.176/scripts/src/osd/sdl.lua
 @@ -228,6 +228,9 @@ if _OPTIONS["targetos"]=="linux" then
  elseif _OPTIONS["targetos"]=="openbsd" then
  elseif _OPTIONS["targetos"]=="netbsd" then
@@ -26,10 +26,10 @@ Index: mame-0.175/scripts/src/osd/sdl.lua
  elseif _OPTIONS["targetos"]=="haiku" then
  elseif _OPTIONS["targetos"]=="asmjs" then
  elseif _OPTIONS["targetos"]=="windows" then
-Index: mame-0.175/src/osd/sdl/sdlprefix.h
+Index: mame-0.176/src/osd/sdl/sdlprefix.h
 ===================================================================
---- mame-0.175.orig/src/osd/sdl/sdlprefix.h
-+++ mame-0.175/src/osd/sdl/sdlprefix.h
+--- mame-0.176.orig/src/osd/sdl/sdlprefix.h
++++ mame-0.176/src/osd/sdl/sdlprefix.h
 @@ -41,7 +41,7 @@
  /* Large file support on IRIX needs _SGI_SOURCE */
  #undef _POSIX_SOURCE
@@ -39,23 +39,10 @@ Index: mame-0.175/src/osd/sdl/sdlprefix.h
  #define SDLMAME_LINUX 1
  
  #elif defined(__FreeBSD__)
-Index: mame-0.175/3rdparty/genie/src/host/premake.h
+Index: mame-0.176/src/osd/modules/file/posixfile.cpp
 ===================================================================
---- mame-0.175.orig/3rdparty/genie/src/host/premake.h
-+++ mame-0.175/3rdparty/genie/src/host/premake.h
-@@ -12,7 +12,7 @@
- 
- /* Identify the current platform I'm not sure how to reliably detect
-  * Windows but since it is the most common I use it as the default */
--#if defined(__linux__)
-+#if defined(__linux__) || defined(__GNU__)
- #define PLATFORM_LINUX    (1)
- #define PLATFORM_STRING   "linux"
- #elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
-Index: mame-0.175/src/osd/modules/file/posixfile.cpp
-===================================================================
---- mame-0.175.orig/src/osd/modules/file/posixfile.cpp
-+++ mame-0.175/src/osd/modules/file/posixfile.cpp
+--- mame-0.176.orig/src/osd/modules/file/posixfile.cpp
++++ mame-0.176/src/osd/modules/file/posixfile.cpp
 @@ -37,6 +37,12 @@
  #endif
  #endif
@@ -68,11 +55,11 @@ Index: mame-0.175/src/osd/modules/file/posixfile.cpp
 +
  // MAME headers
  #include "posixfile.h"
- 
-Index: mame-0.175/src/osd/modules/file/posixptty.cpp
+ #include "unicode.h"
+Index: mame-0.176/src/osd/modules/file/posixptty.cpp
 ===================================================================
---- mame-0.175.orig/src/osd/modules/file/posixptty.cpp
-+++ mame-0.175/src/osd/modules/file/posixptty.cpp
+--- mame-0.176.orig/src/osd/modules/file/posixptty.cpp
++++ mame-0.176/src/osd/modules/file/posixptty.cpp
 @@ -27,10 +27,18 @@
  #include <util.h>
  #elif defined(__linux__) || defined(EMSCRIPTEN)
@@ -92,10 +79,10 @@ Index: mame-0.175/src/osd/modules/file/posixptty.cpp
  
  namespace {
  #if defined(__APPLE__)
-Index: mame-0.175/scripts/genie.lua
+Index: mame-0.176/scripts/genie.lua
 ===================================================================
---- mame-0.175.orig/scripts/genie.lua
-+++ mame-0.175/scripts/genie.lua
+--- mame-0.176.orig/scripts/genie.lua
++++ mame-0.176/scripts/genie.lua
 @@ -117,6 +117,7 @@ newoption {
  		{ "freebsd",       "FreeBSD"                },
  		{ "netbsd",        "NetBSD"                 },
@@ -104,20 +91,16 @@ Index: mame-0.175/scripts/genie.lua
  		{ "pnacl",         "Native Client - PNaCl"  },
  		{ "linux",         "Linux"                  },
  		{ "ios",           "iOS"                    },
-Index: mame-0.175/3rdparty/luafilesystem/src/lfs.c
+Index: mame-0.176/src/osd/modules/render/drawbgfx.cpp
 ===================================================================
---- mame-0.175.orig/3rdparty/luafilesystem/src/lfs.c
-+++ mame-0.175/3rdparty/luafilesystem/src/lfs.c
-@@ -60,6 +60,12 @@
- #include <utime.h>
- #endif
+--- mame-0.176.orig/src/osd/modules/render/drawbgfx.cpp
++++ mame-0.176/src/osd/modules/render/drawbgfx.cpp
+@@ -132,7 +132,7 @@ static void* sdlNativeWindowHandle(SDL_W
+ 		return nullptr;
+ 	}
  
-+#ifdef __GNU__
-+#ifndef MAXPATHLEN
-+#define MAXPATHLEN 1024
-+#endif
-+#endif
-+
- #include <lua.h>
- #include <lauxlib.h>
- #include <lualib.h>
+-#   if BX_PLATFORM_LINUX || BX_PLATFORM_BSD || BX_PLATFORM_RPI
++#   if BX_PLATFORM_LINUX || BX_PLATFORM_BSD || BX_PLATFORM_HURD || BX_PLATFORM_RPI
+ 	return (void*)wmi.info.x11.window;
+ #   elif BX_PLATFORM_OSX
+ 	return wmi.info.cocoa.window;
