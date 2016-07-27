@@ -7,8 +7,6 @@ mame source: outdated-autotools-helper-file 3rdparty/libjpeg/config.sub 2009-11-
 mame source: outdated-autotools-helper-file 3rdparty/portaudio/config.guess 2011-05-11
 mame source: outdated-autotools-helper-file 3rdparty/portaudio/config.sub 2011-03-23
 mame source: license-problem-json-evil 3rdparty/rapidjson/license.txt
-mame source: outdated-autotools-helper-file 3rdparty/expat/conftools/config.guess 2011-05-11
-mame source: outdated-autotools-helper-file 3rdparty/expat/conftools/config.sub 2011-03-23
 mame source: source-contains-prebuilt-doxygen-documentation 3rdparty/winpcap/docs/html/
 mame source: source-contains-prebuilt-doxygen-documentation 3rdparty/libflac/doc/html/api/
 mame source: ancient-autotools-helper-file 3rdparty/portaudio/bindings/cpp/build/gnu/config.guess 2001-10-05

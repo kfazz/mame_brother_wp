@@ -21,6 +21,7 @@ mame (0.176-1) UNRELEASED; urgency=medium
   * Drop remove-m64_flag_for_mips64el_alpha.patch, merged upstream.
   * Make mame build verbosely by default, without entangling it to DH_VERBOSE.
   * Remove generated doxygen docs for a 3rdparty module from source (lintian).
+  * Remove unused lintian overrides.
 
   [ Cesare Falco ]
   * Improved get-orig-source target
