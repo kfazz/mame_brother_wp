@@ -237,8 +237,10 @@ $(PKG)_$(VER)$(DTYPE).orig.tar.xz:
 	cd $(TMPDIR)/$(PKG)-$(VER) && make clean && make cleansrc
 	rm -rf $(TMPDIR)/$(PKG)-$(VER)/.mame_version
 	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/zlib/contrib/dotzlib/DotZLib.chm
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/linux/bin2c
 	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/linux/genie
 	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/linux/ninja
+	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/windows/bin2c.exe
 	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/windows/genie.exe
 	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/windows/ninja.exe
 	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bgfx/3rdparty/remotery/vis/extern/BrowserLib/Core/Code/Convert.js
