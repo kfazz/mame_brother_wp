@@ -1,9 +1,9 @@
-mame (0.176-2) UNRELEASED; urgency=medium
+mame (0.176-2) unstable; urgency=medium
 
   * Brown paper bag time: fix perms for /etc/mame contents in
     override_dh_fixperms-arch, to fix arch:all builds.
 
- -- Jordi Mallach <jordi@debian.org>  Thu, 28 Jul 2016 08:35:29 +0200
+ -- Jordi Mallach <jordi@debian.org>  Thu, 28 Jul 2016 08:45:37 +0200
 
 mame (0.176-1) unstable; urgency=medium
 
