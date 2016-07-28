@@ -198,9 +198,12 @@ override_dh_install:
                --exclude=LICENSE \
                --exclude=README.md
 
-override_dh_fixperms-indep:
+override_dh_fixperms-arch:
 	dh_fixperms
 	find debian/mame/etc/mame -type f -execdir chmod 644 {} \;
+
+override_dh_fixperms-indep:
+	dh_fixperms
 	find debian/mame-data/usr/share/games/mame/artwork -type f -execdir chmod 644 {} \;
 	find debian/mame-data/usr/share/games/mame/bgfx -type f -execdir chmod 644 {} \;
 	find debian/mame-data/usr/share/games/mame/ctrlr -type f -execdir chmod 644 {} \;
