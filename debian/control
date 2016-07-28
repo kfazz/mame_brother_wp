@@ -22,7 +22,6 @@ Build-Depends: debhelper (>= 9),
  portaudio19-dev,
  python-dev,
  qtbase5-dev,
- subversion,
  zlib1g-dev
 Standards-Version: 3.9.8
 Vcs-Git: https://anonscm.debian.org/git/pkg-games/mame.git

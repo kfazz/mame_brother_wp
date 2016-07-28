@@ -1,3 +1,10 @@
+mame (0.176-3) UNRELEASED; urgency=medium
+
+  * Drop Build-Depends on subversion, nothing uses it these days, and it
+    was actually only necessary for get-orig-source target.
+
+ -- Jordi Mallach <jordi@debian.org>  Thu, 28 Jul 2016 09:59:03 +0200
+
 mame (0.176-2) unstable; urgency=medium
 
   * Brown paper bag time: fix perms for /etc/mame contents in
