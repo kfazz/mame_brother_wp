@@ -1,4 +1,4 @@
-mame (0.176-1) UNRELEASED; urgency=medium
+mame (0.176-1) unstable; urgency=medium
 
   [ Jordi Mallach ]
   * New upstream release.
@@ -29,7 +29,7 @@ mame (0.176-1) UNRELEASED; urgency=medium
   * Updated mame.ini files to most recent *path entries
   * Install samples and additional .ini files as well
 
- -- Cesare Falco <c.falco@ubuntu.com>  Fri, 08 Jul 2016 13:08:40 +0200
+ -- Jordi Mallach <jordi@debian.org>  Thu, 28 Jul 2016 07:28:07 +0200
 
 mame (0.175-1) unstable; urgency=medium
 
