@@ -1,2 +1,3 @@
 genie_freebsd_target.patch
 hurd.patch
+x32.patch
