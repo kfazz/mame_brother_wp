@@ -1,4 +1,4 @@
-mame (0.176-3) UNRELEASED; urgency=medium
+mame (0.176-3) unstable; urgency=medium
 
   * Drop Build-Depends on subversion, nothing uses it these days, and it
     was actually only necessary for get-orig-source target.
@@ -6,7 +6,7 @@ mame (0.176-3) UNRELEASED; urgency=medium
     rapidjson, adding a check for __x86_64__ && __ILP32__, to fix a
     build error on x32.
 
- -- Jordi Mallach <jordi@debian.org>  Thu, 28 Jul 2016 09:59:03 +0200
+ -- Jordi Mallach <jordi@debian.org>  Thu, 18 Aug 2016 18:13:13 +0200
 
 mame (0.176-2) unstable; urgency=medium
 
