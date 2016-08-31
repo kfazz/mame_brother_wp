@@ -1,10 +1,8 @@
 mame (0.177-1) unstable; urgency=medium
 
-  * New upstream release
-  * Removed patches accepted upstream
-  * Removed docs no longer distributed upstream
+  * New upstream release.
 
- -- Cesare Falco <c.falco@ubuntu.com>  Wed, 31 Aug 2016 15:58:14 +0200
+ -- Jordi Mallach <jordi@debian.org>  Wed, 31 Aug 2016 11:06:20 +0200
 
 mame (0.176-3) unstable; urgency=medium
 
