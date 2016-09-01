@@ -1,3 +1,11 @@
+mame (0.177-1) unstable; urgency=medium
+
+  * New upstream release
+  * Removed patches accepted upstream
+  * Removed docs no longer distributed upstream
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Wed, 31 Aug 2016 15:58:14 +0200
+
 mame (0.176-3) unstable; urgency=medium
 
   * Drop Build-Depends on subversion, nothing uses it these days, and it
