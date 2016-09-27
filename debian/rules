@@ -198,6 +198,9 @@ override_dh_install:
                --exclude=LICENSE \
                --exclude=README.md
 
+override_dh_installchangelogs:
+	dh_installchangelogs whatsnew.txt
+
 override_dh_fixperms-arch:
 	dh_fixperms
 	find debian/mame/etc/mame -type f -execdir chmod 644 {} \;

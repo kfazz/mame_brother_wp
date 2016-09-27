@@ -3,6 +3,7 @@ mame (0.177-1) unstable; urgency=medium
   * New upstream release.
   * Drop x32.patch, merged upstream.
   * Adapt packaging to massive upstream docs rewrite.
+  * Install whatsnew.txt as upstream changelog.
 
  -- Jordi Mallach <jordi@debian.org>  Wed, 31 Aug 2016 11:06:20 +0200
 
