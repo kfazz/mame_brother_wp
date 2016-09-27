@@ -8,7 +8,7 @@ mame (0.177-1) unstable; urgency=medium
   * Add the non-minified version of modernizr.js to d/missing-sources,
     taken from the modernizr-2.6.2+ds1-1 Debian source package.
 
- -- Jordi Mallach <jordi@debian.org>  Wed, 31 Aug 2016 11:06:20 +0200
+ -- Jordi Mallach <jordi@debian.org>  Tue, 27 Sep 2016 18:15:28 +0200
 
 mame (0.176-3) unstable; urgency=medium
 
