@@ -1,8 +1,6 @@
-docs/config.txt
-docs/emscripten.txt
-docs/floppy.txt
-docs/luaengine.md
-docs/m6502.txt
-docs/mame.txt
-docs/SDL.txt
-whatsnew.txt
+docs/source/advanced
+docs/source/commandline
+docs/source/initialsetup
+docs/source/techspecs
+docs/source/usingmame
+docs/source/whatis.rst
