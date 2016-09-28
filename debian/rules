@@ -196,9 +196,11 @@ override_dh_auto_test-arch:
 
 override_dh_install:
 	dh_install --fail-missing \
-               --exclude=dir.txt \
-               --exclude=LICENSE \
-               --exclude=README.md
+		   --exclude=dir.txt \
+		   --exclude=LICENSE \
+		   --exclude=README.md \
+		   --exclude=jquery.js \
+		   --exclude=underscore.js
 
 override_dh_installchangelogs:
 	dh_installchangelogs whatsnew.txt

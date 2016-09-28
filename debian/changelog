@@ -6,6 +6,12 @@ mame (0.178-1) UNRELEASED; urgency=medium
   * Add a new binary package mame-doc and move all the (generated) docs
     to this package.
   * Let mame suggest mame-doc.
+  * Exclude the install of jquery.js and underscore.js, and instead
+    depend and symlink to the packaged versions.
+  * Add sphinx_mathjax_location.patch: point at the local filesystem
+    path of the mathjax javascript, to avoid a privacy breach when opening
+    the docs in a browser.
+  * Add Depends on libjs-sphinxdoc and libjs-mathjax.
 
  -- Jordi Mallach <jordi@debian.org>  Wed, 28 Sep 2016 08:07:12 +0200
 
