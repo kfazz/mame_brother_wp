@@ -70,7 +70,7 @@ Architecture: any
 Depends: ${misc:Depends},
  ${shlibs:Depends}
 Recommends: mame (= ${source:Version})
-Description: Tools for MAME and MESS
+Description: Tools for MAME
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation).
  .
