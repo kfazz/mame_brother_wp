@@ -188,6 +188,7 @@ override_dh_auto_build-arch:
 	mv ui.ini default.ui.ini
 
 override_dh_auto_build-indep:
+	$(MAKE) -C docs singlehtml
 
 override_dh_auto_test-arch:
 	# Run MAME's internal validation tests

@@ -23,6 +23,7 @@ Build-Depends: debhelper (>= 9),
  python-dev,
  qtbase5-dev,
  zlib1g-dev
+Build-Depends-Indep: python3-sphinx
 Standards-Version: 3.9.8
 Vcs-Git: https://anonscm.debian.org/git/pkg-games/mame.git
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-games/mame.git
@@ -37,6 +38,7 @@ Depends: ${misc:Depends},
 Replaces: mess (<< 0.162)
 Breaks: mess (<< 0.162)
 Suggests: gnome-video-arcade,
+ mame-doc,
  mame-extra,
  mame-tools
 Description: Multiple Arcade Machine Emulator (MAME)
@@ -81,6 +83,17 @@ Description: Tools for MAME and MESS
   ldverify -- Laserdisc AVI/CHD verifier
   romcmp -- ROM comparison utility program
   testkeys -- keyboard code viewer
+
+Package: mame-doc
+Section: doc
+Architecture: all
+Depends: ${misc:Depends}
+Enhances: mame
+Description: Documentation for MAME
+ MAME is a hardware emulator: it faithfully reproduces the behavior of many
+ arcade machines (it is not a simulation).
+ .
+ This is sphinx-generated full documentation for the MAME system.
 
 Package: mess
 Depends: mame, ${misc:Depends}

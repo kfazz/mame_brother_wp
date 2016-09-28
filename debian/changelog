@@ -1,6 +1,11 @@
 mame (0.178-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Add Build-Depends-Indep on python3-sphinx.
+  * Build the singlehtml flavour of docs.
+  * Add a new binary package mame-doc and move all the (generated) docs
+    to this package.
+  * Let mame suggest mame-doc.
 
  -- Jordi Mallach <jordi@debian.org>  Wed, 28 Sep 2016 08:07:12 +0200
 
