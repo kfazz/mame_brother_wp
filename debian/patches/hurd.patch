@@ -1,3 +1,7 @@
+Author: Jordi Mallach <jordi@debian.org>
+Description: Several FTBFS fixes for Hurd systems.
+Forwarded: no
+
 Index: mame-0.176/makefile
 ===================================================================
 --- mame-0.176.orig/makefile

@@ -1,3 +1,7 @@
+Author: Jordi Mallach <jordi@debian.org>
+Description: Hack around genie to make kfreebsd builds work.
+Forwarded: no
+
 Index: mame-0.175/makefile
 ===================================================================
 --- mame-0.175.orig/makefile

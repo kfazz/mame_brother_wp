@@ -14,6 +14,7 @@ mame (0.178-1) UNRELEASED; urgency=medium
   * Add Depends on libjs-sphinxdoc and libjs-mathjax.
   * Register the html docs with doc-base.
   * Remove obsolete reference to MESS in mame-tools' description.
+  * Add missing patch headers.
 
  -- Jordi Mallach <jordi@debian.org>  Wed, 28 Sep 2016 08:07:12 +0200
 
