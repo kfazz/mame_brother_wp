@@ -2,10 +2,10 @@ Author: Jordi Mallach <jordi@debian.org>
 Description: Several FTBFS fixes for Hurd systems.
 Forwarded: no
 
-Index: mame-0.176/makefile
+Index: mame-0.178/makefile
 ===================================================================
---- mame-0.176.orig/makefile
-+++ mame-0.176/makefile
+--- mame-0.178.orig/makefile
++++ mame-0.178/makefile
 @@ -193,6 +193,9 @@ ifeq ($(firstword $(filter OpenBSD,$(UNA
  OS := openbsd
  GENIEOS := bsd
@@ -33,10 +33,10 @@ Index: mame-0.176/makefile
  #-------------------------------------------------
  # gmake-linux-clang
  #-------------------------------------------------
-Index: mame-0.176/scripts/src/osd/sdl.lua
+Index: mame-0.178/scripts/src/osd/sdl.lua
 ===================================================================
---- mame-0.176.orig/scripts/src/osd/sdl.lua
-+++ mame-0.176/scripts/src/osd/sdl.lua
+--- mame-0.178.orig/scripts/src/osd/sdl.lua
++++ mame-0.178/scripts/src/osd/sdl.lua
 @@ -228,6 +228,9 @@ if _OPTIONS["targetos"]=="linux" then
  elseif _OPTIONS["targetos"]=="openbsd" then
  elseif _OPTIONS["targetos"]=="netbsd" then
@@ -47,10 +47,10 @@ Index: mame-0.176/scripts/src/osd/sdl.lua
  elseif _OPTIONS["targetos"]=="haiku" then
  elseif _OPTIONS["targetos"]=="asmjs" then
  elseif _OPTIONS["targetos"]=="windows" then
-Index: mame-0.176/src/osd/sdl/sdlprefix.h
+Index: mame-0.178/src/osd/sdl/sdlprefix.h
 ===================================================================
---- mame-0.176.orig/src/osd/sdl/sdlprefix.h
-+++ mame-0.176/src/osd/sdl/sdlprefix.h
+--- mame-0.178.orig/src/osd/sdl/sdlprefix.h
++++ mame-0.178/src/osd/sdl/sdlprefix.h
 @@ -41,7 +41,7 @@
  /* Large file support on IRIX needs _SGI_SOURCE */
  #undef _POSIX_SOURCE
@@ -60,10 +60,10 @@ Index: mame-0.176/src/osd/sdl/sdlprefix.h
  #define SDLMAME_LINUX 1
  
  #elif defined(__FreeBSD__)
-Index: mame-0.176/src/osd/modules/file/posixfile.cpp
+Index: mame-0.178/src/osd/modules/file/posixfile.cpp
 ===================================================================
---- mame-0.176.orig/src/osd/modules/file/posixfile.cpp
-+++ mame-0.176/src/osd/modules/file/posixfile.cpp
+--- mame-0.178.orig/src/osd/modules/file/posixfile.cpp
++++ mame-0.178/src/osd/modules/file/posixfile.cpp
 @@ -37,6 +37,12 @@
  #endif
  #endif
@@ -77,10 +77,10 @@ Index: mame-0.176/src/osd/modules/file/posixfile.cpp
  // MAME headers
  #include "posixfile.h"
  #include "unicode.h"
-Index: mame-0.176/src/osd/modules/file/posixptty.cpp
+Index: mame-0.178/src/osd/modules/file/posixptty.cpp
 ===================================================================
---- mame-0.176.orig/src/osd/modules/file/posixptty.cpp
-+++ mame-0.176/src/osd/modules/file/posixptty.cpp
+--- mame-0.178.orig/src/osd/modules/file/posixptty.cpp
++++ mame-0.178/src/osd/modules/file/posixptty.cpp
 @@ -27,10 +27,18 @@
  #include <util.h>
  #elif defined(__linux__) || defined(EMSCRIPTEN)
@@ -100,10 +100,10 @@ Index: mame-0.176/src/osd/modules/file/posixptty.cpp
  
  namespace {
  #if defined(__APPLE__)
-Index: mame-0.176/scripts/genie.lua
+Index: mame-0.178/scripts/genie.lua
 ===================================================================
---- mame-0.176.orig/scripts/genie.lua
-+++ mame-0.176/scripts/genie.lua
+--- mame-0.178.orig/scripts/genie.lua
++++ mame-0.178/scripts/genie.lua
 @@ -125,6 +125,7 @@ newoption {
  		{ "freebsd",       "FreeBSD"                },
  		{ "netbsd",        "NetBSD"                 },
@@ -112,10 +112,10 @@ Index: mame-0.176/scripts/genie.lua
  		{ "pnacl",         "Native Client - PNaCl"  },
  		{ "linux",         "Linux"                  },
  		{ "ios",           "iOS"                    },
-Index: mame-0.176/src/osd/modules/render/drawbgfx.cpp
+Index: mame-0.178/src/osd/modules/render/drawbgfx.cpp
 ===================================================================
---- mame-0.176.orig/src/osd/modules/render/drawbgfx.cpp
-+++ mame-0.176/src/osd/modules/render/drawbgfx.cpp
+--- mame-0.178.orig/src/osd/modules/render/drawbgfx.cpp
++++ mame-0.178/src/osd/modules/render/drawbgfx.cpp
 @@ -143,7 +143,7 @@ static void* sdlNativeWindowHandle(SDL_W
  		return nullptr;
  	}
@@ -125,3 +125,16 @@ Index: mame-0.176/src/osd/modules/render/drawbgfx.cpp
  	return (void*)wmi.info.x11.window;
  #   elif BX_PLATFORM_OSX
  	return wmi.info.cocoa.window;
+Index: mame-0.178/3rdparty/bx/include/bx/os.h
+===================================================================
+--- mame-0.178.orig/3rdparty/bx/include/bx/os.h
++++ mame-0.178/3rdparty/bx/include/bx/os.h
+@@ -49,7 +49,7 @@
+ #	elif BX_PLATFORM_OSX
+ #		include <mach/mach.h> // mach_task_basic_info
+ #	elif BX_PLATFORM_HURD
+-#		include <unistd.h> // getpid
++#		include <pthread/pthread.h> // getpid
+ #	elif BX_PLATFORM_ANDROID
+ #		include "debug.h" // getTid is not implemented...
+ #	endif // BX_PLATFORM_ANDROID
