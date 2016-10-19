@@ -7,6 +7,8 @@ Uploaders: Cesare Falco <c.falco@ubuntu.com>,
  Jordi Mallach <jordi@debian.org>
 Build-Depends: debhelper (>= 9),
  dpkg-dev (>= 1.17),
+ gcc-5 [arm64],
+ g++-5 [arm64],
  libexpat1-dev,
  libflac-dev,
  libfontconfig1-dev,

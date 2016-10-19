@@ -1,6 +1,8 @@
 mame (0.178-2) UNRELEASED; urgency=medium
 
   * hurd.patch: use the correct include for pthread_safe().
+  * Build-Depend on and set CC/CXX to gcc-5/g++-5 on arm64, to workaround
+    a GCC 6 bug that causes MAME to FTBFS (closes: #840468).
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 06 Oct 2016 01:39:07 +0200
 

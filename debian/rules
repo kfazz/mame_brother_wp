@@ -61,7 +61,10 @@ endif
 
 ifeq ($(DEB_HOST_ARCH),arm64)
 DEB_OPTS += \
-    ARCHOPTS=-mabi=lp64
+    ARCHOPTS=-mabi=lp64 \
+    OVERRIDE_CXX=g++-5 \
+    OVERRIDE_CC=gcc-5 \
+    CC=gcc-5
 endif
 
 ifeq ($(DEB_HOST_ARCH),i386)
