@@ -89,7 +89,8 @@ Description: Tools for MAME
 Package: mame-doc
 Section: doc
 Architecture: all
-Depends: libjs-sphinxdoc, libjs-mathjax, ${misc:Depends}
+Depends: ${misc:Depends}
+Suggests: libjs-sphinxdoc, libjs-mathjax
 Enhances: mame
 Description: Documentation for MAME
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
