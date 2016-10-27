@@ -6,6 +6,7 @@ mame (0.179-1) UNRELEASED; urgency=medium
     a GCC 6 bug that causes MAME to FTBFS (closes: #840468).
   * Demote libjs-sphinxdoc and libjs-mathjax to Suggests, as the docs are
     still readable without those installed.
+  * Remove testkeys and add floptool to mame-tools' description.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 27 Oct 2016 02:06:54 +0200
 

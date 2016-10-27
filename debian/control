@@ -79,12 +79,12 @@ Description: Tools for MAME
  This package provides tools to be used with MAME. It currently contains:
   castool -- generic cassette manipulation tool for MAME
   chdman -- MAME Compressed Hunks of Data CHD manager
+  floptool -- Generic floppy image manipulation tool for MESS
   imgtool -- generic image manipulation tool for MAME
   jedutil -- binary to/from JEDEC file converter
   ldresample -- Laserdisc audio synchronizer and resampler
   ldverify -- Laserdisc AVI/CHD verifier
   romcmp -- ROM comparison utility program
-  testkeys -- keyboard code viewer
 
 Package: mame-doc
 Section: doc
