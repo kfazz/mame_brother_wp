@@ -1,3 +1,9 @@
+mame (0.179-2) UNRELEASED; urgency=medium
+
+  * Pass -fPIC to arm64 build to workaround yet another build issue.
+
+ -- Jordi Mallach <jordi@debian.org>  Wed, 02 Nov 2016 11:56:14 +0100
+
 mame (0.179-1) unstable; urgency=medium
 
   * New upstream release.
