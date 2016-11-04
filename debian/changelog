@@ -1,6 +1,8 @@
 mame (0.179-2) UNRELEASED; urgency=medium
 
-  * Pass -fPIC to arm64 build to workaround yet another build issue.
+  * Add -fPIC to arm64 ARCHOPTS to workaround yet another build issue.
+  * Add m68000_archopts.patch: Add $(ARCHOPTS) to compiler invocation in the
+    standalone m68000 makefile.
 
  -- Jordi Mallach <jordi@debian.org>  Wed, 02 Nov 2016 11:56:14 +0100
 
