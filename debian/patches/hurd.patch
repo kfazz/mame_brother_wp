@@ -6,7 +6,7 @@ Index: mame-0.178/makefile
 ===================================================================
 --- mame-0.178.orig/makefile
 +++ mame-0.178/makefile
-@@ -193,6 +193,9 @@ ifeq ($(firstword $(filter OpenBSD,$(UNA
+@@ -192,6 +192,9 @@ ifeq ($(firstword $(filter OpenBSD,$(UNA
  OS := openbsd
  GENIEOS := bsd
  endif
@@ -16,7 +16,7 @@ Index: mame-0.178/makefile
  ifeq ($(firstword $(filter Darwin,$(UNAME))),Darwin)
  OS := macosx
  GENIEOS := darwin
-@@ -1180,6 +1183,16 @@ linux: generate $(PROJECTDIR)/$(MAKETYPE
+@@ -1233,6 +1236,16 @@ linux: generate $(PROJECTDIR)/$(MAKETYPE
  	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-linux config=$(CONFIG) precompile
  	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-linux config=$(CONFIG)
  
@@ -104,7 +104,7 @@ Index: mame-0.178/scripts/genie.lua
 ===================================================================
 --- mame-0.178.orig/scripts/genie.lua
 +++ mame-0.178/scripts/genie.lua
-@@ -125,6 +125,7 @@ newoption {
+@@ -129,6 +129,7 @@ newoption {
  		{ "freebsd",       "FreeBSD"                },
  		{ "netbsd",        "NetBSD"                 },
  		{ "openbsd",       "OpenBSD"                },
@@ -125,16 +125,3 @@ Index: mame-0.178/src/osd/modules/render/drawbgfx.cpp
  	return (void*)wmi.info.x11.window;
  #   elif BX_PLATFORM_OSX
  	return wmi.info.cocoa.window;
-Index: mame-0.178/3rdparty/bx/include/bx/os.h
-===================================================================
---- mame-0.178.orig/3rdparty/bx/include/bx/os.h
-+++ mame-0.178/3rdparty/bx/include/bx/os.h
-@@ -49,7 +49,7 @@
- #	elif BX_PLATFORM_OSX
- #		include <mach/mach.h> // mach_task_basic_info
- #	elif BX_PLATFORM_HURD
--#		include <unistd.h> // getpid
-+#		include <pthread/pthread.h> // getpid
- #	elif BX_PLATFORM_ANDROID
- #		include "debug.h" // getTid is not implemented...
- #	endif // BX_PLATFORM_ANDROID
