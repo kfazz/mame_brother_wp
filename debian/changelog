@@ -4,6 +4,9 @@ mame (0.180-1) UNRELEASED; urgency=medium
   [ Cesare Falco ]
   * Refresh patches.
 
+  [ Jordi Mallach ]
+  * Switch back to GCC6 for arm64, as the compiler regression is now fixed.
+
  -- Cesare Falco <c.falco@ubuntu.com>  Wed, 30 Nov 2016 09:26:17 +0100
 
 mame (0.179-2) unstable; urgency=medium
