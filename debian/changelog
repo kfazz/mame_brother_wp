@@ -1,4 +1,4 @@
-mame (0.180-1) UNRELEASED; urgency=medium
+mame (0.180-1) unstable; urgency=medium
 
   * New upstream release
   [ Cesare Falco ]
@@ -7,7 +7,7 @@ mame (0.180-1) UNRELEASED; urgency=medium
   [ Jordi Mallach ]
   * Switch back to GCC6 for arm64, as the compiler regression is now fixed.
 
- -- Cesare Falco <c.falco@ubuntu.com>  Wed, 30 Nov 2016 09:26:17 +0100
+ -- Jordi Mallach <jordi@debian.org>  Wed, 14 Dec 2016 12:37:35 +0100
 
 mame (0.179-2) unstable; urgency=medium
 
