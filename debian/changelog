@@ -1,6 +1,7 @@
 mame (0.181-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Bump debhelper compat to v10.
 
  -- Jordi Mallach <jordi@debian.org>  Wed, 28 Dec 2016 11:13:39 +0100
 
