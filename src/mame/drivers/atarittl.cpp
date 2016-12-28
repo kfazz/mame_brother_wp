@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Fabio Priuli, Scott Stone
+// copyright-holders:Fabio Priuli, Scott Stone, Couriersud
 /***************************************************************************
 
  Atari / Kee Games Driver - Discrete Games made in the 1970's
@@ -53,6 +53,19 @@
  TM-018                   Dodgeball/Dodgem (Not Produced/Released) (1975)
  TM-024                   Qwakers (Not Produced/Released) (1974?) (Kee Games clone of Qwak!?)
 
+ - Information (current as of 21 Dec. 2016) on what logic chips (and some analog parts) are still needed to be emulated in the
+   netlist system per-game:
+
+ TM-057 (Stunt Cycle)
+    4136  Quad General-Purpose Operational Amplifiers
+
+ TM-055 (Indy 4)
+    7406  Hex Inverter Buffers/Drivers with O.C. H.V. Outputs (note: Might not be needed, could just clone from 7404)
+    7414  Hex Schmitt-Trigger Inverters
+    7417  Hex Buffers/Drivers
+    74164 8-bit Serial-In, Parallel-Out Shift Register
+    9301  1-of-10 Decoder
+    LM339 Quad Comparator
 
 ***************************************************************************/
 
@@ -136,7 +149,6 @@ void atarikee_state::video_start()
 
 
 static MACHINE_CONFIG_START( atarikee, atarikee_state )
-
 	/* basic machine hardware */
 	MCFG_DEVICE_ADD("maincpu", NETLIST_CPU, NETLIST_CLOCK)
 	MCFG_NETLIST_SETUP(atarikee)

@@ -4,7 +4,9 @@
 
     ACT Apricot PC/Xi
 
-    - Error 29 (timer failed)
+    TODO:
+    - External RS232 data transfers to the Apricot are usually garbage (but
+      sending to an external target works fine)
     - Dump of the keyboard MCU ROM needed (can be dumped using test mode)
 
 ***************************************************************************/
@@ -25,6 +27,7 @@
 #include "bus/rs232/rs232.h"
 #include "bus/apricot/expansion/expansion.h"
 #include "bus/apricot/keyboard/keyboard.h"
+#include "softlist.h"
 
 
 //**************************************************************************
@@ -311,7 +314,7 @@ MC6845_UPDATE_ROW( apricot_state::crtc_update_row )
 			for (int x = 0; x <= 10; x++)
 			{
 				int color = fill ? 1 : BIT(data, x);
-				if (BIT(code, 15)) color = !color; // reverse?
+				color ^= BIT(code, 15); // reverse?
 				bitmap.pix32(y, x + i*10) = pen[color ? 1 + BIT(code, 14) : 0];
 			}
 		}
@@ -441,12 +444,12 @@ static MACHINE_CONFIG_START( apricot, apricot_state )
 
 	// rs232 port
 	MCFG_RS232_PORT_ADD("rs232", default_rs232_devices, nullptr)
-// note: missing a receive clock callback to support external clock mode
-// (m_data_selector_rts == 1 and m_data_selector_dtr == 0)
+	// note: missing a receive clock callback to support external clock mode
+	// (m_data_selector_rts == 1 and m_data_selector_dtr == 0)
 	MCFG_RS232_RXD_HANDLER(DEVWRITELINE("ic15", z80sio0_device, rxa_w))
 	MCFG_RS232_DCD_HANDLER(DEVWRITELINE("ic15", z80sio0_device, dcda_w))
 	MCFG_RS232_DSR_HANDLER(DEVWRITELINE("ic15", z80sio0_device, synca_w))
-	MCFG_RS232_CTS_HANDLER(DEVWRITELINE("ic15", z80sio0_device, ctsa_w))
+	MCFG_RS232_CTS_HANDLER(DEVWRITELINE("ic15", z80sio0_device, ctsa_w))  MCFG_DEVCB_XOR(1)
 
 	// keyboard
 	MCFG_APRICOT_KEYBOARD_INTERFACE_ADD("kbd", "hle")
@@ -470,6 +473,8 @@ static MACHINE_CONFIG_START( apricot, apricot_state )
 	MCFG_WD_FDC_DRQ_CALLBACK(DEVWRITELINE("ic71", i8089_device, drq1_w))
 	MCFG_FLOPPY_DRIVE_ADD("ic68:0", apricot_floppies, "d32w", apricot_state::floppy_formats)
 	MCFG_FLOPPY_DRIVE_ADD("ic68:1", apricot_floppies, "d32w", apricot_state::floppy_formats)
+
+	MCFG_SOFTWARE_LIST_ADD("flop_list", "apricot_flop")
 
 	// expansion bus
 	MCFG_EXPANSION_ADD("exp", "ic91")
@@ -504,5 +509,5 @@ ROM_END
 //**************************************************************************
 
 //    YEAR  NAME       PARENT   COMPAT  MACHINE    INPUT  CLASS          INIT  COMPANY  FULLNAME      FLAGS
-COMP( 1983, apricot,   0,       0,      apricot,   0,     driver_device, 0,    "ACT",   "Apricot PC", MACHINE_NOT_WORKING )
-COMP( 1984, apricotxi, apricot, 0,      apricotxi, 0,     driver_device, 0,    "ACT",   "Apricot Xi", MACHINE_NOT_WORKING )
+COMP( 1983, apricot,   0,       0,      apricot,   0,     driver_device, 0,    "ACT",   "Apricot PC", 0 )
+COMP( 1984, apricotxi, apricot, 0,      apricotxi, 0,     driver_device, 0,    "ACT",   "Apricot Xi", 0 )
