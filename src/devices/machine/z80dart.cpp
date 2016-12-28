@@ -814,6 +814,7 @@ uint8_t z80dart_channel::control_read()
 void z80dart_channel::control_write(uint8_t data)
 {
 	int reg = m_wr[0] & WR0_REGISTER_MASK;
+	uint8_t prev = m_wr[reg];
 
 	LOG(("Z80DART \"%s\" Channel %c : Control Register Write '%02x'\n", m_owner->tag(), 'A' + m_index, data));
 
@@ -882,6 +883,16 @@ void z80dart_channel::control_write(uint8_t data)
 			// return from interrupt
 			LOG(("Z80DART \"%s\" Channel %c : Return from Interrupt\n", m_owner->tag(), 'A' + m_index));
 			m_uart->z80daisy_irq_reti();
+			if((m_uart->m_variant == z80dart_device::TYPE_I8274) || (m_uart->m_variant == z80dart_device::TYPE_UPD7201))
+			{
+				if (m_uart->m_chanB->m_wr[1] & z80dart_channel::WR1_STATUS_VECTOR)
+				{
+					if((m_uart->m_chanA->m_wr[1] & 0x18) == z80dart_channel::WR2_MODE_8086_8088)
+						m_uart->m_chanB->m_rr[2] = (m_uart->m_chanB->m_wr[2] & 0xf8) | 0x07;
+					else
+						m_uart->m_chanB->m_rr[2] = (m_uart->m_chanB->m_wr[2] & 0xe3) | 0x1c;
+				}
+			}
 			break;
 		}
 		break;
@@ -934,7 +945,8 @@ void z80dart_channel::control_write(uint8_t data)
 		LOG(("Z80DART \"%s\" Channel %c : Auto Enables %u\n", m_owner->tag(), 'A' + m_index, (data & WR3_AUTO_ENABLES) ? 1 : 0));
 		LOG(("Z80DART \"%s\" Channel %c : Receiver Bits/Character %u\n", m_owner->tag(), 'A' + m_index, get_rx_word_length()));
 
-		update_serial();
+		if (data != prev)
+			update_serial();
 		break;
 
 	case 4:
@@ -943,7 +955,8 @@ void z80dart_channel::control_write(uint8_t data)
 		LOG(("Z80DART \"%s\" Channel %c : Stop Bits %s\n", m_owner->tag(), 'A' + m_index, stop_bits_tostring(get_stop_bits())));
 		LOG(("Z80DART \"%s\" Channel %c : Clock Mode %uX\n", m_owner->tag(), 'A' + m_index, get_clock_mode()));
 
-		update_serial();
+		if (data != prev)
+			update_serial();
 		break;
 
 	case 5:
@@ -953,7 +966,8 @@ void z80dart_channel::control_write(uint8_t data)
 		LOG(("Z80DART \"%s\" Channel %c : Request to Send %u\n", m_owner->tag(), 'A' + m_index, (data & WR5_RTS) ? 1 : 0));
 		LOG(("Z80DART \"%s\" Channel %c : Data Terminal Ready %u\n", m_owner->tag(), 'A' + m_index, (data & WR5_DTR) ? 1 : 0));
 
-		update_serial();
+		if (data != prev)
+			update_serial();
 
 		if (data & WR5_RTS)
 		{
