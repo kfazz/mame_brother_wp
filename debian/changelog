@@ -1,10 +1,10 @@
-mame (0.181-1) UNRELEASED; urgency=medium
+mame (0.181-1) unstable; urgency=medium
 
   * New upstream release.
   * Bump debhelper compat to v10.
   * Refresh patches.
 
- -- Jordi Mallach <jordi@debian.org>  Wed, 28 Dec 2016 11:13:39 +0100
+ -- Jordi Mallach <jordi@debian.org>  Wed, 28 Dec 2016 13:01:35 +0100
 
 mame (0.180-1) unstable; urgency=medium
 
