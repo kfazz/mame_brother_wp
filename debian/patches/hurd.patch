@@ -2,10 +2,10 @@ Author: Jordi Mallach <jordi@debian.org>
 Description: Several FTBFS fixes for Hurd systems.
 Forwarded: no
 
-Index: mame-0.178/makefile
+Index: mame/makefile
 ===================================================================
---- mame-0.178.orig/makefile
-+++ mame-0.178/makefile
+--- mame.orig/makefile
++++ mame/makefile
 @@ -192,6 +192,9 @@ ifeq ($(firstword $(filter OpenBSD,$(UNA
  OS := openbsd
  GENIEOS := bsd
@@ -16,7 +16,7 @@ Index: mame-0.178/makefile
  ifeq ($(firstword $(filter Darwin,$(UNAME))),Darwin)
  OS := macosx
  GENIEOS := darwin
-@@ -1233,6 +1236,16 @@ linux: generate $(PROJECTDIR)/$(MAKETYPE
+@@ -1241,6 +1244,16 @@ linux: generate $(PROJECTDIR)/$(MAKETYPE
  	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-linux config=$(CONFIG) precompile
  	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-linux config=$(CONFIG)
  
@@ -33,10 +33,10 @@ Index: mame-0.178/makefile
  #-------------------------------------------------
  # gmake-linux-clang
  #-------------------------------------------------
-Index: mame-0.178/scripts/src/osd/sdl.lua
+Index: mame/scripts/src/osd/sdl.lua
 ===================================================================
---- mame-0.178.orig/scripts/src/osd/sdl.lua
-+++ mame-0.178/scripts/src/osd/sdl.lua
+--- mame.orig/scripts/src/osd/sdl.lua
++++ mame/scripts/src/osd/sdl.lua
 @@ -228,6 +228,9 @@ if _OPTIONS["targetos"]=="linux" then
  elseif _OPTIONS["targetos"]=="openbsd" then
  elseif _OPTIONS["targetos"]=="netbsd" then
@@ -47,10 +47,10 @@ Index: mame-0.178/scripts/src/osd/sdl.lua
  elseif _OPTIONS["targetos"]=="haiku" then
  elseif _OPTIONS["targetos"]=="asmjs" then
  elseif _OPTIONS["targetos"]=="windows" then
-Index: mame-0.178/src/osd/sdl/sdlprefix.h
+Index: mame/src/osd/sdl/sdlprefix.h
 ===================================================================
---- mame-0.178.orig/src/osd/sdl/sdlprefix.h
-+++ mame-0.178/src/osd/sdl/sdlprefix.h
+--- mame.orig/src/osd/sdl/sdlprefix.h
++++ mame/src/osd/sdl/sdlprefix.h
 @@ -41,7 +41,7 @@
  /* Large file support on IRIX needs _SGI_SOURCE */
  #undef _POSIX_SOURCE
@@ -60,10 +60,10 @@ Index: mame-0.178/src/osd/sdl/sdlprefix.h
  #define SDLMAME_LINUX 1
  
  #elif defined(__FreeBSD__)
-Index: mame-0.178/src/osd/modules/file/posixfile.cpp
+Index: mame/src/osd/modules/file/posixfile.cpp
 ===================================================================
---- mame-0.178.orig/src/osd/modules/file/posixfile.cpp
-+++ mame-0.178/src/osd/modules/file/posixfile.cpp
+--- mame.orig/src/osd/modules/file/posixfile.cpp
++++ mame/src/osd/modules/file/posixfile.cpp
 @@ -37,6 +37,12 @@
  #endif
  #endif
@@ -77,10 +77,10 @@ Index: mame-0.178/src/osd/modules/file/posixfile.cpp
  // MAME headers
  #include "posixfile.h"
  #include "unicode.h"
-Index: mame-0.178/src/osd/modules/file/posixptty.cpp
+Index: mame/src/osd/modules/file/posixptty.cpp
 ===================================================================
---- mame-0.178.orig/src/osd/modules/file/posixptty.cpp
-+++ mame-0.178/src/osd/modules/file/posixptty.cpp
+--- mame.orig/src/osd/modules/file/posixptty.cpp
++++ mame/src/osd/modules/file/posixptty.cpp
 @@ -27,10 +27,18 @@
  #include <util.h>
  #elif defined(__linux__) || defined(EMSCRIPTEN)
@@ -100,10 +100,10 @@ Index: mame-0.178/src/osd/modules/file/posixptty.cpp
  
  namespace {
  #if defined(__APPLE__)
-Index: mame-0.178/scripts/genie.lua
+Index: mame/scripts/genie.lua
 ===================================================================
---- mame-0.178.orig/scripts/genie.lua
-+++ mame-0.178/scripts/genie.lua
+--- mame.orig/scripts/genie.lua
++++ mame/scripts/genie.lua
 @@ -129,6 +129,7 @@ newoption {
  		{ "freebsd",       "FreeBSD"                },
  		{ "netbsd",        "NetBSD"                 },
@@ -112,10 +112,10 @@ Index: mame-0.178/scripts/genie.lua
  		{ "pnacl",         "Native Client - PNaCl"  },
  		{ "linux",         "Linux"                  },
  		{ "ios",           "iOS"                    },
-Index: mame-0.178/src/osd/modules/render/drawbgfx.cpp
+Index: mame/src/osd/modules/render/drawbgfx.cpp
 ===================================================================
---- mame-0.178.orig/src/osd/modules/render/drawbgfx.cpp
-+++ mame-0.178/src/osd/modules/render/drawbgfx.cpp
+--- mame.orig/src/osd/modules/render/drawbgfx.cpp
++++ mame/src/osd/modules/render/drawbgfx.cpp
 @@ -143,7 +143,7 @@ static void* sdlNativeWindowHandle(SDL_W
  		return nullptr;
  	}
