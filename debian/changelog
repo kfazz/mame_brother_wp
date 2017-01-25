@@ -1,6 +1,8 @@
 mame (0.182-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Add kfreebsd_dirent.h_path.patch to fix dirent.h include path for
+    kFreeBSD builds (thanks Steven Chamberlain; closes: #852507).
 
  -- Jordi Mallach <jordi@debian.org>  Wed, 25 Jan 2017 13:03:04 +0100
 
