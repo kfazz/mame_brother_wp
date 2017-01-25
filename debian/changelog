@@ -5,6 +5,8 @@ mame (0.182-1) UNRELEASED; urgency=medium
     kFreeBSD builds (thanks Steven Chamberlain; closes: #852507).
   * Drop ConvertUTF.* from the tarball as it is under the Unicode
     non-free license.
+  * Add avoid_linenoise.patch: define NO_USE_LINENOISE and guard uses of
+    linenoise code with it, to avoid the need to compile 3rdparty/linenoise.
 
  -- Jordi Mallach <jordi@debian.org>  Wed, 25 Jan 2017 13:03:04 +0100
 
