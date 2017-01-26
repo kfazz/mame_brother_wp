@@ -1,4 +1,4 @@
-mame (0.182-1) UNRELEASED; urgency=medium
+mame (0.182-1) unstable; urgency=medium
 
   * New upstream release.
   * Add kfreebsd_dirent.h_path.patch to fix dirent.h include path for
@@ -8,7 +8,7 @@ mame (0.182-1) UNRELEASED; urgency=medium
   * Add avoid_linenoise.patch: define NO_USE_LINENOISE and guard uses of
     linenoise code with it, to avoid the need to compile 3rdparty/linenoise.
 
- -- Jordi Mallach <jordi@debian.org>  Wed, 25 Jan 2017 13:03:04 +0100
+ -- Jordi Mallach <jordi@debian.org>  Thu, 26 Jan 2017 01:56:43 +0100
 
 mame (0.181-1) unstable; urgency=medium
 
