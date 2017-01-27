@@ -6,7 +6,7 @@ Index: mame/makefile
 ===================================================================
 --- mame.orig/makefile
 +++ mame/makefile
-@@ -192,6 +192,9 @@ ifeq ($(firstword $(filter OpenBSD,$(UNA
+@@ -193,6 +193,9 @@ ifeq ($(firstword $(filter OpenBSD,$(UNA
  OS := openbsd
  GENIEOS := bsd
  endif
@@ -16,7 +16,7 @@ Index: mame/makefile
  ifeq ($(firstword $(filter Darwin,$(UNAME))),Darwin)
  OS := macosx
  GENIEOS := darwin
-@@ -1241,6 +1244,16 @@ linux: generate $(PROJECTDIR)/$(MAKETYPE
+@@ -1247,6 +1250,16 @@ linux: generate $(PROJECTDIR)/$(MAKETYPE
  	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-linux config=$(CONFIG) precompile
  	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-linux config=$(CONFIG)
  
@@ -37,7 +37,7 @@ Index: mame/scripts/src/osd/sdl.lua
 ===================================================================
 --- mame.orig/scripts/src/osd/sdl.lua
 +++ mame/scripts/src/osd/sdl.lua
-@@ -228,6 +228,9 @@ if _OPTIONS["targetos"]=="linux" then
+@@ -229,6 +229,9 @@ if _OPTIONS["targetos"]=="linux" then
  elseif _OPTIONS["targetos"]=="openbsd" then
  elseif _OPTIONS["targetos"]=="netbsd" then
  	SDL_NETWORK         = "pcap"
