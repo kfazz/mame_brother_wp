@@ -1,3 +1,9 @@
+mame (0.183-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Jordi Mallach <jordi@debian.org>  Fri, 03 Mar 2017 19:22:07 +0100
+
 mame (0.182-1) unstable; urgency=medium
 
   * New upstream release.
