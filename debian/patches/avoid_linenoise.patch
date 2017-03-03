@@ -6,7 +6,7 @@ Index: mame/makefile
 ===================================================================
 --- mame.orig/makefile
 +++ mame/makefile
-@@ -779,6 +779,10 @@ endif
+@@ -784,6 +784,10 @@ endif
  ifdef WEBASSEMBLY
  PARAMS += --WEBASSEMBLY='$(WEBASSEMBLY)'
  endif
@@ -55,7 +55,7 @@ Index: mame/scripts/src/3rdparty.lua
  	files {
  		MAME_DIR .. "3rdparty/lua-linenoise/linenoise_none.c",
  	}
-@@ -1572,7 +1572,7 @@ end
+@@ -1621,7 +1621,7 @@ end
  --------------------------------------------------
  -- linenoise-ng library
  --------------------------------------------------

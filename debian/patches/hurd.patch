@@ -6,7 +6,7 @@ Index: mame/makefile
 ===================================================================
 --- mame.orig/makefile
 +++ mame/makefile
-@@ -193,6 +193,9 @@ ifeq ($(firstword $(filter OpenBSD,$(UNA
+@@ -194,6 +194,9 @@ ifeq ($(firstword $(filter OpenBSD,$(UNA
  OS := openbsd
  GENIEOS := bsd
  endif
@@ -16,7 +16,7 @@ Index: mame/makefile
  ifeq ($(firstword $(filter Darwin,$(UNAME))),Darwin)
  OS := macosx
  GENIEOS := darwin
-@@ -1247,6 +1250,16 @@ linux: generate $(PROJECTDIR)/$(MAKETYPE
+@@ -1252,6 +1255,16 @@ linux: generate $(PROJECTDIR)/$(MAKETYPE
  	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-linux config=$(CONFIG) precompile
  	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-linux config=$(CONFIG)
  

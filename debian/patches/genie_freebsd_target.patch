@@ -6,7 +6,7 @@ Index: mame/makefile
 ===================================================================
 --- mame.orig/makefile
 +++ mame/makefile
-@@ -179,19 +179,19 @@ GENIEOS := solaris
+@@ -180,19 +180,19 @@ GENIEOS := solaris
  endif
  ifeq ($(firstword $(filter FreeBSD,$(UNAME))),FreeBSD)
  OS := freebsd
