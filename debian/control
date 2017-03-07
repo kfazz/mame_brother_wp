@@ -62,7 +62,8 @@ Description: Multiple Arcade Machine Emulator (MAME) -- data files
  machines. These ROMs are subject to copyright and it is in most of the cases
  illegal to use them if you do not own the arcade machine.
  .
- This package provides MAME hash files, keymaps and artwork.
+ This package provides MAME hash files, keymaps, artwork, language files,
+ shaders, plugins and audio samples.
 
 Package: mame-tools
 Section: utils
