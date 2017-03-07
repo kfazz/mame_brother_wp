@@ -1,6 +1,7 @@
 mame (0.183-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Drop transitional mess and mess-data packages.
 
  -- Jordi Mallach <jordi@debian.org>  Fri, 03 Mar 2017 19:22:07 +0100
 

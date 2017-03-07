@@ -1,5 +1,3 @@
-mame source: duplicate-short-description mess mess-data
-mame source: duplicate-long-description mess mess-data
 mame source: ancient-autotools-helper-file 3rdparty/libflac/config.guess 2003-06-17
 mame source: ancient-autotools-helper-file 3rdparty/libflac/config.sub 2003-06-18
 mame source: outdated-autotools-helper-file 3rdparty/libjpeg/config.guess 2009-11-20
