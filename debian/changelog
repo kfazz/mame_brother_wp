@@ -1,10 +1,10 @@
-mame (0.183-1) UNRELEASED; urgency=medium
+mame (0.183-1) experimental; urgency=medium
 
   * New upstream release.
   * Drop transitional mess and mess-data packages.
   * Extend mame-data's description slightly.
 
- -- Jordi Mallach <jordi@debian.org>  Fri, 03 Mar 2017 19:22:07 +0100
+ -- Jordi Mallach <jordi@debian.org>  Tue, 07 Mar 2017 21:37:54 +0100
 
 mame (0.182-1) unstable; urgency=medium
 
