@@ -95,9 +95,9 @@ NETLIB_UPDATE(solver)
 	bool force_solve = (netlist().time() < netlist_time::from_double(2 * m_params.m_max_timestep));
 
 #if HAS_OPENMP && USE_OPENMP
-	const std::size_t t_cnt = m_mat_solvers.size();
 	if (m_parallel())
 	{
+		const std::size_t t_cnt = m_mat_solvers.size();
 		//omp_set_num_threads(3);
 		//omp_set_dynamic(0);
 		#pragma omp parallel
@@ -116,11 +116,11 @@ NETLIB_UPDATE(solver)
 				solver->update_inputs();
 	}
 	else
-		for (int i = 0; i < t_cnt; i++)
-			if (m_mat_solvers[i]->has_timestep_devices() || force_solve)
+		for (auto & solver : m_mat_solvers)
+			if (solver->has_timestep_devices() || force_solve)
 			{
 				// Ignore return value
-				ATTR_UNUSED const netlist_time ts = m_mat_solvers[i]->solve();
+				ATTR_UNUSED const netlist_time ts = solver->solve();
 				solver->update_inputs();
 			}
 #else
@@ -136,8 +136,7 @@ NETLIB_UPDATE(solver)
 	/* step circuit */
 	if (!m_Q_step.net().is_queued())
 	{
-		m_Q_step.net().toggle_new_Q();
-		m_Q_step.net().push_to_queue(netlist_time::from_double(m_params.m_max_timestep));
+		m_Q_step.net().toggle_and_push_to_queue(netlist_time::from_double(m_params.m_max_timestep));
 	}
 }
 

@@ -1,541 +1,454 @@
-0.183
+0.184
 -----
 
 
 MAMETesters Bugs Fixed
 ----------------------
-- 05559: [DIP/Input] (nbmj9195.cpp) jituroku: Resolved DIP settings, on Mame most are Undefined (kamilz)
-- 05577: [DIP/Input] (nbmj9195.cpp) mjanbari: DIP Settings resolved (kamilz)
-- 05599: [DIP/Input] (srmp2.cpp) rmgoldyh: DIP Settings (kamilz)
-- 06470: [DIP/Input] (qix.cpp) qix: Unable to map service buttons with ctrlr.cfg (OzFalcon)
-- 06477: [Cheat System] All systems: MAME should ignore problematic cheats (or at least exit gracefully) (cuavas)
-- 06485: [Documentation] (peyper.cpp) ator: The year of publication is 1985. (AJR)
-- 06499: [Gameplay] (xain.cpp) xsleena and clones: Some enemies in the second stage has disappeared (cuavas)
-- 06500: [Interface] DAT files: Unable to use multiple paths (crazyc)
-- 06503: [DIP/Input] (galaxian.cpp) galaxianmo: Bonus Life dip switch information is incorrect (GoldS_TCRF)
+- 04454: [Crash/Freeze] (saturn.cpp) seabass: Black Screen after patents screen (Angelo Salese)
+- 06337: [DIP/Input] (mz2500.cpp) mz2500: The HELP key is missing (einstein95)
+- 06361: [Cheat System] Cartrdige memory accessed directly with cheats will crash MAME (Pugsy)
+- 06492: [Crash/Freeze] (model3.cpp) scud: Crash running scud with -bench 90, regression. (Phil Bennett)
+- 06504: [Misc.] (coleco.cpp) coleco and clones, adam: Wrong device interface name (gordon-fish)
+- 06512: [Graphics] (seattle.cpp) hyprdriv: Occasionally, when the race starting, the 3D graphic objects start to glitch and
+  disappear, game become unplayable (R. Belmont)
+- 06513: [Crash/Freeze] (gba.cpp) gba: Many previously working gba sl_roms now freeze (R. Belmont)
 
 
 New working machines
 --------------------
-Atari Touch Me [hap, Sean Riddle]
-Dodge Man [ShouTime, Darksoft, Anonymous Donator, Smitdogg, The Dumping Union]
-Flash Boy (vertical) [DECO Cassette MD] (No.12/Ver.0/Set.1,Japan) [Game Preservation Society]
-Fonas 2 Player Baseball [hap, Sean Riddle]
-GAF Melody Madness [hap, Kevin Horton]
-Galaxy Games StarPak 3
-  [Keith M. Kolmos, Rod_Wod, Sean Sutton, Soren Skou Nielsen, Russell Howard, Francis Ramirez, Tourniquet, Brian Troha,
-  coolmod, Smitdogg, The Dumping Union, Luca Elia]
-LJN I Took a Lickin' From a Chicken [hap, Sean Riddle]
-Lakeside Le Boom [hap, Kevin Horton]
-Omega [ShouTime, Darksoft, Anonymous Donator, Smitdogg, Vas Crabb, Brian Troha, The Dumping Union]
-Sega Sonic Cosmo Fighter [ShouTime, Anonymous Donator, The Dumping Union]
-Tandy Electronic Basketball [hap, Sean Riddle]
-Tiger Half Court Computer Basketball [hap, Sean Riddle]
-Tiger/Tandy Rocket Pinball [hap, Sean Riddle]
-Toytronic Football (2 versions) [hap, Sean Riddle]
-Westinghouse Test Console Serial #5 [Vas Crabb, NekoEd]
+Ampro Computers Little Board/186 [Carl, Al Kossow]
+Coleco Quiz Wiz Challenger [hap, Sean Riddle, Rik]
+Conic Electronic I.Q. [hap, Sean Riddle]
+CXG Chess 2001 [hap, Berger]
+Micro Genius IQ-501 [kazblox]
+Micro Genius IQ-502 [kazblox]
+Shiny Golds [caius, The Dumping Union]
+USG/Tandy 2-Player Football [hap, Sean Riddle]
 
 
 New working clones
 ------------------
-Dungeons & Dragons: Shadow over Mystara (Japan 960223) [ShouTime, Steven Fairbrother, Smitdogg, The Dumping Union]
-Force SYS68K/CPU-21 [Joakim Larsson Edstrom]
-Force SYS68K/CPU-21A [Joakim Larsson Edstrom]
-Force SYS68K/CPU-21B [Joakim Larsson Edstrom]
-Force SYS68K/CPU-21S [Joakim Larsson Edstrom]
-Force SYS68K/CPU-21YA [Joakim Larsson Edstrom]
-Force SYS68K/CPU-21YB [Joakim Larsson Edstrom]
-Gals Panic S2 (Europe) [rtw, The Dumping Union]
-Head Panic (ver. 0702, 02/07/1999) [hammy, Brian Troha, The Dumping Union]
-Missile Attack [f205v]
-Momoko 120% (bootleg) [Paul Hogger]
-Mouse Trap (version 2) [Pat Daderko]
-Osborne-1 (Nuevo Video) [Vas Crabb, NekoEd]
-Puzznic (US) [Coolmod]
-Red Hawk (Greece) [Abelardator2]
-Sitcom Timer [Vas Crabb]
-Speak and Help  [Andrew Welburn]
-Street Fighter EX2 (USA 980312) [coolmod, The Dumping Union]
-The King of Fighters '99 - Millennium Battle (Korean release) [Brian Hargrove]
-The Pit Boss (2214-07, U5-0A) [Brian Troha, The Dumping Union]
-VS Block Breaker (Europe) [rtw, The Dumping Union]
-Zen Nippon Pro-Wrestling Featuring Virtua (Taiwan) [XeD]
+2 On 2 Open Ice Challenge (rev 1.2A) [Brian Troha, Sean Sutton, Smitdogg, The Dumping Union]
+Chesster Challenger (V1.3) [yovan]
+Dendy Classic 2 [kazblox]
+Dynablaster / Bomber Man (bootleg, set 3) [Hammy, The Dumping Union]
+Fidelity Designer 2100 [hap]
+Fidelity The Excellence (model EP12, set 2) [yovan]
+Fidelity The Par Excellence (rev. B) [hap]
+Flashgal (set 1, Kyugo logo) [Corrado Tomaselli, The Dumping Union]
+Gals Panic (MCU Protected, set 2) [Hammy, The Dumping Union]
+Granit 'S' [hap]
+Kishon Chesster [yovan]
+Milton Bradley Simon (Rev F) [Sean Riddle]
+NBA Play By Play (ver AAB) [alca]
+Phoenix (IDI bootleg) [f205v]
+Radical Radial (Japan) [ShouTime, The Dumping Union]
+Raiden II (Germany) [caius, The Dumping Union]
+San Francisco Rush (boot rom L 1.06A) [Andrew Welburn, The Dumping Union]
+Shanghai III (US, prototype) [coolmod, The Dumping Union]
+Street Fighter II: The World Warrior (World 910129) [Janniz]
+Super Crowns Golf (World) [Kevin Eshbach, The Dumping Union]
 
 
 Machines promoted to working
 ----------------------------
-Gallop Racer 2 (Export) [Brian Troha, The Dumping Union]
-Ideal Maniac [hap, Sean Riddle, Kevin Horton]
-Milton Bradley Plus One [hap, Sean Riddle]
+Novag Constellation Forte (version B) [hap]
+Heathkit H-19 [Mark Garlanger]
+HP-9845C [f.ulivi, Angus Kueckes]
+SM 7238 [shattered]
 
 
 Clones promoted to working
 --------------------------
-Donkey Kong 3 (bootleg on Ambush hardware) [Dirk Best]
-Gallop Racer 2 (Japan) [Brian Troha, The Dumping Union]
-Gallop Racer 2 Link HW (Japan) [Brian Troha, The Dumping Union]
+Heathkit H-19 w/ Super-19 ROM [Mark Garlanger]
+Heathkit H-19 w/ Watzman ROM [Mark Garlanger]
 
 
 New machines marked as NOT_WORKING
 ----------------------------------
-Dragon's Eye (0100521V, NSW/ACT) [Heihachi_73]
-InterPro 2800 [Patrick Mackinlay]
-K.G. Bird (0200024V, NSW/ACT) [Heihachi_73]
-KOF Sky Stage (v1.00J) [rtw]
-Mega Card (Ver.0210, encrypted) [Team Europe, f205v, Sean Riddle, Roberto Fresca]
-Penguin Pirate II (0100869V, Victoria) [Heihachi_73]
-Phantom Pays (0500005V, NSW/ACT) [Heihachi_73]
-Star Horse 2001 (satellite, Rev B) [any, Lord Nightmare, MetalliC, rtw, ShouTime]
-The King of Fighters XII (v1.00) [Niko]
-Toucan Tango (0100782V, NSW/ACT) [Heihachi_73]
-Tsukande Toru Chicchi [Alex Cmaylo, The Dumping Union, R. Belmont]
-Winning Post (RHG0418-04, US) [Heihachi_73]
-Wizard Ways (0200396V, NSW/ACT) [Heihachi_73]
+Alchemist (01J02046, Venezuela) [Heihachi_73]
+Arizona [PinMAME]
+Bachelorette Party (BHG1248, US) [Heihachi_73]
+Caprice Pro-Action Baseball [hap, Sean Riddle]
+Cowboy 8 Ball [PinMAME]
+Disco Dancing [PinMAME]
+Dream Weaver (0200586V, NSW/ACT) [Heihachi_73]
+Eltec Eurocom II V7 [shattered]
+Fast Fortune (0100651V, NSW/ACT) [Heihachi_73]
+Force [PinMAME]
+Haunted Hotel [PinMAME]
+Hustler [PinMAME]
+Jumpin' Joey (0100383V, NSW/ACT) [Heihachi_73]
+King Kong [PinMAME]
+Lucky Clover (0300109V, NSW/ACT) [Heihachi_73]
+Mammoth Money (0100425V, NSW/ACT) [Heihachi_73]
+Penguin Pirate (0100674V, NSW/ACT) [Heihachi_73]
+Reel Power (0100400V, NSW/ACT) [Heihachi_73]
+Rushin Rooster (0100534V, NSW/ACT) [Heihachi_73]
+Silver Wolf (0100673V, NSW/ACT) [Heihachi_73]
+Snow Cat (0100405V, NSW/ACT) [Heihachi_73]
+Soreike! Anpanman Popcorn Factory (Rev B) [ShouTime, Anonymous Donator, The Dumping Union]
+Space Ship [PinMAME]
+Subor SB-486 [kazblox]
+Thor (0200319V, NSW/ACT) [Heihachi_73]
+Thunder Heart (0200333V, NSW/ACT) [Heihachi_73]
+Time Machine (LTD, 4 players) [PinMAME]
+Trick Shooter [PinMAME]
+USG Programmable Baseball [hap, Sean Riddle]
+Viking King [PinMAME]
+White Force [PinMAME]
+Wicked Winnings (0100553V, NSW/ACT) [Heihachi_73]
+Wild Angels (0100337V, NSW/ACT) [Heihachi_73]
+Yukon Gold (03J00191, NSW/ACT) [Heihachi_73]
+Zoofari [R. Belmont, Sean Sutton, Smitdogg, The Dumping Union]
 
 
 New clones marked as NOT_WORKING
 --------------------------------
-Amazon Hunt III (rev. 1, French) [PinMAME]
-Arena (French) [PinMAME]
-Arena (German) [PinMAME]
-Bad Girls (French) [PinMAME]
-Bad Girls (German) [PinMAME]
-Big House (French) [PinMAME]
-Big House (German) [PinMAME]
-Bone Busters Inc. (German) [PinMAME]
-Bounty Hunter (German) [PinMAME]
-Diamond Lady (French) [PinMAME]
-Diamond Lady (German) [PinMAME]
-Dolphin Treasure - Cash Express (AHG1606, US) [Heihachi_73]
-Excalibur (French) [PinMAME]
-Excalibur (German) [PinMAME]
-Gamshara (World, 10021 Ver.A) [Bill D., The Dumping Union]
-Genesis (French) [PinMAME]
-Genesis (German) [PinMAME]
-Gold Wings (French) [PinMAME]
-Gold Wings (German) [PinMAME]
-Golden Pyramids (0100878V, Victoria) [Heihachi_73]
-Heathkit H-19 w/ Super-19 ROM [Mark Garlanger]
-Heathkit H-19 w/ Watzman ROM [Mark Garlanger]
-Hollywood Heat (French) [PinMAME]
-Hollywood Heat (German) [PinMAME]
-Hot Shots (French) [PinMAME]
-Hot Shots (German) [PinMAME]
-Margarita Magic (EHG1558, US) [Heihachi_73]
-Mars - God of War (Prototype) [PinMAME]
-Missile Attack [f205v]
-Monte Carlo (Pinball, French) [PinMAME]
-Monte Carlo (Pinball, German) [PinMAME]
-Monte Carlo (Pinball, rev. 2) [PinMAME]
-Panther Magic (0100716V, NSW/ACT) [Heihachi_73]
-Pet Shop (0100731V, NSW/ACT) [Heihachi_73]
-Q.T. Bird (0500009V, NSW/ACT) [Heihachi_73]
-Raven (German) [PinMAME]
-Robo-War (French) [PinMAME]
-Rock (German) [PinMAME]
-Rock Encore (German) [PinMAME]
-Rollergames (AD-2) Prototype [PinMAME]
-Rollergames (LF-2) French [PinMAME]
-Rollergames (LF-3) French [PinMAME]
-Spring Break (French) [PinMAME]
-Spring Break (German) [PinMAME]
-Tag-Team Wrestling (German) [PinMAME]
-T.T. Defender
-  [ShouTime, Renato Mucciarelli, Jan Stuhler, Surgeville, John Wilke, Rod_Wod, Mr. Goodwraith, ranger_lennier, Antonio Jover,
-  ArcadeDude, Paul Vining, Ryan Gatto, joey35car, Smitdogg, The Dumping Union]
-TX-Sector (French) [PinMAME]
-TX-Sector (German) [PinMAME]
-Victory (Pinball, French) [PinMAME]
-Victory (Pinball, German) [PinMAME]
-Virtua Bowling (Hong Kong, V101HJS) [Abelardator2]
-Virtual On 2: Oratorio Tangram (Revision A) [twistedsymphony]
+Boot Scootin' (GHG1008-03, US) [Heihachi_73]
+Cash Cat (0100557V, NSW/ACT) [Heihachi_73]
+Cash Cat (0100676V, NSW/ACT) [Heihachi_73]
+The Chariot Challenge (0100787V, NSW/ACT) [Heihachi_73]
+Desert Bloom (0300111V, NSW/ACT) [Heihachi_73]
+Dolphin Treasure - Cash Express (AHG1519, US) [Heihachi_73]
+Dolphin Treasure - Cash Express (AHG1607, US) [Heihachi_73]
+Griffon (Olympia bootleg of Phoenix) [f205v, The Dumping Union]
+Harley Davidson (L-2) [PinMAME]
+Karnov (Japan, bootleg with NEC D8748HD) [The Iron Goat]
+King Galah (0100536V, NSW/ACT) [Heihachi_73]
+Loco Loot (0100473V, NSW/ACT) [Heihachi_73]
+M82 Display Unit (PAL) [kazblox]
+Magic Mask (AHG1549, US) [Heihachi_73]
+Magic Touch (0300455V, NSW/ACT) [Heihachi_73]
+Mine, Mine, Mine (0400115V, NSW/ACT) [Heihachi_73]
+Money Mouse (0300469V, NSW/ACT) [Heihachi_73]
+Mountain Money (0100289V, NSW/ACT) [Heihachi_73]
+Orchid Mist (0100849V, NSW/ACT) [Heihachi_73]
+Oscar (0100348V, NSW/ACT) [Heihachi_73]
+OutRun 2 Special Tours (GDX-0014) [Ordyne, The Dumping Union]
+Penguin Brothers (Japan, bootleg) [Rod_Wod, Team Europe and The Dumping Union]
+Penguin Pays (0100113V, NSW/ACT) [Heihachi_73]
+Penguin Pays - Penguin Pucks (EHG1257, US) [Heihachi_73]
+Penguin Pirate (0200578V, NSW/ACT) [Heihachi_73]
+Pot O' Gold (U.S. Games, v580F) [deathmock]
+PPG Waveterm A [shattered]
+Queen of the Nile (0101139V, NSW/ACT) [Heihachi_73]
+Queen of the Nile (0101707V, Brazil) [Heihachi_73]
+Queen of the Nile (04J00784, Venezuela) [Heihachi_73]
+Queen of the Nile - Cash Express (AHG1525, US) [Heihachi_73]
+Queen of the Nile - Cash Express (AHG1609, US) [Heihachi_73]
+San Francisco Rush: The Rock (Wavenet, boot rom L 1.38, GUTS Aug 19 1997 / MAIN Aug 19 1997) [Andrew Welburn, The Dumping Union]
+San Francisco Rush: The Rock (Wavenet, boot rom L 1.38, GUTS Aug 6 1997 / MAIN Aug 5 1997)  [Andrew Welburn, The Dumping Union]
+Skins Game Tournament Edition [mrsinister]
+Super Bucks III (0100711V, NSW/ACT) [Heihachi_73]
+Sweethearts II (0200465V, NSW/ACT) [Heihachi_73]
+Time Machine (LTD, 2 players) [PinMAME]
+Thunder Heart (0200334V, NSW/ACT) [Heihachi_73]
+Tropical Delight (0100269V, NSW/ACT) [Heihachi_73]
+Time Traveler (set 2) [Ordyne, The Dumping Union]
+Unicorn Dreaming (0100813V, NSW/ACT) [Heihachi_73]
+Wangan Midnight Maximum Tune 2 (Export) (GDX-0016) [Ordyne, The Dumping Union]
+Zephy (alternate set) [PinMAME]
 
 
 New working software list additions
 -----------------------------------
-abc80_flop: Hires Invasion demo [Genesis Project]
-aim65_cart: AIM 65/PC100 Extended BASIC v2.1 & v2.3, AIM 65 Instant Pascal v1.0 [Nigel Barnes]
-atom_flop: Manic Miner (conversion) [Nigel Barnes]
-bbcb_flop: Sherston titles, Byte the Apple music demos [Nigel Barnes]
-gamate: Fortune 'n Luck [Peter Wilhemsen]
+archimedes: Over 20 games and applications [Nigel Barnes]
+bbcb_flop: Disk User coverdisks, Bad Apple and X-Pansions Elevation demos [Nigel Barnes]
+bbcm_flop: Enjoy The Silence and Retribution X demos [Nigel Barnes]
+c64_cass: speakeasy [Dagarman]
 ibm5150:
-  688 Attack Sub (5.25"), Cartooners, Cartooners in Space, Starflight 2: Trade Routes of the Cloud Nebula (Alt), Zany Golf
-  [Octocontrabass]
-  Aces High, Amnesia, Boulder Dash, Bruce Lee, Bubble Bobble, Double Dragon, Double Dragon II, Double Dragon III,
-  Earthly Delights, Executive Suite, Frederick Forsyth's The Fourth Protocol, The Lost Treasures of Infocom,
-  The Lost Treasures of Infocom II, Mega Man, Mega Man III, Metal Gear, MINIX 1.x, Prince of Persia, PSI-5 Trading Company,
-  RoboCop, Wendin Multiuser DOS [Justin Kerk]
-pico: Ecco Jr. e la GrandeCaccia al Tesoro nell'Oceano! (Ita) [f205v]
-z88_cart: game conversions and commercial applications [Nigel Barnes]
-zx81_cass: over 550 games and applications [Nigel Barnes]
+  Bivouac, Chuck Yeager's Advanced Flight Trainer, Double Dragon (5.25", older), EDITEXTE,
+  Indianapolis 500: The Simulation (3.5", newer), Label Magic, Licence to Kill, Multitexte, Pick'n Pile, Prehistorik,
+  PrintMaster Plus, Rockford, Skweek
+  [breiztiger]
+ibm5170:
+  Adaptec EZ-SCSI 3.1 German, AMouse Driver Disk v7.0, Borland Eureka 1.0, Borland Paradox 3.01 (German),
+  Borland Paradox 4.0 (German, 2 versions),
+  IBM DOS 5.02 (German), MS-DOS 6.22 (German), Windows 3.1 (German), Windows for Workgroups 3.11 (German)
+  [darkstar]
+megadriv: TOm and Jerry (Jpn) [ElBarto]
+nes: Magic Kid GooGoo [kazblox]
+ti74: Maths and Finance cartridges [PockEmul]
+vic1001_cass: speakeasy (partial dump) [Dagarman]
 
 
-New NOT_WORKING software list additions
----------------------------------------
-ibm5150: Astro-Dodge, BurgerTime [Justin Kerk]
-zx80_cass: small selection of games [Nigel Barnes]
+New software list additions marked as NOT_WORKING
+-------------------------------------------------
+ibm5150:
+  Ikari Warriors (alt), First Samurai, JetFighter I: The Adventure, Turbo Driver [breiztiger]
 
 
 Source Changes
 --------------
--Added preliminary Clipper CPU core Interpro 2800 driver. [Patrick Mackinlay]
-
--Amiga updates: [Dirk Best]
- * Converted the Amiga keyboards to a bus interface with slot devices.
- * Addes a German A500 keyboard variant, keyboard fixes.
- * Moved and renamed Amiga sound device, added pinout and description.
- * Moved audio related registers into Paula device, now independent from Amiga state class.
- * Made Akiko independent from driver state.
-
--ambush: Rewrote driver. [Dirk Best]
- * Use tilemap system to draw background/foreground characters (and use generic gfx_8x8x2_planar layout).
- * Added mario and dkong3 bootlegs running on extended hardware.
-   - Color PROMs for these haven't been dumped, currently using the PROMs from the original.
- * Updated and corrected DIP switches.
- * Documented tile attribute RAM and sprite RAM layout bits.
- * Use screen raw parameters.
- * Added connector layout, updated TODO list and ROM filenames.
-
--thayers: Fixed keyboard scanning, inputs and communication. [Curt Coder]
-
--vic20 updates: [Curt Coder]
- * Emulated the PPP SpeakEasy (Votrax SC-01-A) cartridge.
- * Emulated the Data 20 Display Manager 40/80 column video cartridge.
-
--c64: Emulated the PPP Speakeasy 64 (Votrax SC-01-A) cartridge. [Curt Coder]
-
--abc800_dsk: Fixed sector interleave. [Curt Coder]
-
--PIC16C5x updates: [hap]
- * Added basic support for the old GI PIC1650 and PIC1655.
- * Made RTCC (aka T0CKI) pin an input line handler.
-
--PIC CPU: Fixed writes with the status register as destination. [Luca Elia]
- * Write all bits except TO and PD, thus enabling e.g. bcf, bsf or clrf to change the flags.
- * rlf and rrf must update the flags after the store to work correctly on this register.
+-Changed games to use 4-way joysticks. [AJR]
+ * assault, bagman.cpp (all games except squasitsa), bballs, darktowr, ddungeon, horekid, klax, maddonna, pushman, stoffy, supduck,
+    toffy, trog (trogpa4 prototype uses different inputs)
 
--More complete Galaxy Games emulation: [Luca Elia]
- * Created devices for the galaxy games carts (EEPROM + Flash + PIC) and the slot(s).
- * Removed code patches and emulated the PIC communication and bank switching.
- * Converted the blitter to a device (cesblit.cpp).
- * Moved the Galaxy Games from tmaster.cpp to their own driver (galgames.cpp).
+-tms1024/tms1025: Added input callbacks and read handler. [AJR]
+ * docastle.cpp: Read inputs through TMS1025.
 
--ms0515.cpp: Hooked up keyboard and floppy, improved video emulation etc. [shattered]
+-hanaroku: Added NVRAM and hopper. [AJR]
 
--dsk_dsk format: Propagate CRC error flags. [shattered]
+-feversoc: Added coin hopper output (prize hopper doesn't quite work). [AJR]
 
--ms7004 keyboard: Handle incoming serial data via INT pin. [shattered]
+-hp9845b: Use standard instance names (and type) for optional ROMs. [AJR]
 
--tigerroad.cpp: replaced bballs MCU simulation with dump from MC68705R3, added to parent set as BAD_DUMP.
- [TeamEurope, Brizzo, Vas Crabb]
+-merit.cpp: PSG type is AY-3-8912. [AJR]
 
--dec0.cpp updates: [Vas Crabb, CAPS0ff]
- * Added dump for baddudes MCU with note about likely bit error.
- * Replaced drgninja MCU simulation with hacked version of baddudes dump.
- * Latch cleanup: 'LS374 senses positive edge, others are educted guesses.
+-Converted screen_device VBLANK callback to devcb_write_line. [AJR]
+ * Renamed screen_eof_xxx to screen_vblank_xxx in many drivers.
 
--m6805: Added CMOS devices, miscellaneous fixes. [Vas Crabb]
- * Added m146805 and m68hc05 to unidasm.
- * Fixed disassembly of BIT opcodes.
- * Fixed burning cycles on disabled interrupts.
- * Cleaned up BIH/BIL handling.
- * Made opcode tables configurable in m6805_base_device, provided tables for HMOS, CMOS and HC families.
- * Implemented MUL instruction, made unimplemented STOP and WAIT raise fatal error.
- * Implemented 'HC05 edge-sensitive external interrupts.
- * Added partially implemented MC68HC05C4, MC68HC05C8 and MC68HC705C8A devices.
- * Fixed problem with edge case in 68705 timer overflow interrupt when TDR=0.
-   - Fixes Zorba keyboard and MT6499.
-
--Fixed crash on loading invalid cheats, MAME now logs an error and continues. [Vas Crabb]
-
--Made debugger fall back from binary to default base on 0b prefix. [Vas Crabb]
- * This makes expressions like 0B12 parse as hex in hex memory spaces.
- * Where there's ambiguity (e.g 0B01) binary takes precedence.
-
--Natural keyboard fixes: [Vas Crabb]
- * Fixed Shift-Alt combinations.
- * Fixed modifiers with LLE keyboards (shift/alt now work reliably with Sun, Amiga, RM Nimbus, etc.).
- * Fixed crash on keyboard inputs with four characters.
-
--Amiga keyboard updates: [Vas Crabb]
- * Corrected polarity of KB_DATA from Amiga to keyboard.
- * Completely rewrote 68HC05CxA-based A1200 keyboard device, now working.
- * Fixed KB_DATA mixing in A500 keyboard.
- * Made A500 keyboard caps lock LED output name consistent with A1200.
- * Added Alt- and Alt-Shift- characters to A500 US keyboard.
- * Factored out matrix keys to a common module shared by A500/A1200.
- * Made new German matrix based on US matrix with Alt-chars hooked up.
- * Added layouts for France/Belgium, Italy and Sweden/Finland, Spain, Denmark, Switzerland, Norway and UK.
-   - Switzerland has French/German config option, natural mode only works for French.
- * Added borderline usable dead keys for natural keyboard.
-
--Osborne-1 updates: [Vas Crabb]
- * Added Osborne-1 with Nuevo Video board as a clone.
- * Made Alpha Lock a toggling key rather than a fake DIP switch.
-
--Made object finder arrays meet more Container/Sequence requirements (allows use of range-based for and many standard algorithms).
- [Vas Crabb]
-
--dl1416: Split interface into signal-level and bus-level APIs, improved support for different variants. [Vas Crabb]
-
--sitcom updates: [Vas Crabb]
- * Implemented Boot and Reset buttons and remapping of low 32kB.
- * Hooked up PIA, I/O space mirrors, and RS232 interface for downloading programs.
-   - PIA ports connected to LED outputs and keypad inputs.
- * Added camera shutter speed measurement rig as a clone.
- * Added a software list with example programs from web site.
-   - Software list is not connected yet, need to load software by full path.
-
--Cherry-picked some features from self-registering drivers PoC: [Vas Crabb]
- * Use size_t for sizes and <algorithm> for algorithms.
- * Fixed up some files that were getting linked into multiple libraries.
- * Added missing virtual method to sh2 peripheral class.
- * Put shortname in driver struct for locality.
- * Made LRU cache use shared pointers for safety.
+-lastbank: Added coin counters. [AJR]
 
--Used known plaintext attack to obtain Omega program encryption key. [Vas Crabb]
+-Added skeleton device for Video System C7-01 GGA. [AJR]
 
--Converted many naked pointers to required_region_ptr. [Robbbert]
+-taito_z.cpp: Fixed subtle color pen bug in Mexico GP stage for Continental Circus. [Angelo Salese]
 
--m6845: Fixed starting address in row/column mode (used by osborne1nv). [Robbbert]
+-8x300dasm: Corrected JMP target addresses. [Barry Rodewald]
 
--Update GENie [Branimir Karadzic]
+-Work around bug in msys2 C runtime causing garbage on console with DInput controllers. [Brad Hughes]
 
--List command format changes: [Tafoid]
- * Changes to output produced to better deal with maximum limits of certain items.
- * Fixed issue with -listroms output not displaying hapyfsh2 rom sizes correctly.
+-abc80: Converted to scanline based rendering, fixed graphics characters, and fixed sound. [Curt Coder]
+ * Genesis Project demos (abcdemo, hiresinv) are now fully working.
 
--Fixed building using system portaudio and utf8proc. [belegdol]
+-Ambush: Cleaned up driver state. [Dirk Best]
 
--Provided the PIC code for all four StarPak cartridges. [Keith M. Kolmos]
+-ay8910: Added a write handler for the case of bc1=a0 and bc2=a1. [Dirk Best]
 
--Confirmed MC68705R3 bootstrap program matches MC68705U3 (and U5 for that matter). [Brizzo]
+-blockade: Rewrote driver: [Dirk Best]
+ * Removed fake interrupts, rewrote coin handling, corrected CPU type.
+ * Used screen raw parameters and generic 8x8x1 gfx layout.
 
--Identified bad dumps and fixed info for a number of Aristocrat games. [Heihachi_73]
+-popper: Got some meat back onto the bones: [Dirk Best]
+ * Made full memory map for main and sub CPUs derived from schematics.
+ * Added both DIP switches with proper defaults.
+ * Hooked up interrupt generation logic.
+ * Decoded character and sprite layout, draw character tilemap.
+ * Added raw screen parameters (to be verified).
+ * Hooked up inputs and flip screen.
+ * Fixed audio hookup.
 
--aristmk5: Rearranged controls to be more playable and added PORT_NAMEs. [Heihachi_73]
+-HP9845C improvements: [f.ulivi, Angus Kueckes]
+ * Expanded from 1 to 4 I/O slots.
+ * Allowed RAM size to be configured with -ram option.
+ * Implemented HP-9845C driver (color version of the 9845 range of machines).
+ * Improved 9845C lightpen emulation.
+ * nanoprocessor: Fixed a subtle bug in interrupt handling.
 
--polyplay: Added light organ and layout. [SailorSat]
- * Traced the lines on the board to figure out how the lightorgan worked - a zero crossing detector triggers NMI on the CPU, which
-    then operates the light organ.
+-n64 updates: [Happy]
+ * Added short delay between RDP full sync and DP interrupt, allowing RSP IRQ to arrive first.
+ * Let debugger disassembly windows track RSP PC.
+ * Flush RSP DRC cache when SP DMA changes IMEM.
+ * Make element selection in vector load/store RSP DRC C functions consistent with other implementations.
+ * Fix a minor issue with RDP disassembly listing for Load Block.
 
--aristmk5: Added SPI and hopper emulation - allows non-US games to boot. [Sandro Ronco]
+-mips3 DRC : Ensure branch delay slot instruction is not virtual instruction before trying to generate code to add it to the block
+ checksum, fixed FPU register aliasing. [Happy]
 
--imgtool: Fixed recently introduced bug that could cause hex numbers to be incorrectly emitted in usage text. [Nathan Woods]
+-z80sio: Added i8274/upd7201 variants, refactored interrupts, improved logging. [Joakim Larsson Edstrom]
+ * isbc: Changed to use z80sio.cpp i8274 device instead of z80dart.cpp's, removed m1_r() workaournd.
 
--saa1099.cpp: Use correct LFSR polynomial for SAA1099 noise generation, added some notes about an unemulated undocumented feature of
- the noise clock. [Jepael, Lord Nightmare]
+-fcisio: Added layout and and RS232 configured for terminals on all 8 serial ports. [Joakim Larsson Edstrom]
 
--Fixed clipper CPU build. [Felipe Sanches]
+-netlist: Added a heap priority queue, fix netlist stats collection, fixed new clang warnings, reduced footprint of extended clock.
+ [couriersud]
 
--Netlist library improvements: [Couriersud]
- * Refactored netlist pmf code.
- * Small optimization for diode calculations.
- * Remove virtual from some destructors and make them protected.
- * Various cleanups and performance improvements.
- * Fixed some inconsistencies.
- * Reduced overhead to load data (ROMs) in netlist significantly.
-   - Previous solution involved a significant amount of redundant replication of information and objects. Now, a ROM name specified
-      as SOMEROM(x21, "romlabel") will be automatically be loaded from region "netlisttag:romlabel" (see hazl1500 and stuntcyc).
- * Fix warning about non existing memory space when netlist is used.
- * Logging enhancements.
- * Fixed crashes on terminals without nets (i.e. connected to a rail).
- * Reviewed "FIXMEs" and corrected some minor ones.
- * Made m_cur_analog protected.
- * Fixed pmf delegates to work with MSVC.
- * More optimizations to the solver code.
- * Started work on a better signal pipeline in nlwav.
- * Only generate documentation for entities which are documented.
- * Made it possible to have multiple update handlers per device.
-   - Makes device implementation more flexible and faster and improves performance slightly.
-   - Each input is now assigned a notification handler. Currently this is update, but going forward it may be a custom handler.
- * Fixed MEMPOOL on OSX.
- * Added delegate support for Emscripten, ARM processors and VS 2015 x64.
- * Made sure netlist includes are not found directly on include path.
- * Made Windows builds of nltool and nlwav understand Unicode.
- * Added standalone VS2015 build file in src/lib/netlist/build.
- * Added state saving and loading to nltool.
- * Optimized 7493 device - gives some 5 to 10% improvement to pong.
- * Reworked truthtables a bit: moved 9312 and 74279 to TTL macro library, renamed TTL_9312_* to more appropriate DM9312.
- * Fixed a number of warnings from latest Ubuntu clang 5.0.
+-Decoded popper color PROMs. [Joe Magiera, couriersud]
 
--huc6261.cpp: Fixed YUV colors, added palette offset and HuC6261-A mixing - fixes PC-FX boot screen graphics/colors. [Angelo Salese]
+-sdk86.cpp: Fixed ROM loading. [Lord Nightmare]
 
--namcond1.cpp: Enabled preliminary ROZ effects in ygv608 core. [Angelo Salese]
+-pes.cpp: use combined /RS and /WS function since the MCU/CPU can in theory change both lines at once, and since it uses a TMS5220C
+ it does matter in this case. [Lord Nightmare]
 
--segas16b.cpp: Improved inputs for Excite League / Super League. [Angelo Salese]
+-segas32.cpp: Added uPD7725 DSP with ROM loading to Air Rescue (disabled for now). [Lord Nightmare]
 
--sh4: Fixed FMOV* opcodes. [MetalliC]
+-upd7725: Added preliminary IRQ support, corrected SI/SO bit order, added SIACK/SOACK registers, fixed save state registration,
+ fixed reset state. [Lord Nightmare]
 
--naomi.cpp: Redumped "Crackin' DJ Part 2". [billy16jr, Cereth, cpsystem3, MetalliC, rtw]
+-Fixed an off-by-one error when loading upd96050 roms for SNES games. [Lord Nightmare]
 
--naomi.cpp documentation updates: [MetalliC]
- * Added two Japan Mushiking cart serial numbers.
- * Documented Atomiswave game exe Build timestamps shown in Test Mode.
- * Corrected few game years.
- * Sorted game list by build dates.
+-potgoldu.cpp: Added undumped MCU as NO_DUMP. [Lord Nightmare]
 
--Mega Card (Ver.0210, encrypted) improvements:
- * Added bruteforced PLD dump. [Team Europe, caius, Roberto Fresca]
- * Added G65SC02 decode die dump and tech notes about the custom CPU. [Team Europe, Sean Riddle, Roberto Fresca]
- * Added CY7C291A dump from inside the custom CPU. [Team Europe, Roberto Fresca]
- * Fixed ASCII PCB layout and list of components. [Roberto Fresca]
+-konmedal/tsukande: Add clock XTAL definition for the Z80 CPU, divisor is guessed. [Lord Nightmare]
 
--Arrow Bingo: Fixed clocks to be more accurate, hooked principal inputs to make the game playable, added technical notes.
- [Roberto Fresca]
+-Heath H19: Fixed keyboard, fixed handling of enable/disable of 25th line, use internal MM5740 ROM, fixed H-19 with Watzman ROM,
+ fixed Super19. [Mark Garlanger]
 
--Power Card (Ver 0263, encrypted): Dumped the CY7C291A from inside of the custom CPU, added technical notes.
- [Team Europe, Roberto Fresca]
+-ti99: Various fixes for TI-99/4 (not A). [Michael Zapf]
+  * Added initializations fixing crash on startup, fixed GROM issues (clock turned off too early).
 
--Arrow Bingo: Added a new input requested by the code, added more technical notes about the program. [Roberto Fresca]
+-geneve: Fixed issue with sector read on HFDC without implied seek (did not check CRC and failed to switch density). [Michael Zapf]
 
--mac: Fixed NuBus memory stomp. [R. Belmont]
+-ti99/geneve: Made bus mouse now separate device, may also be used with evpc. [Michael Zapf]
 
--Fixed apple2gs regressions. [R. Belmont]
+-ti99/geneve: Fixed jerky mouse movement. [Michael Zapf]
 
--konmedal: Improved screen display, added ROM banking, started implementing VROM readback. [R. Belmont]
+-ti99_8: Fixed debugging for TI-99/8. [Michael Zapf]
 
--Added Preliminary TLCS-870 CPU core - work in progress. [David Haywood]
+-Softlist/slot improvements: [Nathan Woods]
+ * Fixed an issue where device options (e.g. -cart) were reported as unknown when they actually worked.
+ * Do more softlist evaluation upfront and use results to drive slot/image setup.
+ * Added device_slot_interface::has_selectable_options() to determine whether a particular slot has selectable options.
 
--spacecr: Added continue button. [AJR]
+-Added a new addrmap.cpp validity check intended to catch AM_REGION declarations not tied to anything meaningful. [Nathan Woods]
 
--De-hardcoded service inputs for gekisou and Atari games. [AJR]
+-CoCo: Implemented support for enabling and disabling cartridge-specific sound, made third and fourth floppy drives present by
+ default. [Nathan Woods]
 
--polepos.cpp input improvements: [AJR]
- * Corrected DIP switches and locations for polepos2bi and polepos2bs.
- * Fix bootleg manufacturer info for polepos2bs.
- * Use modern DEVCB features to make extra 4-bit input ports unnecessary.
+-CoCo 3: Fixed an issue clearing GIME interrupts (disabling interrupts by writing to $FF92/3 also acknowledges interrupt).
+ [Nathan Woods, tim lindner, Glen Hewlett]
 
--lastbank: Working sound and music. [AJR]
- * ES-8712: Added busy status read and notes on device.
- * Allow sound CPU to reset the ES-8712 and M6295.
- * Added NVRAM, remapped/renamed inputs, added RTC notes.
+-6821pia.cpp: changed int to bool where appropriate, changed macros to static functions. [Nathan Woods]
 
--bcruzm12: Changed PSGs to AY8912, added notes on PCB. [AJR]
+-archimedes: Added JFD floppy format as used by JASPP (Archimedes Software Preservation Project). [Nigel Barnes]
 
--dblcrown: Simplified code by adding 8255 PPI, PSG type is YMZ284. [AJR]
+-electron: Added First Byte joystick interface. [Nigel Barnes]
 
--gcpinbal modernization and sound improvements: [AJR]
- * Broke up the bogus IOC structure and used 8-bit handlers where appropriate
-   - Fixes a music playback glitch due to the old handler's failure to account for byte mirroring.
- * Improved OKI M6295 sounds by using correct bit for banking.
- * Load more music by sending interrupt when ES-8712 finishes playing sample.
- * Added interface for 93C46 EEPROM and HCT157.
- * Updated machine flags to better reflect current emulation status.
+-Made side effect suppression a machine property. [O. Galibert]
 
--kothello: Added DIP SW2 and identified DIP switches and locations. [AJR]
+-Removed direct update handlers: [O. Galibert]
+ * a2600, atm (still not working, but less badly), mpf1 (makes step work), mpz80, pentagon, sage2, scorpion, tms32031
 
--vmetal sound improvements: [AJR]
- * Implemented IRQ used to loop ES-8712 music (much like gcpinbal) - all extant samples should be playable now.
- * Reduced unreasonably high OKIM6295 volume.
- * Removed MACHINE_IMPERFECT_SOUND flag.
- * Added a reset line callback for the ES-8712.
-   - Will be used to reset the MSM5205/MSM6585 when the implementation is rewritten to use those devices.
-   - For now, it's used for IRQ generation in vmetal.
- * Removed the auto-repeat feature from the ES-8712 device. All known games that loop samples do so by status polling or IRQs.
+-mb86233: Massive disassembler overhaul. [O. Galibert]
 
--upd7810: Replaced fake I/O space with callbacks. [AJR]
+-arm7ops.cpp: Advance PC on unimplemented opcodes. [Peter Ferrie]
 
--capbowl, bowlrama: Identified DAC type. [AJR]
+-apple2: Rewrote language card handling. [Peter Ferrie]
 
--5clown.cpp, bzone.cpp: Correctly assigned service buttons. [OzFalcon]
+-apple2: Fixed IIe/IIc self-test regression. [R. Belmont]
 
--Force CPU-20: Added board variant handling and a few variants. [Joakim Larsson Edstrom]
- * cpu-21, cpu-21a, cpu-21ya, cpu-21b, cpu-21yb and cpu-21s, differs in CPU speed and memory mainly
- * Added logging.
+-apple2: Fixed IIe $C800 arbitration, Zellyn/kqumba tests pass now. [R. Belmont]
 
--Prodigy: Added netlist for BCD display, got correct boot up display but no interaction yet as keypad is missing, added layout.
- [Joakim Larsson Edstrom]
+-z180: DMA fixes: [R. Belmont]
+ * Count of 0 means 0x10000, as with other DMA controllers.
+ * Fixed scheduling so burst mode DMA is always serviced immediately with no CPU ops interleaved.
 
--VME bus: Added default bus address space and prepared for bus-specific features. [Joakim Larsson Edstrom]
+-gba: Fixed revised copy protection handler to get the right PC (MT6513). [R. Belmont]
 
--via6522 updates: [Joakim Larsson Edstrom]
- * Improved logging.
- * Fixed 50/50 duty cycle for T2 and O2 driven CB1 shift IN & OUT on CB2.
- * Added stop of device_timer when going from internaly to externaly clocked shift modes.
- * Fixed so shift out and in flank is not controlled by pcr in accordance with datasheet.
- * Added missing final and leading flanks when shifting out and in respectivelly.
+-vp101: Added framebuffer, some inputs, ATA, NVRAM, protection cheat; implemented ATA DMA. [R. Belmont]
 
--68561: Improved interrupt support and LOGs messages. [Joakim Larsson Edstrom]
+-MIPS: Added initial support for VR5500 and TX4925 CPUs. [R. Belmont]
 
--BIM 68153: Fixed release irq line bug and updated LOGs. [Joakim Larsson Edstrom]
+-Fixed errors detected by coverity: [shattered]
+ * argo, unior, x07: CID: 138563-138565 "Overlapping buffer in memory copy"
+ * pc88va: CID: 138607 "Operands don't affect result"
+ * peplus: CID: 138606 "Logical vs. bitwise operator"
+ * formats/cbm_tap: CID: 138003 "Dereference before null check"
+ * machine/hdc92x4: CID: 138631 "Operands don't affect result"
+ * machine/roc10937: CID: 138793 "Logically dead code"
 
--fccpu30: Updated to new LOG system. [Joakim Larsson Edstrom]
+-tosh1000: Hooked up ROM-DOS. [shattered]
 
--New netlist device: 74164 - 8bit parallel output serial shift register. [Joakim Larsson Edstrom]
+-agat: Split from apple2, implemented basic agat7 hardware. [shattered]
 
--Made mcombat, mcombata and mcombats boot. They still need inputs/sound (AY8912). [Ivan Vangelista]
+-sm7238: Implemented double-sized characters and smooth scroll. [shattered]
 
--Heathkit H19/H89: A few fixes and more documentation, cleaned up ROM definitions. [Mark Garlanger]
+-poisk1: Added more ROMs. [shattered]
 
--mc6845: The device should not scan out more lines than programmed into the 'visible' register. [Mark Garlanger]
+-ibm6580: Made memory size configurable and fixed a Coverity finding. [shattered]
 
--zx81: Added tzx cassette format, changed default ramsize to 16K. [Nigel Barnes]
+-ie15: Converted to a device with frontends (standalone driver and rs232 slot device). [shattered]
 
--z88: Fixed expanded video addressing in RAM carts. [Nigel Barnes]
+-debugger: Print octal addresses in the trace if CPU is octal. [shattered]
 
--Allow softlist software parts to use different interfaces: [Nigel Barnes]
- * imgcntrl: Don't assume first software part, find part with correct interface.
- * swlist: Check all software parts for matching interface when populating list of software lists.
- * softlist_dev: Check all software parts when finding approximate matches.
+-dec_lk201: Added PORT_CHAR/PORT_CODE where missing. [shattered]
 
--aim65: Added 16K PROM/ROM module, 4 extra sockets required for Instant Pascal. [Nigel Barnes]
+-wd_fdc: Tagged command names in debug messages. [shattered]
 
--lastbank.cpp: Filled in Coinage and Demo Sounds DIP switches. [Brian Troha]
+-Removed tag() argument from logerror() calls in cpu/i86 and floppy code. [shattered]
 
--aquarium.cpp: Documentation and clock update. [Brian Troha]
- * Replaced PCB layout with with a more informational version, listed out major chips on the PCB including customs.
- * Corrected OKI M6295 clock with actual resonator.
+-bitgraph: Switched from layouts to rotation flags, fixed keyboard. [shattered]
 
--t10mmc: Added Play Audio MSF (0x47) command, used by Another CD Player and Astrocounter of Crescents. [Barry Rodewald]
+-legacy floppy: Fixed floppy_stp_w. [shattered]
 
--portaudio: Minimal const-correctness. [O. Galibert]
+-a7150: De-skeletonized. [shattered]
 
--Apple Laserwriter II NT: Updated driver quite a bit, improved the overlay emulation and ram mapping, passes more self tests, added
- as much info about memory maps as could be easily derived without PAL dumps. [Lord Nightmare]
+-t11 cpu: Emulate MFPT instruction; MOV, CLR and SXT read memory before writing to it. [shattered]
 
--LaserWriter II NT: Hooked up interrupts to 68k, got more self tests to pass. [Lord Nightmare]
+-hp_ipc: De-skeletonized. [shattered]
 
--freekick.cpp: Fixed sprite rom load order in omega, derived input ports from gigas rather than fully redefining everything.
- [Lord Nightmare]
+-Commodore LCD: Halved size of character rom region and fixed switching between upper and lower case character sets. [smf]
 
--arkanoid.cpp: Added detailed memory map with proper mirroring; documented and mapped the joystick ports which, while present and
- fully functional on the pcb, are unused by the game code. [Lord Nightmare]
+-Fixed UPD7725 disassembly. [smf]
 
--Updated FSF address in a few files' license headers. [Luke-Nukem]
+-zorba keyboard: Mapped remaining keys, documented remaining DIP switches, and added notes on MCU program. [Vas Crabb]
 
--arm7: Added support for the second BLX form for ARMv5 and fixed behavior of second BLX form in THUMB. [Alex Marshall]
+-gotcha/ppchamp/pasha2: Hooked up lamp outputs and add clickable artwork. [Vas Crabb]
 
--intvkbd driver improvements: [Frank Palazzolo]
- * Corrected screen alignment.
- * Changed to use generic TMS9927.
- * Aligned STIC and TMS9927 graphics properly.
- * Added preliminary support for testing intvkbd printer.
- * Added proper documented memory addresses for tape drive.
- * TMS9927: added support for driver-specific overscan areas.
+-sun3x.cpp: Hooked up keyboard port. [Vas Crabb]
 
--pgm2: Fixed address map up a little bit and added notes. [Alex Marshall]
+-Fixed natural keyboard mapping for vg9k keyboard (and hence UI paste/autoboot). [Vas Crabb]
+ * Also fixed key labels and made default mapping match physical layout where possible.
+ * The "triangle" key isn't mapped - I don't know what it does or how to test it.
 
--namcos22: Added per-game speaker configurations based on manuals and test messages. [superctr]
+-Updated GLM to tip of stable branch (0.9.8.5 pre-release) - fixes build with MacPorts clang. [Vas Crabb]
 
--namcos22: Added 'bodysonic' speaker to airco22b (name comes from test mode). [superctr]
+-Make device types self-register: [Vas Crabb]
+ * MAME now walks all linked device types for -listxml, -romident and -verifyroms whether they're used or not.
+ * Made device_creator a variable template.
+ * Removed screen.h and speaker.h from emu.h and centralised instantiations of screen and speaker finder templates.
+ * Added basic device validation to -valid checks.
+ * Substantially sped up -listxml (at least 30% improvement), -verifyroms, and -romident on multiple files.
 
--C352 improvements: [superctr]
- * Implemented volume ramping behavior confirmed with recording from real hardware.
-   - Example: Tekken 3, reduced pops in especially King's stage BGM.
- * Rewrote mu-law algorithm - might not be quite perfect yet, but is closer to recordings and sounds a bit clearer.
-   - Example: Time Crisis.
- * Byte-swapped sample ROMs as necessary.
+-Fixed crash on excessive command-line arguments, removed long-dead option. [Vas Crabb]
 
--portaudio: Fixed issues causing crash with 32-bit builds, clamp latency. [intealls]
+-ti85.cpp: Convert TI-8x link port to a bus with emulated peripherals, working for TI-82 and TI-85. [Vas Crabb]
+ * Tee connector, HLE TI-Graph Link, stereo/mono speakers, and raw signal forwarding socket supported.
 
--Fixed Battle Cruiser M-12 sprite colors. [MASH]
+-Fixed new device validation issues. [Vas Crabb, O. Galibert, AJR]
 
--dec0.cpp: Added new and improved readme for the DEC0 based games. [Guru]
+-triforce.cpp: Fixed Mario Kart 2 ROM loading. [MetalliC]
 
--SDK85: Added mastermind BIOS. [Paolo Forlani, Stefano Bodrato]
+-naomi.cpp: Dumped and documented 837-14438 hopper controller board (used by Kick'4'Cash and other SWP games).
+ [big10p, Darksoft, MetalliC]
 
--hp9845 updates: [F.Ulivi]
- * Fixed parallel poll logic in PHI.
- * Working support for HP9895 dual floppy drive with MFI image format.
- * Corrected aspect ratio of alpha and graphic video modes using a layout file.
+-Measured Naomi's MIE MCU speed. [rtw, MetalliC]
+
+-naomi.cpp: Redumped "Noukone Puzzle Takoron (GDL-0042)" and "Virtua Fighter 4 (Rev B) (GDS-0012B)". [rtw]
+
+-model1: Added dumped internal TGP ROMs. [Caps0ff]
+
+-naomi.cpp: New BIOS dumps:
+ * "Ferrari F355 Challenge (deluxe, no link)" Export BIOS [Darksoft]
+ * "Ferrari F355 Challenge (deluxe, no link)" Japan BIOS [Ordyne, The Dumping Union]
+ * "House of the Dead 2" Japan BIOS [Nomax]
+
+-triforce.cpp: Added security PIC dumps:
+ * "Mario Kart Arcade GP 2" [Soyandroid, Darksoft]
+ * "Mario Kart Arcade GP" [Soyandroid]
+
+-taito.cpp: Added program ROMs and corrected title for voleybal. [PinMAME]
+
+-phoenix.cpp: Dumped/redumped PROMs for some of the bootlegs. [f205]
+
+-viper.cpp: Added timekeeper dump for code1db. [ShouTime]
+
+-midwunit.cpp: Redumped "Ultimate Mortal Kombat 3" U2-U5 sound ROMs. [ShouTime]
+
+-Corrected the main crystal in marineb.cpp to 12MHz as seen in PCB photos, cleaned up clock definitions in galaxian driver, moved
+ ladybugg from galaxold to galaxian driver, use mooncrst_audio for mooncrst in galaxold, made spcwrp use hunchbkg pallette ROMs.
+ [kazblox]
+
+-nes: Added Magic Kid Googoo board (iNES mapper 190). [kazblox]
+
+-Save state fixes for i386/pc_vga/cs4031: [moralrecordings]
+ * Save cs4031 emulated A20 state, additional i386 attribute registers/flags, and VGA palette configuration.
+ * Fixed broken VGA port reads on state load.
+ * Fixed enum range check in i386.
+
+-vicdual: Added nsub gradient simulation (makes black destroyers on the horizon visible). [SailorSat]
+
+-homedata.cpp: Use 8-way joysticks for Reikai Doushi; added button descriptions and DIP locations. [Bad A. Billy]
+
+-Fixed softwarelist cart memory cheats by moving cheat file loading to a later point in startup process. [Pugsy]
+
+-Removed colon from image_interface preventing front-ends from launching ColecoVision software. [gordon-fish]
+
+-ay8910: Added support for clock frequency changes. [tim lindner]
+
+-chihiro.cpp: Redumped Ollie King (GDX-0007). [Ordyne, The Dumping Union]
+
+-konamigx.cpp: Corrected two ROM names and redumped sound ROM for Rushing Heroes. [Smitdogg, The Dumping Union]
+
+-Updated hiscore.dat. [Leezer]

@@ -185,11 +185,13 @@ static const nes_pcb pcb_list[] =
 	{ "daou_306",         OPENCORP_DAOU306 },
 	{ "subor0",           SUBOR_TYPE0 },
 	{ "subor1",           SUBOR_TYPE1 },
+	{ "subor2",           SUBOR_TYPE2 },
 	{ "cc21",             UNL_CC21 },
 	{ "xiaozy",           UNL_XIAOZY },
 	{ "edu2k",            UNL_EDU2K },
 	{ "t230",             UNL_T230 },
 	{ "mk2",              UNL_MK2 },
+	{ "zemina",           ZEMINA_BOARD },
 	// misc bootleg boards
 	{ "ax5705",           UNL_AX5705 },
 	{ "sc127",            UNL_SC127 },
