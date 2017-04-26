@@ -8,7 +8,7 @@ Index: mame/makefile
 +++ mame/makefile
 @@ -194,6 +194,9 @@ ifeq ($(firstword $(filter OpenBSD,$(UNA
  OS := openbsd
- GENIEOS := bsd
+ GENIEOS := freebsd
  endif
 +ifeq ($(firstword $(filter GNU,$(UNAME))),GNU)
 +OS := gnu
