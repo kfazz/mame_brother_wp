@@ -84,14 +84,15 @@ public:
 	virtual const char *file_extensions() const override { return "ccc,rom"; }
 
 	// slot interface overrides
-	virtual std::string get_default_card_software() override;
+	virtual std::string get_default_card_software(get_default_card_software_hook &hook) const override;
 
 	// reading and writing to $FF40-$FF7F
 	DECLARE_READ8_MEMBER(read);
 	DECLARE_WRITE8_MEMBER(write);
 
-	// sets a cartridge line
-	void cart_set_line(line line, line_value value);
+	// manipulation of cartridge lines
+	void set_line_value(line line, line_value value);
+	line_value get_line_value(line line) const;
 
 	// hack to support twiddling the Q line
 	void twiddle_q_lines();
