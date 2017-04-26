@@ -1,11 +1,11 @@
-mame (0.185-1) UNRELEASED; urgency=medium
+mame (0.185-1) experimental; urgency=medium
 
   * New upstream release.
   * Disable genie_freebsd_target.patch, as it gets in the way and kFreeBSD
     builds are broken in other ways.
   * Refresh patches.
 
- -- Jordi Mallach <jordi@debian.org>  Wed, 26 Apr 2017 11:59:13 +0200
+ -- Jordi Mallach <jordi@debian.org>  Wed, 26 Apr 2017 12:11:22 +0200
 
 mame (0.184-1) experimental; urgency=medium
 
