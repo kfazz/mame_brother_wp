@@ -4,12 +4,12 @@ Description: Use the packaged version of MathJax.
  libjs-mathjax in the generated sphinx docs.
 Forwarded: no
 
-Index: mame-0.178/docs/source/conf.py
+Index: mame/docs/source/conf.py
 ===================================================================
---- mame-0.178.orig/docs/source/conf.py
-+++ mame-0.178/docs/source/conf.py
-@@ -38,7 +38,7 @@ edit_on_github_project = 'mamedev/docs'
- edit_on_github_branch = 'master/source'
+--- mame.orig/docs/source/conf.py
++++ mame/docs/source/conf.py
+@@ -38,7 +38,7 @@ edit_on_github_project = 'mamedev/mame'
+ edit_on_github_branch = 'master/docs/source'
  
  # Math
 -mathjax_path = "http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"

@@ -44,7 +44,7 @@ Index: mame/scripts/src/3rdparty.lua
 -if (_OPTIONS["osd"] ~= "uwp") then
 +if (_OPTIONS["osd"] ~= "uwp") and (not _OPTIONS["NO_USE_LINENOISE"]) then
  	includedirs {
- 		MAME_DIR .. "3rdparty/linenoise-ng/include",
+ 		MAME_DIR .. "3rdparty/linenoise",
  	}
 @@ -595,7 +595,7 @@ end
  		MAME_DIR .. "3rdparty/lua-zlib/lua_zlib.c",
@@ -57,11 +57,11 @@ Index: mame/scripts/src/3rdparty.lua
  	}
 @@ -1633,7 +1633,7 @@ end
  --------------------------------------------------
- -- linenoise-ng library
+ -- linenoise library
  --------------------------------------------------
 -if (_OPTIONS["osd"] ~= "uwp") then
 +if (_OPTIONS["osd"] ~= "uwp") and (not _OPTIONS["NO_USE_LINENOISE"]) then
- project "linenoise-ng"
+ project "linenoise"
  	uuid "7320ffc8-2748-4add-8864-ae29b72a8511"
  	kind (LIBTYPE)
 Index: mame/scripts/src/main.lua
@@ -75,5 +75,5 @@ Index: mame/scripts/src/main.lua
 -if (_OPTIONS["osd"] ~= "uwp") then
 +if (_OPTIONS["osd"] ~= "uwp") and (not _OPTIONS["NO_USE_LINENOISE"]) then
  	links {
- 		"linenoise-ng",
+ 		"linenoise",
  	}
