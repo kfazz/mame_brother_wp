@@ -1,3 +1,10 @@
+mame (0.186-1) UNRELEASED; urgency=medium
+
+  * New upstream relese.
+  * Refresh patches.
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Sun, 04 Jun 2017 08:33:50 +0200
+
 mame (0.185-1) experimental; urgency=medium
 
   * New upstream release.
