@@ -3,6 +3,28 @@ Upstream-Name: MAME
 Source: http://mamedev.org/
  The mame icons are part of the hydroxygen icon set, downloaded from 
  http://deviantdark.deviantart.com/art/hydroxygen-iconset-100826865
+Files-Excluded:
+ */debian
+ */.git*
+ android-project/gradle/wrapper/gradle-wrapper.jar
+ 3rdparty/bx/tools/bin/linux/bin2c
+ 3rdparty/bx/tools/bin/linux/genie
+ 3rdparty/bx/tools/bin/linux/ninja
+ 3rdparty/bx/tools/bin/windows/bin2c.exe
+ 3rdparty/bx/tools/bin/windows/genie.exe
+ 3rdparty/bx/tools/bin/windows/ninja.exe
+ 3rdparty/bgfx/3rdparty/remotery/vis/extern/BrowserLib/Core/Code/Convert.js
+ 3rdparty/bgfx/3rdparty/scintilla/src/Editor.cxx.orig
+ 3rdparty/bgfx/3rdparty/scintilla/gtk/makefile.orig
+ 3rdparty/glm/doc/api
+ 3rdparty/portmidi/pm_csharp/pm_managed/app.rc
+ 3rdparty/portmidi/pm_csharp/pm_managed/resource.h
+ 3rdparty/portmidi/pm_java/JavaExe.exe
+ 3rdparty/portmidi/pm_java/UpdateRsrcJavaExe.exe
+ 3rdparty/portmidi/pm_java/pmjni/pmjni.rc
+ 3rdparty/portmidi/pm_java/setup/pmdefaults-setup.exe
+ 3rdparty/zlib/contrib/dotzlib/DotZLib.chm
+Comment: Remove any unneeded binary and configuration file
 
 Files: debian/*
 Copyright: Mamedeb team <mame@packages.debian.org>

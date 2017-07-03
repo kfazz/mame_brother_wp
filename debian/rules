@@ -203,9 +203,6 @@ override_dh_install:
 		   --exclude=jquery.js \
 		   --exclude=underscore.js
 
-override_dh_installchangelogs:
-	dh_installchangelogs whatsnew.txt
-
 override_dh_fixperms-arch:
 	dh_fixperms
 	find debian/mame/etc/mame -type f -execdir chmod 644 {} \;
@@ -223,59 +220,10 @@ override_dh_fixperms-indep:
 	find debian/mame-data/usr/share/games/mame/plugins -type f -execdir chmod 644 {} \;
 
 PKD := $(abspath $(dir $(MAKEFILE_LIST)))
-PKG := $(shell dpkg-parsechangelog -l$(PKD)/changelog --show-field=Source)
-DTYPE :=
 VER ?= $(shell dpkg-parsechangelog -l$(PKD)/changelog --show-field=Version | sed -e 's/\(.*\)-.*/\1/')
-# Upstream source has no dot in its name, so we have to cut it out
-UVER := $(shell echo $(VER) | sed -e 's/\.//' )
-TMPDIR := $(shell mktemp --dry-run --directory -p .)
 
 .PHONY: get-orig-source
-get-orig-source: $(PKG)_$(VER)$(DTYPE).orig.tar.xz $(info I: $(PKG)_$(VER)$(DTYPE))
-	@
-
-$(PKG)_$(VER)$(DTYPE).orig.tar.xz:
-	@echo "# Downloading..."
+get-orig-source:
 	uscan --noconf --verbose --rename --destdir=$(CURDIR) \
-        --check-dirname-level=0 --force-download \
+        --check-dirname-level=0 --overwrite-download \
         --download-version $(VER) $(PKD)
-	@echo "# Extracting..."
-	mkdir -p $(TMPDIR)/$(PKG)-$(VER)
-	tar -xzf $(PKG)_$(VER).orig.tar.gz --strip-component=1 \
-        -C $(TMPDIR)/$(PKG)-$(VER)/ --exclude=\.*
-	@echo "# Cleaning-up..."
-	# Remove binaries and other cruft
-	cd $(TMPDIR)/$(PKG)-$(VER) && make clean && make cleansrc
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/.mame_version
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/zlib/contrib/dotzlib/DotZLib.chm
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/linux/bin2c
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/linux/genie
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/linux/ninja
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/windows/bin2c.exe
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/windows/genie.exe
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bx/tools/bin/windows/ninja.exe
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bgfx/3rdparty/remotery/vis/extern/BrowserLib/Core/Code/Convert.js
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bgfx/3rdparty/scintilla/src/Editor.cxx.orig
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/bgfx/3rdparty/scintilla/gtk/makefile.orig
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/glm/doc/api
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/linenoise-ng/src/ConvertUTF.*
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/lzma/7zr.exe
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/lzma/lzma.exe
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/portmidi/pm_java/JavaExe.exe
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/portmidi/pm_java/UpdateRsrcJavaExe.exe
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/portmidi/pm_csharp/pm_managed/app.rc
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/portmidi/pm_csharp/pm_managed/resource.h
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/portmidi/pm_java/pmjni/pmjni.rc
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/portmidi/pm_java/setup/pmdefaults-setup.exe
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/android-project/gradle/wrapper/gradle-wrapper.jar
-	rm -rf $(TMPDIR)/$(PKG)-$(VER)/3rdparty/zlib/contrib/dotzlib/DotZLib.chm
-	# Add upstream changelog and other useful bits distributed separately
-	wget https://github.com/mamedev/build/archive/master.zip
-	unzip -oqjd $(TMPDIR) master.zip \
-        *mamedirs.zip *whatsnew_$(UVER).txt
-	mv $(TMPDIR)/whatsnew_$(UVER).txt \
-        $(TMPDIR)/$(PKG)-$(VER)/whatsnew.txt
-	unzip -oqd $(TMPDIR)/$(PKG)-$(VER)/ $(TMPDIR)/mamedirs.zip
-	@echo "# Packing..."
-	tar -C $(TMPDIR) -cf - $(PKG)-$(VER) | xz -9c > $(PKG)_$(VER)$(DTYPE).orig.tar.xz
-	rm -rf $(TMPDIR) $(PKG)_$(VER).orig.tar.gz master.zip
