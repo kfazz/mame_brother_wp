@@ -6,23 +6,23 @@ Source: http://mamedev.org/
 Files-Excluded:
  */debian
  */.git*
+ android-project/app/src/main/libs
  android-project/gradle/wrapper/gradle-wrapper.jar
- 3rdparty/bx/tools/bin/linux/bin2c
- 3rdparty/bx/tools/bin/linux/genie
- 3rdparty/bx/tools/bin/linux/ninja
- 3rdparty/bx/tools/bin/windows/bin2c.exe
- 3rdparty/bx/tools/bin/windows/genie.exe
- 3rdparty/bx/tools/bin/windows/ninja.exe
  3rdparty/bgfx/3rdparty/remotery/vis/extern/BrowserLib/Core/Code/Convert.js
  3rdparty/bgfx/3rdparty/scintilla/src/Editor.cxx.orig
  3rdparty/bgfx/3rdparty/scintilla/gtk/makefile.orig
+ 3rdparty/bgfx/examples/runtime/temp
+ 3rdparty/bgfx/tools/bin
+ 3rdparty/bx/tools/bin/linux
+ 3rdparty/bx/tools/bin/windows
  3rdparty/glm/doc/api
  3rdparty/portmidi/pm_csharp/pm_managed/app.rc
  3rdparty/portmidi/pm_csharp/pm_managed/resource.h
  3rdparty/portmidi/pm_java/JavaExe.exe
  3rdparty/portmidi/pm_java/UpdateRsrcJavaExe.exe
  3rdparty/portmidi/pm_java/pmjni/pmjni.rc
- 3rdparty/portmidi/pm_java/setup/pmdefaults-setup.exe
+ 3rdparty/portmidi/pm_java/setup
+ 3rdparty/rapidjson/docker
  3rdparty/zlib/contrib/dotzlib/DotZLib.chm
 Comment: Remove any unneeded binary and configuration file
 
