@@ -1,12 +1,13 @@
-mame (0.187+dfsg.1-1) UNRELEASED; urgency=medium
+mame (0.187+dfsg.1-1) unstable; urgency=medium
 
-  * New upstream release
-  * Use uscan to repack upstream tarball
-  * Removed whatsnew.txt and ctrlr/*.cfg files, no longer in repacked tarball
+  * New upstream release.
+  * Release to unstable.
+  * Use uscan to repack upstream tarball.
+  * Removed whatsnew.txt and ctrlr/*.cfg files, no longer in repacked tarball.
 
  -- Cesare Falco <c.falco@ubuntu.com>  Mon, 03 Jul 2017 10:49:39 +0200
 
-mame (0.186-1) UNRELEASED; urgency=medium
+mame (0.186-1) unstable; urgency=medium
 
   * New upstream release.
   * Refresh patches.
