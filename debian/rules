@@ -67,6 +67,7 @@ endif
 
 ifeq ($(DEB_HOST_ARCH),i386)
 DEB_OPTS += \
+    OPTIMIZE=0 \
     FORCE_DRC_C_BACKEND= \
     NOASM=
 endif
