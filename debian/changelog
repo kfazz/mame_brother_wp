@@ -1,4 +1,4 @@
-mame (0.188+dfsg.1-1) UNRELEASED; urgency=medium
+mame (0.188+dfsg.1-1) unstable; urgency=medium
 
   * New upstream release.
   * Refreshed hurd.patch.
