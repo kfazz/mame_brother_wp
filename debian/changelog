@@ -2,7 +2,8 @@ mame (0.188+dfsg.1-1) unstable; urgency=medium
 
   * New upstream release.
   * Refreshed hurd.patch.
-  * Removed optimizations for i386 (reduces VM memory requirements).
+  * Removed optimizations for i386 (reduces VM memory requirements;
+    closes: #869074).
 
  -- Cesare Falco <c.falco@ubuntu.com>  Fri, 28 Jul 2017 13:05:51 +0200
 
