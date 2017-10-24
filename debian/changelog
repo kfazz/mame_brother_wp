@@ -1,3 +1,9 @@
+mame (0.190+dfsg.1-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Sat, 30 Sep 2017 18:37:49 +0200
+
 mame (0.189+dfsg.1-2) unstable; urgency=medium
 
   * Reinstate mess dummy package, solves mess-desktop-entries pkg dep issue.
