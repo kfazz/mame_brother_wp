@@ -68,7 +68,7 @@ Index: mame/scripts/src/main.lua
 ===================================================================
 --- mame.orig/scripts/src/main.lua
 +++ mame/scripts/src/main.lua
-@@ -267,7 +267,7 @@ if (STANDALONE~=true) then
+@@ -262,7 +262,7 @@ if (STANDALONE~=true) then
  		ext_lib("lua"),
  		"lualibs",
  	}
