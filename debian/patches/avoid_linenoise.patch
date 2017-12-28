@@ -55,7 +55,7 @@ Index: mame/scripts/src/3rdparty.lua
  	files {
  		MAME_DIR .. "3rdparty/lua-linenoise/linenoise_none.c",
  	}
-@@ -1637,7 +1637,7 @@ end
+@@ -1696,7 +1696,7 @@ end
  --------------------------------------------------
  -- linenoise library
  --------------------------------------------------
