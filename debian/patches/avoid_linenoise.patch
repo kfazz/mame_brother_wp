@@ -6,9 +6,9 @@ Index: mame/makefile
 ===================================================================
 --- mame.orig/makefile
 +++ mame/makefile
-@@ -784,6 +784,10 @@ endif
- ifdef WEBASSEMBLY
- PARAMS += --WEBASSEMBLY='$(WEBASSEMBLY)'
+@@ -788,6 +788,10 @@ endif
+ ifdef SANITIZE
+ PARAMS += --SANITIZE='$(SANITIZE)'
  endif
 +
 +ifdef NO_USE_LINENOISE
@@ -21,7 +21,7 @@ Index: mame/scripts/genie.lua
 ===================================================================
 --- mame.orig/scripts/genie.lua
 +++ mame/scripts/genie.lua
-@@ -388,6 +388,11 @@ newoption {
+@@ -393,6 +393,11 @@ newoption {
  }
  
  newoption {
