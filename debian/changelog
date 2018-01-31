@@ -1,3 +1,10 @@
+mame (0.193+dfsg.1-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+  * debian/rules: removed Mame internal testing, seems to break ARM builds.
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Thu, 28 Dec 2017 16:21:38 +0100
+
 mame (0.192+dfsg.1-1) UNRELEASED; urgency=medium
 
   * New upstream release.
