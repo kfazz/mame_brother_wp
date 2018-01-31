@@ -8,7 +8,6 @@ Files-Excluded:
  */.git*
  android-project/app/src/main/libs
  android-project/gradle/wrapper/gradle-wrapper.jar
- 3rdparty/bgfx/3rdparty/remotery/vis/extern/BrowserLib/Core/Code/Convert.js
  3rdparty/bgfx/3rdparty/scintilla/src/Editor.cxx.orig
  3rdparty/bgfx/3rdparty/scintilla/gtk/makefile.orig
  3rdparty/bgfx/examples/runtime/temp
