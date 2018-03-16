@@ -8,6 +8,8 @@ mame (0.195+dfsg.1-1) UNRELEASED; urgency=medium
     in the generated binary.
   * Remove transitional mess package again, as mess-desktop-entries has
     been fixed.
+  * Use system libglm, rapidjson and utf8proc. Drop definitions for system
+    libuv which is no longer used.
 
  -- Cesare Falco <c.falco@ubuntu.com>  Wed, 31 Jan 2018 12:08:01 +0100
 
