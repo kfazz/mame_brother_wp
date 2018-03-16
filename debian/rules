@@ -38,7 +38,6 @@ DEB_OPTS = \
     PTR64= \
     BIGENDIAN= \
     NOASM=1 \
-    NO_USE_LINENOISE=1 \
     QT_HOME=/usr/lib/$(DEB_HOST_MULTIARCH)/qt5/ \
     USE_SYSTEM_LIB_EXPAT=1 \
     USE_SYSTEM_LIB_ZLIB=1 \

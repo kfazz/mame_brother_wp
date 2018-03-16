@@ -10,6 +10,8 @@ mame (0.195+dfsg.1-1) UNRELEASED; urgency=medium
     been fixed.
   * Use system libglm, rapidjson and utf8proc. Drop definitions for system
     libuv which is no longer used.
+  * Drop avoid_linenoise.patch and build definitions, as the bundled
+    linenoise fork no longer has GPL-incompatible material.
 
  -- Cesare Falco <c.falco@ubuntu.com>  Wed, 31 Jan 2018 12:08:01 +0100
 
