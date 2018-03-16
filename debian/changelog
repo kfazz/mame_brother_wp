@@ -1,7 +1,12 @@
 mame (0.194+dfsg.1-1) UNRELEASED; urgency=medium
 
+  [ Cesare Falco ]
   * New upstream release.
   * Update patches.
+
+  [ Jordi Mallach ]
+  * Reinstate check rule, as a failure to run indicates grave problems
+    in the generated binary.
 
  -- Cesare Falco <c.falco@ubuntu.com>  Wed, 31 Jan 2018 12:08:01 +0100
 
