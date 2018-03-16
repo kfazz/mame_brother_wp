@@ -1,6 +1,18 @@
-mame (0.194+dfsg.1-1) UNRELEASED; urgency=medium
+mame (0.195+dfsg.1-1) UNRELEASED; urgency=medium
 
   [ Cesare Falco ]
+  * New upstream release.
+
+  [ Jordi Mallach ]
+  * Reinstate check rule, as a failure to run indicates grave problems
+    in the generated binary.
+  * Remove transitional mess package again, as mess-desktop-entries has
+    been fixed.
+
+ -- Cesare Falco <c.falco@ubuntu.com>  Wed, 31 Jan 2018 12:08:01 +0100
+
+mame (0.194+dfsg.1-1) UNRELEASED; urgency=medium
+
   * New upstream release.
   * Update patches.
 
