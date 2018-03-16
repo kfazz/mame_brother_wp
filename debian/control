@@ -96,11 +96,3 @@ Description: Documentation for MAME
  arcade machines (it is not a simulation).
  .
  This is sphinx-generated full documentation for the MAME system.
-
-Package: mess
-Depends: mame, ${misc:Depends}
-Architecture: all
-Priority: extra
-Section: oldlibs
-Description: Transitional dummy package
- This is a transitional dummy package. It can safely be removed.
