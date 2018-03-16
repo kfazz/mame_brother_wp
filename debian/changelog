@@ -645,11 +645,11 @@ mame (0.146-3) experimental; urgency=low
 
 mame (0.146-2) unstable; urgency=low
 
-  [ Cesare Falco ] 
+  [ Cesare Falco ]
   * mame.ini: start mame in full screen until issue solved in Ubuntu, see:
     https://bugs.launchpad.net/ubuntu/+source/mame/+bug/994508
   * Man page updated to 0.146
-  
+
   [ Emmanuel Kasper ]
   * Default gcc optimize flag switched to -O2 (-O3 segfaults on arm and i386)
 
@@ -659,7 +659,7 @@ mame (0.146-1) unstable; urgency=low
 
   [ Emmanuel Kasper ]
   * New upstream release
-  * Drop patch to fix man pages section and patches to link with flac 
+  * Drop patch to fix man pages section and patches to link with flac
     and jpeg system lib: all this has been pushed upstream by Cesare Falco
   * Add DM-Upload-Allowed: yes field.
 
@@ -769,7 +769,7 @@ mame (0.142-2) unstable; urgency=low
   * Modify get-orig-source to also fetch MESS sources and build a new
     dpkg source component tarball.
   * Add a new mess binary package and transitional packages for xmess-*
-    (closes: #507932). 
+    (closes: #507932).
   * Setup the source dir to enable building mess even if its source is in
     a mess subdir, by creating necessary symlinks and directory renames
     before the build, and restoring everything on clean.
@@ -793,7 +793,7 @@ mame (0.142-2) unstable; urgency=low
     - manpages for mess, castool and imgtool
 
   [ Emmanuel Kasper ]
-  * Remove executable bit set by windows on all mess hash files 
+  * Remove executable bit set by windows on all mess hash files
   * Fix clean rule on a clean tree.
   * Add copyright information for MESS sources.
   * Remove symlinking of megatech.xml.
