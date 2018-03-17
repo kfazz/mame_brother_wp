@@ -13,6 +13,7 @@ mame (0.195+dfsg.1-1) UNRELEASED; urgency=medium
   * Drop avoid_linenoise.patch and build definitions, as the bundled
     linenoise fork no longer has GPL-incompatible material.
   * Apply several formatting fixes to copyright file.
+  * Bump debhelper compat to v11.
 
  -- Cesare Falco <c.falco@ubuntu.com>  Wed, 31 Jan 2018 12:08:01 +0100
 
