@@ -2,6 +2,7 @@ mame (0.195+dfsg.1-1) experimental; urgency=medium
 
   [ Cesare Falco ]
   * New upstream release.
+  * Use Gold linker and set ld flags to reduce memory requirements
 
   [ Jordi Mallach ]
   * Reinstate check rule, as a failure to run indicates grave problems

@@ -19,7 +19,11 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 export DEB_CFLAGS_MAINT_APPEND = $(shell dpkg-buildflags --get CPPFLAGS)
 
 # Sacrifice linking speed to avoid using so much memory
-export DEB_LDFLAGS_MAINT_APPEND = -Wl,--no-keep-memory
+export DEB_LDFLAGS_MAINT_APPEND = \
+    -Wl,--no-keep-memory,--reduce-memory-overheads,--hash-size=31
+
+# Also, use Gold linker which is less greed for memory
+LDFLAGS = "-fuse-ld=gold"
 
 # taken verbatim from debian policy
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
