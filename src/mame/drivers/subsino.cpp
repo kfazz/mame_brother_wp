@@ -329,6 +329,24 @@ public:
 	required_device<cpu_device> m_maincpu;
 	required_device<gfxdecode_device> m_gfxdecode;
 	required_device<palette_device> m_palette;
+	void mtrainnv(machine_config &config);
+	void stbsub(machine_config &config);
+	void tisub(machine_config &config);
+	void crsbingo(machine_config &config);
+	void srider(machine_config &config);
+	void victor21(machine_config &config);
+	void sharkpy(machine_config &config);
+	void victor5(machine_config &config);
+	void crsbingo_map(address_map &map);
+	void mtrainnv_map(address_map &map);
+	void ramdac_map(address_map &map);
+	void sharkpy_map(address_map &map);
+	void srider_map(address_map &map);
+	void stbsub_map(address_map &map);
+	void subsino_iomap(address_map &map);
+	void tisub_map(address_map &map);
+	void victor21_map(address_map &map);
+	void victor5_map(address_map &map);
 };
 
 void subsino_state::machine_start()
@@ -680,7 +698,7 @@ WRITE8_MEMBER(subsino_state::subsino_out_a_w)
 	machine().bookkeeping().coin_counter_w(2, data & 0x10 );    /* keyout */
 	machine().bookkeeping().coin_counter_w(3, data & 0x20 );    /* payout */
 
-	m_hopper->write(space, 0, (data & 0x0020) ? 0x80 : 0);   // hopper motor
+	m_hopper->motor_w(BIT(data, 5));   // hopper motor
 
 //  popmessage("Out A %02x",data);
 }
@@ -825,53 +843,54 @@ WRITE8_MEMBER(subsino_state::subsino_out_b_w)
 *                              Memory Maps                                 *
 ***************************************************************************/
 
-static ADDRESS_MAP_START( srider_map, AS_PROGRAM, 8, subsino_state )
-	AM_RANGE( 0x00000, 0x0bfff ) AM_ROM
+void subsino_state::srider_map(address_map &map)
+{
+	map(0x00000, 0x0bfff).rom();
 
-	AM_RANGE( 0x0c000, 0x0cfff ) AM_RAM
+	map(0x0c000, 0x0cfff).ram();
 
-	AM_RANGE( 0x0d000, 0x0d002 ) AM_DEVREAD("ppi1", i8255_device, read)
-	AM_RANGE( 0x0d004, 0x0d006 ) AM_DEVREAD("ppi2", i8255_device, read)
+	map(0x0d000, 0x0d002).r("ppi1", FUNC(i8255_device::read));
+	map(0x0d004, 0x0d006).r("ppi2", FUNC(i8255_device::read));
 
-	AM_RANGE( 0x0d009, 0x0d009 ) AM_WRITE(subsino_out_b_w )
-	AM_RANGE( 0x0d00a, 0x0d00a ) AM_WRITE(subsino_out_a_w )
+	map(0x0d009, 0x0d009).w(this, FUNC(subsino_state::subsino_out_b_w));
+	map(0x0d00a, 0x0d00a).w(this, FUNC(subsino_state::subsino_out_a_w));
 
-	AM_RANGE( 0x0d00c, 0x0d00c ) AM_READ_PORT( "INC" )
+	map(0x0d00c, 0x0d00c).portr("INC");
 
-	AM_RANGE( 0x0d016, 0x0d017 ) AM_DEVWRITE("ymsnd", ym3812_device, write)
+	map(0x0d016, 0x0d017).w("ymsnd", FUNC(ym3812_device::write));
 
-	AM_RANGE( 0x0d018, 0x0d018 ) AM_DEVWRITE("oki", okim6295_device, write)
+	map(0x0d018, 0x0d018).w("oki", FUNC(okim6295_device::write));
 
-	AM_RANGE( 0x0d01b, 0x0d01b ) AM_WRITE(subsino_tiles_offset_w )
+	map(0x0d01b, 0x0d01b).w(this, FUNC(subsino_state::subsino_tiles_offset_w));
 
-	AM_RANGE( 0x0e000, 0x0e7ff ) AM_RAM_WRITE(subsino_colorram_w ) AM_SHARE("colorram")
-	AM_RANGE( 0x0e800, 0x0efff ) AM_RAM_WRITE(subsino_videoram_w ) AM_SHARE("videoram")
-ADDRESS_MAP_END
+	map(0x0e000, 0x0e7ff).ram().w(this, FUNC(subsino_state::subsino_colorram_w)).share("colorram");
+	map(0x0e800, 0x0efff).ram().w(this, FUNC(subsino_state::subsino_videoram_w)).share("videoram");
+}
 
 
-static ADDRESS_MAP_START( sharkpy_map, AS_PROGRAM, 8, subsino_state )
-	AM_RANGE( 0x09800, 0x09fff ) AM_RAM
+void subsino_state::sharkpy_map(address_map &map)
+{
+	map(0x00000, 0x13fff).rom(); //overlap unmapped regions
+	map(0x09800, 0x09fff).ram();
 
-	AM_RANGE( 0x09000, 0x09002 ) AM_DEVREAD("ppi1", i8255_device, read)
-	AM_RANGE( 0x09004, 0x09006 ) AM_DEVREAD("ppi2", i8255_device, read)
+	map(0x09000, 0x09002).r("ppi1", FUNC(i8255_device::read));
+	map(0x09004, 0x09006).r("ppi2", FUNC(i8255_device::read));
 
-	AM_RANGE( 0x09009, 0x09009 ) AM_WRITE(subsino_out_b_w )
-	AM_RANGE( 0x0900a, 0x0900a ) AM_WRITE(subsino_out_a_w )
+	map(0x09009, 0x09009).w(this, FUNC(subsino_state::subsino_out_b_w));
+	map(0x0900a, 0x0900a).w(this, FUNC(subsino_state::subsino_out_a_w));
 
-	AM_RANGE( 0x0900c, 0x0900c ) AM_READ_PORT( "INC" )
+	map(0x0900c, 0x0900c).portr("INC");
 
-	AM_RANGE( 0x09016, 0x09017 ) AM_DEVWRITE("ymsnd", ym3812_device, write)
+	map(0x09016, 0x09017).w("ymsnd", FUNC(ym3812_device::write));
 
-	AM_RANGE( 0x09018, 0x09018 ) AM_DEVWRITE("oki", okim6295_device, write)
+	map(0x09018, 0x09018).w("oki", FUNC(okim6295_device::write));
 
-	AM_RANGE( 0x0901b, 0x0901b ) AM_WRITE(subsino_tiles_offset_w )
+	map(0x0901b, 0x0901b).w(this, FUNC(subsino_state::subsino_tiles_offset_w));
 
-	AM_RANGE( 0x07800, 0x07fff ) AM_RAM
-	AM_RANGE( 0x08000, 0x087ff ) AM_RAM_WRITE(subsino_colorram_w ) AM_SHARE("colorram")
-	AM_RANGE( 0x08800, 0x08fff ) AM_RAM_WRITE(subsino_videoram_w ) AM_SHARE("videoram")
-
-	AM_RANGE( 0x00000, 0x13fff ) AM_ROM //overlap unmapped regions
-ADDRESS_MAP_END
+	map(0x07800, 0x07fff).ram();
+	map(0x08000, 0x087ff).ram().w(this, FUNC(subsino_state::subsino_colorram_w)).share("colorram");
+	map(0x08800, 0x08fff).ram().w(this, FUNC(subsino_state::subsino_videoram_w)).share("videoram");
+}
 
 /*
 Victor 21 protection is absolutely trivial. At every number of presetted hands, there's an animation
@@ -879,31 +898,33 @@ that announces to the player that the card deck changes. If the protection check
 this event makes the game to reset without any money in the bank.
 */
 
-static ADDRESS_MAP_START( victor21_map, AS_PROGRAM, 8, subsino_state )
-	AM_RANGE( 0x09800, 0x09fff ) AM_RAM
+void subsino_state::victor21_map(address_map &map)
+{
+	map(0x00000, 0x08fff).rom(); //overlap unmapped regions
 
-	AM_RANGE( 0x09000, 0x09003 ) AM_DEVREADWRITE("ppi", i8255_device, read, write)
-	AM_RANGE( 0x09004, 0x09004 ) AM_READ_PORT( "INA" )
-	AM_RANGE( 0x09005, 0x09005 ) AM_READ_PORT( "INB" )
-	AM_RANGE( 0x09006, 0x09006 ) AM_READ_PORT( "SW1" )
-	AM_RANGE( 0x09007, 0x09007 ) AM_READ_PORT( "SW2" )
-	AM_RANGE( 0x09008, 0x09008 ) AM_READ_PORT( "SW3" )
+	map(0x09800, 0x09fff).ram();
 
-	AM_RANGE( 0x0900b, 0x0900b ) AM_RAM //protection
+	map(0x09000, 0x09003).rw("ppi", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x09004, 0x09004).portr("INA");
+	map(0x09005, 0x09005).portr("INB");
+	map(0x09006, 0x09006).portr("SW1");
+	map(0x09007, 0x09007).portr("SW2");
+	map(0x09008, 0x09008).portr("SW3");
+
+	map(0x0900b, 0x0900b).ram(); //protection
 
 //  AM_RANGE( 0x0900c, 0x0900c ) AM_DEVWRITE("oki", okim6295_device, write)
 
-	AM_RANGE( 0x0900e, 0x0900f ) AM_DEVWRITE("ymsnd", ym2413_device, write)
+	map(0x0900e, 0x0900f).w("ymsnd", FUNC(ym2413_device::write));
 
-	AM_RANGE( 0x0900d, 0x0900d ) AM_WRITE(subsino_tiles_offset_w )
+	map(0x0900d, 0x0900d).w(this, FUNC(subsino_state::subsino_tiles_offset_w));
 
-	AM_RANGE( 0x07800, 0x07fff ) AM_RAM
-	AM_RANGE( 0x08000, 0x087ff ) AM_RAM_WRITE(subsino_videoram_w ) AM_SHARE("videoram")
-	AM_RANGE( 0x08800, 0x08fff ) AM_RAM_WRITE(subsino_colorram_w ) AM_SHARE("colorram")
+	map(0x07800, 0x07fff).ram();
+	map(0x08000, 0x087ff).ram().w(this, FUNC(subsino_state::subsino_videoram_w)).share("videoram");
+	map(0x08800, 0x08fff).ram().w(this, FUNC(subsino_state::subsino_colorram_w)).share("colorram");
 
-	AM_RANGE( 0x00000, 0x08fff ) AM_ROM //overlap unmapped regions
-	AM_RANGE( 0x10000, 0x13fff ) AM_ROM
-ADDRESS_MAP_END
+	map(0x10000, 0x13fff).rom();
+}
 
 
 /*
@@ -957,11 +978,12 @@ WRITE8_MEMBER(subsino_state::flash_w)
 	}
 }
 
-static ADDRESS_MAP_START( victor5_map, AS_PROGRAM, 8, subsino_state )
-	AM_IMPORT_FROM( victor21_map )
-	AM_RANGE( 0x0900a, 0x0900a ) AM_READWRITE(flash_r, flash_w )
-	AM_RANGE( 0x0900b, 0x0900b ) AM_READNOP //"flash" status, bit 0
-ADDRESS_MAP_END
+void subsino_state::victor5_map(address_map &map)
+{
+	victor21_map(map);
+	map(0x0900a, 0x0900a).rw(this, FUNC(subsino_state::flash_r), FUNC(subsino_state::flash_w));
+	map(0x0900b, 0x0900b).nopr(); //"flash" status, bit 0
+}
 
 
 READ8_MEMBER(subsino_state::hwcheck_r)
@@ -970,38 +992,39 @@ READ8_MEMBER(subsino_state::hwcheck_r)
 	return 0x55;
 }
 
-static ADDRESS_MAP_START( crsbingo_map, AS_PROGRAM, 8, subsino_state )
-	AM_RANGE( 0x09800, 0x09fff ) AM_RAM
+void subsino_state::crsbingo_map(address_map &map)
+{
+	map(0x00000, 0x8fff).rom(); //overlap unmapped regions
 
-	AM_RANGE( 0x09000, 0x09000 ) AM_READ_PORT( "SW1" )
-	AM_RANGE( 0x09001, 0x09001 ) AM_READ_PORT( "SW2" )
-	AM_RANGE( 0x09002, 0x09002 ) AM_READ_PORT( "INA" )
-	AM_RANGE( 0x09003, 0x09003 ) AM_READ_PORT( "INB" )
-	AM_RANGE( 0x09004, 0x09004 ) AM_READ_PORT( "INC" )
-	AM_RANGE( 0x09005, 0x09005 ) AM_WRITE(subsino_out_a_w )
+	map(0x09800, 0x09fff).ram();
 
-	AM_RANGE( 0x09008, 0x09008 ) AM_READ_PORT( "SW4" )
-	AM_RANGE( 0x09009, 0x09009 ) AM_READ_PORT( "SW3" )  // AM_WRITE(subsino_out_a_w )
-	AM_RANGE( 0x0900a, 0x0900a ) AM_READWRITE(hwcheck_r, subsino_out_b_w )
+	map(0x09000, 0x09000).portr("SW1");
+	map(0x09001, 0x09001).portr("SW2");
+	map(0x09002, 0x09002).portr("INA");
+	map(0x09003, 0x09003).portr("INB");
+	map(0x09004, 0x09004).portr("INC");
+	map(0x09005, 0x09005).w(this, FUNC(subsino_state::subsino_out_a_w));
 
-	AM_RANGE( 0x09010, 0x09010 ) AM_READWRITE(flash_r, flash_w )
+	map(0x09008, 0x09008).portr("SW4");
+	map(0x09009, 0x09009).portr("SW3");  // AM_WRITE(subsino_out_a_w )
+	map(0x0900a, 0x0900a).rw(this, FUNC(subsino_state::hwcheck_r), FUNC(subsino_state::subsino_out_b_w));
+
+	map(0x09010, 0x09010).rw(this, FUNC(subsino_state::flash_r), FUNC(subsino_state::flash_w));
 //  AM_RANGE( 0x09011, 0x09011 ) //"flash" status, bit 0
 //  AM_RANGE( 0x0900c, 0x0900c ) AM_READ_PORT( "INC" )
-	AM_RANGE( 0x0900c, 0x0900d ) AM_DEVWRITE("ymsnd", ym2413_device, write)
+	map(0x0900c, 0x0900d).w("ymsnd", FUNC(ym2413_device::write));
 
 //  AM_RANGE( 0x09018, 0x09018 ) AM_DEVWRITE("oki", okim6295_device, write)
 
 //  AM_RANGE( 0x0900d, 0x0900d ) AM_WRITE(subsino_tiles_offset_w )
 
-	AM_RANGE( 0x07800, 0x07fff ) AM_RAM
-	AM_RANGE( 0x08000, 0x087ff ) AM_RAM_WRITE(subsino_videoram_w ) AM_SHARE("videoram")
-	AM_RANGE( 0x08800, 0x08fff ) AM_RAM_WRITE(subsino_colorram_w ) AM_SHARE("colorram")
+	map(0x07800, 0x07fff).ram();
+	map(0x08000, 0x087ff).ram().w(this, FUNC(subsino_state::subsino_videoram_w)).share("videoram");
+	map(0x08800, 0x08fff).ram().w(this, FUNC(subsino_state::subsino_colorram_w)).share("colorram");
 
-	AM_RANGE( 0x00000, 0x8fff ) AM_ROM //overlap unmapped regions
+	map(0x10000, 0x13fff).rom(); //overlap unmapped regions
 
-	AM_RANGE( 0x10000, 0x13fff ) AM_ROM //overlap unmapped regions
-
-ADDRESS_MAP_END
+}
 
 WRITE8_MEMBER(subsino_state::subsino_out_c_w)
 {
@@ -1018,45 +1041,47 @@ WRITE8_MEMBER(subsino_state::subsino_out_c_w)
 //  popmessage("data %02x\n",data);
 }
 
-static ADDRESS_MAP_START( tisub_map, AS_PROGRAM, 8, subsino_state )
-	AM_RANGE( 0x09800, 0x09fff ) AM_RAM
+void subsino_state::tisub_map(address_map &map)
+{
+	map(0x00000, 0x0bfff).rom(); // overlap unmapped regions
+	map(0x09800, 0x09fff).ram();
 
-	AM_RANGE( 0x09000, 0x09002 ) AM_DEVREAD("ppi1", i8255_device, read)
-	AM_RANGE( 0x09004, 0x09006 ) AM_DEVREAD("ppi2", i8255_device, read)
+	map(0x09000, 0x09002).r("ppi1", FUNC(i8255_device::read));
+	map(0x09004, 0x09006).r("ppi2", FUNC(i8255_device::read));
 
 	/* 0x09008: is marked as OUTPUT C in the test mode. */
-	AM_RANGE( 0x09008, 0x09008 ) AM_WRITE(subsino_out_c_w )
-	AM_RANGE( 0x09009, 0x09009 ) AM_WRITE(subsino_out_b_w )
-	AM_RANGE( 0x0900a, 0x0900a ) AM_WRITE(subsino_out_a_w )
+	map(0x09008, 0x09008).w(this, FUNC(subsino_state::subsino_out_c_w));
+	map(0x09009, 0x09009).w(this, FUNC(subsino_state::subsino_out_b_w));
+	map(0x0900a, 0x0900a).w(this, FUNC(subsino_state::subsino_out_a_w));
 
-	AM_RANGE( 0x0900c, 0x0900c ) AM_READ_PORT( "INC" )
+	map(0x0900c, 0x0900c).portr("INC");
 
-	AM_RANGE( 0x09016, 0x09017 ) AM_DEVWRITE("ymsnd", ym3812_device, write)
+	map(0x09016, 0x09017).w("ymsnd", FUNC(ym3812_device::write));
 
 //  AM_RANGE( 0x0900c, 0x0900c ) AM_DEVWRITE("oki", okim6295_device, write)
 
-	AM_RANGE( 0x0901b, 0x0901b ) AM_WRITE(subsino_tiles_offset_w )
+	map(0x0901b, 0x0901b).w(this, FUNC(subsino_state::subsino_tiles_offset_w));
 
-	AM_RANGE( 0x07800, 0x07fff ) AM_RAM
-	AM_RANGE( 0x08800, 0x08fff ) AM_RAM_WRITE(subsino_videoram_w ) AM_SHARE("videoram")
-	AM_RANGE( 0x08000, 0x087ff ) AM_RAM_WRITE(subsino_colorram_w ) AM_SHARE("colorram")
+	map(0x07800, 0x07fff).ram();
+	map(0x08800, 0x08fff).ram().w(this, FUNC(subsino_state::subsino_videoram_w)).share("videoram");
+	map(0x08000, 0x087ff).ram().w(this, FUNC(subsino_state::subsino_colorram_w)).share("colorram");
 
-	AM_RANGE( 0x00000, 0x0bfff ) AM_ROM // overlap unmapped regions
-	AM_RANGE( 0x10000, 0x13fff ) AM_ROM
-	AM_RANGE( 0x14000, 0x14fff ) AM_ROM // reads the card face data here (see rom copy in rom loading)
+	map(0x10000, 0x13fff).rom();
+	map(0x14000, 0x14fff).rom(); // reads the card face data here (see rom copy in rom loading)
 
-	AM_RANGE( 0x150c0, 0x150ff ) AM_RAM AM_SHARE("reel3_scroll")
-	AM_RANGE( 0x15140, 0x1517f ) AM_RAM AM_SHARE("reel2_scroll")
-	AM_RANGE( 0x15180, 0x151bf ) AM_RAM AM_SHARE("reel1_scroll")
+	map(0x150c0, 0x150ff).ram().share("reel3_scroll");
+	map(0x15140, 0x1517f).ram().share("reel2_scroll");
+	map(0x15180, 0x151bf).ram().share("reel1_scroll");
 
-	AM_RANGE( 0x15800, 0x159ff ) AM_RAM_WRITE(subsino_reel1_ram_w) AM_SHARE("reel1_ram")
-	AM_RANGE( 0x15a00, 0x15bff ) AM_RAM_WRITE(subsino_reel2_ram_w) AM_SHARE("reel2_ram")
-	AM_RANGE( 0x15c00, 0x15dff ) AM_RAM_WRITE(subsino_reel3_ram_w) AM_SHARE("reel3_ram")
-ADDRESS_MAP_END
+	map(0x15800, 0x159ff).ram().w(this, FUNC(subsino_state::subsino_reel1_ram_w)).share("reel1_ram");
+	map(0x15a00, 0x15bff).ram().w(this, FUNC(subsino_state::subsino_reel2_ram_w)).share("reel2_ram");
+	map(0x15c00, 0x15dff).ram().w(this, FUNC(subsino_state::subsino_reel3_ram_w)).share("reel3_ram");
+}
 
-static ADDRESS_MAP_START( ramdac_map, 0, 8, subsino_state )
-	AM_RANGE(0x000, 0x3ff) AM_DEVREADWRITE("ramdac", ramdac_device, ramdac_pal_r, ramdac_rgb666_w)
-ADDRESS_MAP_END
+void subsino_state::ramdac_map(address_map &map)
+{
+	map(0x000, 0x3ff).rw("ramdac", FUNC(ramdac_device::ramdac_pal_r), FUNC(ramdac_device::ramdac_rgb666_w));
+}
 
 // this stuff is banked..
 // not 100% sure on the bank bits.. other bits are also set
@@ -1109,82 +1134,85 @@ READ8_MEMBER(subsino_state::reel_scrollattr_r)
 	return m_reel1_attr[offset];
 }
 
-static ADDRESS_MAP_START( stbsub_map, AS_PROGRAM, 8, subsino_state )
-	AM_RANGE( 0x00000, 0x0bfff ) AM_ROM
+void subsino_state::stbsub_map(address_map &map)
+{
+	map(0x00000, 0x0bfff).rom();
 
-	AM_RANGE( 0x0c000, 0x0cfff ) AM_RAM
+	map(0x0c000, 0x0cfff).ram();
 
-	AM_RANGE( 0x0d000, 0x0d002 ) AM_DEVREAD("ppi1", i8255_device, read)
-	AM_RANGE( 0x0d004, 0x0d006 ) AM_DEVREAD("ppi2", i8255_device, read)
+	map(0x0d000, 0x0d002).r("ppi1", FUNC(i8255_device::read));
+	map(0x0d004, 0x0d006).r("ppi2", FUNC(i8255_device::read));
 
-	AM_RANGE( 0x0d008, 0x0d008 ) AM_RAM AM_SHARE("stbsub_out_c")
+	map(0x0d008, 0x0d008).ram().share("stbsub_out_c");
 
-	AM_RANGE( 0x0d009, 0x0d009 ) AM_WRITE(subsino_out_b_w )
-	AM_RANGE( 0x0d00a, 0x0d00a ) AM_WRITE(subsino_out_a_w )
+	map(0x0d009, 0x0d009).w(this, FUNC(subsino_state::subsino_out_b_w));
+	map(0x0d00a, 0x0d00a).w(this, FUNC(subsino_state::subsino_out_a_w));
 
-	AM_RANGE( 0x0d00c, 0x0d00c ) AM_READ_PORT( "INC" )
+	map(0x0d00c, 0x0d00c).portr("INC");
 
-	AM_RANGE( 0x0d010, 0x0d010 ) AM_DEVWRITE("ramdac", ramdac_device, index_w)
-	AM_RANGE( 0x0d011, 0x0d011 ) AM_DEVWRITE("ramdac", ramdac_device, pal_w)
-	AM_RANGE( 0x0d012, 0x0d012 ) AM_DEVWRITE("ramdac", ramdac_device, mask_w)
+	map(0x0d010, 0x0d010).w("ramdac", FUNC(ramdac_device::index_w));
+	map(0x0d011, 0x0d011).w("ramdac", FUNC(ramdac_device::pal_w));
+	map(0x0d012, 0x0d012).w("ramdac", FUNC(ramdac_device::mask_w));
 
-	AM_RANGE( 0x0d016, 0x0d017 ) AM_DEVWRITE("ymsnd", ym3812_device, write)
+	map(0x0d016, 0x0d017).w("ymsnd", FUNC(ym3812_device::write));
 
 //  AM_RANGE( 0x0d01b, 0x0d01b ) AM_WRITE(subsino_tiles_offset_w )
 
-	AM_RANGE( 0x0e000, 0x0e7ff ) AM_RAM_WRITE(subsino_colorram_w ) AM_SHARE("colorram")
-	AM_RANGE( 0x0e800, 0x0efff ) AM_RAM_WRITE(subsino_videoram_w ) AM_SHARE("videoram")
+	map(0x0e000, 0x0e7ff).ram().w(this, FUNC(subsino_state::subsino_colorram_w)).share("colorram");
+	map(0x0e800, 0x0efff).ram().w(this, FUNC(subsino_state::subsino_videoram_w)).share("videoram");
 
-	AM_RANGE( 0xf000, 0xf7ff ) AM_READWRITE(reel_scrollattr_r, reel_scrollattr_w)
+	map(0xf000, 0xf7ff).rw(this, FUNC(subsino_state::reel_scrollattr_r), FUNC(subsino_state::reel_scrollattr_w));
 
-	AM_RANGE( 0xf800, 0xf9ff ) AM_RAM_WRITE(subsino_reel1_ram_w) AM_SHARE("reel1_ram")
-	AM_RANGE( 0xfa00, 0xfbff ) AM_RAM_WRITE(subsino_reel2_ram_w) AM_SHARE("reel2_ram")
-	AM_RANGE( 0xfc00, 0xfdff ) AM_RAM_WRITE(subsino_reel3_ram_w) AM_SHARE("reel3_ram")
-ADDRESS_MAP_END
+	map(0xf800, 0xf9ff).ram().w(this, FUNC(subsino_state::subsino_reel1_ram_w)).share("reel1_ram");
+	map(0xfa00, 0xfbff).ram().w(this, FUNC(subsino_state::subsino_reel2_ram_w)).share("reel2_ram");
+	map(0xfc00, 0xfdff).ram().w(this, FUNC(subsino_state::subsino_reel3_ram_w)).share("reel3_ram");
+}
 
 
 /***************************************************************************
                         Magic Train (Clear NVRAM ROM?)
 ***************************************************************************/
 
-static ADDRESS_MAP_START( mtrainnv_map, AS_PROGRAM, 8, subsino_state )
-	AM_RANGE( 0x00000, 0x0bfff ) AM_ROM
+void subsino_state::mtrainnv_map(address_map &map)
+{
+	map(0x00000, 0x0bfff).rom();
 
-	AM_RANGE( 0x0c000, 0x0cfff ) AM_RAM
+	map(0x0c000, 0x0cfff).ram();
 
-	AM_RANGE( 0x0d000, 0x0d002 ) AM_DEVREAD("ppi1", i8255_device, read)
-	AM_RANGE( 0x0d004, 0x0d006 ) AM_DEVREAD("ppi2", i8255_device, read)
+	map(0x0d000, 0x0d002).r("ppi1", FUNC(i8255_device::read));
+	map(0x0d004, 0x0d006).r("ppi2", FUNC(i8255_device::read));
 
-	AM_RANGE( 0x0d008, 0x0d008 ) AM_RAM AM_SHARE("stbsub_out_c")
+	map(0x0d008, 0x0d008).ram().share("stbsub_out_c");
 //  AM_RANGE( 0x0d009, 0x0d009 ) AM_WRITE
 //  AM_RANGE( 0x0d00a, 0x0d00a ) AM_WRITE
 //  AM_RANGE( 0x0d00b, 0x0d00b ) AM_WRITE
-	AM_RANGE( 0x0d00c, 0x0d00c ) AM_READ_PORT( "INC" )
+	map(0x0d00c, 0x0d00c).portr("INC");
 
-	AM_RANGE( 0x0d010, 0x0d010 ) AM_DEVWRITE("ramdac", ramdac_device, index_w)
-	AM_RANGE( 0x0d011, 0x0d011 ) AM_DEVWRITE("ramdac", ramdac_device, pal_w)
-	AM_RANGE( 0x0d012, 0x0d012 ) AM_DEVWRITE("ramdac", ramdac_device, mask_w)
+	map(0x0d010, 0x0d010).w("ramdac", FUNC(ramdac_device::index_w));
+	map(0x0d011, 0x0d011).w("ramdac", FUNC(ramdac_device::pal_w));
+	map(0x0d012, 0x0d012).w("ramdac", FUNC(ramdac_device::mask_w));
 
 //  AM_RANGE( 0x0d012, 0x0d012 ) AM_WRITE
 
-	AM_RANGE( 0x0d016, 0x0d017 ) AM_DEVWRITE("ymsnd", ym3812_device, write)
+	map(0x0d016, 0x0d017).w("ymsnd", FUNC(ym3812_device::write));
 
 //  AM_RANGE( 0x0d018, 0x0d018 ) AM_DEVREADWRITE("oki", okim6295_device, read, write)
 
-	AM_RANGE( 0x0e000, 0x0e7ff ) AM_RAM_WRITE(subsino_colorram_w ) AM_SHARE("colorram")
-	AM_RANGE( 0x0e800, 0x0efff ) AM_RAM_WRITE(subsino_videoram_w ) AM_SHARE("videoram")
+	map(0x0e000, 0x0e7ff).ram().w(this, FUNC(subsino_state::subsino_colorram_w)).share("colorram");
+	map(0x0e800, 0x0efff).ram().w(this, FUNC(subsino_state::subsino_videoram_w)).share("videoram");
 
-	AM_RANGE( 0xf000, 0xf7ff ) AM_READWRITE(reel_scrollattr_r, reel_scrollattr_w)
+	map(0xf000, 0xf7ff).rw(this, FUNC(subsino_state::reel_scrollattr_r), FUNC(subsino_state::reel_scrollattr_w));
 
-	AM_RANGE( 0xf800, 0xf9ff ) AM_RAM_WRITE(subsino_reel1_ram_w) AM_SHARE("reel1_ram")
-	AM_RANGE( 0xfa00, 0xfbff ) AM_RAM_WRITE(subsino_reel2_ram_w) AM_SHARE("reel2_ram")
-	AM_RANGE( 0xfc00, 0xfdff ) AM_RAM_WRITE(subsino_reel3_ram_w) AM_SHARE("reel3_ram")
-ADDRESS_MAP_END
+	map(0xf800, 0xf9ff).ram().w(this, FUNC(subsino_state::subsino_reel1_ram_w)).share("reel1_ram");
+	map(0xfa00, 0xfbff).ram().w(this, FUNC(subsino_state::subsino_reel2_ram_w)).share("reel2_ram");
+	map(0xfc00, 0xfdff).ram().w(this, FUNC(subsino_state::subsino_reel3_ram_w)).share("reel3_ram");
+}
 
 
-static ADDRESS_MAP_START( subsino_iomap, AS_IO, 8, subsino_state )
-	AM_RANGE( 0x0000, 0x003f ) AM_RAM // internal regs
-ADDRESS_MAP_END
+void subsino_state::subsino_iomap(address_map &map)
+{
+	map(0x0000, 0x003f).ram(); // internal regs
+}
 
 
 /***************************************************************************
@@ -1636,15 +1664,15 @@ static INPUT_PORTS_START( stbsub )
 	PORT_DIPNAME( 0x10, 0x10, "Double-Up Game" )        PORT_DIPLOCATION("SW4:5")
 	PORT_DIPSETTING(    0x10, "Dancers / Panties Colors" )
 	PORT_DIPSETTING(    0x00, "Cards / Seven-Bingo" )
-	PORT_DIPNAME( 0x20, 0x20, DEF_STR( Unknown ) )      PORT_DIPLOCATION("SW4:6")
-	PORT_DIPSETTING(    0x20, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x40, 0x40, DEF_STR( Unknown ) )      PORT_DIPLOCATION("SW4:7")
-	PORT_DIPSETTING(    0x40, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x80, 0x80, DEF_STR( Unknown ) )      PORT_DIPLOCATION("SW4:8")
-	PORT_DIPSETTING(    0x80, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0xe0, 0xe0, "Clear Ticket Unit" )     PORT_DIPLOCATION("SW4:6,7,8")
+	PORT_DIPSETTING(    0x00, "500" )
+	PORT_DIPSETTING(    0x20, "100" )
+	PORT_DIPSETTING(    0x40, "50" )
+	PORT_DIPSETTING(    0x60, "25" )
+	PORT_DIPSETTING(    0x80, "20" )
+	PORT_DIPSETTING(    0xa0, "10" )
+	PORT_DIPSETTING(    0xc0, "5" )
+	PORT_DIPSETTING(    0xe0, "1" )
 
 	PORT_START("INA")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN )
@@ -2748,9 +2776,9 @@ GFXDECODE_END
 *                             Machine Drivers                              *
 ***************************************************************************/
 
-static MACHINE_CONFIG_START( victor21 )
+MACHINE_CONFIG_START(subsino_state::victor21)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z180, XTAL_12MHz / 8)   /* Unknown clock */
+	MCFG_CPU_ADD("maincpu", Z180, XTAL(12'000'000) / 8)   /* Unknown clock */
 	MCFG_CPU_PROGRAM_MAP(victor21_map)
 	MCFG_CPU_IO_MAP(subsino_iomap)
 
@@ -2782,15 +2810,16 @@ static MACHINE_CONFIG_START( victor21 )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_SOUND_ADD("ymsnd", YM2413, XTAL_3_579545MHz)
+	MCFG_SOUND_ADD("ymsnd", YM2413, XTAL(3'579'545))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MCFG_OKIM6295_ADD("oki", XTAL_4_433619MHz / 4, PIN7_HIGH)  /* Clock frequency & pin 7 not verified */
+	MCFG_OKIM6295_ADD("oki", XTAL(4'433'619) / 4, PIN7_HIGH)  /* Clock frequency & pin 7 not verified */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 
 /* same but with an additional protection. */
-static MACHINE_CONFIG_DERIVED( victor5, victor21 )
+MACHINE_CONFIG_START(subsino_state::victor5)
+	victor21(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -2798,9 +2827,9 @@ static MACHINE_CONFIG_DERIVED( victor5, victor21 )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( crsbingo )
+MACHINE_CONFIG_START(subsino_state::crsbingo)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z180, XTAL_12MHz / 8)   /* Unknown CPU and clock */
+	MCFG_CPU_ADD("maincpu", Z180, XTAL(12'000'000) / 8)   /* Unknown CPU and clock */
 	MCFG_CPU_PROGRAM_MAP(crsbingo_map)
 	MCFG_CPU_IO_MAP(subsino_iomap)
 
@@ -2825,14 +2854,14 @@ static MACHINE_CONFIG_START( crsbingo )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_SOUND_ADD("ymsnd", YM2413, XTAL_3_579545MHz)   /* Unknown clock */
+	MCFG_SOUND_ADD("ymsnd", YM2413, XTAL(3'579'545))   /* Unknown clock */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( srider )
+MACHINE_CONFIG_START(subsino_state::srider)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z180, XTAL_12MHz / 8)   /* Unknown clock */
+	MCFG_CPU_ADD("maincpu", Z180, XTAL(12'000'000) / 8)   /* Unknown clock */
 	MCFG_CPU_PROGRAM_MAP(srider_map)
 	MCFG_CPU_IO_MAP(subsino_iomap)
 
@@ -2867,24 +2896,25 @@ static MACHINE_CONFIG_START( srider )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_3_579545MHz)
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL(3'579'545))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MCFG_OKIM6295_ADD("oki", XTAL_4_433619MHz / 4, PIN7_HIGH)  /* Clock frequency & pin 7 not verified */
+	MCFG_OKIM6295_ADD("oki", XTAL(4'433'619) / 4, PIN7_HIGH)  /* Clock frequency & pin 7 not verified */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( sharkpy, srider )
+MACHINE_CONFIG_START(subsino_state::sharkpy)
+	srider(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(sharkpy_map)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( tisub )
+MACHINE_CONFIG_START(subsino_state::tisub)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z180, XTAL_12MHz / 8)   /* Unknown CPU and clock */
+	MCFG_CPU_ADD("maincpu", Z180, XTAL(12'000'000) / 8)   /* Unknown CPU and clock */
 	MCFG_CPU_PROGRAM_MAP(tisub_map)
 	MCFG_CPU_IO_MAP(subsino_iomap)
 
@@ -2919,13 +2949,13 @@ static MACHINE_CONFIG_START( tisub )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_3_579545MHz)   /* Unknown clock */
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL(3'579'545))   /* Unknown clock */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( stbsub )
+MACHINE_CONFIG_START(subsino_state::stbsub)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z180, XTAL_12MHz / 8)   /* Unknown clock */
+	MCFG_CPU_ADD("maincpu", Z180, XTAL(12'000'000) / 8)   /* Unknown clock */
 	MCFG_CPU_PROGRAM_MAP(stbsub_map)
 	MCFG_CPU_IO_MAP(subsino_iomap)
 
@@ -2962,11 +2992,12 @@ static MACHINE_CONFIG_START( stbsub )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_3_579545MHz)
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL(3'579'545))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( mtrainnv, stbsub )
+MACHINE_CONFIG_START(subsino_state::mtrainnv)
+	stbsub(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -3269,7 +3300,7 @@ ROM_START( sharkpy )
 	ROM_CONTINUE(              0x38000, 0x08000 )
 
 	ROM_REGION( 0x40000, "oki", 0 )
-	ROM_LOAD( "shark(ii)-italy_4_ver1.0.u54", 0x00000, 0x20000, CRC(9f384c59) SHA1(d2b087b8370b40b6f0944de661ea6aebaebea06f) )
+	ROM_LOAD( "shark=ii=-italy_4_ver1.0.u54", 0x00000, 0x20000, CRC(9f384c59) SHA1(d2b087b8370b40b6f0944de661ea6aebaebea06f) )
 
 	ROM_REGION( 0x300, "proms", 0 )
 	ROM_LOAD( "n82s129an.u11", 0x000, 0x100, CRC(daf3657a) SHA1(93005938e2d60d54e7bbf1e234bba3802ee1af21) )
@@ -3333,7 +3364,7 @@ ROM_START( sharkpya )
 	ROM_CONTINUE(              0x38000, 0x08000 )
 
 	ROM_REGION( 0x40000, "oki", 0 )
-	ROM_LOAD( "shark(ii)-italy_4_ver1.0.u54", 0x00000, 0x20000, CRC(9f384c59) SHA1(d2b087b8370b40b6f0944de661ea6aebaebea06f) )
+	ROM_LOAD( "shark=ii=-italy_4_ver1.0.u54", 0x00000, 0x20000, CRC(9f384c59) SHA1(d2b087b8370b40b6f0944de661ea6aebaebea06f) )
 
 	ROM_REGION( 0x300, "proms", 0 )
 	ROM_LOAD( "sn82s129an.u11", 0x000, 0x100, CRC(daf3657a) SHA1(93005938e2d60d54e7bbf1e234bba3802ee1af21) )

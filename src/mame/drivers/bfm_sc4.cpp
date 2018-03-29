@@ -273,23 +273,24 @@ uint8_t sc4_state::read_input_matrix(int row)
 
 READ16_MEMBER(sc4_state::sc4_cs1_r)
 {
-	int pc = space.device().safe_pc();
+	int pc = m_maincpu->pc();
 
 	if (offset<0x100000/2)
 	{
 		// allow some sets to boot, should probably return this data on Mbus once we figure out what it is
 		if ((pc == m_chk41addr) && (offset == m_chk41addr>>1))
 		{
-			uint32_t r_A0 = space.device().state().state_int(M68K_A0);
-			uint32_t r_A1 = space.device().state().state_int(M68K_A1);
-			uint32_t r_D1 = space.device().state().state_int(M68K_D1);
+			uint32_t r_A0 = m_maincpu->state_int(M68K_A0);
+			uint32_t r_A1 = m_maincpu->state_int(M68K_A1);
+			uint32_t r_D1 = m_maincpu->state_int(M68K_D1);
 
 			if (r_D1 == 0x7)
 			{
+				auto &mspace = m_maincpu->space(AS_PROGRAM);
 				bool valid = true;
 				for (int i=0;i<8;i++)
 				{
-					uint8_t code = space.read_byte(r_A0+i);
+					uint8_t code = mspace.read_byte(r_A0+i);
 					if (code != 0xff) // assume our mbus code just returns 0xff for now..
 						valid = false;
 				}
@@ -302,9 +303,9 @@ READ16_MEMBER(sc4_state::sc4_cs1_r)
 					printf("Ident code? ");
 					for (int i=0;i<8;i++)
 					{
-						uint8_t code = space.read_byte(r_A1+i);
+						uint8_t code = mspace.read_byte(r_A1+i);
 						printf("%02x",code);
-						space.write_byte(r_A0+i, code);
+						mspace.write_byte(r_A0+i, code);
 					}
 					printf("\n");
 				}
@@ -322,7 +323,7 @@ READ16_MEMBER(sc4_state::sc4_cs1_r)
 
 READ16_MEMBER(sc4_state::sc4_mem_r)
 {
-	int pc = space.device().safe_pc();
+	int pc = m_maincpu->pc();
 	int cs = m_maincpu->get_cs(offset * 2);
 	int base = 0, end = 0, base2 = 0, end2 = 0;
 //  if (!(debugger_access())) printf("cs is %d\n", cs);
@@ -444,28 +445,28 @@ READ16_MEMBER(sc4_state::sc4_mem_r)
 	return 0x0000;
 }
 
+void bfm_sc45_state::machine_start()
+{
+	m_lamps.resolve();
+	m_matrix.resolve();
+	m_digits.resolve();
+}
+
 WRITE8_MEMBER(bfm_sc45_state::mux_output_w)
 {
-	int i;
-	int off = offset<<3;
+	int const off = offset<<3;
 
-	for (i=0; i<8; i++)
-		output().set_lamp_value(off+i, ((data & (1 << i)) != 0));
-
-
-	output().set_indexed_value("matrix", off+i, ((data & (1 << i)) != 0));
+	for (int i=0; i<8; i++)
+		m_lamps[off+i] = BIT(data, i);
 }
 
 WRITE8_MEMBER(bfm_sc45_state::mux_output2_w)
 {
-	int i;
-	int off = offset<<3;
+	int const off = offset<<3;
 
 	// some games use this as a matrix port (luckb etc.)
-	for (i=0; i<8; i++)
-	{
-		output().set_indexed_value("matrix", off+i, ((data & (1 << i)) != 0));
-	}
+	for (int i=0; i<8; i++)
+		m_matrix[off+i] = BIT(data, i);
 
 	// others drive 7-segs with it..  so rendering it there as well in our debug layouts
 
@@ -473,34 +474,30 @@ WRITE8_MEMBER(bfm_sc45_state::mux_output2_w)
 	{
 		m_segment_34_cache[offset] = data;
 
-		uint16_t short_data;
-		uint8_t byte_data_first_segment;
-		uint8_t byte_data_second_segment;
 		for (int digit = 0; digit < 32; digit += 2)
 		{
-			short_data = (m_segment_34_cache[digit + 1] << 8) | m_segment_34_cache[digit];
-			byte_data_first_segment = (short_data >> 1) & 15;
-			byte_data_second_segment = (short_data >> 6) & 15;
-			output().set_digit_value(digit, SEGMENT_34_ENCODING_LOOKUP[byte_data_first_segment]);
-			output().set_digit_value(digit + 1, SEGMENT_34_ENCODING_LOOKUP[byte_data_second_segment]);
+			uint16_t const short_data = (m_segment_34_cache[digit + 1] << 8) | m_segment_34_cache[digit];
+			uint8_t byte_data_first_segment = (short_data >> 1) & 15;
+			uint8_t const byte_data_second_segment = (short_data >> 6) & 15;
+			m_digits[digit] = SEGMENT_34_ENCODING_LOOKUP[byte_data_first_segment];
+			m_digits[digit + 1] = SEGMENT_34_ENCODING_LOOKUP[byte_data_second_segment];
 
 			if (digit == 0 || digit == 2)
 			{
 				byte_data_first_segment = (short_data >> 11) & 15;
-				output().set_digit_value((digit / 2) + 32, SEGMENT_34_ENCODING_LOOKUP[byte_data_first_segment]);
+				m_digits[(digit / 2) + 32] = SEGMENT_34_ENCODING_LOOKUP[byte_data_first_segment];
 			}
 		}
 	}
 	else
 	{
-		uint8_t bf7segdata = BITSWAP8(data,0,7,6,5,4,3,2,1);
-		output().set_digit_value(offset, bf7segdata);
+		m_digits[offset] = bitswap<8>(data,0,7,6,5,4,3,2,1);
 	}
 }
 
 WRITE16_MEMBER(sc4_state::sc4_mem_w)
 {
-	int pc = space.device().safe_pc();
+	int pc = m_maincpu->pc();
 	int cs = m_maincpu->get_cs(offset * 2);
 	int base = 0, end = 0, base2 = 0, end2 = 0;
 
@@ -615,17 +612,18 @@ WRITE16_MEMBER(sc4_state::sc4_mem_w)
 	}
 }
 
-static ADDRESS_MAP_START( sc4_map, AS_PROGRAM, 16, sc4_state )
-	AM_RANGE(0x0000000, 0x0fffff) AM_READ(sc4_cs1_r) // technically we should be going through the cs handler, but this is always set to ROM, and assuming that is a lot faster
-	AM_RANGE(0x0000000, 0xffffff) AM_READWRITE(sc4_mem_r, sc4_mem_w)
-ADDRESS_MAP_END
+void sc4_state::sc4_map(address_map &map)
+{
+	map(0x0000000, 0xffffff).rw(this, FUNC(sc4_state::sc4_mem_r), FUNC(sc4_state::sc4_mem_w));
+	map(0x0000000, 0x0fffff).r(this, FUNC(sc4_state::sc4_cs1_r)); // technically we should be going through the cs handler, but this is always set to ROM, and assuming that is a lot faster
+}
 
 
 
 
 READ32_MEMBER(sc4_adder4_state::adder4_mem_r)
 {
-	int pc = space.device().safe_pc();
+	int pc = m_adder4cpu->pc();
 	int cs = m_adder4cpu->get_cs(offset * 4);
 
 	switch ( cs )
@@ -647,7 +645,7 @@ READ32_MEMBER(sc4_adder4_state::adder4_mem_r)
 
 WRITE32_MEMBER(sc4_adder4_state::adder4_mem_w)
 {
-	int pc = space.device().safe_pc();
+	int pc = m_adder4cpu->pc();
 	int cs = m_adder4cpu->get_cs(offset * 4);
 
 	switch ( cs )
@@ -665,9 +663,10 @@ WRITE32_MEMBER(sc4_adder4_state::adder4_mem_w)
 
 }
 
-static ADDRESS_MAP_START( sc4_adder4_map, AS_PROGRAM, 32, sc4_adder4_state )
-	AM_RANGE(0x00000000, 0xffffffff) AM_READWRITE(adder4_mem_r, adder4_mem_w)
-ADDRESS_MAP_END
+void sc4_adder4_state::sc4_adder4_map(address_map &map)
+{
+	map(0x00000000, 0xffffffff).rw(this, FUNC(sc4_adder4_state::adder4_mem_r), FUNC(sc4_adder4_state::adder4_mem_w));
+}
 
 
 
@@ -773,8 +772,7 @@ void sc4_state::bfm_sc4_68307_portb_w(address_space &space, bool dedicated, uint
 {
 //  if (dedicated == false)
 	{
-		int pc = space.device().safe_pc();
-		//_m68ki_cpu_core *m68k = m68k_get_safe_token(&space.device());
+		int pc = m_maincpu->pc();
 		// serial output to the VFD at least..
 		logerror("%08x bfm_sc4_68307_portb_w %04x %04x\n", pc, data, line_mask);
 
@@ -786,7 +784,7 @@ void sc4_state::bfm_sc4_68307_portb_w(address_space &space, bool dedicated, uint
 }
 uint8_t sc4_state::bfm_sc4_68307_porta_r(address_space &space, bool dedicated, uint8_t line_mask)
 {
-	int pc = space.device().safe_pc();
+	int pc = m_maincpu->pc();
 	logerror("%08x bfm_sc4_68307_porta_r\n", pc);
 	return 0xbb;// machine().rand();
 }
@@ -805,16 +803,20 @@ uint16_t sc4_state::bfm_sc4_68307_portb_r(address_space &space, bool dedicated, 
 	}
 }
 
-MACHINE_RESET_MEMBER(sc4_state,sc4)
+void sc4_state::machine_reset()
 {
+	bfm_sc45_state::machine_reset();
+
 	m_dochk41 = true;
 
 	sec.reset();
 }
 
 
-MACHINE_START_MEMBER(sc4_state,sc4)
+void sc4_state::machine_start()
 {
+	bfm_sc45_state::machine_start();
+
 	m_nvram->set_base(m_mainram, sizeof(m_mainram));
 
 	m_maincpu->set_port_callbacks(
@@ -890,23 +892,20 @@ WRITE_LINE_MEMBER(sc4_state::bfmdm01_busy)
 	// Must tie back to inputs somehow!
 }
 
-MACHINE_CONFIG_START( sc4_common )
+MACHINE_CONFIG_START(sc4_state::sc4_common)
 	MCFG_CPU_ADD("maincpu", M68307, 16000000)    // 68307! (EC000 core)
 	MCFG_CPU_PROGRAM_MAP(sc4_map)
 	MCFG_MC68307_SERIAL_A_TX_CALLBACK(WRITELINE(sc4_state, m68307_duart_txa))
 	MCFG_MC68307_SERIAL_INPORT_CALLBACK(READ8(sc4_state, m68307_duart_input_r))
 	MCFG_MC68307_SERIAL_OUTPORT_CALLBACK(WRITE8(sc4_state, m68307_duart_output_w))
 
-	MCFG_MACHINE_START_OVERRIDE(sc4_state, sc4 )
-	MCFG_MACHINE_RESET_OVERRIDE(sc4_state, sc4 )
-
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
 	MCFG_NVRAM_ADD_1FILL("nvram")
 
-	MCFG_MC68681_ADD("duart68681", 16000000/4) // ?? Mhz
-	MCFG_MC68681_SET_EXTERNAL_CLOCKS(XTAL_16MHz/2/8, XTAL_16MHz/2/16, XTAL_16MHz/2/16, XTAL_16MHz/2/8)
+	MCFG_DEVICE_ADD("duart68681", MC68681, 16000000/4) // ?? Mhz
+	MCFG_MC68681_SET_EXTERNAL_CLOCKS(XTAL(16'000'000)/2/8, XTAL(16'000'000)/2/16, XTAL(16'000'000)/2/16, XTAL(16'000'000)/2/8)
 	MCFG_MC68681_IRQ_CALLBACK(WRITELINE(sc4_state, bfm_sc4_duart_irq_handler))
 	MCFG_MC68681_A_TX_CALLBACK(WRITELINE(sc4_state, bfm_sc4_duart_txa))
 	MCFG_MC68681_INPORT_CALLBACK(READ8(sc4_state, bfm_sc4_duart_input_r))
@@ -921,8 +920,8 @@ MACHINE_CONFIG_START( sc4_common )
 MACHINE_CONFIG_END
 
 //Standard 6 reels all connected
-MACHINE_CONFIG_START( sc4 )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -939,8 +938,8 @@ MACHINE_CONFIG_START( sc4 )
 MACHINE_CONFIG_END
 
 //Standard 3 reels
-MACHINE_CONFIG_START( sc4_3reel )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_3reel)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -952,8 +951,8 @@ MACHINE_CONFIG_START( sc4_3reel )
 MACHINE_CONFIG_END
 
 //Standard 4 reels
-MACHINE_CONFIG_START( sc4_4reel )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_4reel)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -966,9 +965,9 @@ MACHINE_CONFIG_START( sc4_4reel )
 MACHINE_CONFIG_END
 
 //4 reels, with the last connected to RL4 not RL3
-MACHINE_CONFIG_START( sc4_4reel_alt )
+MACHINE_CONFIG_START(sc4_state::sc4_4reel_alt)
 
-	MCFG_FRAGMENT_ADD(sc4_common)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -983,8 +982,8 @@ MACHINE_CONFIG_END
 
 
 //Standard 5 reels
-MACHINE_CONFIG_START( sc4_5reel )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_5reel)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -999,8 +998,8 @@ MACHINE_CONFIG_START( sc4_5reel )
 MACHINE_CONFIG_END
 
 //5 reels, with RL4 skipped
-MACHINE_CONFIG_START( sc4_5reel_alt )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_5reel_alt)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1017,9 +1016,9 @@ MACHINE_CONFIG_START( sc4_5reel_alt )
 MACHINE_CONFIG_END
 
 //6 reels, last 200 steps
-MACHINE_CONFIG_START( sc4_200_std )
+MACHINE_CONFIG_START(sc4_state::sc4_200_std)
 
-	MCFG_FRAGMENT_ADD(sc4_common)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1036,8 +1035,8 @@ MACHINE_CONFIG_START( sc4_200_std )
 MACHINE_CONFIG_END
 
 //6 reels, last 200 steps
-MACHINE_CONFIG_START( sc4_200_alt )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_200_alt)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1054,8 +1053,8 @@ MACHINE_CONFIG_START( sc4_200_alt )
 MACHINE_CONFIG_END
 
 //6 reels, RL4 200 steps
-MACHINE_CONFIG_START( sc4_200_alta )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_200_alta)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1072,8 +1071,8 @@ MACHINE_CONFIG_START( sc4_200_alta )
 MACHINE_CONFIG_END
 
 //6 reels, 3 48 step, 3 200 step
-MACHINE_CONFIG_START( sc4_200_altb )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_200_altb)
+	sc4_common(config);
 
 	MCFG_STARPOINT_200STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1090,8 +1089,8 @@ MACHINE_CONFIG_START( sc4_200_altb )
 MACHINE_CONFIG_END
 
 //5 reels, last one 200 steps
-MACHINE_CONFIG_START( sc4_200_5r )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_200_5r)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1108,8 +1107,8 @@ MACHINE_CONFIG_END
 
 
 //5 reels, last one 200 steps, RL4 skipped
-MACHINE_CONFIG_START( sc4_200_5ra )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_200_5ra)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1125,8 +1124,8 @@ MACHINE_CONFIG_START( sc4_200_5ra )
 MACHINE_CONFIG_END
 
 //5 reels, last one 200 steps, RL5 skipped
-MACHINE_CONFIG_START( sc4_200_5rb )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_200_5rb)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1142,8 +1141,8 @@ MACHINE_CONFIG_START( sc4_200_5rb )
 MACHINE_CONFIG_END
 
 //5 reels, RL5 200 steps, RL4 skipped
-MACHINE_CONFIG_START( sc4_200_5rc )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_200_5rc)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1159,8 +1158,8 @@ MACHINE_CONFIG_START( sc4_200_5rc )
 MACHINE_CONFIG_END
 
 //4 reels, last one 200 steps
-MACHINE_CONFIG_START( sc4_200_4r )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_200_4r)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1173,8 +1172,8 @@ MACHINE_CONFIG_START( sc4_200_4r )
 MACHINE_CONFIG_END
 
 //4 reels, last one 200 steps, RL4 skipped
-MACHINE_CONFIG_START( sc4_200_4ra )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_200_4ra)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1189,8 +1188,8 @@ MACHINE_CONFIG_END
 
 
 //4 reels, last one 200 steps, RL4,5 skipped
-MACHINE_CONFIG_START( sc4_200_4rb )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_200_4rb)
+	sc4_common(config);
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1203,8 +1202,8 @@ MACHINE_CONFIG_START( sc4_200_4rb )
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel6_optic_cb))
 MACHINE_CONFIG_END
 
-MACHINE_CONFIG_START( sc4_4reel_200 )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_4reel_200)
+	sc4_common(config);
 
 	MCFG_STARPOINT_200STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1216,8 +1215,8 @@ MACHINE_CONFIG_START( sc4_4reel_200 )
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel4_optic_cb))
 MACHINE_CONFIG_END
 
-MACHINE_CONFIG_START( sc4_3reel_200 )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_3reel_200)
+	sc4_common(config);
 
 	MCFG_STARPOINT_200STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1227,9 +1226,9 @@ MACHINE_CONFIG_START( sc4_3reel_200 )
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel3_optic_cb))
 MACHINE_CONFIG_END
 
-MACHINE_CONFIG_START( sc4_3reel_200_48 )
+MACHINE_CONFIG_START(sc4_state::sc4_3reel_200_48)
 
-	MCFG_FRAGMENT_ADD(sc4_common)
+	sc4_common(config);
 
 	MCFG_STARPOINT_200STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -1241,35 +1240,31 @@ MACHINE_CONFIG_START( sc4_3reel_200_48 )
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel4_optic_cb))
 MACHINE_CONFIG_END
 
-MACHINE_CONFIG_START( sc4_no_reels )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4_no_reels)
+	sc4_common(config);
 MACHINE_CONFIG_END
 
-MACHINE_START_MEMBER(sc4_adder4_state,adder4)
+void sc4_adder4_state::machine_start()
 {
-	m_adder4cpuregion = (uint32_t*)memregion( "adder4" )->base();
+	sc4_state::machine_start();
+
 	m_adder4ram = make_unique_clear<uint32_t[]>(0x10000);
-	MACHINE_START_CALL_MEMBER(sc4);
 }
 
-MACHINE_CONFIG_START( sc4_adder4 )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_adder4_state::sc4_adder4)
+	sc4_common(config);
 
 	MCFG_CPU_ADD("adder4", M68340, 25175000)     // 68340 (CPU32 core)
 	MCFG_CPU_PROGRAM_MAP(sc4_adder4_map)
-
-	MCFG_MACHINE_START_OVERRIDE(sc4_adder4_state, adder4 )
 MACHINE_CONFIG_END
 
-MACHINE_CONFIG_START( sc4dmd )
-	MCFG_FRAGMENT_ADD(sc4_common)
+MACHINE_CONFIG_START(sc4_state::sc4dmd)
+	sc4_common(config);
 	/* video hardware */
 
 	//MCFG_DEFAULT_LAYOUT(layout_sc4_dmd)
 	MCFG_DEVICE_ADD("dm01", BFM_DM01, 0)
 	MCFG_BFM_DM01_BUSY_CB(WRITELINE(sc4_state, bfmdm01_busy))
-
-	MCFG_MACHINE_START_OVERRIDE(sc4_state, sc4 )
 
 	MCFG_STARPOINT_RM20_48STEP_ADD("reel1")
 	MCFG_STEPPER_OPTIC_CALLBACK(WRITELINE(sc4_state, reel1_optic_cb))
@@ -11570,57 +11565,57 @@ ROM_END
 
 ROM_START( sc4mtbclh )
 	ROM_REGION( 0x400000, "maincpu", ROMREGION_ERASEFF )
-	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p(1)ss.hi", 0x00000, 0x080000, CRC(6baafc2d) SHA1(fb775e0d431a2c31b3f6c565cddaad5d22d9d122) )
-	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p(1)ss.lo", 0x00001, 0x080000, CRC(179f0787) SHA1(6815167bee95e88cf628128a88065a66983a7489) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p=1=ss.hi", 0x00000, 0x080000, CRC(6baafc2d) SHA1(fb775e0d431a2c31b3f6c565cddaad5d22d9d122) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p=1=ss.lo", 0x00001, 0x080000, CRC(179f0787) SHA1(6815167bee95e88cf628128a88065a66983a7489) )
 	sc_mtbcl_others
 ROM_END
 
 ROM_START( sc4mtbcli )
 	ROM_REGION( 0x400000, "maincpu", ROMREGION_ERASEFF )
-	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p(2)ss.hi", 0x00000, 0x080000, CRC(3539277b) SHA1(2a602de4a3b3d6336e4f0be15b9bd3d9e730c571) )
-	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p(2)ss.lo", 0x00001, 0x080000, CRC(9cc4bf96) SHA1(db0cd119346b5ffce1bdf19e595f085bef93747d) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p=2=ss.hi", 0x00000, 0x080000, CRC(3539277b) SHA1(2a602de4a3b3d6336e4f0be15b9bd3d9e730c571) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p=2=ss.lo", 0x00001, 0x080000, CRC(9cc4bf96) SHA1(db0cd119346b5ffce1bdf19e595f085bef93747d) )
 	sc_mtbcl_others
 ROM_END
 
 ROM_START( sc4mtbclj )
 	ROM_REGION( 0x400000, "maincpu", ROMREGION_ERASEFF )
-	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p(3)ss.hi", 0x00000, 0x080000, CRC(82d9d864) SHA1(02f6fe87364d5afece5a7289ac74bd66345b53ea) )
-	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p(3)ss.lo", 0x00001, 0x080000, CRC(902c1902) SHA1(15e00073cb818af46a37357304d2a8ef7f256f09) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p=3=ss.hi", 0x00000, 0x080000, CRC(82d9d864) SHA1(02f6fe87364d5afece5a7289ac74bd66345b53ea) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p=3=ss.lo", 0x00001, 0x080000, CRC(902c1902) SHA1(15e00073cb818af46a37357304d2a8ef7f256f09) )
 	sc_mtbcl_others
 ROM_END
 
 ROM_START( sc4mtbclk )
 	ROM_REGION( 0x400000, "maincpu", ROMREGION_ERASEFF )
-	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p(4)ss.hi", 0x00000, 0x080000, CRC(75a15cea) SHA1(d34e20273c1ed7b7a11100a68462775930f7c39f) )
-	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p(4)ss.lo", 0x00001, 0x080000, CRC(0f5d2f5b) SHA1(725c1cf317cac74a6f0e0185a46ff0c7c399432d) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p=4=ss.hi", 0x00000, 0x080000, CRC(75a15cea) SHA1(d34e20273c1ed7b7a11100a68462775930f7c39f) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_dat_ac_1000pnd-50p=4=ss.lo", 0x00001, 0x080000, CRC(0f5d2f5b) SHA1(725c1cf317cac74a6f0e0185a46ff0c7c399432d) )
 	sc_mtbcl_others
 ROM_END
 
 ROM_START( sc4mtbcll )
 	ROM_REGION( 0x400000, "maincpu", ROMREGION_ERASEFF )
-	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p(1)ss.hi", 0x00000, 0x080000, CRC(d596e8bc) SHA1(7fbf3bac2c96034714ce3b83077f737c5bd93afc) )
-	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p(1)ss.lo", 0x00001, 0x080000, CRC(a4ea7d69) SHA1(ae949626d8784570145bc2e51b6389454ead73f8) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p=1=ss.hi", 0x00000, 0x080000, CRC(d596e8bc) SHA1(7fbf3bac2c96034714ce3b83077f737c5bd93afc) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p=1=ss.lo", 0x00001, 0x080000, CRC(a4ea7d69) SHA1(ae949626d8784570145bc2e51b6389454ead73f8) )
 	sc_mtbcl_others
 ROM_END
 
 ROM_START( sc4mtbclm )
 	ROM_REGION( 0x400000, "maincpu", ROMREGION_ERASEFF )
-	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p(2)ss.hi", 0x00000, 0x080000, CRC(decceaa7) SHA1(1e13bf0eb30280932028f0b52cbf45e461f5ab5e) )
-	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p(2)ss.lo", 0x00001, 0x080000, CRC(b57323fd) SHA1(b9a43b16ff347cf3d87a064468c0f507c87ef819) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p=2=ss.hi", 0x00000, 0x080000, CRC(decceaa7) SHA1(1e13bf0eb30280932028f0b52cbf45e461f5ab5e) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p=2=ss.lo", 0x00001, 0x080000, CRC(b57323fd) SHA1(b9a43b16ff347cf3d87a064468c0f507c87ef819) )
 	sc_mtbcl_others
 ROM_END
 
 ROM_START( sc4mtbcln )
 	ROM_REGION( 0x400000, "maincpu", ROMREGION_ERASEFF )
-	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p(3)ss.hi", 0x00000, 0x080000, CRC(64882431) SHA1(21184508e6e2878fa5d8b300ad5f9ef7ab75c223) )
-	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p(3)ss.lo", 0x00001, 0x080000, CRC(8ab940ad) SHA1(a4170464e3d08f0a925ab6d302f0d0a7ab03ed94) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p=3=ss.hi", 0x00000, 0x080000, CRC(64882431) SHA1(21184508e6e2878fa5d8b300ad5f9ef7ab75c223) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p=3=ss.lo", 0x00001, 0x080000, CRC(8ab940ad) SHA1(a4170464e3d08f0a925ab6d302f0d0a7ab03ed94) )
 	sc_mtbcl_others
 ROM_END
 
 ROM_START( sc4mtbclo )
 	ROM_REGION( 0x400000, "maincpu", ROMREGION_ERASEFF )
-	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p(4)ss.hi", 0x00000, 0x080000, CRC(df931438) SHA1(3fd98e4a3f79b84576c33481296a878dca56afce) )
-	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p(4)ss.lo", 0x00001, 0x080000, CRC(dadd9222) SHA1(679a87c43b42662e99ad4307b49b5f3a12e8b28d) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p=4=ss.hi", 0x00000, 0x080000, CRC(df931438) SHA1(3fd98e4a3f79b84576c33481296a878dca56afce) )
+	ROM_LOAD16_BYTE( "club-money-to-burn_std_ac_1000pnd-50p=4=ss.lo", 0x00001, 0x080000, CRC(dadd9222) SHA1(679a87c43b42662e99ad4307b49b5f3a12e8b28d) )
 	sc_mtbcl_others
 ROM_END
 
@@ -23930,8 +23925,8 @@ ROM_END
 
 ROM_START( sc4sladh )
 	ROM_REGION( 0x400000, "maincpu", ROMREGION_ERASEFF )
-	ROM_LOAD16_BYTE( "sna&lad.hi", 0x00000, 0x080000, CRC(70180308) SHA1(5833aca21637e9a9dbeca087e0a4e3f25a0ecf42) )//Whitbread
-	ROM_LOAD16_BYTE( "sna&lad.lo", 0x00001, 0x080000, CRC(50147f4a) SHA1(70361cab074fe00048a5bf48fd4faf4ad39d46f5) )
+	ROM_LOAD16_BYTE( "sna+lad.hi", 0x00000, 0x080000, CRC(70180308) SHA1(5833aca21637e9a9dbeca087e0a4e3f25a0ecf42) )//Whitbread
+	ROM_LOAD16_BYTE( "sna+lad.lo", 0x00001, 0x080000, CRC(50147f4a) SHA1(70361cab074fe00048a5bf48fd4faf4ad39d46f5) )
 	sc_slad_others
 ROM_END
 
@@ -25088,11 +25083,11 @@ ROM_END
 
 #define sc4milro_sound \
 	ROM_REGION( 0x100000, "ymz", ROMREGION_ERASE00 ) \
-	ROM_LOAD( "millionaires row s16 sound (8meg)", 0x000000, 0x100000, CRC(4086df3f) SHA1(7fd358d901db48d1f8edc4b22789c73b5fb84874) )
+	ROM_LOAD( "millionaires row s16 sound,8meg", 0x000000, 0x100000, CRC(4086df3f) SHA1(7fd358d901db48d1f8edc4b22789c73b5fb84874) )
 ROM_START( sc4milro )
 	ROM_REGION( 0x400000, "maincpu", 0 )
-	ROM_LOAD16_BYTE( "millionaires row s16 v1-0 lo (4meg)", 0x00001, 0x080000, CRC(8436aab9) SHA1(815000121e93c9a8e4f6c6d6d12a06c4484eb50c) )
-	ROM_LOAD16_BYTE( "millionaires row s16 v1-0 hi (4meg)", 0x00000, 0x080000, CRC(6b879665) SHA1(79fa91721375f0f968ecbd07fe9e9695344b7cd6) )
+	ROM_LOAD16_BYTE( "millionaires row s16 v1-0 lo,4meg", 0x00001, 0x080000, CRC(8436aab9) SHA1(815000121e93c9a8e4f6c6d6d12a06c4484eb50c) )
+	ROM_LOAD16_BYTE( "millionaires row s16 v1-0 hi,4meg", 0x00000, 0x080000, CRC(6b879665) SHA1(79fa91721375f0f968ecbd07fe9e9695344b7cd6) )
 	sc4milro_sound
 ROM_END
 

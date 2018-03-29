@@ -2,24 +2,24 @@
 // copyright-holders:Robbbert
 /***************************************************************************
 
-    Argo
+Argo
 
-    16/03/2011 Skeleton driver.
+2011-03-16 Skeleton driver.
 
-    Some info obtained from EMU-80.
-    There are no manuals, diagrams, or anything else available afaik.
-    The entire driver is guesswork.
+Some info obtained from EMU-80.
+There are no manuals, diagrams, or anything else available afaik.
+The entire driver is guesswork.
 
-    The monitor will only allow certain characters to be typed, thus the
-    modifier keys appear to do nothing. There is no need to use the enter
-    key; using spacebar and the correct parameters is enough.
+The monitor will only allow certain characters to be typed, thus the
+modifier keys appear to do nothing. There is no need to use the enter
+key; using spacebar and the correct parameters is enough.
 
-    Commands: same as UNIOR
+Commands: same as UNIOR
 
-    ToDo:
-    - Add devices
-    - There is no obvious evidence of sound.
-    - Cassette UART on ports C1 and C3.
+ToDo:
+- Add devices
+- There is no obvious evidence of sound.
+- Cassette UART on ports C1 and C3.
 
 ****************************************************************************/
 
@@ -49,6 +49,9 @@ public:
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	DECLARE_DRIVER_INIT(argo);
 
+	void argo(machine_config &config);
+	void io_map(address_map &map);
+	void mem_map(address_map &map);
 private:
 	required_device<cpu_device> m_maincpu;
 	required_shared_ptr<uint8_t> m_p_videoram;
@@ -141,17 +144,19 @@ WRITE8_MEMBER(argo_state::argo_io_w)
 
 
 
-static ADDRESS_MAP_START(argo_mem, AS_PROGRAM, 8, argo_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x07ff) AM_RAMBANK("boot")
-	AM_RANGE(0x0800, 0xf7af) AM_RAM
-	AM_RANGE(0xf7b0, 0xf7ff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0xf800, 0xffff) AM_ROM AM_WRITE(argo_videoram_w)
-ADDRESS_MAP_END
+void argo_state::mem_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x07ff).bankrw("boot");
+	map(0x0800, 0xf7af).ram();
+	map(0xf7b0, 0xf7ff).ram().share("videoram");
+	map(0xf800, 0xffff).rom().w(this, FUNC(argo_state::argo_videoram_w));
+}
 
-static ADDRESS_MAP_START(argo_io, AS_IO, 8, argo_state)
-	AM_RANGE(0x0000, 0xFFFF) AM_READWRITE(argo_io_r,argo_io_w)
-ADDRESS_MAP_END
+void argo_state::io_map(address_map &map)
+{
+	map(0x0000, 0xFFFF).rw(this, FUNC(argo_state::argo_io_r), FUNC(argo_state::argo_io_w));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( argo ) // Keyboard was worked out by trial & error;'F' keys produce symbols
@@ -342,11 +347,11 @@ uint32_t argo_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, 
 	return 0;
 }
 
-static MACHINE_CONFIG_START( argo )
+MACHINE_CONFIG_START(argo_state::argo)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 3500000)
-	MCFG_CPU_PROGRAM_MAP(argo_mem)
-	MCFG_CPU_IO_MAP(argo_io)
+	MCFG_CPU_PROGRAM_MAP(mem_map)
+	MCFG_CPU_IO_MAP(io_map)
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)

@@ -82,21 +82,23 @@ WRITE8_MEMBER( tmc2000e_state::keyboard_latch_w )
 
 /* Memory Maps */
 
-static ADDRESS_MAP_START( tmc2000e_map, AS_PROGRAM, 8, tmc2000e_state )
-	AM_RANGE(0x0000, 0x1fff) AM_RAM
-	AM_RANGE(0xc000, 0xdfff) AM_ROM
-	AM_RANGE(0xfc00, 0xffff) AM_WRITEONLY AM_SHARE("colorram")
-ADDRESS_MAP_END
+void tmc2000e_state::tmc2000e_map(address_map &map)
+{
+	map(0x0000, 0x1fff).ram();
+	map(0xc000, 0xdfff).rom();
+	map(0xfc00, 0xffff).writeonly().share("colorram");
+}
 
-static ADDRESS_MAP_START( tmc2000e_io_map, AS_IO, 8, tmc2000e_state )
-	AM_RANGE(0x01, 0x01) AM_DEVWRITE(CDP1864_TAG, cdp1864_device, tone_latch_w)
-	AM_RANGE(0x02, 0x02) AM_DEVWRITE(CDP1864_TAG, cdp1864_device, step_bgcolor_w)
-	AM_RANGE(0x03, 0x03) AM_READWRITE(ascii_keyboard_r, keyboard_latch_w)
-	AM_RANGE(0x04, 0x04) AM_READWRITE(io_r, io_w)
-	AM_RANGE(0x05, 0x05) AM_READWRITE(vismac_r, vismac_w)
-	AM_RANGE(0x06, 0x06) AM_READWRITE(floppy_r, floppy_w)
-	AM_RANGE(0x07, 0x07) AM_READ_PORT("DSW0") AM_WRITE(io_select_w)
-ADDRESS_MAP_END
+void tmc2000e_state::tmc2000e_io_map(address_map &map)
+{
+	map(0x01, 0x01).w(m_cti, FUNC(cdp1864_device::tone_latch_w));
+	map(0x02, 0x02).w(m_cti, FUNC(cdp1864_device::step_bgcolor_w));
+	map(0x03, 0x03).rw(this, FUNC(tmc2000e_state::ascii_keyboard_r), FUNC(tmc2000e_state::keyboard_latch_w));
+	map(0x04, 0x04).rw(this, FUNC(tmc2000e_state::io_r), FUNC(tmc2000e_state::io_w));
+	map(0x05, 0x05).rw(this, FUNC(tmc2000e_state::vismac_r), FUNC(tmc2000e_state::vismac_w));
+	map(0x06, 0x06).rw(this, FUNC(tmc2000e_state::floppy_r), FUNC(tmc2000e_state::floppy_w));
+	map(0x07, 0x07).portr("DSW0").w(this, FUNC(tmc2000e_state::io_select_w));
+}
 
 /* Input Ports */
 
@@ -276,9 +278,9 @@ void tmc2000e_state::machine_reset()
 
 /* Machine Drivers */
 
-static MACHINE_CONFIG_START( tmc2000e )
+MACHINE_CONFIG_START(tmc2000e_state::tmc2000e)
 	// basic system hardware
-	MCFG_CPU_ADD(CDP1802_TAG, CDP1802, XTAL_1_75MHz)
+	MCFG_CPU_ADD(CDP1802_TAG, CDP1802, XTAL(1'750'000))
 	MCFG_CPU_PROGRAM_MAP(tmc2000e_map)
 	MCFG_CPU_IO_MAP(tmc2000e_io_map)
 	MCFG_COSMAC_WAIT_CALLBACK(VCC)
@@ -289,12 +291,12 @@ static MACHINE_CONFIG_START( tmc2000e )
 	MCFG_COSMAC_DMAW_CALLBACK(WRITE8(tmc2000e_state, dma_w))
 
 	// video hardware
-	MCFG_CDP1864_SCREEN_ADD(SCREEN_TAG, XTAL_1_75MHz)
+	MCFG_CDP1864_SCREEN_ADD(SCREEN_TAG, XTAL(1'750'000))
 	MCFG_SCREEN_UPDATE_DEVICE(CDP1864_TAG, cdp1864_device, screen_update)
 
 	// sound hardware
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_CDP1864_ADD(CDP1864_TAG, SCREEN_TAG, XTAL_1_75MHz, GND, INPUTLINE(CDP1802_TAG, COSMAC_INPUT_LINE_INT), INPUTLINE(CDP1802_TAG, COSMAC_INPUT_LINE_DMAOUT), INPUTLINE(CDP1802_TAG, COSMAC_INPUT_LINE_EF1), NOOP, READLINE(tmc2000e_state, rdata_r), READLINE(tmc2000e_state, bdata_r), READLINE(tmc2000e_state, gdata_r))
+	MCFG_CDP1864_ADD(CDP1864_TAG, SCREEN_TAG, XTAL(1'750'000), GND, INPUTLINE(CDP1802_TAG, COSMAC_INPUT_LINE_INT), INPUTLINE(CDP1802_TAG, COSMAC_INPUT_LINE_DMAOUT), INPUTLINE(CDP1802_TAG, COSMAC_INPUT_LINE_EF1), NOOP, READLINE(tmc2000e_state, rdata_r), READLINE(tmc2000e_state, bdata_r), READLINE(tmc2000e_state, gdata_r))
 	MCFG_CDP1864_CHROMINANCE(RES_K(2.2), RES_K(1), RES_K(5.1), RES_K(4.7)) // unverified
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 

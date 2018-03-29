@@ -226,7 +226,7 @@ ToDo:
 #include "super80.lh"
 
 
-#define MASTER_CLOCK    (XTAL_12MHz)
+#define MASTER_CLOCK    (XTAL(12'000'000))
 #define PIXEL_CLOCK (MASTER_CLOCK/2)
 #define HTOTAL      (384)
 #define HBEND       (0)
@@ -246,79 +246,86 @@ ToDo:
     This makes the H and E monitor commands show FF */
 READ8_MEMBER( super80_state::super80_read_ff ) { return 0xff; }
 
-static ADDRESS_MAP_START( super80_map, AS_PROGRAM, 8, super80_state )
-	AM_RANGE(0x0000, 0x3fff) AM_RAMBANK("boot") AM_REGION("maincpu", 0x0000)
-	AM_RANGE(0x4000, 0xbfff) AM_RAM AM_REGION("maincpu", 0x4000)
-	AM_RANGE(0xc000, 0xefff) AM_ROM
-	AM_RANGE(0xf000, 0xffff) AM_READ(super80_read_ff) AM_WRITENOP
-ADDRESS_MAP_END
+void super80_state::super80_map(address_map &map)
+{
+	map(0x0000, 0x3fff).bankrw("boot").region("maincpu", 0x0000);
+	map(0x4000, 0xbfff).ram().region("maincpu", 0x4000);
+	map(0xc000, 0xefff).rom();
+	map(0xf000, 0xffff).r(this, FUNC(super80_state::super80_read_ff)).nopw();
+}
 
-static ADDRESS_MAP_START( super80m_map, AS_PROGRAM, 8, super80_state )
-	AM_RANGE(0x0000, 0x3fff) AM_RAMBANK("boot") AM_REGION("maincpu", 0x0000)
-	AM_RANGE(0x4000, 0xbfff) AM_RAM AM_REGION("maincpu", 0x4000)
-	AM_RANGE(0xc000, 0xefff) AM_ROM
-	AM_RANGE(0xf000, 0xffff) AM_RAM AM_REGION("maincpu", 0xf000)
-ADDRESS_MAP_END
+void super80_state::super80m_map(address_map &map)
+{
+	map(0x0000, 0x3fff).bankrw("boot").region("maincpu", 0x0000);
+	map(0x4000, 0xbfff).ram().region("maincpu", 0x4000);
+	map(0xc000, 0xefff).rom();
+	map(0xf000, 0xffff).ram().region("maincpu", 0xf000);
+}
 
-static ADDRESS_MAP_START( super80v_map, AS_PROGRAM, 8, super80_state)
-	AM_RANGE(0x0000, 0x3fff) AM_RAMBANK("boot")
-	AM_RANGE(0x4000, 0xbfff) AM_RAM
-	AM_RANGE(0xc000, 0xefff) AM_ROM
-	AM_RANGE(0xf000, 0xf7ff) AM_READWRITE(super80v_low_r, super80v_low_w)
-	AM_RANGE(0xf800, 0xffff) AM_READWRITE(super80v_high_r, super80v_high_w)
-ADDRESS_MAP_END
+void super80_state::super80v_map(address_map &map)
+{
+	map(0x0000, 0x3fff).bankrw("boot");
+	map(0x4000, 0xbfff).ram();
+	map(0xc000, 0xefff).rom();
+	map(0xf000, 0xf7ff).rw(this, FUNC(super80_state::super80v_low_r), FUNC(super80_state::super80v_low_w));
+	map(0xf800, 0xffff).rw(this, FUNC(super80_state::super80v_high_r), FUNC(super80_state::super80v_high_w));
+}
 
-static ADDRESS_MAP_START( super80_io, AS_IO, 8, super80_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0xdc, 0xdc) AM_DEVREAD("cent_status_in", input_buffer_device, read)
-	AM_RANGE(0xdc, 0xdc) AM_WRITE(super80_dc_w)
-	AM_RANGE(0xe0, 0xe0) AM_MIRROR(0x14) AM_WRITE(super80_f0_w)
-	AM_RANGE(0xe1, 0xe1) AM_MIRROR(0x14) AM_WRITE(super80_f1_w)
-	AM_RANGE(0xe2, 0xe2) AM_MIRROR(0x14) AM_READ(super80_f2_r)
-	AM_RANGE(0xf8, 0xfb) AM_MIRROR(0x04) AM_DEVREADWRITE("z80pio", z80pio_device, read_alt, write_alt)
-ADDRESS_MAP_END
+void super80_state::super80_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map.unmap_value_high();
+	map(0xdc, 0xdc).r("cent_status_in", FUNC(input_buffer_device::read));
+	map(0xdc, 0xdc).w(this, FUNC(super80_state::super80_dc_w));
+	map(0xe0, 0xe0).mirror(0x14).w(this, FUNC(super80_state::super80_f0_w));
+	map(0xe1, 0xe1).mirror(0x14).w(this, FUNC(super80_state::super80_f1_w));
+	map(0xe2, 0xe2).mirror(0x14).r(this, FUNC(super80_state::super80_f2_r));
+	map(0xf8, 0xfb).mirror(0x04).rw(m_pio, FUNC(z80pio_device::read_alt), FUNC(z80pio_device::write_alt));
+}
 
-static ADDRESS_MAP_START( super80e_io, AS_IO, 8, super80_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0xbc, 0xbc) AM_DEVREAD("cent_status_in", input_buffer_device, read)
-	AM_RANGE(0xbc, 0xbc) AM_WRITE(super80_dc_w)
-	AM_RANGE(0xe0, 0xe0) AM_MIRROR(0x14) AM_WRITE(super80_f0_w)
-	AM_RANGE(0xe1, 0xe1) AM_MIRROR(0x14) AM_WRITE(super80_f1_w)
-	AM_RANGE(0xe2, 0xe2) AM_MIRROR(0x14) AM_READ(super80_f2_r)
-	AM_RANGE(0xf8, 0xfb) AM_MIRROR(0x04) AM_DEVREADWRITE("z80pio", z80pio_device, read_alt, write_alt)
-ADDRESS_MAP_END
+void super80_state::super80e_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map.unmap_value_high();
+	map(0xbc, 0xbc).r("cent_status_in", FUNC(input_buffer_device::read));
+	map(0xbc, 0xbc).w(this, FUNC(super80_state::super80_dc_w));
+	map(0xe0, 0xe0).mirror(0x14).w(this, FUNC(super80_state::super80_f0_w));
+	map(0xe1, 0xe1).mirror(0x14).w(this, FUNC(super80_state::super80_f1_w));
+	map(0xe2, 0xe2).mirror(0x14).r(this, FUNC(super80_state::super80_f2_r));
+	map(0xf8, 0xfb).mirror(0x04).rw(m_pio, FUNC(z80pio_device::read_alt), FUNC(z80pio_device::write_alt));
+}
 
-static ADDRESS_MAP_START( super80r_io, AS_IO, 8, super80_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x10, 0x10) AM_WRITE(super80v_10_w)
-	AM_RANGE(0x11, 0x11) AM_DEVREAD("crtc", mc6845_device, register_r)
-	AM_RANGE(0x11, 0x11) AM_WRITE(super80v_11_w)
-	AM_RANGE(0x30, 0x30) AM_DEVREADWRITE("dma", z80dma_device, read, write)
-	AM_RANGE(0x38, 0x3b) AM_DEVREADWRITE("fdc", wd2793_device, read, write)
-	AM_RANGE(0x3e, 0x3e) AM_READ(port3e_r)
-	AM_RANGE(0x3f, 0x3f) AM_WRITE(port3f_w)
-	AM_RANGE(0xdc, 0xdc) AM_DEVREAD("cent_status_in", input_buffer_device, read)
-	AM_RANGE(0xdc, 0xdc) AM_WRITE(super80_dc_w)
-	AM_RANGE(0xe0, 0xe0) AM_MIRROR(0x14) AM_WRITE(super80r_f0_w)
-	AM_RANGE(0xe2, 0xe2) AM_MIRROR(0x14) AM_READ(super80_f2_r)
-	AM_RANGE(0xf8, 0xfb) AM_MIRROR(0x04) AM_DEVREADWRITE("z80pio", z80pio_device, read_alt, write_alt)
-ADDRESS_MAP_END
+void super80_state::super80r_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map.unmap_value_high();
+	map(0x10, 0x10).w(this, FUNC(super80_state::super80v_10_w));
+	map(0x11, 0x11).r(m_crtc, FUNC(mc6845_device::register_r));
+	map(0x11, 0x11).w(this, FUNC(super80_state::super80v_11_w));
+	map(0x30, 0x30).rw(m_dma, FUNC(z80dma_device::read), FUNC(z80dma_device::write));
+	map(0x38, 0x3b).rw(m_fdc, FUNC(wd2793_device::read), FUNC(wd2793_device::write));
+	map(0x3e, 0x3e).r(this, FUNC(super80_state::port3e_r));
+	map(0x3f, 0x3f).w(this, FUNC(super80_state::port3f_w));
+	map(0xdc, 0xdc).r("cent_status_in", FUNC(input_buffer_device::read));
+	map(0xdc, 0xdc).w(this, FUNC(super80_state::super80_dc_w));
+	map(0xe0, 0xe0).mirror(0x14).w(this, FUNC(super80_state::super80r_f0_w));
+	map(0xe2, 0xe2).mirror(0x14).r(this, FUNC(super80_state::super80_f2_r));
+	map(0xf8, 0xfb).mirror(0x04).rw(m_pio, FUNC(z80pio_device::read_alt), FUNC(z80pio_device::write_alt));
+}
 
-static ADDRESS_MAP_START( super80v_io, AS_IO, 8, super80_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x10, 0x10) AM_WRITE(super80v_10_w)
-	AM_RANGE(0x11, 0x11) AM_DEVREAD("crtc", mc6845_device, register_r)
-	AM_RANGE(0x11, 0x11) AM_WRITE(super80v_11_w)
-	AM_RANGE(0xdc, 0xdc) AM_DEVREAD("cent_status_in", input_buffer_device, read)
-	AM_RANGE(0xdc, 0xdc) AM_WRITE(super80_dc_w)
-	AM_RANGE(0xe0, 0xe0) AM_MIRROR(0x14) AM_WRITE(super80_f0_w)
-	AM_RANGE(0xe2, 0xe2) AM_MIRROR(0x14) AM_READ(super80_f2_r)
-	AM_RANGE(0xf8, 0xfb) AM_MIRROR(0x04) AM_DEVREADWRITE("z80pio", z80pio_device, read_alt, write_alt)
-ADDRESS_MAP_END
+void super80_state::super80v_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map.unmap_value_high();
+	map(0x10, 0x10).w(this, FUNC(super80_state::super80v_10_w));
+	map(0x11, 0x11).r(m_crtc, FUNC(mc6845_device::register_r));
+	map(0x11, 0x11).w(this, FUNC(super80_state::super80v_11_w));
+	map(0xdc, 0xdc).r("cent_status_in", FUNC(input_buffer_device::read));
+	map(0xdc, 0xdc).w(this, FUNC(super80_state::super80_dc_w));
+	map(0xe0, 0xe0).mirror(0x14).w(this, FUNC(super80_state::super80_f0_w));
+	map(0xe2, 0xe2).mirror(0x14).r(this, FUNC(super80_state::super80_f2_r));
+	map(0xf8, 0xfb).mirror(0x04).rw(m_pio, FUNC(z80pio_device::read_alt), FUNC(z80pio_device::write_alt));
+}
 
 /**************************** DIPSWITCHES, KEYBOARD, HARDWARE CONFIGURATION ****************************************/
 
@@ -692,7 +699,7 @@ static const char *const relay_sample_names[] =
 };
 
 
-static MACHINE_CONFIG_START( super80 )
+MACHINE_CONFIG_START(super80_state::super80)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK/6)        /* 2 MHz */
 	MCFG_CPU_PROGRAM_MAP(super80_map)
@@ -753,13 +760,15 @@ static MACHINE_CONFIG_START( super80 )
 	MCFG_SOFTWARE_LIST_ADD("cass_list", "super80_cass")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( super80d, super80 )
+MACHINE_CONFIG_START(super80_state::super80d)
+	super80(config);
 	MCFG_GFXDECODE_MODIFY("gfxdecode", super80d)
 	MCFG_SCREEN_MODIFY("screen")
 	MCFG_SCREEN_UPDATE_DRIVER(super80_state, screen_update_super80d)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( super80e, super80 )
+MACHINE_CONFIG_START(super80_state::super80e)
+	super80(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_IO_MAP(super80e_io)
 	MCFG_GFXDECODE_MODIFY("gfxdecode", super80e)
@@ -767,7 +776,8 @@ static MACHINE_CONFIG_DERIVED( super80e, super80 )
 	MCFG_SCREEN_UPDATE_DRIVER(super80_state, screen_update_super80e)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( super80m, super80 )
+MACHINE_CONFIG_START(super80_state::super80m)
+	super80(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(super80m_map)
 
@@ -778,7 +788,7 @@ static MACHINE_CONFIG_DERIVED( super80m, super80 )
 	MCFG_SCREEN_VBLANK_CALLBACK(WRITELINE(super80_state, screen_vblank_super80m))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( super80v )
+MACHINE_CONFIG_START(super80_state::super80v)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK/6)        /* 2 MHz */
 	MCFG_CPU_PROGRAM_MAP(super80v_map)
@@ -839,7 +849,8 @@ static MACHINE_CONFIG_START( super80v )
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("timer_k", super80_state, timer_k, attotime::from_hz(300)) // keyb scan
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( super80r, super80v )
+MACHINE_CONFIG_START(super80_state::super80r)
+	super80v(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_IO_MAP(super80r_io)
 
@@ -852,7 +863,7 @@ static MACHINE_CONFIG_DERIVED( super80r, super80v )
 	MCFG_Z80DMA_IN_IORQ_CB(READ8(super80_state, io_read_byte))
 	MCFG_Z80DMA_OUT_IORQ_CB(WRITE8(super80_state, io_write_byte))
 
-	MCFG_WD2793_ADD("fdc", XTAL_2MHz)
+	MCFG_WD2793_ADD("fdc", XTAL(2'000'000))
 	MCFG_WD_FDC_DRQ_CALLBACK(DEVWRITELINE("dma", z80dma_device, rdy_w))
 	MCFG_FLOPPY_DRIVE_ADD("fdc:0", super80_floppies, "525dd", floppy_image_device::default_floppy_formats)
 	MCFG_FLOPPY_DRIVE_SOUND(true)

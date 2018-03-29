@@ -70,84 +70,93 @@ WRITE8_MEMBER(tigeroad_state::msm5205_w)
 
 /***************************************************************************/
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 16, tigeroad_state )
-	AM_RANGE(0x000000, 0x03ffff) AM_ROM
+void tigeroad_state::main_map(address_map &map)
+{
+	map(0x000000, 0x03ffff).rom();
 
-	AM_RANGE(0xfe0800, 0xfe0cff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0xfe0d00, 0xfe1807) AM_RAM     /* still part of OBJ RAM */
-	AM_RANGE(0xfe4000, 0xfe4001) AM_READ_PORT("P1_P2") AM_WRITE(tigeroad_videoctrl_w)   /* char bank, coin counters, + ? */
-	AM_RANGE(0xfe4002, 0xfe4003) AM_READ_PORT("SYSTEM") AM_WRITE(tigeroad_soundcmd_w) /* AM_WRITE(tigeroad_soundcmd_w) is replaced in init for for f1dream protection */
-	AM_RANGE(0xfe4004, 0xfe4005) AM_READ_PORT("DSW")
-	AM_RANGE(0xfe8000, 0xfe8003) AM_WRITE(tigeroad_scroll_w)
-	AM_RANGE(0xfe800e, 0xfe800f) AM_WRITEONLY    /* fe800e = watchdog or IRQ acknowledge */
-	AM_RANGE(0xfec000, 0xfec7ff) AM_RAM_WRITE(tigeroad_videoram_w) AM_SHARE("videoram")
+	map(0xfe0800, 0xfe0cff).ram().share("spriteram");
+	map(0xfe0d00, 0xfe1807).ram();     /* still part of OBJ RAM */
+	map(0xfe4000, 0xfe4001).portr("P1_P2").w(this, FUNC(tigeroad_state::tigeroad_videoctrl_w));   /* char bank, coin counters, + ? */
+	map(0xfe4002, 0xfe4003).portr("SYSTEM").w(this, FUNC(tigeroad_state::tigeroad_soundcmd_w)); /* AM_WRITE(tigeroad_soundcmd_w) is replaced in init for for f1dream protection */
+	map(0xfe4004, 0xfe4005).portr("DSW");
+	map(0xfe8000, 0xfe8003).w(this, FUNC(tigeroad_state::tigeroad_scroll_w));
+	map(0xfe800e, 0xfe800f).writeonly();    /* fe800e = watchdog or IRQ acknowledge */
+	map(0xfec000, 0xfec7ff).ram().w(this, FUNC(tigeroad_state::tigeroad_videoram_w)).share("videoram");
 
-	AM_RANGE(0xff8000, 0xff87ff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0xffc000, 0xffffff) AM_RAM AM_SHARE("ram16")
-ADDRESS_MAP_END
+	map(0xff8000, 0xff87ff).ram().w(m_palette, FUNC(palette_device::write16)).share("palette");
+	map(0xffc000, 0xffffff).ram().share("ram16");
+}
 
-static ADDRESS_MAP_START( pushman_map, AS_PROGRAM, 16, pushman_state )
-	AM_IMPORT_FROM(main_map)
+void pushman_state::pushman_map(address_map &map)
+{
+	main_map(map);
 
-	AM_RANGE(0x060000, 0x060007) AM_READ(mcu_comm_r)
-	AM_RANGE(0x060000, 0x060003) AM_WRITE(pushman_mcu_comm_w)
-ADDRESS_MAP_END
+	map(0x060000, 0x060007).r(this, FUNC(pushman_state::mcu_comm_r));
+	map(0x060000, 0x060003).w(this, FUNC(pushman_state::pushman_mcu_comm_w));
+}
 
-static ADDRESS_MAP_START( bballs_map, AS_PROGRAM, 16, pushman_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xfffff)
-	AM_RANGE(0x00000, 0x3ffff) AM_ROM
-	AM_RANGE(0x60000, 0x60007) AM_READ(mcu_comm_r)
-	AM_RANGE(0x60000, 0x60001) AM_WRITE(bballs_mcu_comm_w)
+void pushman_state::bballs_map(address_map &map)
+{
+	map.global_mask(0xfffff);
+	map(0x00000, 0x3ffff).rom();
+	map(0x60000, 0x60007).r(this, FUNC(pushman_state::mcu_comm_r));
+	map(0x60000, 0x60001).w(this, FUNC(pushman_state::bballs_mcu_comm_w));
 	// are these mirror addresses or does this PCB have a different addressing?
-	AM_RANGE(0xe0800, 0xe17ff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0xe4000, 0xe4001) AM_READ_PORT("P1_P2") AM_WRITE(tigeroad_videoctrl_w)
-	AM_RANGE(0xe4002, 0xe4003) AM_READ_PORT("SYSTEM") AM_WRITE(tigeroad_soundcmd_w)
-	AM_RANGE(0xe4004, 0xe4005) AM_READ_PORT("DSW")
-	AM_RANGE(0xe8000, 0xe8003) AM_WRITE(tigeroad_scroll_w)
-	AM_RANGE(0xe800e, 0xe800f) AM_WRITENOP /* ? */
-	AM_RANGE(0xec000, 0xec7ff) AM_RAM_WRITE(tigeroad_videoram_w) AM_SHARE("videoram")
+	map(0xe0800, 0xe17ff).ram().share("spriteram");
+	map(0xe4000, 0xe4001).portr("P1_P2").w(this, FUNC(pushman_state::tigeroad_videoctrl_w));
+	map(0xe4002, 0xe4003).portr("SYSTEM").w(this, FUNC(pushman_state::tigeroad_soundcmd_w));
+	map(0xe4004, 0xe4005).portr("DSW");
+	map(0xe8000, 0xe8003).w(this, FUNC(pushman_state::tigeroad_scroll_w));
+	map(0xe800e, 0xe800f).nopw(); /* ? */
+	map(0xec000, 0xec7ff).ram().w(this, FUNC(pushman_state::tigeroad_videoram_w)).share("videoram");
 
-	AM_RANGE(0xf8000, 0xf87ff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0xfc000, 0xfffff) AM_RAM AM_SHARE("ram16")
-ADDRESS_MAP_END
+	map(0xf8000, 0xf87ff).ram().w(m_palette, FUNC(palette_device::write16)).share("palette");
+	map(0xfc000, 0xfffff).ram().share("ram16");
+}
 
 /* Capcom games ONLY */
-static ADDRESS_MAP_START( sound_map, AS_PROGRAM, 8, tigeroad_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x8001) AM_DEVREADWRITE("ym1", ym2203_device, read, write)
-	AM_RANGE(0xa000, 0xa001) AM_DEVREADWRITE("ym2", ym2203_device, read, write)
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM
-	AM_RANGE(0xe000, 0xe000) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+void tigeroad_state::sound_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x8001).rw("ym1", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+	map(0xa000, 0xa001).rw("ym2", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+	map(0xc000, 0xc7ff).ram();
+	map(0xe000, 0xe000).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
-static ADDRESS_MAP_START( sound_port_map, AS_IO, 8, tigeroad_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x7f, 0x7f) AM_DEVWRITE("soundlatch2", generic_latch_8_device, write)
-ADDRESS_MAP_END
+void tigeroad_state::sound_port_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x7f, 0x7f).w("soundlatch2", FUNC(generic_latch_8_device::write));
+}
 
 /* toramich ONLY */
-static ADDRESS_MAP_START( sample_map, AS_PROGRAM, 8, tigeroad_state )
-	AM_RANGE(0x0000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void tigeroad_state::sample_map(address_map &map)
+{
+	map(0x0000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START( sample_port_map, AS_IO, 8, tigeroad_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_DEVREAD("soundlatch2", generic_latch_8_device, read)
-	AM_RANGE(0x01, 0x01) AM_WRITE(msm5205_w)
-ADDRESS_MAP_END
+void tigeroad_state::sample_port_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).r("soundlatch2", FUNC(generic_latch_8_device::read));
+	map(0x01, 0x01).w(this, FUNC(tigeroad_state::msm5205_w));
+}
 
 /* Pushman / Bouncing Balls */
-static ADDRESS_MAP_START( comad_sound_map, AS_PROGRAM, 8, tigeroad_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM
-	AM_RANGE(0xe000, 0xe000) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+void tigeroad_state::comad_sound_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0xc000, 0xc7ff).ram();
+	map(0xe000, 0xe000).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
-static ADDRESS_MAP_START( comad_sound_io_map, AS_IO, 8, tigeroad_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x01) AM_DEVWRITE("ym1", ym2203_device, write)
-	AM_RANGE(0x80, 0x81) AM_DEVWRITE("ym2", ym2203_device, write)
-ADDRESS_MAP_END
+void tigeroad_state::comad_sound_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x01).w("ym1", FUNC(ym2203_device::write));
+	map(0x80, 0x81).w("ym2", FUNC(ym2203_device::write));
+}
 
 
 
@@ -182,7 +191,7 @@ static INPUT_PORTS_START( tigeroad )
 	PORT_BIT( 0x8000, IP_ACTIVE_LOW, IPT_COIN2 )
 
 	PORT_START("DSW")
-	PORT_DIPNAME( 0x0007, 0x0007, DEF_STR( Coin_B ) )
+	PORT_DIPNAME( 0x0007, 0x0007, DEF_STR( Coin_B ) ) PORT_DIPLOCATION("DIPA:1,2,3")
 	PORT_DIPSETTING(      0x0000, DEF_STR( 4C_1C ) )
 	PORT_DIPSETTING(      0x0001, DEF_STR( 3C_1C ) )
 	PORT_DIPSETTING(      0x0002, DEF_STR( 2C_1C ) )
@@ -191,7 +200,7 @@ static INPUT_PORTS_START( tigeroad )
 	PORT_DIPSETTING(      0x0005, DEF_STR( 1C_3C ) )
 	PORT_DIPSETTING(      0x0004, DEF_STR( 1C_4C ) )
 	PORT_DIPSETTING(      0x0003, DEF_STR( 1C_6C ) )
-	PORT_DIPNAME( 0x0038, 0x0038, DEF_STR( Coin_A ) )
+	PORT_DIPNAME( 0x0038, 0x0038, DEF_STR( Coin_A ) ) PORT_DIPLOCATION("DIPA:4,5,6")
 	PORT_DIPSETTING(      0x0000, DEF_STR( 4C_1C ) )
 	PORT_DIPSETTING(      0x0008, DEF_STR( 3C_1C ) )
 	PORT_DIPSETTING(      0x0010, DEF_STR( 2C_1C ) )
@@ -200,29 +209,29 @@ static INPUT_PORTS_START( tigeroad )
 	PORT_DIPSETTING(      0x0028, DEF_STR( 1C_3C ) )
 	PORT_DIPSETTING(      0x0020, DEF_STR( 1C_4C ) )
 	PORT_DIPSETTING(      0x0018, DEF_STR( 1C_6C ) )
-	PORT_SERVICE( 0x0040, IP_ACTIVE_LOW )
-	PORT_DIPNAME( 0x0080, 0x0080, DEF_STR( Flip_Screen ) )
-	PORT_DIPSETTING(      0x0080, DEF_STR( Off ))
+	PORT_SERVICE( 0x0040, IP_ACTIVE_LOW ) PORT_DIPLOCATION("DIPA:7")
+	PORT_DIPNAME( 0x0080, 0x0080, DEF_STR( Flip_Screen ) ) PORT_DIPLOCATION("DIPA:8")
+	PORT_DIPSETTING(      0x0080, DEF_STR( Off ) )
 	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
-	PORT_DIPNAME( 0x0300, 0x0300, DEF_STR( Lives ) )
+	PORT_DIPNAME( 0x0300, 0x0300, DEF_STR( Lives ) ) PORT_DIPLOCATION("DIPB:1,2")
 	PORT_DIPSETTING(      0x0300, "3" )
 	PORT_DIPSETTING(      0x0200, "4" )
 	PORT_DIPSETTING(      0x0100, "5" )
 	PORT_DIPSETTING(      0x0000, "7" )
-	PORT_DIPNAME( 0x0400, 0x0000, DEF_STR( Cabinet ) )
-	PORT_DIPSETTING(      0x0000, DEF_STR( Upright ))
-	PORT_DIPSETTING(      0x0400, DEF_STR( Cocktail ))
-	PORT_DIPNAME( 0x1800, 0x1800, DEF_STR( Bonus_Life ) )
+	PORT_DIPNAME( 0x0400, 0x0000, DEF_STR( Cabinet ) ) PORT_DIPLOCATION("DIPB:3")
+	PORT_DIPSETTING(      0x0000, DEF_STR( Upright ) )
+	PORT_DIPSETTING(      0x0400, DEF_STR( Cocktail ) )
+	PORT_DIPNAME( 0x1800, 0x1800, DEF_STR( Bonus_Life ) ) PORT_DIPLOCATION("DIPB:4,5")
 	PORT_DIPSETTING(      0x1800, "20000 70000 70000" )
 	PORT_DIPSETTING(      0x1000, "20000 80000 80000" )
 	PORT_DIPSETTING(      0x0800, "30000 80000 80000" )
 	PORT_DIPSETTING(      0x0000, "30000 90000 90000" )
-	PORT_DIPNAME( 0x6000, 0x6000, DEF_STR( Difficulty ) )
-	PORT_DIPSETTING(      0x2000, DEF_STR( Very_Easy) )
-	PORT_DIPSETTING(      0x4000, DEF_STR( Easy ) )
-	PORT_DIPSETTING(      0x6000, DEF_STR( Normal ) )
-	PORT_DIPSETTING(      0x0000, DEF_STR( Difficult ) )
-	PORT_DIPNAME( 0x8000, 0x8000, DEF_STR( Allow_Continue ) )
+	PORT_DIPNAME( 0x6000, 0x6000, DEF_STR( Difficulty ) ) PORT_DIPLOCATION("DIPB:6,7")
+	PORT_DIPSETTING(      0x2000, "Very Easy (Level 0)")
+	PORT_DIPSETTING(      0x4000, "Easy (Level 10)")
+	PORT_DIPSETTING(      0x6000, "Normal (Level 20)")
+	PORT_DIPSETTING(      0x0000, "Difficult (Level 30)")
+	PORT_DIPNAME( 0x8000, 0x8000, DEF_STR( Allow_Continue ) ) PORT_DIPLOCATION("DIPB:8")
 	PORT_DIPSETTING(      0x0000, DEF_STR( No ) )
 	PORT_DIPSETTING(      0x8000, DEF_STR( Yes ) )
 INPUT_PORTS_END
@@ -335,7 +344,7 @@ static INPUT_PORTS_START( f1dream )
 	PORT_BIT( 0x8000, IP_ACTIVE_LOW, IPT_COIN2 )
 
 	PORT_START("DSW")
-	PORT_DIPNAME( 0x0007, 0x0007, DEF_STR( Coin_B ) )
+	PORT_DIPNAME( 0x0007, 0x0007, DEF_STR( Coin_B ) ) PORT_DIPLOCATION("DIPA:1,2,3")
 	PORT_DIPSETTING(      0x0000, DEF_STR( 4C_1C ) )
 	PORT_DIPSETTING(      0x0001, DEF_STR( 3C_1C ) )
 	PORT_DIPSETTING(      0x0002, DEF_STR( 2C_1C ) )
@@ -344,7 +353,7 @@ static INPUT_PORTS_START( f1dream )
 	PORT_DIPSETTING(      0x0005, DEF_STR( 1C_3C ) )
 	PORT_DIPSETTING(      0x0004, DEF_STR( 1C_4C ) )
 	PORT_DIPSETTING(      0x0003, DEF_STR( 1C_6C ) )
-	PORT_DIPNAME( 0x0038, 0x0038, DEF_STR( Coin_A ) )
+	PORT_DIPNAME( 0x0038, 0x0038, DEF_STR( Coin_A ) )  PORT_DIPLOCATION("DIPA:4,5,6")
 	PORT_DIPSETTING(      0x0000, DEF_STR( 4C_1C ) )
 	PORT_DIPSETTING(      0x0008, DEF_STR( 3C_1C ) )
 	PORT_DIPSETTING(      0x0010, DEF_STR( 2C_1C ) )
@@ -353,30 +362,30 @@ static INPUT_PORTS_START( f1dream )
 	PORT_DIPSETTING(      0x0028, DEF_STR( 1C_3C ) )
 	PORT_DIPSETTING(      0x0020, DEF_STR( 1C_4C ) )
 	PORT_DIPSETTING(      0x0018, DEF_STR( 1C_6C ) )
-	PORT_SERVICE( 0x0040, IP_ACTIVE_LOW )
-	PORT_DIPNAME( 0x0080, 0x0080, DEF_STR( Flip_Screen ) )
+	PORT_SERVICE( 0x0040, IP_ACTIVE_LOW ) PORT_DIPLOCATION("DIPA:7")
+	PORT_DIPNAME( 0x0080, 0x0080, DEF_STR( Flip_Screen ) ) PORT_DIPLOCATION("DIPA:8")
 	PORT_DIPSETTING(      0x0080, DEF_STR( Off ))
 	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
-	PORT_DIPNAME( 0x0300, 0x0300, DEF_STR( Lives ) )
+	PORT_DIPNAME( 0x0300, 0x0300, DEF_STR( Lives ) ) PORT_DIPLOCATION("DIPB:1,2") // "Not Used" according to Romstar manual
 	PORT_DIPSETTING(      0x0300, "3" )
 	PORT_DIPSETTING(      0x0200, "4" )
 	PORT_DIPSETTING(      0x0100, "5" )
 	PORT_DIPSETTING(      0x0000, "7" )
-	PORT_DIPNAME( 0x0400, 0x0000, DEF_STR( Cabinet ) )
+	PORT_DIPNAME( 0x0400, 0x0000, DEF_STR( Cabinet ) ) PORT_DIPLOCATION("DIPB:3")
 	PORT_DIPSETTING(      0x0000, DEF_STR( Upright ))
 	PORT_DIPSETTING(      0x0400, DEF_STR( Cocktail ))
-	PORT_DIPNAME( 0x1800, 0x1800, "F1 Up Point" )
+	PORT_DIPNAME( 0x1800, 0x1800, "F1 Up Point" ) PORT_DIPLOCATION("DIPB:4,5")
 	PORT_DIPSETTING(      0x1800, "12" )
 	PORT_DIPSETTING(      0x1000, "16" )
 	PORT_DIPSETTING(      0x0800, "18" )
 	PORT_DIPSETTING(      0x0000, "20" )
-	PORT_DIPNAME( 0x2000, 0x2000, DEF_STR( Difficulty ) )
+	PORT_DIPNAME( 0x2000, 0x2000, DEF_STR( Difficulty ) ) PORT_DIPLOCATION("DIPB:6")
 	PORT_DIPSETTING(      0x2000, DEF_STR( Normal ) )
 	PORT_DIPSETTING(      0x0000, DEF_STR( Difficult ) )
-	PORT_DIPNAME( 0x4000, 0x0000, DEF_STR( Version ) )
+	PORT_DIPNAME( 0x4000, 0x0000, DEF_STR( Version ) ) PORT_DIPLOCATION("DIPB:7")
 	PORT_DIPSETTING(      0x0000, DEF_STR( World ) )
 	PORT_DIPSETTING(      0x4000, DEF_STR( Japan ) )
-	PORT_DIPNAME( 0x8000, 0x8000, DEF_STR( Allow_Continue ) )
+	PORT_DIPNAME( 0x8000, 0x8000, DEF_STR( Allow_Continue ) ) PORT_DIPLOCATION("DIPB:8")
 	PORT_DIPSETTING(      0x0000, DEF_STR( No ) )
 	PORT_DIPSETTING(      0x8000, DEF_STR( Yes ) )
 INPUT_PORTS_END
@@ -574,14 +583,14 @@ static GFXDECODE_START( tigeroad )
 	GFXDECODE_ENTRY( "sprites", 0, sprite_layout, 0x200, 16 )
 GFXDECODE_END
 
-static MACHINE_CONFIG_START( tigeroad )
+MACHINE_CONFIG_START(tigeroad_state::tigeroad)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M68000, XTAL_10MHz) /* verified on pcb */
+	MCFG_CPU_ADD("maincpu", M68000, XTAL(10'000'000)) /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(main_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", tigeroad_state,  irq2_line_hold)
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz) /* verified on pcb */
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(3'579'545)) /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(sound_map)
 	MCFG_CPU_IO_MAP(sound_port_map)
 
@@ -612,17 +621,18 @@ static MACHINE_CONFIG_START( tigeroad )
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch2")
 
-	MCFG_SOUND_ADD("ym1", YM2203, XTAL_3_579545MHz) /* verified on pcb */
+	MCFG_SOUND_ADD("ym1", YM2203, XTAL(3'579'545)) /* verified on pcb */
 	MCFG_YM2203_IRQ_HANDLER(INPUTLINE("audiocpu", 0))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MCFG_SOUND_ADD("ym2", YM2203, XTAL_3_579545MHz) /* verified on pcb */
+	MCFG_SOUND_ADD("ym2", YM2203, XTAL(3'579'545)) /* verified on pcb */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 MACHINE_CONFIG_END
 
 
 /* same as above but with additional Z80 for samples playback */
-static MACHINE_CONFIG_DERIVED( toramich, tigeroad )
+MACHINE_CONFIG_START(tigeroad_state::toramich)
+	tigeroad(config);
 
 	/* basic machine hardware */
 
@@ -638,7 +648,7 @@ static MACHINE_CONFIG_DERIVED( toramich, tigeroad )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( f1dream_comad )
+MACHINE_CONFIG_START(tigeroad_state::f1dream_comad)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 8000000)
@@ -695,7 +705,8 @@ void pushman_state::machine_start()
 	save_item(NAME(m_mcu_latch_ctl));
 }
 
-static MACHINE_CONFIG_DERIVED(pushman, f1dream_comad)
+MACHINE_CONFIG_START(pushman_state::pushman)
+	f1dream_comad(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(pushman_map)
 
@@ -706,7 +717,8 @@ static MACHINE_CONFIG_DERIVED(pushman, f1dream_comad)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED(bballs, pushman)
+MACHINE_CONFIG_START(pushman_state::bballs)
+	pushman(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(bballs_map)
 MACHINE_CONFIG_END

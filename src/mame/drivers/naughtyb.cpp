@@ -159,16 +159,16 @@ READ8_MEMBER(naughtyb_state::popflame_protection_r)/* Not used by bootleg/hack *
 		return seed00[m_prot_count] | seedxx;
 
 #if 0
-	if ( space.device().safe_pc() == (0x26F2 + 0x03) )
+	if ( m_maincpu->pc() == (0x26F2 + 0x03) )
 	{
 		popflame_prot_count = 0;
 		return 0x01;
 	} /* Must not carry when rotated left */
 
-	if ( space.device().safe_pc() == (0x26F9 + 0x03) )
+	if ( m_maincpu->pc() == (0x26F9 + 0x03) )
 		return 0x80; /* Must carry when rotated left */
 
-	if ( space.device().safe_pc() == (0x270F + 0x03) )
+	if ( m_maincpu->pc() == (0x270F + 0x03) )
 	{
 		switch( popflame_prot_count++ )
 		{
@@ -178,7 +178,7 @@ READ8_MEMBER(naughtyb_state::popflame_protection_r)/* Not used by bootleg/hack *
 			case 3: return 0x38; /* x011 1xxx, matches 0x07 at $2693, stored in $400D */
 		}
 	}
-	logerror("CPU #0 PC %06x: unmapped protection read\n", space.device().safe_pc());
+	logerror("CPU #0 PC %06x: unmapped protection read\n", m_maincpu->pc());
 	return 0x00;
 #endif
 }
@@ -246,31 +246,33 @@ WRITE8_MEMBER(naughtyb_state::popflame_protection_w)
 
 
 
-static ADDRESS_MAP_START( naughtyb_map, AS_PROGRAM, 8, naughtyb_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x7fff) AM_RAM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x8800, 0x8fff) AM_RAM AM_SHARE("videoram2")
-	AM_RANGE(0x9000, 0x97ff) AM_WRITE(naughtyb_videoreg_w)
-	AM_RANGE(0x9800, 0x9fff) AM_RAM AM_SHARE("scrollreg")
-	AM_RANGE(0xa000, 0xa7ff) AM_DEVWRITE("naughtyb_custom", naughtyb_sound_device, control_a_w)
-	AM_RANGE(0xa800, 0xafff) AM_DEVWRITE("naughtyb_custom", naughtyb_sound_device, control_b_w)
-	AM_RANGE(0xb000, 0xb7ff) AM_READ(in0_port_r)    // IN0
-	AM_RANGE(0xb800, 0xbfff) AM_READ(dsw0_port_r)   // DSW0
-ADDRESS_MAP_END
+void naughtyb_state::naughtyb_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x7fff).ram();
+	map(0x8000, 0x87ff).ram().share("videoram");
+	map(0x8800, 0x8fff).ram().share("videoram2");
+	map(0x9000, 0x97ff).w(this, FUNC(naughtyb_state::naughtyb_videoreg_w));
+	map(0x9800, 0x9fff).ram().share("scrollreg");
+	map(0xa000, 0xa7ff).w(m_naughtyb_custom, FUNC(naughtyb_sound_device::control_a_w));
+	map(0xa800, 0xafff).w(m_naughtyb_custom, FUNC(naughtyb_sound_device::control_b_w));
+	map(0xb000, 0xb7ff).r(this, FUNC(naughtyb_state::in0_port_r));    // IN0
+	map(0xb800, 0xbfff).r(this, FUNC(naughtyb_state::dsw0_port_r));   // DSW0
+}
 
-static ADDRESS_MAP_START( popflame_map, AS_PROGRAM, 8, naughtyb_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x7fff) AM_RAM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x8800, 0x8fff) AM_RAM AM_SHARE("videoram2")
-	AM_RANGE(0x9000, 0x97ff) AM_WRITE(popflame_videoreg_w)
-	AM_RANGE(0x9800, 0x9fff) AM_RAM AM_SHARE("scrollreg")
-	AM_RANGE(0xa000, 0xa7ff) AM_DEVWRITE("popflame_custom", popflame_sound_device, control_a_w)
-	AM_RANGE(0xa800, 0xafff) AM_DEVWRITE("popflame_custom", popflame_sound_device, control_b_w)
-	AM_RANGE(0xb000, 0xb7ff) AM_READ(in0_port_r)    // IN0
-	AM_RANGE(0xb800, 0xbfff) AM_READ(dsw0_port_r)   // DSW0
-ADDRESS_MAP_END
+void naughtyb_state::popflame_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x7fff).ram();
+	map(0x8000, 0x87ff).ram().share("videoram");
+	map(0x8800, 0x8fff).ram().share("videoram2");
+	map(0x9000, 0x97ff).w(this, FUNC(naughtyb_state::popflame_videoreg_w));
+	map(0x9800, 0x9fff).ram().share("scrollreg");
+	map(0xa000, 0xa7ff).w(m_popflame_custom, FUNC(popflame_sound_device::control_a_w));
+	map(0xa800, 0xafff).w(m_popflame_custom, FUNC(popflame_sound_device::control_b_w));
+	map(0xb000, 0xb7ff).r(this, FUNC(naughtyb_state::in0_port_r));    // IN0
+	map(0xb800, 0xbfff).r(this, FUNC(naughtyb_state::dsw0_port_r));   // DSW0
+}
 
 
 
@@ -406,7 +408,7 @@ static GFXDECODE_START( naughtyb )
 GFXDECODE_END
 
 
-static MACHINE_CONFIG_START( naughtyb )
+MACHINE_CONFIG_START(naughtyb_state::naughtyb)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CLOCK_XTAL / 4) /* 12 MHz clock, divided by 4. CPU is a Z80A */
@@ -443,7 +445,7 @@ MACHINE_CONFIG_END
 
 
 /* Exactly the same but for certain address writes */
-static MACHINE_CONFIG_START( popflame )
+MACHINE_CONFIG_START(naughtyb_state::popflame)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CLOCK_XTAL / 4) /* 12 MHz clock, divided by 4. CPU is a Z80A */

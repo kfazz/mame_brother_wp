@@ -86,7 +86,7 @@ void xyonix_state::handle_coins(int coin)
 
 READ8_MEMBER(xyonix_state::io_r)
 {
-	int regPC = space.device().safe_pc();
+	int regPC = m_maincpu->pc();
 
 	if (regPC == 0x27ba)
 		return 0x88;
@@ -137,27 +137,29 @@ READ8_MEMBER(xyonix_state::io_r)
 
 WRITE8_MEMBER(xyonix_state::io_w)
 {
-	//logerror ("xyonix_port_e0_w %02x - PC = %04x\n", data, space.device().safe_pc());
+	//logerror ("xyonix_port_e0_w %02x - PC = %04x\n", data, m_maincpu->pc());
 	m_e0_data = data;
 }
 
 /* Mem / Port Maps ***********************************************************/
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 8, xyonix_state )
-	AM_RANGE(0x0000, 0xbfff) AM_ROM
-	AM_RANGE(0xc000, 0xdfff) AM_RAM
-	AM_RANGE(0xe000, 0xffff) AM_RAM_WRITE(vidram_w) AM_SHARE("vidram")
-ADDRESS_MAP_END
+void xyonix_state::main_map(address_map &map)
+{
+	map(0x0000, 0xbfff).rom();
+	map(0xc000, 0xdfff).ram();
+	map(0xe000, 0xffff).ram().w(this, FUNC(xyonix_state::vidram_w)).share("vidram");
+}
 
-static ADDRESS_MAP_START( port_map, AS_IO, 8, xyonix_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x20, 0x20) AM_READNOP AM_DEVWRITE("sn1", sn76496_device, write)   /* SN76496 ready signal */
-	AM_RANGE(0x21, 0x21) AM_READNOP AM_DEVWRITE("sn2", sn76496_device, write)
-	AM_RANGE(0x40, 0x40) AM_WRITENOP        /* NMI ack? */
-	AM_RANGE(0x50, 0x50) AM_WRITE(irqack_w)
-	AM_RANGE(0x60, 0x61) AM_WRITENOP        /* mc6845 */
-	AM_RANGE(0xe0, 0xe0) AM_READWRITE(io_r, io_w)
-ADDRESS_MAP_END
+void xyonix_state::port_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x20, 0x20).nopr().w("sn1", FUNC(sn76496_device::write));   /* SN76496 ready signal */
+	map(0x21, 0x21).nopr().w("sn2", FUNC(sn76496_device::write));
+	map(0x40, 0x40).nopw();        /* NMI ack? */
+	map(0x50, 0x50).w(this, FUNC(xyonix_state::irqack_w));
+	map(0x60, 0x61).nopw();        /* mc6845 */
+	map(0xe0, 0xe0).rw(this, FUNC(xyonix_state::io_r), FUNC(xyonix_state::io_w));
+}
 
 /* Inputs Ports **************************************************************/
 
@@ -224,7 +226,7 @@ GFXDECODE_END
 
 /* MACHINE driver *************************************************************/
 
-static MACHINE_CONFIG_START( xyonix )
+MACHINE_CONFIG_START(xyonix_state::xyonix)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80,16000000 / 4)        /* 4 MHz ? */

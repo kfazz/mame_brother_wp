@@ -69,23 +69,25 @@ const tiny_rom_entry *newbrain_fdc_device::device_rom_region() const
 //  ADDRESS_MAP( newbrain_fdc_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( newbrain_fdc_mem, AS_PROGRAM, 8, newbrain_fdc_device )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-ADDRESS_MAP_END
+void newbrain_fdc_device::newbrain_fdc_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x1fff).rom();
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( newbrain_fdc_io )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( newbrain_fdc_io, AS_IO, 8, newbrain_fdc_device )
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0x71)
-	AM_RANGE(0x00, 0x01) AM_MIRROR(0x10) AM_DEVICE(UPD765_TAG, upd765a_device, map)
-	AM_RANGE(0x20, 0x20) AM_MIRROR(0x11) AM_WRITE(fdc_auxiliary_w)
-	AM_RANGE(0x40, 0x40) AM_MIRROR(0x11) AM_READ(fdc_control_r)
-ADDRESS_MAP_END
+void newbrain_fdc_device::newbrain_fdc_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0x71);
+	map(0x00, 0x01).mirror(0x10).m(UPD765_TAG, FUNC(upd765a_device::map));
+	map(0x20, 0x20).mirror(0x11).w(this, FUNC(newbrain_fdc_device::fdc_auxiliary_w));
+	map(0x40, 0x40).mirror(0x11).r(this, FUNC(newbrain_fdc_device::fdc_control_r));
+}
 
 
 //-------------------------------------------------
@@ -101,8 +103,8 @@ SLOT_INTERFACE_END
 //  device_add_mconfig - add device configuration
 //-------------------------------------------------
 
-MACHINE_CONFIG_MEMBER( newbrain_fdc_device::device_add_mconfig )
-	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_4MHz)
+MACHINE_CONFIG_START(newbrain_fdc_device::device_add_mconfig)
+	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(newbrain_fdc_mem)
 	MCFG_CPU_IO_MAP(newbrain_fdc_io)
 
@@ -114,7 +116,7 @@ MACHINE_CONFIG_MEMBER( newbrain_fdc_device::device_add_mconfig )
 	MCFG_FLOPPY_DRIVE_ADD(UPD765_TAG ":2", newbrain_floppies, nullptr, floppy_image_device::default_floppy_formats)
 	MCFG_FLOPPY_DRIVE_ADD(UPD765_TAG ":3", newbrain_floppies, nullptr, floppy_image_device::default_floppy_formats)
 
-	MCFG_NEWBRAIN_EXPANSION_SLOT_ADD(NEWBRAIN_EXPANSION_SLOT_TAG, XTAL_16MHz/8, newbrain_expansion_cards, nullptr)
+	MCFG_NEWBRAIN_EXPANSION_SLOT_ADD(NEWBRAIN_EXPANSION_SLOT_TAG, XTAL(16'000'000)/8, newbrain_expansion_cards, nullptr)
 MACHINE_CONFIG_END
 
 

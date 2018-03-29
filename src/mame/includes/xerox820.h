@@ -14,6 +14,7 @@
 #include "machine/ram.h"
 #include "bus/scsi/scsi.h"
 #include "bus/scsi/scsihd.h"
+#include "machine/timer.h"
 #include "machine/wd_fdc.h"
 #include "machine/x820kb.h"
 #include "machine/z80pio.h"
@@ -21,6 +22,7 @@
 #include "machine/z80dart.h"
 #include "sound/spkrdev.h"
 #include "sound/beep.h"
+#include "imagedev/snapquik.h"
 
 #define SCREEN_TAG      "screen"
 
@@ -78,9 +80,15 @@ public:
 	DECLARE_WRITE_LINE_MEMBER( fr_w );
 	DECLARE_WRITE_LINE_MEMBER( fdc_intrq_w );
 	DECLARE_WRITE_LINE_MEMBER( fdc_drq_w );
+	DECLARE_QUICKLOAD_LOAD_MEMBER(xerox820);
 
 	TIMER_DEVICE_CALLBACK_MEMBER(ctc_tick);
 
+	void mk83(machine_config &config);
+	void xerox820(machine_config &config);
+	void mk83_mem(address_map &map);
+	void xerox820_io(address_map &map);
+	void xerox820_mem(address_map &map);
 protected:
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
@@ -127,6 +135,7 @@ public:
 
 	DECLARE_WRITE8_MEMBER( kbpio_pa_w );
 
+	void bigboard(machine_config &config);
 protected:
 	virtual void machine_reset() override;
 
@@ -156,6 +165,11 @@ public:
 	DECLARE_WRITE8_MEMBER( rdpio_pb_w );
 	DECLARE_WRITE_LINE_MEMBER( rdpio_pardy_w );
 
+	void xerox168(machine_config &config);
+	void xerox820ii(machine_config &config);
+	void xerox168_mem(address_map &map);
+	void xerox820ii_io(address_map &map);
+	void xerox820ii_mem(address_map &map);
 protected:
 	virtual void machine_reset() override;
 

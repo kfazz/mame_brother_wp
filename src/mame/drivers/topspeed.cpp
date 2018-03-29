@@ -53,8 +53,6 @@ Taito: 2 * PC080SN, PC060HA, TC0040IOC, 2 * TC0060DCA, PC050CM
 TODO Lists
 ==========
 
-Replace TC0140SYT with PC060HA
-
 Minor black glitches on the road: these are all on the right
 hand edge of the tilemap making up the "left" half: this is
 the upper of the two road tilemaps so any gunk will be visible.
@@ -238,7 +236,7 @@ READ16_MEMBER(topspeed_state::motor_r)
 			return 0;
 
 		default:
-			logerror("CPU #0 PC %06x: warning - read from motor cpu %03x\n", space.device().safe_pc(), offset);
+			logerror("CPU #0 PC %06x: warning - read from motor cpu %03x\n", m_subcpu->pc(), offset);
 			return 0;
 	}
 }
@@ -246,7 +244,7 @@ READ16_MEMBER(topspeed_state::motor_r)
 WRITE16_MEMBER(topspeed_state::motor_w)
 {
 	// Writes $900000-25 and $900200-219
-	logerror("CPU #0 PC %06x: warning - write %04x to motor cpu %03x\n", space.device().safe_pc(), data, offset);
+	logerror("CPU #0 PC %06x: warning - write %04x to motor cpu %03x\n", m_subcpu->pc(), data, offset);
 }
 
 WRITE8_MEMBER(topspeed_state::coins_w)
@@ -318,7 +316,7 @@ WRITE8_MEMBER(topspeed_state::msm5205_command_w)
 			break;
 
 		default:
-			logerror("Unhandled MSM5205 control write to %x with %x (PC:%.4x)\n", 0xb000 + offset, data, space.device().safe_pc());
+			logerror("Unhandled MSM5205 control write to %x with %x (PC:%.4x)\n", 0xb000 + offset, data, m_audiocpu->pc());
 			break;
 	}
 }
@@ -379,54 +377,59 @@ WRITE_LINE_MEMBER(topspeed_state::z80ctc_to0)
                       MEMORY STRUCTURES
 ***********************************************************/
 
-static ADDRESS_MAP_START( cpua_map, AS_PROGRAM, 16, topspeed_state )
-	AM_RANGE(0x000000, 0x0fffff) AM_ROM
-	AM_RANGE(0x400000, 0x40ffff) AM_RAM AM_SHARE("sharedram")
-	AM_RANGE(0x500000, 0x503fff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0x600002, 0x600003) AM_WRITE(cpua_ctrl_w)
-	AM_RANGE(0x7e0000, 0x7e0001) AM_READNOP AM_DEVWRITE8("tc0140syt", tc0140syt_device, master_port_w, 0x00ff)
-	AM_RANGE(0x7e0002, 0x7e0003) AM_DEVREADWRITE8("tc0140syt", tc0140syt_device, master_comm_r, master_comm_w, 0x00ff)
-	AM_RANGE(0x800000, 0x8003ff) AM_RAM AM_SHARE("raster_ctrl")
-	AM_RANGE(0x800400, 0x80ffff) AM_RAM
-	AM_RANGE(0x880000, 0x880007) AM_WRITENOP // Lamps/outputs?
-	AM_RANGE(0xa00000, 0xa0ffff) AM_DEVREADWRITE("pc080sn_1", pc080sn_device, word_r, word_w)
-	AM_RANGE(0xa20000, 0xa20003) AM_DEVWRITE("pc080sn_1", pc080sn_device, yscroll_word_w)
-	AM_RANGE(0xa40000, 0xa40003) AM_DEVWRITE("pc080sn_1", pc080sn_device, xscroll_word_w)
-	AM_RANGE(0xa50000, 0xa50003) AM_DEVWRITE("pc080sn_1", pc080sn_device, ctrl_word_w)
-	AM_RANGE(0xb00000, 0xb0ffff) AM_DEVREADWRITE("pc080sn_2", pc080sn_device, word_r, word_w)
-	AM_RANGE(0xb20000, 0xb20003) AM_DEVWRITE("pc080sn_2", pc080sn_device, yscroll_word_w)
-	AM_RANGE(0xb40000, 0xb40003) AM_DEVWRITE("pc080sn_2", pc080sn_device, xscroll_word_w)
-	AM_RANGE(0xb50000, 0xb50003) AM_DEVWRITE("pc080sn_2", pc080sn_device, ctrl_word_w)
-	AM_RANGE(0xd00000, 0xd00fff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0xe00000, 0xe0ffff) AM_RAM AM_SHARE("spritemap")
-ADDRESS_MAP_END
+void topspeed_state::cpua_map(address_map &map)
+{
+	map(0x000000, 0x0fffff).rom();
+	map(0x400000, 0x40ffff).ram().share("sharedram");
+	map(0x500000, 0x503fff).ram().w("palette", FUNC(palette_device::write16)).share("palette");
+	map(0x600002, 0x600003).w(this, FUNC(topspeed_state::cpua_ctrl_w));
+	map(0x7e0000, 0x7e0001).nopr();
+	map(0x7e0001, 0x7e0001).w("ciu", FUNC(pc060ha_device::master_port_w));
+	map(0x7e0003, 0x7e0003).rw("ciu", FUNC(pc060ha_device::master_comm_r), FUNC(pc060ha_device::master_comm_w));
+	map(0x800000, 0x8003ff).ram().share("raster_ctrl");
+	map(0x800400, 0x80ffff).ram();
+	map(0x880000, 0x880007).nopw(); // Lamps/outputs?
+	map(0xa00000, 0xa0ffff).rw(m_pc080sn_1, FUNC(pc080sn_device::word_r), FUNC(pc080sn_device::word_w));
+	map(0xa20000, 0xa20003).w(m_pc080sn_1, FUNC(pc080sn_device::yscroll_word_w));
+	map(0xa40000, 0xa40003).w(m_pc080sn_1, FUNC(pc080sn_device::xscroll_word_w));
+	map(0xa50000, 0xa50003).w(m_pc080sn_1, FUNC(pc080sn_device::ctrl_word_w));
+	map(0xb00000, 0xb0ffff).rw(m_pc080sn_2, FUNC(pc080sn_device::word_r), FUNC(pc080sn_device::word_w));
+	map(0xb20000, 0xb20003).w(m_pc080sn_2, FUNC(pc080sn_device::yscroll_word_w));
+	map(0xb40000, 0xb40003).w(m_pc080sn_2, FUNC(pc080sn_device::xscroll_word_w));
+	map(0xb50000, 0xb50003).w(m_pc080sn_2, FUNC(pc080sn_device::ctrl_word_w));
+	map(0xd00000, 0xd00fff).ram().share("spriteram");
+	map(0xe00000, 0xe0ffff).ram().share("spritemap");
+}
 
-static ADDRESS_MAP_START( cpub_map, AS_PROGRAM, 16, topspeed_state )
-	AM_RANGE(0x000000, 0x01ffff) AM_ROM
-	AM_RANGE(0x400000, 0x40ffff) AM_RAM AM_SHARE("sharedram")
-	AM_RANGE(0x880000, 0x880001) AM_READ8(input_bypass_r, 0x00ff) AM_DEVWRITE8("tc0040ioc", tc0040ioc_device, portreg_w, 0x00ff)
-	AM_RANGE(0x880002, 0x880003) AM_DEVREADWRITE8("tc0040ioc", tc0040ioc_device, port_r, port_w, 0x00ff)
-	AM_RANGE(0x900000, 0x9003ff) AM_READWRITE(motor_r, motor_w)
-ADDRESS_MAP_END
+void topspeed_state::cpub_map(address_map &map)
+{
+	map(0x000000, 0x01ffff).rom();
+	map(0x400000, 0x40ffff).ram().share("sharedram");
+	map(0x880001, 0x880001).r(this, FUNC(topspeed_state::input_bypass_r)).w(m_tc0040ioc, FUNC(tc0040ioc_device::portreg_w)).umask16(0x00ff);
+	map(0x880003, 0x880003).rw(m_tc0040ioc, FUNC(tc0040ioc_device::port_r), FUNC(tc0040ioc_device::port_w));
+	map(0x900000, 0x9003ff).rw(this, FUNC(topspeed_state::motor_r), FUNC(topspeed_state::motor_w));
+}
 
 
 /***************************************************************************/
 
-static ADDRESS_MAP_START( z80_prg, AS_PROGRAM, 8, topspeed_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("sndbank")
-	AM_RANGE(0x8000, 0x8fff) AM_RAM
-	AM_RANGE(0x9000, 0x9001) AM_DEVREADWRITE("ymsnd", ym2151_device, read, write)
-	AM_RANGE(0xa000, 0xa000) AM_DEVWRITE("tc0140syt", tc0140syt_device, slave_port_w)
-	AM_RANGE(0xa001, 0xa001) AM_DEVREADWRITE("tc0140syt", tc0140syt_device, slave_comm_r, slave_comm_w)
-	AM_RANGE(0xb000, 0xcfff) AM_WRITE(msm5205_command_w)
-	AM_RANGE(0xd000, 0xdfff) AM_WRITE(volume_w)
-ADDRESS_MAP_END
+void topspeed_state::z80_prg(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x7fff).bankr("sndbank");
+	map(0x8000, 0x8fff).ram();
+	map(0x9000, 0x9001).rw("ymsnd", FUNC(ym2151_device::read), FUNC(ym2151_device::write));
+	map(0xa000, 0xa000).w("ciu", FUNC(pc060ha_device::slave_port_w));
+	map(0xa001, 0xa001).rw("ciu", FUNC(pc060ha_device::slave_comm_r), FUNC(pc060ha_device::slave_comm_w));
+	map(0xb000, 0xcfff).w(this, FUNC(topspeed_state::msm5205_command_w));
+	map(0xd000, 0xdfff).w(this, FUNC(topspeed_state::volume_w));
+}
 
-static ADDRESS_MAP_START( z80_io, AS_IO, 8, topspeed_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_DEVREADWRITE("ctc", z80ctc_device, read, write)
-ADDRESS_MAP_END
+void topspeed_state::z80_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).rw("ctc", FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+}
 
 
 /***********************************************************
@@ -570,22 +573,22 @@ void topspeed_state::machine_reset()
 }
 
 
-static MACHINE_CONFIG_START( topspeed )
+MACHINE_CONFIG_START(topspeed_state::topspeed)
 
 	// basic machine hardware
-	MCFG_CPU_ADD("maincpu", M68000, XTAL_16MHz / 2)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL(16'000'000) / 2)
 	MCFG_CPU_PROGRAM_MAP(cpua_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", topspeed_state, irq6_line_hold)
 
-	MCFG_CPU_ADD("subcpu", M68000, XTAL_16MHz / 2)
+	MCFG_CPU_ADD("subcpu", M68000, XTAL(16'000'000) / 2)
 	MCFG_CPU_PROGRAM_MAP(cpub_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", topspeed_state, irq5_line_hold)
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_16MHz / 4)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(16'000'000) / 4)
 	MCFG_CPU_PROGRAM_MAP(z80_prg)
 	MCFG_CPU_IO_MAP(z80_io)
 
-	MCFG_DEVICE_ADD("ctc", Z80CTC, XTAL_16MHz / 4)
+	MCFG_DEVICE_ADD("ctc", Z80CTC, XTAL(16'000'000) / 4)
 	MCFG_Z80CTC_ZC0_CB(WRITELINE(topspeed_state, z80ctc_to0))
 
 	MCFG_DEVICE_ADD("pc080sn_1", PC080SN, 0)
@@ -598,9 +601,9 @@ static MACHINE_CONFIG_START( topspeed )
 	MCFG_PC080SN_OFFSETS(0, 8)
 	MCFG_PC080SN_GFXDECODE("gfxdecode")
 
-	MCFG_DEVICE_ADD("tc0140syt", TC0140SYT, 0)
-	MCFG_TC0140SYT_MASTER_CPU("maincpu")
-	MCFG_TC0140SYT_SLAVE_CPU("audiocpu")
+	MCFG_DEVICE_ADD("ciu", PC060HA, 0)
+	MCFG_PC060HA_MASTER_CPU("maincpu")
+	MCFG_PC060HA_SLAVE_CPU("audiocpu")
 
 	MCFG_DEVICE_ADD("tc0040ioc", TC0040IOC, 0)
 	MCFG_TC0040IOC_READ_0_CB(IOPORT("DSWA"))
@@ -626,18 +629,18 @@ static MACHINE_CONFIG_START( topspeed )
 	// sound hardware
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MCFG_YM2151_ADD("ymsnd", XTAL_16MHz / 4)
+	MCFG_YM2151_ADD("ymsnd", XTAL(16'000'000) / 4)
 	MCFG_YM2151_IRQ_HANDLER(INPUTLINE("audiocpu", 0))
 	MCFG_YM2151_PORT_WRITE_HANDLER(WRITE8(topspeed_state, sound_bankswitch_w))
 	MCFG_SOUND_ROUTE(0, "filter1l", 1.0)
 	MCFG_SOUND_ROUTE(1, "filter1r", 1.0)
 
-	MCFG_SOUND_ADD("msm1", MSM5205, XTAL_384kHz)
+	MCFG_SOUND_ADD("msm1", MSM5205, XTAL(384'000))
 	MCFG_MSM5205_VCLK_CB(WRITELINE(topspeed_state, msm5205_1_vck)) // VCK function
 	MCFG_MSM5205_PRESCALER_SELECTOR(S48_4B)      // 8 kHz, 4-bit
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "filter2", 1.0)
 
-	MCFG_SOUND_ADD("msm2", MSM5205, XTAL_384kHz)
+	MCFG_SOUND_ADD("msm2", MSM5205, XTAL(384'000))
 	MCFG_MSM5205_PRESCALER_SELECTOR(SEX_4B)      // Slave mode, 4-bit
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "filter3", 1.0)
 

@@ -287,8 +287,8 @@ WRITE8_MEMBER( tandy2k_state::addr_ctrl_w )
 
 	if (m_clkspd != clkspd || m_clkcnt != clkcnt)
 	{
-		float busdotclk = XTAL_16MHz*28 / (clkspd ? 16 : 20);
-		float vidcclk = busdotclk / (clkcnt ? 8 : 10);
+		const XTAL busdotclk = XTAL(16'000'000)*28 / (clkspd ? 16 : 20);
+		const XTAL vidcclk = busdotclk / (clkcnt ? 8 : 10);
 
 		m_vpac->set_character_width(clkcnt ? 8 : 10);
 		m_vpac->set_unscaled_clock(vidcclk);
@@ -307,45 +307,49 @@ WRITE8_MEMBER( tandy2k_state::addr_ctrl_w )
 
 // Memory Maps
 
-static ADDRESS_MAP_START( tandy2k_mem, AS_PROGRAM, 16, tandy2k_state )
-	ADDRESS_MAP_UNMAP_HIGH
+void tandy2k_state::tandy2k_mem(address_map &map)
+{
+	map.unmap_value_high();
 //  AM_RANGE(0x00000, 0xdffff) AM_RAM
-	AM_RANGE(0xe0000, 0xf7fff) AM_RAM AM_SHARE("hires_ram")
-	AM_RANGE(0xf8000, 0xfbfff) AM_READWRITE8(char_ram_r, char_ram_w, 0x00ff)
-	AM_RANGE(0xfc000, 0xfdfff) AM_MIRROR(0x2000) AM_ROM AM_REGION(I80186_TAG, 0)
-ADDRESS_MAP_END
+	map(0xe0000, 0xf7fff).ram().share("hires_ram");
+	map(0xf8000, 0xfbfff).rw(this, FUNC(tandy2k_state::char_ram_r), FUNC(tandy2k_state::char_ram_w)).umask16(0x00ff);
+	map(0xfc000, 0xfdfff).mirror(0x2000).rom().region(I80186_TAG, 0);
+}
 
-static ADDRESS_MAP_START( tandy2k_io, AS_IO, 16, tandy2k_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000, 0x00001) AM_MIRROR(0x8) AM_READWRITE8(enable_r, enable_w, 0x00ff)
-	AM_RANGE(0x00002, 0x00003) AM_MIRROR(0x8) AM_WRITE8(dma_mux_w, 0x00ff)
-	AM_RANGE(0x00004, 0x00005) AM_MIRROR(0x8) AM_READWRITE8(fldtc_r, fldtc_w, 0x00ff)
-	AM_RANGE(0x00010, 0x00013) AM_MIRROR(0xc) AM_DEVREADWRITE8(I8251A_TAG, i8251_device, data_r, data_w, 0x00ff)
-	AM_RANGE(0x00030, 0x00033) AM_MIRROR(0xc) AM_DEVICE8(I8272A_TAG, i8272a_device, map, 0x00ff)
-	AM_RANGE(0x00040, 0x00047) AM_MIRROR(0x8) AM_DEVREADWRITE8(I8253_TAG, pit8253_device, read, write, 0x00ff)
-	AM_RANGE(0x00052, 0x00053) AM_MIRROR(0x8) AM_READ8(kbint_clr_r, 0x00ff)
-	AM_RANGE(0x00050, 0x00057) AM_MIRROR(0x8) AM_DEVREADWRITE8(I8255A_TAG, i8255_device, read, write, 0x00ff)
-	AM_RANGE(0x00060, 0x00063) AM_MIRROR(0xc) AM_DEVREADWRITE8(I8259A_0_TAG, pic8259_device, read, write, 0x00ff)
-	AM_RANGE(0x00070, 0x00073) AM_MIRROR(0xc) AM_DEVREADWRITE8(I8259A_1_TAG, pic8259_device, read, write, 0x00ff)
-	AM_RANGE(0x00080, 0x00081) AM_MIRROR(0xe) AM_DEVREADWRITE8(I8272A_TAG, i8272a_device, mdma_r, mdma_w, 0x00ff)
+void tandy2k_state::tandy2k_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000, 0x00000).mirror(0x8).rw(this, FUNC(tandy2k_state::enable_r), FUNC(tandy2k_state::enable_w));
+	map(0x00002, 0x00002).mirror(0x8).w(this, FUNC(tandy2k_state::dma_mux_w));
+	map(0x00004, 0x00004).mirror(0x8).rw(this, FUNC(tandy2k_state::fldtc_r), FUNC(tandy2k_state::fldtc_w));
+	map(0x00010, 0x00013).mirror(0xc).rw(m_uart, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w)).umask16(0x00ff);
+	map(0x00030, 0x00033).mirror(0xc).m(m_fdc, FUNC(i8272a_device::map)).umask16(0x00ff);
+	map(0x00040, 0x00047).mirror(0x8).rw(m_pit, FUNC(pit8253_device::read), FUNC(pit8253_device::write)).umask16(0x00ff);
+	map(0x00050, 0x00057).mirror(0x8).rw(m_i8255a, FUNC(i8255_device::read), FUNC(i8255_device::write)).umask16(0x00ff);
+	map(0x00052, 0x00052).mirror(0x8).r(this, FUNC(tandy2k_state::kbint_clr_r));
+	map(0x00060, 0x00063).mirror(0xc).rw(m_pic0, FUNC(pic8259_device::read), FUNC(pic8259_device::write)).umask16(0x00ff);
+	map(0x00070, 0x00073).mirror(0xc).rw(m_pic1, FUNC(pic8259_device::read), FUNC(pic8259_device::write)).umask16(0x00ff);
+	map(0x00080, 0x00080).mirror(0xe).rw(m_fdc, FUNC(i8272a_device::mdma_r), FUNC(i8272a_device::mdma_w));
 //  AM_RANGE(0x00100, 0x0017f) AM_DEVREADWRITE8(CRT9007_TAG, crt9007_t, read, write, 0x00ff) AM_WRITE8(addr_ctrl_w, 0xff00)
-	AM_RANGE(0x00100, 0x0017f) AM_READWRITE(vpac_r, vpac_w)
+	map(0x00100, 0x0017f).rw(this, FUNC(tandy2k_state::vpac_r), FUNC(tandy2k_state::vpac_w));
 //  AM_RANGE(0x00180, 0x00180) AM_READ8(hires_status_r, 0x00ff)
 //  AM_RANGE(0x00180, 0x001bf) AM_WRITE(hires_palette_w)
 //  AM_RANGE(0x001a0, 0x001a0) AM_READ8(hires_plane_w, 0x00ff)
 //  AM_RANGE(0x0ff00, 0x0ffff) AM_READWRITE(i186_internal_port_r, i186_internal_port_w)
-ADDRESS_MAP_END
+}
 
-static ADDRESS_MAP_START( tandy2k_hd_io, AS_IO, 16, tandy2k_state )
-	AM_IMPORT_FROM(tandy2k_io)
+void tandy2k_state::tandy2k_hd_io(address_map &map)
+{
+	tandy2k_io(map);
 //  AM_RANGE(0x000e0, 0x000ff) AM_WRITE8(hdc_dack_w, 0x00ff)
 //  AM_RANGE(0x0026c, 0x0026d) AM_DEVREADWRITE8(WD1010_TAG, wd1010_device, hdc_reset_r, hdc_reset_w, 0x00ff)
 //  AM_RANGE(0x0026e, 0x0027f) AM_DEVREADWRITE8(WD1010_TAG, wd1010_device, wd1010_r, wd1010_w, 0x00ff)
-ADDRESS_MAP_END
+}
 
-static ADDRESS_MAP_START( vpac_mem, 0, 8, tandy2k_state )
-	AM_RANGE(0x0000, 0x3fff) AM_READ(videoram_r)
-ADDRESS_MAP_END
+void tandy2k_state::vpac_mem(address_map &map)
+{
+	map(0x0000, 0x3fff).r(this, FUNC(tandy2k_state::videoram_r));
+}
 
 // Input Ports
 
@@ -764,9 +768,9 @@ void tandy2k_state::device_reset_after_children()
 
 // Machine Driver
 
-static MACHINE_CONFIG_START( tandy2k )
+MACHINE_CONFIG_START(tandy2k_state::tandy2k)
 	// basic machine hardware
-	MCFG_CPU_ADD(I80186_TAG, I80186, XTAL_16MHz)
+	MCFG_CPU_ADD(I80186_TAG, I80186, XTAL(16'000'000))
 	MCFG_CPU_PROGRAM_MAP(tandy2k_mem)
 	MCFG_CPU_IO_MAP(tandy2k_io)
 	MCFG_80186_IRQ_SLAVE_ACK(DEVREAD8(DEVICE_SELF, tandy2k_state, irq_callback))
@@ -782,7 +786,7 @@ static MACHINE_CONFIG_START( tandy2k )
 
 	MCFG_PALETTE_ADD_MONOCHROME("palette")
 
-	MCFG_DEVICE_ADD(CRT9007_TAG, CRT9007, XTAL_16MHz*28/20/8)
+	MCFG_DEVICE_ADD(CRT9007_TAG, CRT9007, XTAL(16'000'000)*28/20/8)
 	MCFG_DEVICE_ADDRESS_MAP(0, vpac_mem)
 	MCFG_CRT9007_CHARACTER_WIDTH(8)
 	MCFG_CRT9007_INT_CALLBACK(DEVWRITELINE(I8259A_1_TAG, pic8259_device, ir1_w))
@@ -804,7 +808,7 @@ static MACHINE_CONFIG_START( tandy2k )
 	MCFG_CRT9212_WEN2_VCC()
 	MCFG_CRT9212_DOUT_CALLBACK(WRITE8(tandy2k_state, drb_attr_w))
 
-	MCFG_DEVICE_ADD(CRT9021B_TAG, CRT9021, XTAL_16MHz*28/20)
+	MCFG_DEVICE_ADD(CRT9021B_TAG, CRT9021, XTAL(16'000'000)*28/20)
 	MCFG_VIDEO_SET_SCREEN(SCREEN_TAG)
 
 	MCFG_TIMER_DRIVER_ADD("vidldsh", tandy2k_state, vidldsh_tick)
@@ -834,16 +838,18 @@ static MACHINE_CONFIG_START( tandy2k )
 	// TODO pin 17 external receiver clock
 
 	MCFG_DEVICE_ADD(I8253_TAG, PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_16MHz/16)
+	MCFG_PIT8253_CLK0(XTAL(16'000'000)/16)
 	MCFG_PIT8253_OUT0_HANDLER(WRITELINE(tandy2k_state, outspkr_w))
-	MCFG_PIT8253_CLK1(XTAL_16MHz/8)
+	MCFG_PIT8253_CLK1(XTAL(16'000'000)/8)
 	MCFG_PIT8253_OUT1_HANDLER(WRITELINE(tandy2k_state, intbrclk_w))
-	//MCFG_PIT8253_CLK2(XTAL_16MHz/8)
+	//MCFG_PIT8253_CLK2(XTAL(16'000'000)/8)
 	//MCFG_PIT8253_OUT2_HANDLER(WRITELINE(tandy2k_state, rfrqpulse_w))
 
-	MCFG_PIC8259_ADD(I8259A_0_TAG, DEVWRITELINE(I80186_TAG, i80186_cpu_device, int0_w), VCC, NOOP)
+	MCFG_DEVICE_ADD(I8259A_0_TAG, PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(DEVWRITELINE(I80186_TAG, i80186_cpu_device, int0_w))
 
-	MCFG_PIC8259_ADD(I8259A_1_TAG, DEVWRITELINE(I80186_TAG, i80186_cpu_device, int1_w), VCC, NOOP)
+	MCFG_DEVICE_ADD(I8259A_1_TAG, PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(DEVWRITELINE(I80186_TAG, i80186_cpu_device, int1_w))
 
 	MCFG_I8272A_ADD(I8272A_TAG, true)
 	downcast<i8272a_device *>(device)->set_select_lines_connected(true);
@@ -879,7 +885,8 @@ static MACHINE_CONFIG_START( tandy2k )
 	MCFG_RAM_EXTRA_OPTIONS("256K,384K,512K,640K,768K,896K")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( tandy2k_hd, tandy2k )
+MACHINE_CONFIG_START(tandy2k_state::tandy2k_hd)
+	tandy2k(config);
 	// basic machine hardware
 	MCFG_CPU_MODIFY(I80186_TAG)
 	MCFG_CPU_IO_MAP(tandy2k_hd_io)

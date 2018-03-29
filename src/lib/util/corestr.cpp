@@ -119,23 +119,6 @@ bool core_iswildstr(const char *sp)
 
 
 /*-------------------------------------------------
-    core_strdup - string duplication via malloc
--------------------------------------------------*/
-
-char *core_strdup(const char *str)
-{
-	char *cpy = nullptr;
-	if (str != nullptr)
-	{
-		cpy = (char *)malloc(strlen(str) + 1);
-		if (cpy != nullptr)
-			strcpy(cpy, str);
-	}
-	return cpy;
-}
-
-
-/*-------------------------------------------------
     std::string helpers
 -------------------------------------------------*/
 
@@ -171,7 +154,7 @@ void strreplacechr(std::string& str, char ch, char newch)
 	}
 }
 
-static std::string internal_strtrimspace(std::string& str, bool right_only)
+static std::string &internal_strtrimspace(std::string& str, bool right_only)
 {
 	// identify the start
 	std::string::iterator start = str.begin();
@@ -196,33 +179,33 @@ static std::string internal_strtrimspace(std::string& str, bool right_only)
 	return str;
 }
 
-std::string strtrimspace(std::string& str)
+std::string &strtrimspace(std::string& str)
 {
 	return internal_strtrimspace(str, false);
 }
 
-std::string strtrimrightspace(std::string& str)
+std::string &strtrimrightspace(std::string& str)
 {
 	return internal_strtrimspace(str, true);
 }
 
-std::string strmakeupper(std::string& str)
+std::string &strmakeupper(std::string& str)
 {
 	std::transform(str.begin(), str.end(), str.begin(), ::toupper);
 	return str;
 }
 
 /**
- * @fn  std::string strmakelower(std::string& str)
+ * @fn  std::string &strmakelower(std::string& str)
  *
- * @brief   Strmakelowers the given string.
+ * @brief   Changes the given string to lower case.
  *
- * @param [in,out]  str The string.
+ * @param [in,out]  str The string to make lower case
  *
- * @return  A std::string.
+ * @return  A reference to the original std::string having been changed to lower case
  */
 
-std::string strmakelower(std::string& str)
+std::string &strmakelower(std::string& str)
 {
 	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
 	return str;

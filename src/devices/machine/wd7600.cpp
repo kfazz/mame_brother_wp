@@ -21,7 +21,7 @@
 
 DEFINE_DEVICE_TYPE(WD7600, wd7600_device, "wd7600", "Western Digital WD7600 chipset")
 
-MACHINE_CONFIG_MEMBER( wd7600_device::device_add_mconfig )
+MACHINE_CONFIG_START(wd7600_device::device_add_mconfig)
 	MCFG_DEVICE_ADD("dma1", AM9517A, 0)
 	MCFG_I8237_OUT_HREQ_CB(DEVWRITELINE("dma2", am9517a_device, dreq0_w))
 	MCFG_I8237_OUT_EOP_CB(WRITELINE(wd7600_device, dma1_eop_w))
@@ -53,15 +53,22 @@ MACHINE_CONFIG_MEMBER( wd7600_device::device_add_mconfig )
 	MCFG_I8237_OUT_DACK_1_CB(WRITELINE(wd7600_device, dma2_dack1_w))
 	MCFG_I8237_OUT_DACK_2_CB(WRITELINE(wd7600_device, dma2_dack2_w))
 	MCFG_I8237_OUT_DACK_3_CB(WRITELINE(wd7600_device, dma2_dack3_w))
-	MCFG_PIC8259_ADD("intc1", WRITELINE(wd7600_device, pic1_int_w), VCC, READ8(wd7600_device, pic1_slave_ack_r))
-	MCFG_PIC8259_ADD("intc2", DEVWRITELINE("intc1", pic8259_device, ir2_w), GND, NOOP)
+
+	MCFG_DEVICE_ADD("intc1", PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(WRITELINE(wd7600_device, pic1_int_w))
+	MCFG_PIC8259_IN_SP_CB(VCC)
+	MCFG_PIC8259_CASCADE_ACK_CB(READ8(wd7600_device, pic1_slave_ack_r))
+
+	MCFG_DEVICE_ADD("intc2", PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(DEVWRITELINE("intc1", pic8259_device, ir2_w))
+	MCFG_PIC8259_IN_SP_CB(GND)
 
 	MCFG_DEVICE_ADD("ctc", PIT8254, 0)
-	MCFG_PIT8253_CLK0(XTAL_14_31818MHz / 12.0)
+	MCFG_PIT8253_CLK0(XTAL(14'318'181) / 12.0)
 	MCFG_PIT8253_OUT0_HANDLER(DEVWRITELINE("intc1", pic8259_device, ir0_w))
-	MCFG_PIT8253_CLK1(XTAL_14_31818MHz / 12.0)
+	MCFG_PIT8253_CLK1(XTAL(14'318'181) / 12.0)
 	MCFG_PIT8253_OUT1_HANDLER(WRITELINE(wd7600_device, ctc_out1_w))
-	MCFG_PIT8253_CLK2(XTAL_14_31818MHz / 12.0)
+	MCFG_PIT8253_CLK2(XTAL(14'318'181) / 12.0)
 	MCFG_PIT8253_OUT2_HANDLER(WRITELINE(wd7600_device, ctc_out2_w))
 
 	MCFG_DS12885_ADD("rtc")
@@ -69,30 +76,6 @@ MACHINE_CONFIG_MEMBER( wd7600_device::device_add_mconfig )
 	MCFG_MC146818_CENTURY_INDEX(0x32)
 MACHINE_CONFIG_END
 
-
-void wd7600_device::static_set_cputag(device_t &device, const char *tag)
-{
-	wd7600_device &chip = downcast<wd7600_device &>(device);
-	chip.m_cputag = tag;
-}
-
-void wd7600_device::static_set_isatag(device_t &device, const char *tag)
-{
-	wd7600_device &chip = downcast<wd7600_device &>(device);
-	chip.m_isatag = tag;
-}
-
-void wd7600_device::static_set_biostag(device_t &device, const char *tag)
-{
-	wd7600_device &chip = downcast<wd7600_device &>(device);
-	chip.m_biostag = tag;
-}
-
-void wd7600_device::static_set_keybctag(device_t &device, const char *tag)
-{
-	wd7600_device &chip = downcast<wd7600_device &>(device);
-	chip.m_keybctag = tag;
-}
 
 wd7600_device::wd7600_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, WD7600, tag, owner, clock),

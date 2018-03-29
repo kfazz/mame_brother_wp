@@ -42,6 +42,7 @@ PROMs : NEC B406 (1kx4) x2
 #include "emu.h"
 #include "cpu/i8085/i8085.h"
 #include "cpu/mcs48/mcs48.h"
+#include "machine/timer.h"
 #include "machine/watchdog.h"
 #include "sound/ay8910.h"
 #include "video/resnet.h"
@@ -86,6 +87,9 @@ public:
 
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	void postload();
+	void sbowling(machine_config &config);
+	void main_map(address_map &map);
+	void port_map(address_map &map);
 };
 
 TILE_GET_INFO_MEMBER(sbowling_state::get_tile_info)
@@ -243,23 +247,25 @@ READ8_MEMBER(sbowling_state::controls_r)
 		return ioport("TRACKX")->read();
 }
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 8, sbowling_state )
-	AM_RANGE(0x0000, 0x2fff) AM_ROM
-	AM_RANGE(0x8000, 0xbfff) AM_RAM_WRITE(videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0xf800, 0xf801) AM_DEVWRITE("aysnd", ay8910_device, address_data_w)
-	AM_RANGE(0xf801, 0xf801) AM_DEVREAD("aysnd", ay8910_device, data_r)
-	AM_RANGE(0xfc00, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void sbowling_state::main_map(address_map &map)
+{
+	map(0x0000, 0x2fff).rom();
+	map(0x8000, 0xbfff).ram().w(this, FUNC(sbowling_state::videoram_w)).share("videoram");
+	map(0xf800, 0xf801).w("aysnd", FUNC(ay8910_device::address_data_w));
+	map(0xf801, 0xf801).r("aysnd", FUNC(ay8910_device::data_r));
+	map(0xfc00, 0xffff).ram();
+}
 
 
-static ADDRESS_MAP_START( port_map, AS_IO, 8, sbowling_state )
-	AM_RANGE(0x00, 0x00) AM_READ_PORT("IN0") AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x01, 0x01) AM_READWRITE(controls_r, pix_data_w)
-	AM_RANGE(0x02, 0x02) AM_READWRITE(pix_data_r, pix_shift_w)
-	AM_RANGE(0x03, 0x03) AM_READ_PORT("IN1") AM_WRITENOP
-	AM_RANGE(0x04, 0x04) AM_READ_PORT("DSW0") AM_WRITE(system_w)
-	AM_RANGE(0x05, 0x05) AM_READ_PORT("DSW1") AM_WRITE(graph_control_w)
-ADDRESS_MAP_END
+void sbowling_state::port_map(address_map &map)
+{
+	map(0x00, 0x00).portr("IN0").w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x01, 0x01).rw(this, FUNC(sbowling_state::controls_r), FUNC(sbowling_state::pix_data_w));
+	map(0x02, 0x02).rw(this, FUNC(sbowling_state::pix_data_r), FUNC(sbowling_state::pix_shift_w));
+	map(0x03, 0x03).portr("IN1").nopw();
+	map(0x04, 0x04).portr("DSW0").w(this, FUNC(sbowling_state::system_w));
+	map(0x05, 0x05).portr("DSW1").w(this, FUNC(sbowling_state::graph_control_w));
+}
 
 
 
@@ -401,8 +407,8 @@ PALETTE_INIT_MEMBER(sbowling_state, sbowling)
 	}
 }
 
-static MACHINE_CONFIG_START( sbowling )
-	MCFG_CPU_ADD("maincpu", I8080, XTAL_19_968MHz/10)   /* ? */
+MACHINE_CONFIG_START(sbowling_state::sbowling)
+	MCFG_CPU_ADD("maincpu", I8080, XTAL(19'968'000)/10)   /* ? */
 	MCFG_CPU_PROGRAM_MAP(main_map)
 	MCFG_CPU_IO_MAP(port_map)
 	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", sbowling_state, interrupt, "screen", 0, 1)
@@ -425,7 +431,7 @@ static MACHINE_CONFIG_START( sbowling )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_SOUND_ADD("aysnd", AY8910, XTAL_19_968MHz/16)  /* ? */
+	MCFG_SOUND_ADD("aysnd", AY8910, XTAL(19'968'000)/16)  /* ? */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.33)
 MACHINE_CONFIG_END
 

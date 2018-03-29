@@ -15,7 +15,6 @@
 #include "cpu/m6809/m6809.h"
 #include "cpu/z80/z80.h"
 #include "sound/2203intf.h"
-#include "sound/discrete.h"
 #include "screen.h"
 #include "speaker.h"
 
@@ -49,7 +48,6 @@ WRITE8_MEMBER(ironhors_state::sh_irqtrigger_w)
 
 WRITE8_MEMBER(ironhors_state::filter_w)
 {
-	discrete_device *m_disc_ih = machine().device<discrete_device>("disc_ih");
 	m_disc_ih->write(space, NODE_11, (data & 0x04) >> 2);
 	m_disc_ih->write(space, NODE_12, (data & 0x02) >> 1);
 	m_disc_ih->write(space, NODE_13, (data & 0x01) >> 0);
@@ -61,84 +59,90 @@ WRITE8_MEMBER(ironhors_state::filter_w)
  *
  *************************************/
 
-static ADDRESS_MAP_START( master_map, AS_PROGRAM, 8, ironhors_state )
-	AM_RANGE(0x0000, 0x0002) AM_RAM
-	AM_RANGE(0x0003, 0x0003) AM_RAM_WRITE(charbank_w)
-	AM_RANGE(0x0004, 0x0004) AM_RAM AM_SHARE("int_enable")
-	AM_RANGE(0x0005, 0x001f) AM_RAM
-	AM_RANGE(0x0020, 0x003f) AM_RAM AM_SHARE("scroll")
-	AM_RANGE(0x0040, 0x005f) AM_RAM
-	AM_RANGE(0x0060, 0x00df) AM_RAM
-	AM_RANGE(0x0800, 0x0800) AM_DEVWRITE("soundlatch", generic_latch_8_device, write)
-	AM_RANGE(0x0900, 0x0900) AM_READ_PORT("DSW3") AM_WRITE(sh_irqtrigger_w)
-	AM_RANGE(0x0a00, 0x0a00) AM_READ_PORT("DSW2") AM_WRITE(palettebank_w)
-	AM_RANGE(0x0b00, 0x0b00) AM_READ_PORT("DSW1") AM_WRITE(flipscreen_w)
-	AM_RANGE(0x0b01, 0x0b01) AM_READ_PORT("P2")
-	AM_RANGE(0x0b02, 0x0b02) AM_READ_PORT("P1")
-	AM_RANGE(0x0b03, 0x0b03) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0x1800, 0x1800) AM_WRITENOP // ???
-	AM_RANGE(0x1a00, 0x1a01) AM_WRITENOP // ???
-	AM_RANGE(0x1c00, 0x1dff) AM_WRITENOP // ???
-	AM_RANGE(0x2000, 0x23ff) AM_RAM_WRITE(colorram_w) AM_SHARE("colorram")
-	AM_RANGE(0x2400, 0x27ff) AM_RAM_WRITE(videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x2800, 0x2fff) AM_RAM
-	AM_RANGE(0x3000, 0x30ff) AM_RAM AM_SHARE("spriteram2")
-	AM_RANGE(0x3100, 0x37ff) AM_RAM
-	AM_RANGE(0x3800, 0x38ff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0x3900, 0x3fff) AM_RAM
-	AM_RANGE(0x4000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void ironhors_state::master_map(address_map &map)
+{
+	map(0x0000, 0x0002).ram();
+	map(0x0003, 0x0003).ram().w(this, FUNC(ironhors_state::charbank_w));
+	map(0x0004, 0x0004).ram().share("int_enable");
+	map(0x0005, 0x001f).ram();
+	map(0x0020, 0x003f).ram().share("scroll");
+	map(0x0040, 0x005f).ram();
+	map(0x0060, 0x00df).ram();
+	map(0x0800, 0x0800).w(m_soundlatch, FUNC(generic_latch_8_device::write));
+	map(0x0900, 0x0900).portr("DSW3").w(this, FUNC(ironhors_state::sh_irqtrigger_w));
+	map(0x0a00, 0x0a00).portr("DSW2").w(this, FUNC(ironhors_state::palettebank_w));
+	map(0x0b00, 0x0b00).portr("DSW1").w(this, FUNC(ironhors_state::flipscreen_w));
+	map(0x0b01, 0x0b01).portr("P2");
+	map(0x0b02, 0x0b02).portr("P1");
+	map(0x0b03, 0x0b03).portr("SYSTEM");
+	map(0x1800, 0x1800).nopw(); // ???
+	map(0x1a00, 0x1a01).nopw(); // ???
+	map(0x1c00, 0x1dff).nopw(); // ???
+	map(0x2000, 0x23ff).ram().w(this, FUNC(ironhors_state::colorram_w)).share("colorram");
+	map(0x2400, 0x27ff).ram().w(this, FUNC(ironhors_state::videoram_w)).share("videoram");
+	map(0x2800, 0x2fff).ram();
+	map(0x3000, 0x30ff).ram().share("spriteram2");
+	map(0x3100, 0x37ff).ram();
+	map(0x3800, 0x38ff).ram().share("spriteram");
+	map(0x3900, 0x3fff).ram();
+	map(0x4000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START( slave_map, AS_PROGRAM, 8, ironhors_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x43ff) AM_RAM
-	AM_RANGE(0x8000, 0x8000) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+void ironhors_state::slave_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x43ff).ram();
+	map(0x8000, 0x8000).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
-static ADDRESS_MAP_START( slave_io_map, AS_IO, 8, ironhors_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x01) AM_DEVREADWRITE("ym2203", ym2203_device, read, write)
-ADDRESS_MAP_END
+void ironhors_state::slave_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x01).rw("ym2203", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+}
 
-static ADDRESS_MAP_START( farwest_master_map, AS_PROGRAM, 8, ironhors_state )
-	AM_RANGE(0x0000, 0x0002) AM_RAM
+void ironhors_state::farwest_master_map(address_map &map)
+{
+	map(0x0000, 0x1bff).rom();
+
+	map(0x0000, 0x0002).ram();
 	//20=31db
 
-	AM_RANGE(0x0005, 0x001f) AM_RAM
-	AM_RANGE(0x31db, 0x31fa) AM_RAM AM_SHARE("scroll")
-	AM_RANGE(0x0040, 0x005f) AM_RAM
-	AM_RANGE(0x0060, 0x00ff) AM_RAM
-	AM_RANGE(0x0800, 0x0800) AM_DEVWRITE("soundlatch", generic_latch_8_device, write)
-	AM_RANGE(0x0900, 0x0900) /*AM_READ_PORT("DSW3") */AM_WRITE(sh_irqtrigger_w)
-	AM_RANGE(0x0a00, 0x0a00) AM_READ_PORT("DSW2") //AM_WRITE(palettebank_w)
-	AM_RANGE(0x0b00, 0x0b00) AM_READ_PORT("DSW1") AM_WRITE(flipscreen_w)
-	AM_RANGE(0x0b01, 0x0b01) AM_READ_PORT("DSW2") //AM_WRITE(palettebank_w)
-	AM_RANGE(0x0b02, 0x0b02) AM_READ_PORT("P1")
-	AM_RANGE(0x0b03, 0x0b03) AM_READ_PORT("SYSTEM")
+	map(0x0005, 0x001f).ram();
+	map(0x0040, 0x005f).ram();
+	map(0x0060, 0x00ff).ram();
+	map(0x0800, 0x0800).w(m_soundlatch, FUNC(generic_latch_8_device::write));
+	map(0x0900, 0x0900) /*.protr("DSW3") */ .w(this, FUNC(ironhors_state::sh_irqtrigger_w));
+	map(0x0a00, 0x0a00).portr("DSW2"); //.w(this, FUNC(ironhors_state::palettebank_w));
+	map(0x0b00, 0x0b00).portr("DSW1").w(this, FUNC(ironhors_state::flipscreen_w));
+	map(0x0b01, 0x0b01).portr("DSW2"); //.w(this, FUNC(ironhors_state::palettebank_w));
+	map(0x0b02, 0x0b02).portr("P1");
+	map(0x0b03, 0x0b03).portr("SYSTEM");
 
 
 
-	AM_RANGE(0x1800, 0x1800) AM_WRITE(sh_irqtrigger_w)
-	AM_RANGE(0x1a00, 0x1a00) AM_RAM AM_SHARE("int_enable")
-	AM_RANGE(0x1a01, 0x1a01) AM_RAM_WRITE(charbank_w)
-	AM_RANGE(0x1a02, 0x1a02) AM_WRITE(palettebank_w)
-	AM_RANGE(0x0000, 0x1bff) AM_ROM
-//  AM_RANGE(0x1c00, 0x1fff) AM_RAM
-	AM_RANGE(0x2000, 0x23ff) AM_RAM_WRITE(colorram_w) AM_SHARE("colorram")
-	AM_RANGE(0x2400, 0x27ff) AM_RAM_WRITE(videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x2800, 0x2fff) AM_RAM
-	AM_RANGE(0x1c00, 0x1dff) AM_RAM AM_SHARE("spriteram2")
-	AM_RANGE(0x3000, 0x38ff) AM_RAM
-	AM_RANGE(0x1e00, 0x1eff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0x3900, 0x3fff) AM_RAM
-	AM_RANGE(0x4000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+	map(0x1800, 0x1800).w(this, FUNC(ironhors_state::sh_irqtrigger_w));
+	map(0x1a00, 0x1a00).ram().share("int_enable");
+	map(0x1a01, 0x1a01).ram().w(this, FUNC(ironhors_state::charbank_w));
+	map(0x1a02, 0x1a02).w(this, FUNC(ironhors_state::palettebank_w));
+//  map(0x1c00, 0x1fff).ram();
+	map(0x2000, 0x23ff).ram().w(this, FUNC(ironhors_state::colorram_w)).share("colorram");
+	map(0x2400, 0x27ff).ram().w(this, FUNC(ironhors_state::videoram_w)).share("videoram");
+	map(0x2800, 0x2fff).ram();
+	map(0x1c00, 0x1dff).ram().share("spriteram2");
+	map(0x3000, 0x38ff).ram();
+	map(0x31db, 0x31fa).ram().share("scroll");
+	map(0x1e00, 0x1eff).ram().share("spriteram");
+	map(0x3900, 0x3fff).ram();
+	map(0x4000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START( farwest_slave_map, AS_PROGRAM, 8, ironhors_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x43ff) AM_RAM
-	AM_RANGE(0x8000, 0x8001) AM_DEVREADWRITE("ym2203", ym2203_device, read, write)
-ADDRESS_MAP_END
+void ironhors_state::farwest_slave_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x43ff).ram();
+	map(0x8000, 0x8001).rw("ym2203", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+}
 
 
 /*************************************
@@ -360,14 +364,29 @@ void ironhors_state::machine_reset()
 	m_spriterambank = 0;
 }
 
-static MACHINE_CONFIG_START( ironhors )
+/*
+clock measurements:
+main Xtal is 18.432mhz
+
+Z80 runs at 3.072mhz
+
+M6809E runs at 1.532mhz ( NOT 3.072mhz)
+
+Vsync is 61hz
+
+Hsync is 15,56khz
+
+These clocks make the emulation run too fast.
+*/
+
+MACHINE_CONFIG_START(ironhors_state::ironhors)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809,18432000/6)        /* 3.072 MHz??? mod by Shingo Suzuki 1999/10/15 */
+	MCFG_CPU_ADD("maincpu", MC6809E, 18432000/6)        /* 3.072 MHz??? mod by Shingo Suzuki 1999/10/15 */
 	MCFG_CPU_PROGRAM_MAP(master_map)
 	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", ironhors_state, irq, "screen", 0, 1)
 
-	MCFG_CPU_ADD("soundcpu",Z80,18432000/6)      /* 3.072 MHz */
+	MCFG_CPU_ADD("soundcpu", Z80, 18432000/6)      /* 3.072 MHz */
 	MCFG_CPU_PROGRAM_MAP(slave_map)
 	MCFG_CPU_IO_MAP(slave_io_map)
 
@@ -426,7 +445,8 @@ READ8_MEMBER(ironhors_state::farwest_soundlatch_r)
 	return m_soundlatch->read(m_soundcpu->space(AS_PROGRAM), 0);
 }
 
-static MACHINE_CONFIG_DERIVED( farwest, ironhors )
+MACHINE_CONFIG_START(ironhors_state::farwest)
+	ironhors(config);
 
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(farwest_master_map)
@@ -435,7 +455,7 @@ static MACHINE_CONFIG_DERIVED( farwest, ironhors )
 
 	MCFG_CPU_MODIFY("soundcpu")
 	MCFG_CPU_PROGRAM_MAP(farwest_slave_map)
-	MCFG_CPU_IO_MAP(0)
+	MCFG_DEVICE_REMOVE_ADDRESS_MAP(AS_IO)
 
 	MCFG_GFXDECODE_MODIFY("gfxdecode", farwest)
 	MCFG_VIDEO_START_OVERRIDE(ironhors_state,farwest)
@@ -456,6 +476,28 @@ MACHINE_CONFIG_END
  *************************************/
 
 ROM_START( ironhors )
+	ROM_REGION( 0x10000, "maincpu", 0 )
+	ROM_LOAD( "560_k03.13c",  0x4000, 0x8000, CRC(395351b4) SHA1(21cf2f39a208571d06f20ca8ca346999541e870a) )
+	ROM_LOAD( "560_k02.12c",  0xc000, 0x4000, CRC(1cff3d59) SHA1(9194f31ec1e9a90850f2f44aef10b5b32a28ef1d) )
+
+	ROM_REGION( 0x10000, "soundcpu", 0 )
+	ROM_LOAD( "560_h01.10c",  0x0000, 0x4000, CRC(2b17930f) SHA1(be7b21f050f6b74c75a33c9284455bbed5b03c63) )
+
+	ROM_REGION( 0x20000, "gfx1", 0 )
+	ROM_LOAD16_BYTE( "560_h06.08f",  0x00000, 0x8000, CRC(f21d8c93) SHA1(4245fff5360e10441e11d0d207d510e5c317bb0e) )
+	ROM_LOAD16_BYTE( "560_h05.07f",  0x00001, 0x8000, CRC(60107859) SHA1(ab59b6be155d36811a37dc873abbd97cd0a4120d) )
+	ROM_LOAD16_BYTE( "560_h07.09f",  0x10000, 0x8000, CRC(c761ec73) SHA1(78266c9ff3ea74a59fd3ce84afb4f8a1164c8bba) )
+	ROM_LOAD16_BYTE( "560_h04.06f",  0x10001, 0x8000, CRC(c1486f61) SHA1(4b96aebe5d35fd1d73bde8576689addbb1ff66ed) )
+
+	ROM_REGION( 0x0500, "proms", 0 )
+	ROM_LOAD( "03f_h08.bin",  0x0000, 0x0100, CRC(9f6ddf83) SHA1(08a37182a974c5448156637f10fe60bfe5f225ad) ) /* palette red */
+	ROM_LOAD( "04f_h09.bin",  0x0100, 0x0100, CRC(e6773825) SHA1(7523e7fa090d850fe79ff0069d3260c76645d65a) ) /* palette green */
+	ROM_LOAD( "05f_h10.bin",  0x0200, 0x0100, CRC(30a57860) SHA1(3ec7535286c8bc65e203320f47e4ed6f1d3d61c9) ) /* palette blue */
+	ROM_LOAD( "10f_h12.bin",  0x0300, 0x0100, CRC(5eb33e73) SHA1(f34916dc4617b0c48e0a7ac6ace97b35dfcf1c40) ) /* character lookup table */
+	ROM_LOAD( "10f_h11.bin",  0x0400, 0x0100, CRC(a63e37d8) SHA1(1a0a76ecd14310125bdf41a8431d562ed498eb27) ) /* sprite lookup table */
+ROM_END
+
+ROM_START( ironhorsh )
 	ROM_REGION( 0x10000, "maincpu", 0 )
 	ROM_LOAD( "13c_h03.bin",  0x4000, 0x8000, CRC(24539af1) SHA1(1eb96a2cb03007665587d6ec114894ab4cafdb23) )
 	ROM_LOAD( "12c_h02.bin",  0xc000, 0x4000, CRC(fab07f86) SHA1(9f599d32d473d873113b89f2b24a54a435dbcbe5) )
@@ -479,8 +521,8 @@ ROM_END
 
 ROM_START( dairesya )
 	ROM_REGION( 0x10000, "maincpu", 0 )
-	ROM_LOAD( "560-k03.13c",  0x4000, 0x8000, CRC(2ac6103b) SHA1(331e1be3f29df85d65081831c215743354d76778) )
-	ROM_LOAD( "560-k02.12c",  0xc000, 0x4000, CRC(07bc13a9) SHA1(1d3a44ad41799f89bfa84cc05fbe0792e57305af) )
+	ROM_LOAD( "560-k03.13c",  0x4000, 0x8000, CRC(2ac6103b) SHA1(331e1be3f29df85d65081831c215743354d76778) ) // sldh
+	ROM_LOAD( "560-k02.12c",  0xc000, 0x4000, CRC(07bc13a9) SHA1(1d3a44ad41799f89bfa84cc05fbe0792e57305af) ) // sldh
 
 	ROM_REGION( 0x10000, "soundcpu", 0 )
 	ROM_LOAD( "560-j01.10c",  0x0000, 0x4000, CRC(a203b223) SHA1(fd19ae55bda467a09151539be6dce3791c28f18a) )
@@ -532,7 +574,8 @@ ROM_END
  *  Game driver(s)
  *
  *************************************/
-
-GAME( 1986, ironhors, 0,        ironhors, ironhors, ironhors_state, 0, ROT0, "Konami", "Iron Horse", MACHINE_SUPPORTS_SAVE )
-GAME( 1986, dairesya, ironhors, ironhors, dairesya, ironhors_state, 0, ROT0, "Konami (Kawakusu license)", "Dai Ressya Goutou (Japan)", MACHINE_SUPPORTS_SAVE )
-GAME( 1986, farwest,  ironhors, farwest,  ironhors, ironhors_state, 0, ROT0, "bootleg?", "Far West", MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )
+// versions are taken from the letters on the program ROMs' labels
+GAME( 1986, ironhors,  0,        ironhors, ironhors, ironhors_state, 0, ROT0, "Konami", "Iron Horse (version K)", MACHINE_SUPPORTS_SAVE )
+GAME( 1986, ironhorsh, ironhors, ironhors, ironhors, ironhors_state, 0, ROT0, "Konami", "Iron Horse (version H)", MACHINE_SUPPORTS_SAVE )
+GAME( 1986, dairesya,  ironhors, ironhors, dairesya, ironhors_state, 0, ROT0, "Konami (Kawakusu license)", "Dai Ressya Goutou (Japan, version K)", MACHINE_SUPPORTS_SAVE )
+GAME( 1986, farwest,   ironhors, farwest,  ironhors, ironhors_state, 0, ROT0, "bootleg?", "Far West", MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )

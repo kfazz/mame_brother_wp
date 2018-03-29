@@ -77,6 +77,10 @@ public:
 	DECLARE_WRITE8_MEMBER(portfa_w);
 	DECLARE_QUICKLOAD_LOAD_MEMBER(instruct);
 	INTERRUPT_GEN_MEMBER(t2l_int);
+	void instruct(machine_config &config);
+	void data_map(address_map &map);
+	void io_map(address_map &map);
+	void mem_map(address_map &map);
 private:
 	virtual void machine_reset() override;
 	uint16_t m_lar;
@@ -214,30 +218,33 @@ INTERRUPT_GEN_MEMBER( instruct_state::t2l_int )
 	}
 }
 
-static ADDRESS_MAP_START( instruct_mem, AS_PROGRAM, 8, instruct_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x0ffe) AM_RAM AM_SHARE("mainram")
-	AM_RANGE(0x0fff, 0x0fff) AM_READWRITE(port_r,port_w)
-	AM_RANGE(0x1780, 0x17ff) AM_RAM AM_SHARE("smiram")
-	AM_RANGE(0x1800, 0x1fff) AM_ROM AM_REGION("roms",0)
-	AM_RANGE(0x2000, 0x7fff) AM_RAM AM_SHARE("extram")
-ADDRESS_MAP_END
+void instruct_state::mem_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x0ffe).ram().share("mainram");
+	map(0x0fff, 0x0fff).rw(this, FUNC(instruct_state::port_r), FUNC(instruct_state::port_w));
+	map(0x1780, 0x17ff).ram().share("smiram");
+	map(0x1800, 0x1fff).rom().region("roms", 0);
+	map(0x2000, 0x7fff).ram().share("extram");
+}
 
-static ADDRESS_MAP_START( instruct_io, AS_IO, 8, instruct_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x07, 0x07) AM_READWRITE(port_r,port_w)
-	AM_RANGE(0xf8, 0xf8) AM_WRITE(portf8_w)
-	AM_RANGE(0xf9, 0xf9) AM_WRITE(portf9_w)
-	AM_RANGE(0xfa, 0xfa) AM_WRITE(portfa_w)
-	AM_RANGE(0xfc, 0xfc) AM_READ(portfc_r)
-	AM_RANGE(0xfd, 0xfd) AM_READ(portfd_r)
-	AM_RANGE(0xfe, 0xfe) AM_READ(portfe_r)
-ADDRESS_MAP_END
+void instruct_state::io_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x07, 0x07).rw(this, FUNC(instruct_state::port_r), FUNC(instruct_state::port_w));
+	map(0xf8, 0xf8).w(this, FUNC(instruct_state::portf8_w));
+	map(0xf9, 0xf9).w(this, FUNC(instruct_state::portf9_w));
+	map(0xfa, 0xfa).w(this, FUNC(instruct_state::portfa_w));
+	map(0xfc, 0xfc).r(this, FUNC(instruct_state::portfc_r));
+	map(0xfd, 0xfd).r(this, FUNC(instruct_state::portfd_r));
+	map(0xfe, 0xfe).r(this, FUNC(instruct_state::portfe_r));
+}
 
-static ADDRESS_MAP_START( instruct_data, AS_DATA, 8, instruct_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(S2650_DATA_PORT, S2650_DATA_PORT) AM_READWRITE(port_r,port_w)
-ADDRESS_MAP_END
+void instruct_state::data_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(S2650_DATA_PORT, S2650_DATA_PORT).rw(this, FUNC(instruct_state::port_r), FUNC(instruct_state::port_w));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( instruct )
@@ -408,12 +415,12 @@ QUICKLOAD_LOAD_MEMBER( instruct_state, instruct )
 	return result;
 }
 
-static MACHINE_CONFIG_START( instruct )
+MACHINE_CONFIG_START(instruct_state::instruct)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",S2650, XTAL_3_579545MHz / 4)
-	MCFG_CPU_PROGRAM_MAP(instruct_mem)
-	MCFG_CPU_IO_MAP(instruct_io)
-	MCFG_CPU_DATA_MAP(instruct_data)
+	MCFG_CPU_ADD("maincpu",S2650, XTAL(3'579'545) / 4)
+	MCFG_CPU_PROGRAM_MAP(mem_map)
+	MCFG_CPU_IO_MAP(io_map)
+	MCFG_CPU_DATA_MAP(data_map)
 	MCFG_CPU_PERIODIC_INT_DRIVER(instruct_state, t2l_int, 120)
 	MCFG_S2650_SENSE_INPUT(READLINE(instruct_state, sense_r))
 	MCFG_S2650_FLAG_OUTPUT(WRITELINE(instruct_state, flag_w))

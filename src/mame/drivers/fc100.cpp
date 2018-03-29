@@ -41,6 +41,7 @@ TODO:
 #include "machine/buffer.h"
 #include "machine/clock.h"
 #include "machine/i8251.h"
+#include "machine/timer.h"
 #include "sound/ay8910.h"
 #include "sound/wave.h"
 #include "video/mc6847.h"
@@ -74,7 +75,6 @@ public:
 	DECLARE_WRITE8_MEMBER(port60_w);
 	DECLARE_WRITE8_MEMBER(port70_w);
 	DECLARE_WRITE_LINE_MEMBER(txdata_callback);
-	DECLARE_WRITE_LINE_MEMBER(uart_clock_w);
 	DECLARE_DRIVER_INIT(fc100);
 	TIMER_DEVICE_CALLBACK_MEMBER(timer_c);
 	TIMER_DEVICE_CALLBACK_MEMBER(timer_p);
@@ -84,6 +84,9 @@ public:
 	{
 		return m_p_chargen[(ch * 16 + line) & 0xfff];
 	}
+	void fc100(machine_config &config);
+	void fc100_io(address_map &map);
+	void fc100_mem(address_map &map);
 private:
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
@@ -115,34 +118,36 @@ private:
 };
 
 
-static ADDRESS_MAP_START( fc100_mem, AS_PROGRAM, 8, fc100_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x0000, 0x5fff ) AM_ROM AM_REGION("roms", 0)
+void fc100_state::fc100_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x5fff).rom().region("roms", 0);
 	//AM_RANGE(0x6000, 0x6fff)      // mapped by the cartslot
-	AM_RANGE( 0x7800, 0x7fff ) AM_READ_BANK("bankr") AM_WRITE_BANK("bankw") // Banked RAM/ROM
-	AM_RANGE( 0x8000, 0xbfff ) AM_RAM // expansion ram pack - if omitted you get a 'Pages?' prompt at boot
-	AM_RANGE( 0xc000, 0xffff ) AM_RAM AM_SHARE("videoram")
-ADDRESS_MAP_END
+	map(0x7800, 0x7fff).bankr("bankr").bankw("bankw"); // Banked RAM/ROM
+	map(0x8000, 0xbfff).ram(); // expansion ram pack - if omitted you get a 'Pages?' prompt at boot
+	map(0xc000, 0xffff).ram().share("videoram");
+}
 
-static ADDRESS_MAP_START( fc100_io, AS_IO, 8, fc100_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x0F) AM_READ(port00_r)
+void fc100_state::fc100_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0x00, 0x0F).r(this, FUNC(fc100_state::port00_r));
 	// AM_RANGE(0x10, 0x10) AM_WRITE(port10_w)  // vdg, unknown effects
-	AM_RANGE(0x21, 0x21) AM_DEVWRITE("psg", ay8910_device, data_w)
-	AM_RANGE(0x22, 0x22) AM_DEVREAD("psg", ay8910_device, data_r)
-	AM_RANGE(0x23, 0x23) AM_DEVWRITE("psg", ay8910_device, address_w)
-	AM_RANGE(0x31, 0x31) AM_WRITE(port31_w)
-	AM_RANGE(0x33, 0x33) AM_WRITE(port33_w)
-	AM_RANGE(0x40, 0x40) AM_DEVWRITE("cent_data_out", output_latch_device, write)
-	AM_RANGE(0x42, 0x42) AM_WRITENOP // bit 0 could be printer select
-	AM_RANGE(0x43, 0x43) AM_WRITE(port43_w)
-	AM_RANGE(0x44, 0x44) AM_DEVREAD("cent_status_in", input_buffer_device, read)
-	AM_RANGE(0x60, 0x61) AM_WRITE(port60_w)
-	AM_RANGE(0x70, 0x71) AM_WRITE(port70_w)
-	AM_RANGE(0xb0, 0xb0) AM_DEVREADWRITE("uart", i8251_device, data_r, data_w)
-	AM_RANGE(0xb8, 0xb8) AM_DEVREADWRITE("uart", i8251_device, status_r, control_w)
-ADDRESS_MAP_END
+	map(0x21, 0x21).w("psg", FUNC(ay8910_device::data_w));
+	map(0x22, 0x22).r("psg", FUNC(ay8910_device::data_r));
+	map(0x23, 0x23).w("psg", FUNC(ay8910_device::address_w));
+	map(0x31, 0x31).w(this, FUNC(fc100_state::port31_w));
+	map(0x33, 0x33).w(this, FUNC(fc100_state::port33_w));
+	map(0x40, 0x40).w("cent_data_out", FUNC(output_latch_device::write));
+	map(0x42, 0x42).nopw(); // bit 0 could be printer select
+	map(0x43, 0x43).w(this, FUNC(fc100_state::port43_w));
+	map(0x44, 0x44).r("cent_status_in", FUNC(input_buffer_device::read));
+	map(0x60, 0x61).w(this, FUNC(fc100_state::port60_w));
+	map(0x70, 0x71).w(this, FUNC(fc100_state::port70_w));
+	map(0xb0, 0xb0).rw(m_uart, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0xb8, 0xb8).rw(m_uart, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+}
 
 static INPUT_PORTS_START( fc100 )
 	PORT_START("KEY.0")
@@ -419,12 +424,6 @@ WRITE_LINE_MEMBER( fc100_state::txdata_callback )
 	m_cass_state = state;
 }
 
-WRITE_LINE_MEMBER( fc100_state::uart_clock_w )
-{
-	m_uart->write_txc(state);
-	m_uart->write_rxc(state);
-}
-
 TIMER_DEVICE_CALLBACK_MEMBER( fc100_state::timer_c )
 {
 	m_cass_data[3]++;
@@ -512,14 +511,14 @@ DRIVER_INIT_MEMBER( fc100_state, fc100 )
 	membank("bankr")->configure_entry(1, &ram[0]);
 }
 
-static MACHINE_CONFIG_START( fc100 )
+MACHINE_CONFIG_START(fc100_state::fc100)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",Z80, XTAL_7_15909MHz/2)
+	MCFG_CPU_ADD("maincpu",Z80, XTAL(7'159'090)/2)
 	MCFG_CPU_PROGRAM_MAP(fc100_mem)
 	MCFG_CPU_IO_MAP(fc100_io)
 
 	/* video hardware */
-	MCFG_DEVICE_ADD("vdg", M5C6847P1, XTAL_7_15909MHz/3)  // Clock not verified
+	MCFG_DEVICE_ADD("vdg", M5C6847P1, XTAL(7'159'090)/3)  // Clock not verified
 	MCFG_MC6847_INPUT_CALLBACK(READ8(fc100_state, mc6847_videoram_r))
 	MCFG_MC6847_CHARROM_CALLBACK(fc100_state, get_char_rom)
 	MCFG_MC6847_FIXED_MODE(m5c6847p1_device::MODE_INTEXT)
@@ -533,7 +532,7 @@ static MACHINE_CONFIG_START( fc100 )
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_WAVE_ADD(WAVE_TAG, "cassette")
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.05)
-	MCFG_SOUND_ADD("psg", AY8910, XTAL_7_15909MHz/3/2)  /* AY-3-8910 - clock not verified */
+	MCFG_SOUND_ADD("psg", AY8910, XTAL(7'159'090)/3/2)  /* AY-3-8910 - clock not verified */
 	MCFG_AY8910_PORT_A_READ_CB(IOPORT("JOY0"))
 	MCFG_AY8910_PORT_B_READ_CB(IOPORT("JOY1"))
 	//MCFG_AY8910_PORT_A_WRITE_CB(WRITE8(fc100_state, ay_port_a_w))
@@ -547,8 +546,10 @@ static MACHINE_CONFIG_START( fc100 )
 
 	MCFG_DEVICE_ADD("uart", I8251, 0)
 	MCFG_I8251_TXD_HANDLER(WRITELINE(fc100_state, txdata_callback))
-	MCFG_DEVICE_ADD("uart_clock", CLOCK, XTAL_4_9152MHz/16/16) // gives 19200
-	MCFG_CLOCK_SIGNAL_HANDLER(WRITELINE(fc100_state, uart_clock_w))
+	MCFG_DEVICE_ADD("uart_clock", CLOCK, XTAL(4'915'200)/16/16) // gives 19200
+	MCFG_CLOCK_SIGNAL_HANDLER(DEVWRITELINE("uart", i8251_device, write_txc))
+	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("uart", i8251_device, write_rxc))
+
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("timer_c", fc100_state, timer_c, attotime::from_hz(4800)) // cass write
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("timer_p", fc100_state, timer_p, attotime::from_hz(40000)) // cass read
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("timer_k", fc100_state, timer_k, attotime::from_hz(300)) // keyb scan

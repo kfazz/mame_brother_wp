@@ -190,36 +190,39 @@ WRITE16_MEMBER(magmax_state::magmax_vreg_w)
 
 
 
-static ADDRESS_MAP_START( magmax_map, AS_PROGRAM, 16, magmax_state )
-	AM_RANGE(0x000000, 0x013fff) AM_ROM
-	AM_RANGE(0x018000, 0x018fff) AM_RAM
-	AM_RANGE(0x020000, 0x0207ff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x028000, 0x0281ff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0x030000, 0x030001) AM_READ_PORT("P1")
-	AM_RANGE(0x030002, 0x030003) AM_READ_PORT("P2")
-	AM_RANGE(0x030004, 0x030005) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0x030006, 0x030007) AM_READ_PORT("DSW")
-	AM_RANGE(0x030010, 0x030011) AM_WRITE(magmax_vreg_w) AM_SHARE("vreg")
-	AM_RANGE(0x030012, 0x030013) AM_WRITEONLY AM_SHARE("scroll_x")
-	AM_RANGE(0x030014, 0x030015) AM_WRITEONLY AM_SHARE("scroll_y")
-	AM_RANGE(0x03001c, 0x03001d) AM_DEVWRITE8("soundlatch", generic_latch_8_device, write, 0x00ff)
-	AM_RANGE(0x03001e, 0x03001f) AM_WRITE(cpu_irq_ack_w)
-ADDRESS_MAP_END
+void magmax_state::magmax_map(address_map &map)
+{
+	map(0x000000, 0x013fff).rom();
+	map(0x018000, 0x018fff).ram();
+	map(0x020000, 0x0207ff).ram().share("videoram");
+	map(0x028000, 0x0281ff).ram().share("spriteram");
+	map(0x030000, 0x030001).portr("P1");
+	map(0x030002, 0x030003).portr("P2");
+	map(0x030004, 0x030005).portr("SYSTEM");
+	map(0x030006, 0x030007).portr("DSW");
+	map(0x030010, 0x030011).w(this, FUNC(magmax_state::magmax_vreg_w)).share("vreg");
+	map(0x030012, 0x030013).writeonly().share("scroll_x");
+	map(0x030014, 0x030015).writeonly().share("scroll_y");
+	map(0x03001d, 0x03001d).w(m_soundlatch, FUNC(generic_latch_8_device::write));
+	map(0x03001e, 0x03001f).w(this, FUNC(magmax_state::cpu_irq_ack_w));
+}
 
-static ADDRESS_MAP_START( magmax_sound_map, AS_PROGRAM, 8, magmax_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x7fff) // A15 not connected
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x4000) AM_MIRROR(0x1fff) AM_DEVREADWRITE("soundlatch", generic_latch_8_device, acknowledge_r, acknowledge_w)
-	AM_RANGE(0x6000, 0x67ff) AM_MIRROR(0x1800) AM_RAM
-ADDRESS_MAP_END
+void magmax_state::magmax_sound_map(address_map &map)
+{
+	map.global_mask(0x7fff); // A15 not connected
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x4000).mirror(0x1fff).rw(m_soundlatch, FUNC(generic_latch_8_device::acknowledge_r), FUNC(generic_latch_8_device::acknowledge_w));
+	map(0x6000, 0x67ff).mirror(0x1800).ram();
+}
 
-static ADDRESS_MAP_START( magmax_sound_io_map, AS_IO, 8, magmax_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x01) AM_DEVWRITE("ay1", ay8910_device, address_data_w)
-	AM_RANGE(0x02, 0x03) AM_DEVWRITE("ay2", ay8910_device, address_data_w)
-	AM_RANGE(0x04, 0x05) AM_DEVWRITE("ay3", ay8910_device, address_data_w)
-	AM_RANGE(0x06, 0x06) AM_READ(magmax_sound_r)
-ADDRESS_MAP_END
+void magmax_state::magmax_sound_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x01).w("ay1", FUNC(ay8910_device::address_data_w));
+	map(0x02, 0x03).w("ay2", FUNC(ay8910_device::address_data_w));
+	map(0x04, 0x05).w("ay3", FUNC(ay8910_device::address_data_w));
+	map(0x06, 0x06).r(this, FUNC(magmax_state::magmax_sound_r));
+}
 
 
 static INPUT_PORTS_START( magmax )
@@ -325,14 +328,14 @@ static GFXDECODE_START( magmax )
 GFXDECODE_END
 
 
-static MACHINE_CONFIG_START( magmax )
+MACHINE_CONFIG_START(magmax_state::magmax)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M68000, XTAL_16MHz/2)   /* verified on pcb */
+	MCFG_CPU_ADD("maincpu", M68000, XTAL(16'000'000)/2)   /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(magmax_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", magmax_state,  irq1_line_assert)
 
-	MCFG_CPU_ADD("audiocpu", Z80,XTAL_20MHz/8) /* verified on pcb */
+	MCFG_CPU_ADD("audiocpu", Z80,XTAL(20'000'000)/8) /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(magmax_sound_map)
 	MCFG_CPU_IO_MAP(magmax_sound_io_map)
 
@@ -355,15 +358,15 @@ static MACHINE_CONFIG_START( magmax )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_SOUND_ADD("ay1", AY8910, XTAL_20MHz/16) /* verified on pcb */
+	MCFG_SOUND_ADD("ay1", AY8910, XTAL(20'000'000)/16) /* verified on pcb */
 	MCFG_AY8910_PORT_A_WRITE_CB(WRITE8(magmax_state, ay8910_portA_0_w))  /*write port A*/
 	MCFG_AY8910_PORT_B_WRITE_CB(WRITE8(magmax_state, ay8910_portB_0_w))  /*write port B*/
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
-	MCFG_SOUND_ADD("ay2", AY8910, XTAL_20MHz/16) /* verified on pcb */
+	MCFG_SOUND_ADD("ay2", AY8910, XTAL(20'000'000)/16) /* verified on pcb */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
-	MCFG_SOUND_ADD("ay3", AY8910, XTAL_20MHz/16) /* verified on pcb */
+	MCFG_SOUND_ADD("ay3", AY8910, XTAL(20'000'000)/16) /* verified on pcb */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")

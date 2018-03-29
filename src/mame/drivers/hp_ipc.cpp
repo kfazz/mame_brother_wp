@@ -415,6 +415,9 @@ public:
 
 	emu_timer *m_bus_error_timer;
 
+	void hp_ipc(machine_config &config);
+	void hp_ipc_mem_inner(address_map &map);
+	void hp_ipc_mem_outer(address_map &map);
 private:
 	required_device<m68000_device> m_maincpu;
 	required_device<address_map_bank_device> m_bankdev;
@@ -461,37 +464,40 @@ void hp_ipc_state::set_bus_error(uint32_t address, bool write, uint16_t mem_mask
 	m_bus_error_timer->adjust(m_maincpu->cycles_to_attotime(16)); // let rmw cycles complete
 }
 
-static ADDRESS_MAP_START(hp_ipc_mem_outer, AS_PROGRAM, 16, hp_ipc_state)
-	AM_RANGE(0x000000, 0xFFFFFF) AM_READWRITE(mem_r, mem_w)
-ADDRESS_MAP_END
+void hp_ipc_state::hp_ipc_mem_outer(address_map &map)
+{
+	map(0x000000, 0xFFFFFF).rw(this, FUNC(hp_ipc_state::mem_r), FUNC(hp_ipc_state::mem_w));
+}
 
-static ADDRESS_MAP_START(hp_ipc_mem_inner, AS_PROGRAM, 16, hp_ipc_state)
+void hp_ipc_state::hp_ipc_mem_inner(address_map &map)
+{
+// bus error handler
+	map(0x0000000, 0x1FFFFFF).rw(this, FUNC(hp_ipc_state::trap_r), FUNC(hp_ipc_state::trap_w));
+
 // user mode
-	AM_RANGE(0x1000000, 0x17FFFFF) AM_READWRITE(ram_r, ram_w)
-	AM_RANGE(0x1800000, 0x187FFFF) AM_ROM AM_REGION("maincpu", 0)
-	AM_RANGE(0x1E20000, 0x1E2000F) AM_DEVREADWRITE8("gpu", hp1ll3_device, read, write, 0x00ff)
-	AM_RANGE(0x1E40000, 0x1E4002F) AM_DEVREADWRITE8("rtc", mm58167_device, read, write, 0x00ff)
+	map(0x1000000, 0x17FFFFF).rw(this, FUNC(hp_ipc_state::ram_r), FUNC(hp_ipc_state::ram_w));
+	map(0x1800000, 0x187FFFF).rom().region("maincpu", 0);
+	map(0x1E20000, 0x1E2000F).rw("gpu", FUNC(hp1ll3_device::read), FUNC(hp1ll3_device::write)).umask16(0x00ff);
+	map(0x1E40000, 0x1E4002F).rw("rtc", FUNC(mm58167_device::read), FUNC(mm58167_device::write)).umask16(0x00ff);
 
 // supervisor mode
-	AM_RANGE(0x0000000, 0x007FFFF) AM_ROM AM_REGION("maincpu", 0)       // Internal ROM (operating system PCA)
-	AM_RANGE(0x0080000, 0x00FFFFF) AM_UNMAP     // Internal ROM (option ROM PCA)
-	AM_RANGE(0x0100000, 0x04FFFFF) AM_UNMAP     // External ROM modules
-	AM_RANGE(0x0600000, 0x060FFFF) AM_READWRITE(mmu_r, mmu_w)
-	AM_RANGE(0x0610000, 0x0610007) AM_READWRITE8(floppy_id_r, floppy_id_w, 0x00ff)
-	AM_RANGE(0x0610008, 0x061000F) AM_DEVREADWRITE8("fdc", wd2797_device, read, write, 0x00ff)
-	AM_RANGE(0x0620000, 0x062000F) AM_DEVREADWRITE8("gpu", hp1ll3_device, read, write, 0x00ff)
-	AM_RANGE(0x0630000, 0x063FFFF) AM_NOP       // AM_DEVREADWRITE8(TMS9914_TAG, tms9914_device, read, write, 0x00ff)
-	AM_RANGE(0x0640000, 0x064002F) AM_DEVREADWRITE8("rtc", mm58167_device, read, write, 0x00ff)
-	AM_RANGE(0x0650000, 0x065FFFF) AM_NOP       // HP-IL Printer (optional; ROM sets _desktop to 0 if not mapped) -- sys/lpint.h
-	AM_RANGE(0x0660000, 0x06600FF) AM_DEVREADWRITE8("mlc", hp_hil_mlc_device, read, write, 0x00ff)  // 'caravan', scrn/caravan.h
-	AM_RANGE(0x0670000, 0x067FFFF) AM_NOP       // Speaker (NatSemi COP 452)
-	AM_RANGE(0x0680000, 0x068FFFF) AM_NOP       // 'SIMON (98628) fast HP-IB card' -- sys/simon.h
-	AM_RANGE(0x0700000, 0x07FFFFF) AM_UNMAP     // External I/O
-	AM_RANGE(0x0800000, 0x0FFFFFF) AM_READWRITE(ram_r, ram_w)
+	map(0x0000000, 0x007FFFF).rom().region("maincpu", 0);       // Internal ROM (operating system PCA)
+	map(0x0080000, 0x00FFFFF).unmaprw();     // Internal ROM (option ROM PCA)
+	map(0x0100000, 0x04FFFFF).unmaprw();     // External ROM modules
+	map(0x0600000, 0x060FFFF).rw(this, FUNC(hp_ipc_state::mmu_r), FUNC(hp_ipc_state::mmu_w));
+	map(0x0610000, 0x0610007).rw(this, FUNC(hp_ipc_state::floppy_id_r), FUNC(hp_ipc_state::floppy_id_w)).umask16(0x00ff);
+	map(0x0610008, 0x061000F).rw(m_fdc, FUNC(wd2797_device::read), FUNC(wd2797_device::write)).umask16(0x00ff);
+	map(0x0620000, 0x062000F).rw("gpu", FUNC(hp1ll3_device::read), FUNC(hp1ll3_device::write)).umask16(0x00ff);
+	map(0x0630000, 0x063FFFF).noprw();       // AM_DEVREADWRITE8(TMS9914_TAG, tms9914_device, read, write, 0x00ff)
+	map(0x0640000, 0x064002F).rw("rtc", FUNC(mm58167_device::read), FUNC(mm58167_device::write)).umask16(0x00ff);
+	map(0x0650000, 0x065FFFF).noprw();       // HP-IL Printer (optional; ROM sets _desktop to 0 if not mapped) -- sys/lpint.h
+	map(0x0660000, 0x06600FF).rw("mlc", FUNC(hp_hil_mlc_device::read), FUNC(hp_hil_mlc_device::write)).umask16(0x00ff);  // 'caravan', scrn/caravan.h
+	map(0x0670000, 0x067FFFF).noprw();       // Speaker (NatSemi COP 452)
+	map(0x0680000, 0x068FFFF).noprw();       // 'SIMON (98628) fast HP-IB card' -- sys/simon.h
+	map(0x0700000, 0x07FFFFF).unmaprw();     // External I/O
+	map(0x0800000, 0x0FFFFFF).rw(this, FUNC(hp_ipc_state::ram_r), FUNC(hp_ipc_state::ram_w));
 
-// bus error handler
-	AM_RANGE(0x0000000, 0x1FFFFFF) AM_READWRITE(trap_r, trap_w)
-ADDRESS_MAP_END
+}
 
 static INPUT_PORTS_START(hp_ipc)
 INPUT_PORTS_END
@@ -537,14 +543,14 @@ WRITE16_MEMBER(hp_ipc_state::mem_w)
 
 READ16_MEMBER(hp_ipc_state::trap_r)
 {
-	if (!machine().side_effect_disabled()) set_bus_error((offset << 1) & 0xFFFFFF, 0, mem_mask);
+	if (!machine().side_effects_disabled()) set_bus_error((offset << 1) & 0xFFFFFF, 0, mem_mask);
 
 	return 0xffff;
 }
 
 WRITE16_MEMBER(hp_ipc_state::trap_w)
 {
-	if (!machine().side_effect_disabled()) set_bus_error((offset << 1) & 0xFFFFFF, 1, mem_mask);
+	if (!machine().side_effects_disabled()) set_bus_error((offset << 1) & 0xFFFFFF, 1, mem_mask);
 }
 
 
@@ -555,7 +561,7 @@ READ16_MEMBER(hp_ipc_state::ram_r)
 
 	if (ram_address < m_lowest_ram_addr)
 	{
-		if (!machine().side_effect_disabled()) set_bus_error((offset << 1) + 0x800000, 0, mem_mask);
+		if (!machine().side_effects_disabled()) set_bus_error((offset << 1) + 0x800000, 0, mem_mask);
 	}
 	else if (ram_address < 0x3c0000)
 	{
@@ -572,7 +578,7 @@ WRITE16_MEMBER(hp_ipc_state::ram_w)
 
 	if (ram_address < m_lowest_ram_addr)
 	{
-		if (!machine().side_effect_disabled()) set_bus_error((offset << 1) + 0x800000, 1, mem_mask);
+		if (!machine().side_effects_disabled()) set_bus_error((offset << 1) + 0x800000, 1, mem_mask);
 	}
 	else if (ram_address < 0x3c0000)
 	{
@@ -709,15 +715,15 @@ SLOT_INTERFACE_END
  *  2   HP-HIL devices (keyboard, mouse)
  *  1   Real-time clock
  */
-static MACHINE_CONFIG_START(hp_ipc)
-	MCFG_CPU_ADD("maincpu", M68000, XTAL_15_92MHz / 2)
+MACHINE_CONFIG_START(hp_ipc_state::hp_ipc)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL(15'920'000) / 2)
 	MCFG_CPU_PROGRAM_MAP(hp_ipc_mem_outer)
 
 	MCFG_DEVICE_ADD("bankdev", ADDRESS_MAP_BANK, 0)
 	MCFG_DEVICE_PROGRAM_MAP(hp_ipc_mem_inner)
 	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_BIG)
-	MCFG_ADDRESS_MAP_BANK_ADDRBUS_WIDTH(25)
-	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(16)
+	MCFG_ADDRESS_MAP_BANK_ADDR_WIDTH(25)
+	MCFG_ADDRESS_MAP_BANK_DATA_WIDTH(16)
 	MCFG_ADDRESS_MAP_BANK_STRIDE(0x1000000)
 
 	// horizontal time = 60 us (min)
@@ -725,9 +731,9 @@ static MACHINE_CONFIG_START(hp_ipc)
 	// ver.period = 16.7ms (~60 hz)
 	MCFG_SCREEN_ADD_MONOCHROME("screen", RASTER, rgb_t::amber())
 	MCFG_SCREEN_UPDATE_DEVICE("gpu", hp1ll3_device, screen_update)
-	MCFG_SCREEN_RAW_PARAMS(XTAL_6MHz * 2, 720, 0, 512, 278, 0, 256)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(6'000'000) * 2, 720, 0, 512, 278, 0, 256)
 //  when _desktop == 0:
-//  MCFG_SCREEN_RAW_PARAMS(XTAL_6MHz * 2, 720, 0, 640, 480, 0, 400)
+//  MCFG_SCREEN_RAW_PARAMS(XTAL(6'000'000) * 2, 720, 0, 640, 480, 0, 400)
 	MCFG_SCREEN_VBLANK_CALLBACK(DEVWRITELINE("mlc", hp_hil_mlc_device, ap_w)) // XXX actually it's driven by 555 (U59)
 	MCFG_DEFAULT_LAYOUT(layout_lcd)
 
@@ -740,17 +746,17 @@ static MACHINE_CONFIG_START(hp_ipc)
 
 	// XXX actual clock is 1MHz; remove this workaround (and change 2000 to 100 in hp_ipc_dsk.cpp)
 	// XXX when floppy code correctly handles 600 rpm drives.
-	MCFG_WD2797_ADD("fdc", XTAL_2MHz)
+	MCFG_WD2797_ADD("fdc", XTAL(2'000'000))
 	MCFG_WD_FDC_INTRQ_CALLBACK(WRITELINE(hp_ipc_state, irq_5))
 	MCFG_FLOPPY_DRIVE_ADD("fdc:0", hp_ipc_floppies, "35dd", hp_ipc_state::floppy_formats)
 
 	MCFG_SOFTWARE_LIST_ADD("flop_list","hp_ipc")
 
-	MCFG_DEVICE_ADD("rtc", MM58167, XTAL_32_768kHz)
+	MCFG_DEVICE_ADD("rtc", MM58167, XTAL(32'768))
 	MCFG_MM58167_IRQ_CALLBACK(WRITELINE(hp_ipc_state, irq_1))
 //  MCFG_MM58167_STANDBY_IRQ_CALLBACK(WRITELINE(hp_ipc_state, irq_6))
 
-	MCFG_DEVICE_ADD("mlc", HP_HIL_MLC, XTAL_15_92MHz/2)
+	MCFG_DEVICE_ADD("mlc", HP_HIL_MLC, XTAL(15'920'000)/2)
 	MCFG_HP_HIL_INT_CALLBACK(WRITELINE(hp_ipc_state, irq_2))
 	MCFG_HP_HIL_NMI_CALLBACK(WRITELINE(hp_ipc_state, irq_7))
 	MCFG_HP_HIL_SLOT_ADD("mlc", "hil1", hp_hil_devices, "hp_ipc_kbd")
@@ -763,7 +769,7 @@ MACHINE_CONFIG_END
 
 ROM_START(hp_ipc)
 	ROM_REGION(0x100000, "maincpu" , 0)
-	ROM_LOAD("hp ipc os 82991A.bin", 0x00000, 0x80000, BAD_DUMP CRC(df45a37b) SHA1(476af9923bca0d2d0f40aeb81be5145ca76fddf5)) // Should be spread across 4 x 128K ROMs
+	ROM_LOAD("hp ipc os 82991a.bin", 0x00000, 0x80000, BAD_DUMP CRC(df45a37b) SHA1(476af9923bca0d2d0f40aeb81be5145ca76fddf5)) // Should be spread across 4 x 128K ROMs
 ROM_END
 
 

@@ -549,7 +549,7 @@ void i8251_device::mode_w(uint8_t data)
 		/* setup for sync byte(s) */
 		m_flags |= I8251_EXPECTING_SYNC_BYTE;
 		m_sync_byte_offset = 0;
-		if (data & 0x07)
+		if (BIT(data, 7))
 		{
 			m_sync_byte_count = 1;
 		}
@@ -717,6 +717,11 @@ WRITE_LINE_MEMBER(i8251_device::write_txc)
 		if (!m_txc)
 			transmit_clock();
 	}
+}
+
+READ_LINE_MEMBER(i8251_device::txrdy_r)
+{
+	return is_tx_enabled() && (m_status & I8251_STATUS_TX_READY) != 0;
 }
 
 WRITE8_MEMBER(v53_scu_device::command_w)

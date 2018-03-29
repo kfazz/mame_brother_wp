@@ -35,7 +35,7 @@ public:
 		m_light1_y(*this, "LIGHT1_Y")
 	{ }
 
-	required_device<cpu_device> m_maincpu;
+	required_device<tms34010_device> m_maincpu;
 	required_device<screen_device> m_screen;
 	required_device<ticket_dispenser_device> m_ticket;
 	optional_ioport m_paddle;
@@ -67,6 +67,9 @@ public:
 	inline void get_crosshair_xy(int player, int *x, int *y);
 	TMS340X0_SCANLINE_IND16_CB_MEMBER(scanline_update);
 
+	void lethalj(machine_config &config);
+	void gameroom(machine_config &config);
+	void lethalj_map(address_map &map);
 protected:
 	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 };

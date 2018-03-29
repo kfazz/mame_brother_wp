@@ -36,25 +36,26 @@
 //  ADDRESS_MAP( sage2_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( sage2_mem, AS_PROGRAM, 16, sage2_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0xffc000, 0xffc007) AM_DEVREADWRITE8(I8253_1_TAG, pit8253_device, read, write, 0x00ff)
-	AM_RANGE(0xffc010, 0xffc01f) AM_NOP //AM_DEVREADWRITE8(TMS9914_TAG, tms9914_device, read, write, 0x00ff)
-	AM_RANGE(0xffc020, 0xffc027) AM_DEVREADWRITE8(I8255A_0_TAG, i8255_device, read, write, 0x00ff) // i8255, DIPs + Floppy ctrl port
-	AM_RANGE(0xffc030, 0xffc031) AM_DEVREADWRITE8(I8251_1_TAG, i8251_device, data_r, data_w, 0x00ff)
-	AM_RANGE(0xffc032, 0xffc033) AM_DEVREADWRITE8(I8251_1_TAG, i8251_device, status_r, control_w, 0x00ff)
-	AM_RANGE(0xffc040, 0xffc043) AM_DEVREADWRITE8(I8259_TAG, pic8259_device, read, write, 0x00ff)
-	AM_RANGE(0xffc050, 0xffc053) AM_DEVICE8(UPD765_TAG, upd765a_device, map, 0x00ff)
-	AM_RANGE(0xffc060, 0xffc067) AM_DEVREADWRITE8(I8255A_1_TAG, i8255_device, read, write, 0x00ff) // i8255, Printer
-	AM_RANGE(0xffc070, 0xffc071) AM_DEVREADWRITE8(I8251_0_TAG, i8251_device, data_r, data_w, 0x00ff)
-	AM_RANGE(0xffc072, 0xffc073) AM_DEVREADWRITE8(I8251_0_TAG, i8251_device, status_r, control_w, 0x00ff)
-	AM_RANGE(0xffc080, 0xffc087) AM_MIRROR(0x78) AM_DEVREADWRITE8(I8253_0_TAG, pit8253_device, read, write, 0x00ff)
+void sage2_state::sage2_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0xffc000, 0xffc007).rw(I8253_1_TAG, FUNC(pit8253_device::read), FUNC(pit8253_device::write)).umask16(0x00ff);
+	map(0xffc010, 0xffc01f).noprw(); //AM_DEVREADWRITE8(TMS9914_TAG, tms9914_device, read, write, 0x00ff)
+	map(0xffc020, 0xffc027).rw(I8255A_0_TAG, FUNC(i8255_device::read), FUNC(i8255_device::write)).umask16(0x00ff); // i8255, DIPs + Floppy ctrl port
+	map(0xffc031, 0xffc031).rw(m_usart1, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0xffc033, 0xffc033).rw(m_usart1, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0xffc040, 0xffc043).rw(m_pic, FUNC(pic8259_device::read), FUNC(pic8259_device::write)).umask16(0x00ff);
+	map(0xffc050, 0xffc053).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x00ff);
+	map(0xffc060, 0xffc067).rw(I8255A_1_TAG, FUNC(i8255_device::read), FUNC(i8255_device::write)).umask16(0x00ff); // i8255, Printer
+	map(0xffc071, 0xffc071).rw(m_usart0, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0xffc073, 0xffc073).rw(m_usart0, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0xffc080, 0xffc087).mirror(0x78).rw(I8253_0_TAG, FUNC(pit8253_device::read), FUNC(pit8253_device::write)).umask16(0x00ff);
 //  AM_RANGE(0xffc400, 0xffc407) AM_DEVREADWRITE8(S2651_0_TAG, s2651_device, read, write, 0x00ff)
 //  AM_RANGE(0xffc440, 0xffc447) AM_DEVREADWRITE8(S2651_1_TAG, s2651_device, read, write, 0x00ff)
 //  AM_RANGE(0xffc480, 0xffc487) AM_DEVREADWRITE8(S2651_2_TAG, s2651_device, read, write, 0x00ff)
 //  AM_RANGE(0xffc4c0, 0xffc4c7) AM_DEVREADWRITE8(S2651_3_TAG, s2651_device, read, write, 0x00ff)
 //  AM_RANGE(0xffc500, 0xffc7ff) // Winchester drive ports
-ADDRESS_MAP_END
+}
 
 
 
@@ -407,13 +408,14 @@ READ16_MEMBER(sage2_state::rom_r)
 //  MACHINE_CONFIG( sage2 )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_START( sage2 )
+MACHINE_CONFIG_START(sage2_state::sage2)
 	// basic machine hardware
-	MCFG_CPU_ADD(M68000_TAG, M68000, XTAL_16MHz/2)
+	MCFG_CPU_ADD(M68000_TAG, M68000, XTAL(16'000'000)/2)
 	MCFG_CPU_PROGRAM_MAP(sage2_mem)
 
 	// devices
-	MCFG_PIC8259_ADD(I8259_TAG, INPUTLINE(M68000_TAG, M68K_IRQ_1), VCC, NOOP)
+	MCFG_DEVICE_ADD(I8259_TAG, PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(INPUTLINE(M68000_TAG, M68K_IRQ_1))
 
 	MCFG_DEVICE_ADD(I8255A_0_TAG, I8255A, 0)
 	MCFG_I8255_IN_PORTA_CB(IOPORT("J7"))
@@ -428,17 +430,17 @@ static MACHINE_CONFIG_START( sage2 )
 	MCFG_DEVICE_ADD(I8253_0_TAG, PIT8253, 0)
 	MCFG_PIT8253_CLK0(0) // from U75 OUT0
 	MCFG_PIT8253_OUT0_HANDLER(DEVWRITELINE(I8259_TAG, pic8259_device, ir6_w))
-	MCFG_PIT8253_CLK1(XTAL_16MHz/2/125)
+	MCFG_PIT8253_CLK1(XTAL(16'000'000)/2/125)
 	MCFG_PIT8253_OUT1_HANDLER(DEVWRITELINE(I8253_0_TAG, pit8253_device, write_clk2))
 	MCFG_PIT8253_CLK2(0) // from OUT2
 	MCFG_PIT8253_OUT2_HANDLER(DEVWRITELINE(I8259_TAG, pic8259_device, ir0_w))
 
 	MCFG_DEVICE_ADD(I8253_1_TAG, PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_16MHz/2/125)
+	MCFG_PIT8253_CLK0(XTAL(16'000'000)/2/125)
 	MCFG_PIT8253_OUT0_HANDLER(DEVWRITELINE(I8253_0_TAG, pit8253_device, write_clk0))
-	MCFG_PIT8253_CLK1(XTAL_16MHz/2/13)
+	MCFG_PIT8253_CLK1(XTAL(16'000'000)/2/13)
 	MCFG_PIT8253_OUT1_HANDLER(WRITELINE(sage2_state, br1_w))
-	MCFG_PIT8253_CLK2(XTAL_16MHz/2/13)
+	MCFG_PIT8253_CLK2(XTAL(16'000'000)/2/13)
 	MCFG_PIT8253_OUT2_HANDLER(WRITELINE(sage2_state, br2_w))
 
 	MCFG_DEVICE_ADD(I8251_0_TAG, I8251, 0)

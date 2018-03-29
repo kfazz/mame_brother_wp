@@ -40,8 +40,8 @@
 #include "speaker.h"
 
 
-#define MASTER_CLOCK (XTAL_12_096MHz)
-#define CLOCK_3KHZ   ((double)MASTER_CLOCK / 4096)
+#define MASTER_CLOCK (XTAL(12'096'000))
+#define CLOCK_3KHZ   (MASTER_CLOCK / 4096)
 
 
 WRITE8_MEMBER(starwars_state::quad_pokeyn_w)
@@ -130,41 +130,43 @@ WRITE8_MEMBER(starwars_state::esb_slapstic_w)
  *
  *************************************/
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 8, starwars_state )
-	AM_RANGE(0x0000, 0x2fff) AM_RAM AM_SHARE("vectorram") AM_REGION("maincpu", 0)
-	AM_RANGE(0x3000, 0x3fff) AM_ROM                             /* vector_rom */
-	AM_RANGE(0x4300, 0x431f) AM_READ_PORT("IN0")
-	AM_RANGE(0x4320, 0x433f) AM_READ_PORT("IN1")
-	AM_RANGE(0x4340, 0x435f) AM_READ_PORT("DSW0")
-	AM_RANGE(0x4360, 0x437f) AM_READ_PORT("DSW1")
-	AM_RANGE(0x4380, 0x439f) AM_READ(starwars_adc_r)            /* a-d control result */
-	AM_RANGE(0x4400, 0x4400) AM_DEVREAD("mainlatch", generic_latch_8_device, read)
-	AM_RANGE(0x4400, 0x4400) AM_DEVWRITE("soundlatch", generic_latch_8_device, write)
-	AM_RANGE(0x4401, 0x4401) AM_READ(starwars_main_ready_flag_r)
-	AM_RANGE(0x4500, 0x45ff) AM_DEVREADWRITE("x2212", x2212_device, read, write)
-	AM_RANGE(0x4600, 0x461f) AM_DEVWRITE("avg", avg_starwars_device, go_w)
-	AM_RANGE(0x4620, 0x463f) AM_DEVWRITE("avg", avg_starwars_device, reset_w)
-	AM_RANGE(0x4640, 0x465f) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x4660, 0x467f) AM_WRITE(irq_ack_w)
-	AM_RANGE(0x4680, 0x4687) AM_READNOP AM_MIRROR(0x0018) AM_DEVWRITE("outlatch", ls259_device, write_d7)
-	AM_RANGE(0x46a0, 0x46bf) AM_WRITE(starwars_nstore_w)
-	AM_RANGE(0x46c0, 0x46c2) AM_WRITE(starwars_adc_select_w)
-	AM_RANGE(0x46e0, 0x46e0) AM_WRITE(starwars_soundrst_w)
-	AM_RANGE(0x4700, 0x4707) AM_WRITE(starwars_math_w)
-	AM_RANGE(0x4700, 0x4700) AM_READ(starwars_div_reh_r)
-	AM_RANGE(0x4701, 0x4701) AM_READ(starwars_div_rel_r)
-	AM_RANGE(0x4703, 0x4703) AM_READ(starwars_prng_r)           /* pseudo random number generator */
-	AM_RANGE(0x4800, 0x4fff) AM_RAM                             /* CPU and Math RAM */
-	AM_RANGE(0x5000, 0x5fff) AM_RAM AM_SHARE("mathram") /* CPU and Math RAM */
-	AM_RANGE(0x6000, 0x7fff) AM_ROMBANK("bank1")                        /* banked ROM */
-	AM_RANGE(0x8000, 0xffff) AM_ROM                             /* rest of main_rom */
-ADDRESS_MAP_END
+void starwars_state::main_map(address_map &map)
+{
+	map(0x0000, 0x2fff).ram().share("vectorram").region("maincpu", 0);
+	map(0x3000, 0x3fff).rom();                             /* vector_rom */
+	map(0x4300, 0x431f).portr("IN0");
+	map(0x4320, 0x433f).portr("IN1");
+	map(0x4340, 0x435f).portr("DSW0");
+	map(0x4360, 0x437f).portr("DSW1");
+	map(0x4380, 0x439f).r(this, FUNC(starwars_state::starwars_adc_r));            /* a-d control result */
+	map(0x4400, 0x4400).r(m_mainlatch, FUNC(generic_latch_8_device::read));
+	map(0x4400, 0x4400).w(m_soundlatch, FUNC(generic_latch_8_device::write));
+	map(0x4401, 0x4401).r(this, FUNC(starwars_state::starwars_main_ready_flag_r));
+	map(0x4500, 0x45ff).rw("x2212", FUNC(x2212_device::read), FUNC(x2212_device::write));
+	map(0x4600, 0x461f).w("avg", FUNC(avg_starwars_device::go_w));
+	map(0x4620, 0x463f).w("avg", FUNC(avg_starwars_device::reset_w));
+	map(0x4640, 0x465f).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x4660, 0x467f).w(this, FUNC(starwars_state::irq_ack_w));
+	map(0x4680, 0x4687).nopr().mirror(0x0018).w("outlatch", FUNC(ls259_device::write_d7));
+	map(0x46a0, 0x46bf).w(this, FUNC(starwars_state::starwars_nstore_w));
+	map(0x46c0, 0x46c2).w(this, FUNC(starwars_state::starwars_adc_select_w));
+	map(0x46e0, 0x46e0).w(this, FUNC(starwars_state::starwars_soundrst_w));
+	map(0x4700, 0x4707).w(this, FUNC(starwars_state::starwars_math_w));
+	map(0x4700, 0x4700).r(this, FUNC(starwars_state::starwars_div_reh_r));
+	map(0x4701, 0x4701).r(this, FUNC(starwars_state::starwars_div_rel_r));
+	map(0x4703, 0x4703).r(this, FUNC(starwars_state::starwars_prng_r));           /* pseudo random number generator */
+	map(0x4800, 0x4fff).ram();                             /* CPU and Math RAM */
+	map(0x5000, 0x5fff).ram().share("mathram"); /* CPU and Math RAM */
+	map(0x6000, 0x7fff).bankr("bank1");                        /* banked ROM */
+	map(0x8000, 0xffff).rom();                             /* rest of main_rom */
+}
 
-static ADDRESS_MAP_START( esb_main_map, AS_PROGRAM, 8, starwars_state )
-	AM_RANGE(0x8000, 0x9fff) AM_READWRITE(esb_slapstic_r, esb_slapstic_w)
-	AM_RANGE(0xa000, 0xffff) AM_ROMBANK("bank2")
-	AM_IMPORT_FROM(main_map)
-ADDRESS_MAP_END
+void starwars_state::esb_main_map(address_map &map)
+{
+	main_map(map);
+	map(0x8000, 0x9fff).rw(this, FUNC(starwars_state::esb_slapstic_r), FUNC(starwars_state::esb_slapstic_w));
+	map(0xa000, 0xffff).bankr("bank2");
+}
 
 
 /*************************************
@@ -173,16 +175,17 @@ ADDRESS_MAP_END
  *
  *************************************/
 
-static ADDRESS_MAP_START( sound_map, AS_PROGRAM, 8, starwars_state )
-	AM_RANGE(0x0000, 0x07ff) AM_DEVWRITE("mainlatch", generic_latch_8_device, write)
-	AM_RANGE(0x0800, 0x0fff) AM_DEVREAD("soundlatch", generic_latch_8_device, read) /* SIN Read */
-	AM_RANGE(0x1000, 0x107f) AM_RAM                         /* 6532 ram */
-	AM_RANGE(0x1080, 0x109f) AM_DEVREADWRITE("riot", riot6532_device, read, write)
-	AM_RANGE(0x1800, 0x183f) AM_WRITE(quad_pokeyn_w)
-	AM_RANGE(0x2000, 0x27ff) AM_RAM                         /* program RAM */
-	AM_RANGE(0x4000, 0x7fff) AM_ROM                         /* sound roms */
-	AM_RANGE(0xb000, 0xffff) AM_ROM                         /* more sound roms */
-ADDRESS_MAP_END
+void starwars_state::sound_map(address_map &map)
+{
+	map(0x0000, 0x07ff).w(m_mainlatch, FUNC(generic_latch_8_device::write));
+	map(0x0800, 0x0fff).r(m_soundlatch, FUNC(generic_latch_8_device::read)); /* SIN Read */
+	map(0x1000, 0x107f).ram();                         /* 6532 ram */
+	map(0x1080, 0x109f).rw(m_riot, FUNC(riot6532_device::read), FUNC(riot6532_device::write));
+	map(0x1800, 0x183f).w(this, FUNC(starwars_state::quad_pokeyn_w));
+	map(0x2000, 0x27ff).ram();                         /* program RAM */
+	map(0x4000, 0x7fff).rom();                         /* sound roms */
+	map(0xb000, 0xffff).rom();                         /* more sound roms */
+}
 
 
 
@@ -299,17 +302,17 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( starwars )
+MACHINE_CONFIG_START(starwars_state::starwars)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809, MASTER_CLOCK / 8)
+	MCFG_CPU_ADD("maincpu", MC6809E, MASTER_CLOCK / 8)
 	MCFG_CPU_PROGRAM_MAP(main_map)
 	MCFG_CPU_PERIODIC_INT_DRIVER(starwars_state, irq0_line_assert, CLOCK_3KHZ / 12)
 
 	MCFG_WATCHDOG_ADD("watchdog")
 	MCFG_WATCHDOG_TIME_INIT(attotime::from_hz(CLOCK_3KHZ / 128))
 
-	MCFG_CPU_ADD("audiocpu", M6809, MASTER_CLOCK / 8)
+	MCFG_CPU_ADD("audiocpu", MC6809E, MASTER_CLOCK / 8)
 	MCFG_CPU_PROGRAM_MAP(sound_map)
 
 	MCFG_DEVICE_ADD("riot", RIOT6532, MASTER_CLOCK / 8)
@@ -362,13 +365,16 @@ static MACHINE_CONFIG_START( starwars )
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
 	MCFG_GENERIC_LATCH_DATA_PENDING_CB(DEVWRITELINE("riot", riot6532_device, pa7_w))
+	MCFG_DEVCB_CHAIN_OUTPUT(WRITELINE(starwars_state, boost_interleave_hack))
 
 	MCFG_GENERIC_LATCH_8_ADD("mainlatch")
 	MCFG_GENERIC_LATCH_DATA_PENDING_CB(DEVWRITELINE("riot", riot6532_device, pa6_w))
+	MCFG_DEVCB_CHAIN_OUTPUT(WRITELINE(starwars_state, boost_interleave_hack))
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( esb, starwars )
+MACHINE_CONFIG_START(starwars_state::esb)
+	starwars(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(esb_main_map)
 

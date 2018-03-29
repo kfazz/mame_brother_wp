@@ -131,18 +131,18 @@ Notes (couriersud)
 
 #define LOG(x) do { if (M10_DEBUG) printf x; } while (0)
 
-WRITE8_MEMBER(m10_state::ic8j1_output_changed)
+WRITE_LINE_MEMBER(m10_state::ic8j1_output_changed)
 {
-	LOG(("ic8j1: %d %d\n", data, m_screen->vpos()));
-	m_maincpu->set_input_line(0, !data ? CLEAR_LINE : ASSERT_LINE);
+	LOG(("ic8j1: %d %d\n", state, m_screen->vpos()));
+	m_maincpu->set_input_line(0, !state ? CLEAR_LINE : ASSERT_LINE);
 }
 
-WRITE8_MEMBER(m10_state::ic8j2_output_changed)
+WRITE_LINE_MEMBER(m10_state::ic8j2_output_changed)
 {
 	/* written from /Q to A with slight delight */
-	LOG(("ic8j2: %d\n", data));
-	m_ic8j2->a_w(space, 0, data);
-	m_ic8j1->a_w(space, 0, data);
+	LOG(("ic8j2: %d\n", state));
+	m_ic8j2->a_w(state);
+	m_ic8j1->a_w(state);
 }
 
 /*************************************
@@ -444,8 +444,8 @@ READ8_MEMBER(m10_state::m10_a700_r)
 {
 	//LOG(("rd:%d\n",m_screen->vpos()));
 	LOG(("clear\n"));
-	m_ic8j1->clear_w(space, 0, 0);
-	m_ic8j1->clear_w(space, 0, 1);
+	m_ic8j1->clear_w(0);
+	m_ic8j1->clear_w(1);
 	return 0x00;
 }
 
@@ -454,8 +454,8 @@ READ8_MEMBER(m10_state::m11_a700_r)
 	//LOG(("rd:%d\n",m_screen->vpos()));
 	//m_maincpu->set_input_line(0, CLEAR_LINE);
 	LOG(("clear\n"));
-	m_ic8j1->clear_w(space, 0, 0);
-	m_ic8j1->clear_w(space, 0, 1);
+	m_ic8j1->clear_w(0);
+	m_ic8j1->clear_w(1);
 	return 0x00;
 }
 
@@ -525,47 +525,50 @@ INTERRUPT_GEN_MEMBER(m10_state::m15_interrupt)
  *
  *************************************/
 
-static ADDRESS_MAP_START( m10_main, AS_PROGRAM, 8, m10_state )
-	AM_RANGE(0x0000, 0x02ff) AM_RAM AM_SHARE("memory") /* scratch ram */
-	AM_RANGE(0x1000, 0x2fff) AM_ROM AM_SHARE("rom")
-	AM_RANGE(0x4000, 0x43ff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x4800, 0x4bff) AM_RAM_WRITE(m10_colorram_w) AM_SHARE("colorram") /* foreground colour  */
-	AM_RANGE(0x5000, 0x53ff) AM_RAM_WRITE(m10_chargen_w) AM_SHARE("chargen") /* background ????? */
-	AM_RANGE(0xa200, 0xa200) AM_READ_PORT("DSW")
-	AM_RANGE(0xa300, 0xa300) AM_READ_PORT("INPUTS")
-	AM_RANGE(0xa400, 0xa400) AM_WRITE(m10_ctrl_w)   /* line at bottom of screen?, sound, flip screen */
-	AM_RANGE(0xa500, 0xa500) AM_WRITE(m10_a500_w)   /* ??? */
-	AM_RANGE(0xa700, 0xa700) AM_READ(m10_a700_r)
-	AM_RANGE(0xfc00, 0xffff) AM_ROM /* for the reset / interrupt vectors */
-ADDRESS_MAP_END
+void m10_state::m10_main(address_map &map)
+{
+	map(0x0000, 0x02ff).ram().share("memory"); /* scratch ram */
+	map(0x1000, 0x2fff).rom().share("rom");
+	map(0x4000, 0x43ff).ram().share("videoram");
+	map(0x4800, 0x4bff).ram().w(this, FUNC(m10_state::m10_colorram_w)).share("colorram"); /* foreground colour  */
+	map(0x5000, 0x53ff).ram().w(this, FUNC(m10_state::m10_chargen_w)).share("chargen"); /* background ????? */
+	map(0xa200, 0xa200).portr("DSW");
+	map(0xa300, 0xa300).portr("INPUTS");
+	map(0xa400, 0xa400).w(this, FUNC(m10_state::m10_ctrl_w));   /* line at bottom of screen?, sound, flip screen */
+	map(0xa500, 0xa500).w(this, FUNC(m10_state::m10_a500_w));   /* ??? */
+	map(0xa700, 0xa700).r(this, FUNC(m10_state::m10_a700_r));
+	map(0xfc00, 0xffff).rom(); /* for the reset / interrupt vectors */
+}
 
-static ADDRESS_MAP_START( m11_main, AS_PROGRAM, 8, m10_state )
-	AM_RANGE(0x0000, 0x02ff) AM_RAM AM_SHARE("memory") /* scratch ram */
-	AM_RANGE(0x1000, 0x2fff) AM_ROM AM_SHARE("rom")
-	AM_RANGE(0x4000, 0x43ff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x4800, 0x4bff) AM_RAM_WRITE(m10_colorram_w) AM_SHARE("colorram") /* foreground colour  */
-	AM_RANGE(0x5000, 0x53ff) AM_RAM AM_SHARE("chargen") /* background ????? */
-	AM_RANGE(0xa100, 0xa100) AM_WRITE(m11_a100_w) /* sound writes ???? */
-	AM_RANGE(0xa200, 0xa200) AM_READ_PORT("DSW")
-	AM_RANGE(0xa300, 0xa300) AM_READ_PORT("INPUTS")
-	AM_RANGE(0xa400, 0xa400) AM_WRITE(m11_ctrl_w)   /* line at bottom of screen?, sound, flip screen */
-	AM_RANGE(0xa700, 0xa700) AM_READ(m11_a700_r)
-	AM_RANGE(0xfc00, 0xffff) AM_ROM /* for the reset / interrupt vectors */
-ADDRESS_MAP_END
+void m10_state::m11_main(address_map &map)
+{
+	map(0x0000, 0x02ff).ram().share("memory"); /* scratch ram */
+	map(0x1000, 0x2fff).rom().share("rom");
+	map(0x4000, 0x43ff).ram().share("videoram");
+	map(0x4800, 0x4bff).ram().w(this, FUNC(m10_state::m10_colorram_w)).share("colorram"); /* foreground colour  */
+	map(0x5000, 0x53ff).ram().share("chargen"); /* background ????? */
+	map(0xa100, 0xa100).w(this, FUNC(m10_state::m11_a100_w)); /* sound writes ???? */
+	map(0xa200, 0xa200).portr("DSW");
+	map(0xa300, 0xa300).portr("INPUTS");
+	map(0xa400, 0xa400).w(this, FUNC(m10_state::m11_ctrl_w));   /* line at bottom of screen?, sound, flip screen */
+	map(0xa700, 0xa700).r(this, FUNC(m10_state::m11_a700_r));
+	map(0xfc00, 0xffff).rom(); /* for the reset / interrupt vectors */
+}
 
-static ADDRESS_MAP_START( m15_main, AS_PROGRAM, 8, m10_state )
-	AM_RANGE(0x0000, 0x02ff) AM_RAM AM_SHARE("memory") /* scratch ram */
-	AM_RANGE(0x1000, 0x33ff) AM_ROM AM_SHARE("rom")
-	AM_RANGE(0x4000, 0x43ff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x4800, 0x4bff) AM_RAM_WRITE(m10_colorram_w) AM_SHARE("colorram") /* foreground colour  */
-	AM_RANGE(0x5000, 0x57ff) AM_RAM_WRITE(m15_chargen_w) AM_SHARE("chargen") /* background ????? */
-	AM_RANGE(0xa000, 0xa000) AM_READ_PORT("P2")
-	AM_RANGE(0xa100, 0xa100) AM_WRITE(m15_a100_w) /* sound writes ???? */
-	AM_RANGE(0xa200, 0xa200) AM_READ_PORT("DSW")
-	AM_RANGE(0xa300, 0xa300) AM_READ_PORT("P1")
-	AM_RANGE(0xa400, 0xa400) AM_WRITE(m15_ctrl_w)   /* sound, flip screen */
-	AM_RANGE(0xfc00, 0xffff) AM_ROM /* for the reset / interrupt vectors */
-ADDRESS_MAP_END
+void m10_state::m15_main(address_map &map)
+{
+	map(0x0000, 0x02ff).ram().share("memory"); /* scratch ram */
+	map(0x1000, 0x33ff).rom().share("rom");
+	map(0x4000, 0x43ff).ram().share("videoram");
+	map(0x4800, 0x4bff).ram().w(this, FUNC(m10_state::m10_colorram_w)).share("colorram"); /* foreground colour  */
+	map(0x5000, 0x57ff).ram().w(this, FUNC(m10_state::m15_chargen_w)).share("chargen"); /* background ????? */
+	map(0xa000, 0xa000).portr("P2");
+	map(0xa100, 0xa100).w(this, FUNC(m10_state::m15_a100_w)); /* sound writes ???? */
+	map(0xa200, 0xa200).portr("DSW");
+	map(0xa300, 0xa300).portr("P1");
+	map(0xa400, 0xa400).w(this, FUNC(m10_state::m15_ctrl_w));   /* sound, flip screen */
+	map(0xfc00, 0xffff).rom(); /* for the reset / interrupt vectors */
+}
 
 /*************************************
  *
@@ -809,7 +812,7 @@ static const char *const m10_sample_names[] =
  *
  *************************************/
 
-static MACHINE_CONFIG_START( m10 )
+MACHINE_CONFIG_START(m10_state::m10)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M6502,IREMM10_CPU_CLOCK)
@@ -841,7 +844,7 @@ static MACHINE_CONFIG_START( m10 )
 	MCFG_TTL74123_A_PIN_VALUE(1)                  /* A pin - driven by the CRTC */
 	MCFG_TTL74123_B_PIN_VALUE(1)                  /* B pin - pulled high */
 	MCFG_TTL74123_CLEAR_PIN_VALUE(1)                  /* Clear pin - pulled high */
-	MCFG_TTL74123_OUTPUT_CHANGED_CB(WRITE8(m10_state, ic8j1_output_changed))
+	MCFG_TTL74123_OUTPUT_CHANGED_CB(WRITELINE(m10_state, ic8j1_output_changed))
 	MCFG_DEVICE_ADD("ic8j2", TTL74123, 0)
 	MCFG_TTL74123_CONNECTION_TYPE(TTL74123_NOT_GROUNDED_DIODE)    /* the hook up type */
 	/* 10k + 20k variable resistor */
@@ -850,7 +853,7 @@ static MACHINE_CONFIG_START( m10 )
 	MCFG_TTL74123_A_PIN_VALUE(1)                  /* A pin - driven by the CRTC */
 	MCFG_TTL74123_B_PIN_VALUE(1)                  /* B pin - pulled high */
 	MCFG_TTL74123_CLEAR_PIN_VALUE(1)                  /* Clear pin - pulled high */
-	MCFG_TTL74123_OUTPUT_CHANGED_CB(WRITE8(m10_state, ic8j2_output_changed))
+	MCFG_TTL74123_OUTPUT_CHANGED_CB(WRITELINE(m10_state, ic8j2_output_changed))
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -862,7 +865,8 @@ static MACHINE_CONFIG_START( m10 )
 
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( m11, m10 )
+MACHINE_CONFIG_START(m10_state::m11)
+	m10(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -872,7 +876,7 @@ static MACHINE_CONFIG_DERIVED( m11, m10 )
 	/* sound hardware */
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( m15 )
+MACHINE_CONFIG_START(m10_state::m15)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M6502,IREMM15_CPU_CLOCK)
@@ -906,7 +910,8 @@ static MACHINE_CONFIG_START( m15 )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( headoni, m15 )
+MACHINE_CONFIG_START(m10_state::headoni)
+	m15(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_CLOCK(11730000/16)
 MACHINE_CONFIG_END

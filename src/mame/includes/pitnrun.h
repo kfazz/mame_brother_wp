@@ -40,9 +40,9 @@ public:
 	tilemap_t *m_bg;
 	tilemap_t *m_fg;
 
-	DECLARE_WRITE8_MEMBER(nmi_enable_w);
-	DECLARE_WRITE8_MEMBER(hflip_w);
-	DECLARE_WRITE8_MEMBER(vflip_w);
+	DECLARE_WRITE_LINE_MEMBER(nmi_enable_w);
+	DECLARE_WRITE_LINE_MEMBER(hflip_w);
+	DECLARE_WRITE_LINE_MEMBER(vflip_w);
 	DECLARE_READ8_MEMBER(mcu_data_r);
 	DECLARE_WRITE8_MEMBER(mcu_data_w);
 	DECLARE_READ8_MEMBER(mcu_status_r);
@@ -53,13 +53,13 @@ public:
 	DECLARE_READ8_MEMBER(m68705_portC_r);
 	DECLARE_WRITE8_MEMBER(videoram_w);
 	DECLARE_WRITE8_MEMBER(videoram2_w);
-	DECLARE_WRITE8_MEMBER(char_bank_select);
+	DECLARE_WRITE_LINE_MEMBER(char_bank_select_w);
 	DECLARE_WRITE8_MEMBER(scroll_w);
 	DECLARE_WRITE8_MEMBER(scroll_y_w);
 	DECLARE_WRITE8_MEMBER(ha_w);
 	DECLARE_WRITE8_MEMBER(h_heed_w);
 	DECLARE_WRITE8_MEMBER(v_heed_w);
-	DECLARE_WRITE8_MEMBER(color_select_w);
+	DECLARE_WRITE_LINE_MEMBER(color_select_w);
 
 	TILE_GET_INFO_MEMBER(get_tile_info1);
 	TILE_GET_INFO_MEMBER(get_tile_info2);
@@ -78,4 +78,10 @@ public:
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	void spotlights();
 	void draw_sprites(bitmap_ind16 &bitmap, const rectangle &cliprect );
+	void pitnrun_mcu(machine_config &config);
+	void pitnrun(machine_config &config);
+	void pitnrun_map(address_map &map);
+	void pitnrun_map_mcu(address_map &map);
+	void pitnrun_sound_io_map(address_map &map);
+	void pitnrun_sound_map(address_map &map);
 };

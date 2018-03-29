@@ -48,17 +48,27 @@ public:
 		, m_p_videoram(*this, "videoram")
 		, m_p_chargen(*this, "chargen")
 		, m_screen(*this, SCREEN_TAG)
-		{ }
+	{ }
+
+	void att4425(machine_config &config);
+
+protected:
+	DECLARE_WRITE8_MEMBER(port10_w);
+	DECLARE_WRITE8_MEMBER(port14_w);
+	DECLARE_READ8_MEMBER(port14_r);
+	DECLARE_READ8_MEMBER(port15_r);
 
 	DECLARE_WRITE_LINE_MEMBER(write_line_clock);
 	DECLARE_WRITE_LINE_MEMBER(write_keyboard_clock);
 
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
-private:
 	virtual void machine_start() override;
 	virtual void video_start() override;
+	void att4425_io(address_map &map);
+	void att4425_mem(address_map &map);
 
+private:
 	required_device<z80_device> m_maincpu;
 	required_device<i8251_device> m_i8251;
 	required_device<z80sio_device> m_sio;
@@ -69,20 +79,45 @@ private:
 
 /* Memory Maps */
 
-static ADDRESS_MAP_START( att4425_mem, AS_PROGRAM, 8, att4425_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM AM_REGION(Z80_TAG, 0)
-	AM_RANGE(0x8000, 0xffff) AM_RAM AM_SHARE("videoram") // c000..f7af?
-ADDRESS_MAP_END
+WRITE8_MEMBER(att4425_state::port10_w)
+{
+	logerror("Writing %02X to port 10\n", data);
+}
 
-static ADDRESS_MAP_START( att4425_io, AS_IO, 8, att4425_state )
-	AM_RANGE(0x0000, 0x0000) AM_MIRROR(0xff00) AM_DEVREADWRITE(I8251_TAG, i8251_device, data_r, data_w)
-	AM_RANGE(0x0001, 0x0001) AM_MIRROR(0xff00) AM_DEVREADWRITE(I8251_TAG, i8251_device, status_r, control_w)
-	AM_RANGE(0x0008, 0x0008) AM_MIRROR(0xff00) AM_UNMAP // write 08
-	AM_RANGE(0x0010, 0x0010) AM_MIRROR(0xff00) AM_UNMAP // write 10
-	AM_RANGE(0x0014, 0x0015) AM_MIRROR(0xff00) AM_UNMAP // NVRAM? read 14, 15; write 14
-	AM_RANGE(0x0018, 0x001b) AM_MIRROR(0xff00) AM_DEVREADWRITE(Z80CTC_TAG, z80ctc_device, read, write)
-	AM_RANGE(0x001c, 0x001f) AM_MIRROR(0xff00) AM_DEVREADWRITE(Z80SIO_TAG, z80sio_device, ba_cd_r, ba_cd_w)
-ADDRESS_MAP_END
+WRITE8_MEMBER(att4425_state::port14_w)
+{
+	logerror("Writing %02X to port 14\n", data);
+}
+
+READ8_MEMBER(att4425_state::port14_r)
+{
+	// only complement of bit 0 used?
+	return 0;
+}
+
+READ8_MEMBER(att4425_state::port15_r)
+{
+	// status of something (at least bits 2 and 3 used)
+	return 0;
+}
+
+void att4425_state::att4425_mem(address_map &map)
+{
+	map(0x0000, 0x7fff).rom().region(Z80_TAG, 0);
+	map(0x8000, 0xffff).ram().share("videoram"); // c000..f7af?
+}
+
+void att4425_state::att4425_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).rw(m_i8251, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x01, 0x01).rw(m_i8251, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x10, 0x10).w(this, FUNC(att4425_state::port10_w));
+	map(0x14, 0x14).rw(this, FUNC(att4425_state::port14_r), FUNC(att4425_state::port14_w));
+	map(0x15, 0x15).r(this, FUNC(att4425_state::port15_r));
+	map(0x18, 0x1b).rw(Z80CTC_TAG, FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+	map(0x1c, 0x1f).rw(m_sio, FUNC(z80sio_device::ba_cd_r), FUNC(z80sio_device::ba_cd_w));
+}
 
 /* Input Ports */
 
@@ -203,9 +238,9 @@ static const z80_daisy_config att4425_daisy_chain[] =
 	{ nullptr }
 };
 
-static MACHINE_CONFIG_START( att4425 )
+MACHINE_CONFIG_START(att4425_state::att4425)
 	/* basic machine hardware */
-	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_32MHz/8) // XXX
+	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL(32'000'000)/8) // XXX
 	MCFG_CPU_PROGRAM_MAP(att4425_mem)
 	MCFG_CPU_IO_MAP(att4425_io)
 	MCFG_Z80_DAISY_CHAIN(att4425_daisy_chain)
@@ -222,7 +257,7 @@ static MACHINE_CONFIG_START( att4425 )
 	MCFG_PALETTE_ADD_MONOCHROME_HIGHLIGHT("palette")
 
 	// ch.3 -- timer?
-	MCFG_DEVICE_ADD(Z80CTC_TAG, Z80CTC, XTAL_32MHz) // XXX
+	MCFG_DEVICE_ADD(Z80CTC_TAG, Z80CTC, XTAL(32'000'000)) // XXX
 	MCFG_Z80CTC_INTR_CB(INPUTLINE(Z80_TAG, INPUT_LINE_IRQ0))
 #ifdef notdef
 	MCFG_Z80CTC_ZC0_CB(DEVWRITELINE(Z80SIO_TAG, z80sio_device, rxca_w))
@@ -230,7 +265,7 @@ static MACHINE_CONFIG_START( att4425 )
 	MCFG_Z80CTC_ZC2_CB(DEVWRITELINE(Z80SIO_TAG, z80sio_device, rxtxcb_w))
 #endif
 
-	MCFG_Z80SIO_ADD(Z80SIO_TAG, 4800, 0, 0, 0, 0) // XXX
+	MCFG_DEVICE_ADD(Z80SIO_TAG, Z80SIO, 4800) // XXX
 	MCFG_Z80SIO_OUT_INT_CB(INPUTLINE(Z80_TAG, INPUT_LINE_IRQ0))
 	MCFG_Z80SIO_OUT_TXDA_CB(DEVWRITELINE(RS232_A_TAG, rs232_port_device, write_txd))
 	MCFG_Z80SIO_OUT_DTRA_CB(DEVWRITELINE(RS232_A_TAG, rs232_port_device, write_dtr))

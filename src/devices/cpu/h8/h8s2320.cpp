@@ -3,19 +3,19 @@
 #include "emu.h"
 #include "h8s2320.h"
 
-DEFINE_DEVICE_TYPE(H8S2320, h8s2320_device, "h8s2320", "H8S/2320")
-DEFINE_DEVICE_TYPE(H8S2321, h8s2321_device, "h8s2321", "H8S/2321")
-DEFINE_DEVICE_TYPE(H8S2322, h8s2322_device, "h8s2322", "H8S/2322")
-DEFINE_DEVICE_TYPE(H8S2323, h8s2323_device, "h8s2323", "H8S/2323")
-DEFINE_DEVICE_TYPE(H8S2324, h8s2324_device, "h8s2324", "H8S/2324")
-DEFINE_DEVICE_TYPE(H8S2326, h8s2326_device, "h8s2326", "H8S/2326")
-DEFINE_DEVICE_TYPE(H8S2327, h8s2327_device, "h8s2327", "H8S/2327")
-DEFINE_DEVICE_TYPE(H8S2328, h8s2328_device, "h8s2328", "H8S/2328")
-DEFINE_DEVICE_TYPE(H8S2329, h8s2329_device, "h8s2329", "H8S/2329")
+DEFINE_DEVICE_TYPE(H8S2320, h8s2320_device, "h8s2320", "Hitachi H8S/2320")
+DEFINE_DEVICE_TYPE(H8S2321, h8s2321_device, "h8s2321", "Hitachi H8S/2321")
+DEFINE_DEVICE_TYPE(H8S2322, h8s2322_device, "h8s2322", "Hitachi H8S/2322")
+DEFINE_DEVICE_TYPE(H8S2323, h8s2323_device, "h8s2323", "Hitachi H8S/2323")
+DEFINE_DEVICE_TYPE(H8S2324, h8s2324_device, "h8s2324", "Hitachi H8S/2324")
+DEFINE_DEVICE_TYPE(H8S2326, h8s2326_device, "h8s2326", "Hitachi H8S/2326")
+DEFINE_DEVICE_TYPE(H8S2327, h8s2327_device, "h8s2327", "Hitachi H8S/2327")
+DEFINE_DEVICE_TYPE(H8S2328, h8s2328_device, "h8s2328", "Hitachi H8S/2328")
+DEFINE_DEVICE_TYPE(H8S2329, h8s2329_device, "h8s2329", "Hitachi H8S/2329")
 
 
 h8s2320_device::h8s2320_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, uint32_t start) :
-	h8s2000_device(mconfig, type, tag, owner, clock, address_map_delegate(FUNC(h8s2320_device::map), this)),
+	h8s2000_device(mconfig, type, tag, owner, clock, address_map_constructor(FUNC(h8s2320_device::map), this)),
 	intc(*this, "intc"),
 	adc(*this, "adc"),
 	dma(*this, "dma"),
@@ -98,7 +98,7 @@ h8s2329_device::h8s2329_device(const machine_config &mconfig, const char *tag, d
 {
 }
 
-DEVICE_ADDRESS_MAP_START(map, 16, h8s2320_device)
+ADDRESS_MAP_START(h8s2320_device::map)
 	AM_RANGE(ram_start, 0xfffbff) AM_RAM
 
 	AM_RANGE(0xfffe80, 0xfffe81) AM_DEVREADWRITE8("timer16:3", h8_timer16_channel_device, tcr_r,    tcr_w,    0xff00)
@@ -263,7 +263,7 @@ ADDRESS_MAP_END
 
 // TODO: the 2321 doesn't have the dma subdevice
 
-MACHINE_CONFIG_MEMBER(h8s2320_device::device_add_mconfig)
+MACHINE_CONFIG_START(h8s2320_device::device_add_mconfig)
 	MCFG_H8S_INTC_ADD("intc")
 	MCFG_H8_ADC_2320_ADD("adc", "intc", 28)
 	MCFG_H8_DMA_ADD("dma")

@@ -61,6 +61,8 @@ public:
 	DECLARE_WRITE8_MEMBER(port_a_w);
 	DECLARE_WRITE_LINE_MEMBER(cass_w);
 	DECLARE_READ_LINE_MEMBER(cass_r);
+	void mk14(machine_config &config);
+	void mem_map(address_map &map);
 private:
 	virtual void machine_reset() override;
 	required_device<cpu_device> m_maincpu;
@@ -105,16 +107,17 @@ WRITE8_MEMBER( mk14_state::display_w )
 	}
 }
 
-static ADDRESS_MAP_START(mk14_mem, AS_PROGRAM, 8, mk14_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0x0fff)
-	AM_RANGE(0x000, 0x1ff) AM_MIRROR(0x600) AM_ROM // ROM
-	AM_RANGE(0x800, 0x87f) AM_MIRROR(0x600) AM_DEVREADWRITE("ic8", ins8154_device, ins8154_r, ins8154_w) // I/O
-	AM_RANGE(0x880, 0x8ff) AM_MIRROR(0x600) AM_RAM // 128 I/O chip RAM
-	AM_RANGE(0x900, 0x9ff) AM_MIRROR(0x400) AM_READWRITE(keyboard_r, display_w)
-	AM_RANGE(0xb00, 0xbff) AM_RAM // VDU RAM
-	AM_RANGE(0xf00, 0xfff) AM_RAM // Standard RAM
-ADDRESS_MAP_END
+void mk14_state::mem_map(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0x0fff);
+	map(0x000, 0x1ff).mirror(0x600).rom(); // ROM
+	map(0x800, 0x87f).mirror(0x600).rw("ic8", FUNC(ins8154_device::ins8154_r), FUNC(ins8154_device::ins8154_w)); // I/O
+	map(0x880, 0x8ff).mirror(0x600).ram(); // 128 I/O chip RAM
+	map(0x900, 0x9ff).mirror(0x400).rw(this, FUNC(mk14_state::keyboard_r), FUNC(mk14_state::display_w));
+	map(0xb00, 0xbff).ram(); // VDU RAM
+	map(0xf00, 0xfff).ram(); // Standard RAM
+}
 
 
 /* Input ports */
@@ -188,12 +191,12 @@ void mk14_state::machine_reset()
 {
 }
 
-static MACHINE_CONFIG_START( mk14 )
+MACHINE_CONFIG_START(mk14_state::mk14)
 	/* basic machine hardware */
 	// IC1 1SP-8A/600 (8060) SC/MP Microprocessor
-	MCFG_CPU_ADD("maincpu", INS8060, XTAL_4_433619MHz)
+	MCFG_CPU_ADD("maincpu", INS8060, XTAL(4'433'619))
 	MCFG_SCMP_CONFIG(WRITELINE(mk14_state, cass_w), NOOP, READLINE(mk14_state, cass_r), NOOP, READLINE(mk14_state, cass_r), NOOP)
-	MCFG_CPU_PROGRAM_MAP(mk14_mem)
+	MCFG_CPU_PROGRAM_MAP(mem_map)
 
 	/* video hardware */
 	MCFG_DEFAULT_LAYOUT(layout_mk14)

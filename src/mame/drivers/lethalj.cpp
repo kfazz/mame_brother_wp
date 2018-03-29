@@ -146,11 +146,11 @@ Pin #11(+) | | R               |
 #include "speaker.h"
 
 
-#define MASTER_CLOCK            XTAL_40MHz
-#define SOUND_CLOCK             XTAL_2MHz
+#define MASTER_CLOCK            XTAL(40'000'000)
+#define SOUND_CLOCK             XTAL(2'000'000)
 
-#define VIDEO_CLOCK             XTAL_11_289MHz
-#define VIDEO_CLOCK_LETHALJ     XTAL_11_0592MHz
+#define VIDEO_CLOCK             XTAL(11'289'000)
+#define VIDEO_CLOCK_LETHALJ     XTAL(11'059'200)
 
 
 
@@ -176,29 +176,29 @@ CUSTOM_INPUT_MEMBER(lethalj_state::cclownz_paddle)
 
 WRITE16_MEMBER(lethalj_state::ripribit_control_w)
 {
-	machine().bookkeeping().coin_counter_w(0, data & 1);
-	m_ticket->write(space, 0, ((data >> 1) & 1) << 7);
-	output().set_lamp_value(0, (data >> 2) & 1);
+	machine().bookkeeping().coin_counter_w(0, BIT(data, 0));
+	m_ticket->motor_w(BIT(data, 1));
+	output().set_lamp_value(0, BIT(data, 2));
 }
 
 
 WRITE16_MEMBER(lethalj_state::cfarm_control_w)
 {
-	m_ticket->write(space, 0, ((data >> 0) & 1) << 7);
-	output().set_lamp_value(0, (data >> 2) & 1);
-	output().set_lamp_value(1, (data >> 3) & 1);
-	output().set_lamp_value(2, (data >> 4) & 1);
-	machine().bookkeeping().coin_counter_w(0, (data >> 7) & 1);
+	m_ticket->motor_w(BIT(data, 0));
+	output().set_lamp_value(0, BIT(data, 2));
+	output().set_lamp_value(1, BIT(data, 3));
+	output().set_lamp_value(2, BIT(data, 4));
+	machine().bookkeeping().coin_counter_w(0, BIT(data, 7));
 }
 
 
 WRITE16_MEMBER(lethalj_state::cclownz_control_w)
 {
-	m_ticket->write(space, 0, ((data >> 0) & 1) << 7);
-	output().set_lamp_value(0, (data >> 2) & 1);
-	output().set_lamp_value(1, (data >> 4) & 1);
-	output().set_lamp_value(2, (data >> 5) & 1);
-	machine().bookkeeping().coin_counter_w(0, (data >> 6) & 1);
+	m_ticket->motor_w(BIT(data, 0));
+	output().set_lamp_value(0, BIT(data, 2));
+	output().set_lamp_value(1, BIT(data, 4));
+	output().set_lamp_value(2, BIT(data, 5));
+	machine().bookkeeping().coin_counter_w(0, BIT(data, 6));
 }
 
 
@@ -209,22 +209,23 @@ WRITE16_MEMBER(lethalj_state::cclownz_control_w)
  *
  *************************************/
 
-static ADDRESS_MAP_START( lethalj_map, AS_PROGRAM, 16, lethalj_state )
-	AM_RANGE(0x00000000, 0x003fffff) AM_RAM
-	AM_RANGE(0x04000000, 0x0400000f) AM_DEVREADWRITE8("oki1", okim6295_device, read, write, 0x00ff)
-	AM_RANGE(0x04000010, 0x0400001f) AM_DEVREADWRITE8("oki2", okim6295_device, read, write, 0x00ff)
-	AM_RANGE(0x04100000, 0x0410000f) AM_DEVREADWRITE8("oki3", okim6295_device, read, write, 0x00ff)
+void lethalj_state::lethalj_map(address_map &map)
+{
+	map(0x00000000, 0x003fffff).ram();
+	map(0x04000000, 0x0400000f).rw("oki1", FUNC(okim6295_device::read), FUNC(okim6295_device::write)).umask16(0x00ff);
+	map(0x04000010, 0x0400001f).rw("oki2", FUNC(okim6295_device::read), FUNC(okim6295_device::write)).umask16(0x00ff);
+	map(0x04100000, 0x0410000f).rw("oki3", FUNC(okim6295_device::read), FUNC(okim6295_device::write)).umask16(0x00ff);
 //  AM_RANGE(0x04100010, 0x0410001f) AM_READNOP     /* read but never examined */
-	AM_RANGE(0x04200000, 0x0420001f) AM_WRITENOP    /* clocks bits through here */
-	AM_RANGE(0x04300000, 0x0430007f) AM_READ(lethalj_gun_r)
-	AM_RANGE(0x04400000, 0x0440000f) AM_WRITENOP    /* clocks bits through here */
-	AM_RANGE(0x04500010, 0x0450001f) AM_READ_PORT("IN0")
-	AM_RANGE(0x04600000, 0x0460000f) AM_READ_PORT("IN1")
-	AM_RANGE(0x04700000, 0x0470007f) AM_WRITE(lethalj_blitter_w)
-	AM_RANGE(0xc0000000, 0xc00001ff) AM_DEVREADWRITE("maincpu", tms34010_device, io_register_r, io_register_w)
-	AM_RANGE(0xc0000240, 0xc000025f) AM_WRITENOP    /* seems to be a bug in their code, one of many. */
-	AM_RANGE(0xff800000, 0xffffffff) AM_ROM AM_REGION("user1", 0)
-ADDRESS_MAP_END
+	map(0x04200000, 0x0420001f).nopw();    /* clocks bits through here */
+	map(0x04300000, 0x0430007f).r(this, FUNC(lethalj_state::lethalj_gun_r));
+	map(0x04400000, 0x0440000f).nopw();    /* clocks bits through here */
+	map(0x04500010, 0x0450001f).portr("IN0");
+	map(0x04600000, 0x0460000f).portr("IN1");
+	map(0x04700000, 0x0470007f).w(this, FUNC(lethalj_state::lethalj_blitter_w));
+	map(0xc0000000, 0xc00001ff).rw(m_maincpu, FUNC(tms34010_device::io_register_r), FUNC(tms34010_device::io_register_w));
+	map(0xc0000240, 0xc000025f).nopw();    /* seems to be a bug in their code, one of many. */
+	map(0xff800000, 0xffffffff).rom().region("user1", 0);
+}
 
 
 
@@ -629,7 +630,7 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( gameroom )
+MACHINE_CONFIG_START(lethalj_state::gameroom)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", TMS34010, MASTER_CLOCK)
@@ -663,7 +664,8 @@ static MACHINE_CONFIG_START( gameroom )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( lethalj, gameroom )
+MACHINE_CONFIG_START(lethalj_state::lethalj)
+	gameroom(config);
 
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_TMS340X0_PIXEL_CLOCK(VIDEO_CLOCK_LETHALJ) /* pixel clock */

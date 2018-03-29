@@ -82,6 +82,12 @@ public:
 	u32 screen_update_bcs3(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	u32 screen_update_bcs3a(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
+	void bcs3a(machine_config &config);
+	void bcs3(machine_config &config);
+	void bcs3b(machine_config &config);
+	void bcs3_io(address_map &map);
+	void bcs3_mem(address_map &map);
+	void bcs3a_mem(address_map &map);
 private:
 	bool m_cass_bit;
 	u8 s_curs;
@@ -127,31 +133,34 @@ READ8_MEMBER( bcs3_state::zx_r )
 	return 0xf7;
 }
 
-static ADDRESS_MAP_START(bcs3_mem, AS_PROGRAM, 8, bcs3_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x0000, 0x0fff ) AM_MIRROR(0x2000) AM_ROM AM_REGION("roms", 0)
-	AM_RANGE( 0x1000, 0x13ff ) AM_MIRROR(0x2000) AM_READ(keyboard_r)
-	AM_RANGE( 0x1400, 0x17ff ) AM_MIRROR(0x2000) AM_NOP //  /WAIT circuit
-	AM_RANGE( 0x1800, 0x1bff ) AM_MIRROR(0x2000) AM_READ(video_r)
-	AM_RANGE( 0x1c00, 0x1fff ) AM_MIRROR(0x2000) AM_RAM AM_SHARE("videoram")
-ADDRESS_MAP_END
+void bcs3_state::bcs3_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x0fff).mirror(0x2000).rom().region("roms", 0);
+	map(0x1000, 0x13ff).mirror(0x2000).r(this, FUNC(bcs3_state::keyboard_r));
+	map(0x1400, 0x17ff).mirror(0x2000).noprw(); //  /WAIT circuit
+	map(0x1800, 0x1bff).mirror(0x2000).r(this, FUNC(bcs3_state::video_r));
+	map(0x1c00, 0x1fff).mirror(0x2000).ram().share("videoram");
+}
 
-static ADDRESS_MAP_START(bcs3a_mem, AS_PROGRAM, 8, bcs3_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x0000, 0x0fff ) AM_MIRROR(0x2000) AM_ROM AM_REGION("roms", 0)
-	AM_RANGE( 0x1000, 0x13ff ) AM_MIRROR(0x2000) AM_READ(keyboard_r)
-	AM_RANGE( 0x1400, 0x17ff ) AM_MIRROR(0x2000) AM_NOP //  /WAIT circuit
-	AM_RANGE( 0x1800, 0x1bff ) AM_MIRROR(0x2000) AM_READ(zx_r)
-	AM_RANGE( 0x3c00, 0x7fff ) AM_RAM AM_SHARE("videoram")
-	AM_RANGE( 0xf000, 0xf3ff ) AM_ROM AM_REGION("roms", 0x1000)
-ADDRESS_MAP_END
+void bcs3_state::bcs3a_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x0fff).mirror(0x2000).rom().region("roms", 0);
+	map(0x1000, 0x13ff).mirror(0x2000).r(this, FUNC(bcs3_state::keyboard_r));
+	map(0x1400, 0x17ff).mirror(0x2000).noprw(); //  /WAIT circuit
+	map(0x1800, 0x1bff).mirror(0x2000).r(this, FUNC(bcs3_state::zx_r));
+	map(0x3c00, 0x7fff).ram().share("videoram");
+	map(0xf000, 0xf3ff).rom().region("roms", 0x1000);
+}
 
-static ADDRESS_MAP_START( bcs3_io, AS_IO, 8, bcs3_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(3)
+void bcs3_state::bcs3_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(3);
 	// coded in the rom as F8 to FB
-	AM_RANGE( 0x00, 0x03 ) AM_DEVREADWRITE("ctc", z80ctc_device, read, write)
-ADDRESS_MAP_END
+	map(0x00, 0x03).rw(m_ctc, FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( bcs3 )
@@ -374,10 +383,10 @@ DRIVER_INIT_MEMBER( bcs3_state, bcs3d )
 	s_cols = 29;
 }
 
-static MACHINE_CONFIG_START( bcs3 )
+MACHINE_CONFIG_START(bcs3_state::bcs3)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_5MHz /2)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(5'000'000) /2)
 	MCFG_CPU_PROGRAM_MAP(bcs3_mem)
 	MCFG_CPU_IO_MAP(bcs3_io)
 	MCFG_Z80_DAISY_CHAIN(daisy_chain_intf)
@@ -393,7 +402,7 @@ static MACHINE_CONFIG_START( bcs3 )
 	MCFG_GFXDECODE_ADD("gfxdecode", "palette", bcs3)
 	MCFG_PALETTE_ADD_MONOCHROME("palette")
 
-	MCFG_DEVICE_ADD("ctc", Z80CTC, XTAL_5MHz / 2)
+	MCFG_DEVICE_ADD("ctc", Z80CTC, XTAL(5'000'000) / 2)
 	MCFG_Z80CTC_INTR_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 	MCFG_Z80CTC_ZC0_CB(WRITELINE(bcs3_state, ctc_z0_w))
 	MCFG_Z80CTC_ZC1_CB(WRITELINE(bcs3_state, ctc_z1_w))
@@ -401,10 +410,10 @@ static MACHINE_CONFIG_START( bcs3 )
 	MCFG_CASSETTE_ADD( "cassette" )
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( bcs3a )
+MACHINE_CONFIG_START(bcs3_state::bcs3a)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_7MHz /2)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(7'000'000) /2)
 	MCFG_CPU_PROGRAM_MAP(bcs3a_mem)
 	MCFG_CPU_IO_MAP(bcs3_io)
 	MCFG_Z80_DAISY_CHAIN(daisy_chain_intf)
@@ -420,7 +429,7 @@ static MACHINE_CONFIG_START( bcs3a )
 	MCFG_GFXDECODE_ADD("gfxdecode", "palette", bcs3)
 	MCFG_PALETTE_ADD_MONOCHROME("palette")
 
-	MCFG_DEVICE_ADD("ctc", Z80CTC, XTAL_7MHz / 2)
+	MCFG_DEVICE_ADD("ctc", Z80CTC, XTAL(7'000'000) / 2)
 	MCFG_Z80CTC_INTR_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 	MCFG_Z80CTC_ZC0_CB(WRITELINE(bcs3_state, ctc_z0_w))
 	MCFG_Z80CTC_ZC1_CB(WRITELINE(bcs3_state, ctc_z1_w))
@@ -428,7 +437,8 @@ static MACHINE_CONFIG_START( bcs3a )
 	MCFG_CASSETTE_ADD( "cassette" )
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( bcs3b, bcs3a )
+MACHINE_CONFIG_START(bcs3_state::bcs3b)
+	bcs3a(config);
 	MCFG_SCREEN_MODIFY("screen")
 	MCFG_SCREEN_SIZE(40*8, 24*10)
 	MCFG_SCREEN_VISIBLE_AREA(0,40*8-1,0,24*10-1)

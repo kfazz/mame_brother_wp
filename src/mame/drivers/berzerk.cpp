@@ -93,10 +93,15 @@ public:
 	void create_nmi_timer();
 	void start_nmi_timer();
 	void get_pens(rgb_t *pens);
+	void berzerk(machine_config &config);
+	void frenzy(machine_config &config);
+	void berzerk_io_map(address_map &map);
+	void berzerk_map(address_map &map);
+	void frenzy_map(address_map &map);
 };
 
 
-#define MASTER_CLOCK                (XTAL_10MHz)
+#define MASTER_CLOCK                (XTAL(10'000'000))
 #define MAIN_CPU_CLOCK              (MASTER_CLOCK / 4)
 #define PIXEL_CLOCK                 (MASTER_CLOCK / 2)
 #define S14001_CLOCK                (MASTER_CLOCK / 4)
@@ -392,7 +397,7 @@ WRITE8_MEMBER(berzerk_state::magicram_w)
 	uint8_t shift_flop_output = (((uint16_t)m_last_shift_data << 8) | data) >> (m_magicram_control & 0x07);
 
 	if (m_magicram_control & 0x08)
-		shift_flop_output = BITSWAP8(shift_flop_output, 0, 1, 2, 3, 4, 5, 6, 7);
+		shift_flop_output = bitswap<8>(shift_flop_output, 0, 1, 2, 3, 4, 5, 6, 7);
 
 	/* collision detection - AND gate output goes to the K pin of the flip-flop,
 	   while J is LO, therefore, it only resets, never sets */
@@ -599,25 +604,27 @@ void berzerk_state::sound_reset()
  *
  *************************************/
 
-static ADDRESS_MAP_START( berzerk_map, AS_PROGRAM, 8, berzerk_state )
-	AM_RANGE(0x0000, 0x07ff) AM_ROM
-	AM_RANGE(0x0800, 0x0bff) AM_MIRROR(0x0400) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x1000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x5fff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x6000, 0x7fff) AM_RAM_WRITE(magicram_w) AM_SHARE("videoram")
-	AM_RANGE(0x8000, 0x87ff) AM_MIRROR(0x3800) AM_RAM AM_SHARE("colorram")
-	AM_RANGE(0xc000, 0xffff) AM_NOP
-ADDRESS_MAP_END
+void berzerk_state::berzerk_map(address_map &map)
+{
+	map(0x0000, 0x07ff).rom();
+	map(0x0800, 0x0bff).mirror(0x0400).ram().share("nvram");
+	map(0x1000, 0x3fff).rom();
+	map(0x4000, 0x5fff).ram().share("videoram");
+	map(0x6000, 0x7fff).ram().w(this, FUNC(berzerk_state::magicram_w)).share("videoram");
+	map(0x8000, 0x87ff).mirror(0x3800).ram().share("colorram");
+	map(0xc000, 0xffff).noprw();
+}
 
 
-static ADDRESS_MAP_START( frenzy_map, AS_PROGRAM, 8, berzerk_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x5fff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x6000, 0x7fff) AM_RAM_WRITE(magicram_w) AM_SHARE("videoram")
-	AM_RANGE(0x8000, 0x87ff) AM_MIRROR(0x3800) AM_RAM AM_SHARE("colorram")
-	AM_RANGE(0xc000, 0xcfff) AM_ROM
-	AM_RANGE(0xf800, 0xfbff) AM_MIRROR(0x0400) AM_RAM AM_SHARE("nvram")
-ADDRESS_MAP_END
+void berzerk_state::frenzy_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x5fff).ram().share("videoram");
+	map(0x6000, 0x7fff).ram().w(this, FUNC(berzerk_state::magicram_w)).share("videoram");
+	map(0x8000, 0x87ff).mirror(0x3800).ram().share("colorram");
+	map(0xc000, 0xcfff).rom();
+	map(0xf800, 0xfbff).mirror(0x0400).ram().share("nvram");
+}
 
 
 
@@ -627,30 +634,31 @@ ADDRESS_MAP_END
  *
  *************************************/
 
-static ADDRESS_MAP_START( berzerk_io_map, AS_IO, 8, berzerk_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x3f) AM_NOP
-	AM_RANGE(0x40, 0x47) AM_READWRITE(audio_r, audio_w)
-	AM_RANGE(0x48, 0x48) AM_READ_PORT("P1") AM_WRITENOP
-	AM_RANGE(0x49, 0x49) AM_READ_PORT("SYSTEM") AM_WRITENOP
-	AM_RANGE(0x4a, 0x4a) AM_READ_PORT("P2") AM_WRITENOP
-	AM_RANGE(0x4b, 0x4b) AM_READNOP AM_WRITE(magicram_control_w)
-	AM_RANGE(0x4c, 0x4c) AM_READWRITE(nmi_enable_r, nmi_enable_w)
-	AM_RANGE(0x4d, 0x4d) AM_READWRITE(nmi_disable_r, nmi_disable_w)
-	AM_RANGE(0x4e, 0x4e) AM_READ(intercept_v256_r) AM_WRITENOP // note reading from here should clear pending frame interrupts, see zfb-1.tiff 74ls74 at 3D pin 13 /CLR
-	AM_RANGE(0x4f, 0x4f) AM_READNOP AM_WRITE(irq_enable_w)
-	AM_RANGE(0x50, 0x57) AM_NOP /* second sound board, initialized but not used */
-	AM_RANGE(0x58, 0x5f) AM_NOP
-	AM_RANGE(0x60, 0x60) AM_MIRROR(0x18) AM_READ_PORT("F3") AM_WRITENOP
-	AM_RANGE(0x61, 0x61) AM_MIRROR(0x18) AM_READ_PORT("F2") AM_WRITENOP
-	AM_RANGE(0x62, 0x62) AM_MIRROR(0x18) AM_READ_PORT("F6") AM_WRITENOP
-	AM_RANGE(0x63, 0x63) AM_MIRROR(0x18) AM_READ_PORT("F5") AM_WRITENOP
-	AM_RANGE(0x64, 0x64) AM_MIRROR(0x18) AM_READ_PORT("F4") AM_WRITENOP
-	AM_RANGE(0x65, 0x65) AM_MIRROR(0x18) AM_READ_PORT("SW2") AM_WRITENOP
-	AM_RANGE(0x66, 0x66) AM_MIRROR(0x18) AM_READWRITE(led_off_r, led_off_w)
-	AM_RANGE(0x67, 0x67) AM_MIRROR(0x18) AM_READWRITE(led_on_r, led_on_w)
-	AM_RANGE(0x80, 0xff) AM_NOP
-ADDRESS_MAP_END
+void berzerk_state::berzerk_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x3f).noprw();
+	map(0x40, 0x47).rw(this, FUNC(berzerk_state::audio_r), FUNC(berzerk_state::audio_w));
+	map(0x48, 0x48).portr("P1").nopw();
+	map(0x49, 0x49).portr("SYSTEM").nopw();
+	map(0x4a, 0x4a).portr("P2").nopw();
+	map(0x4b, 0x4b).nopr().w(this, FUNC(berzerk_state::magicram_control_w));
+	map(0x4c, 0x4c).rw(this, FUNC(berzerk_state::nmi_enable_r), FUNC(berzerk_state::nmi_enable_w));
+	map(0x4d, 0x4d).rw(this, FUNC(berzerk_state::nmi_disable_r), FUNC(berzerk_state::nmi_disable_w));
+	map(0x4e, 0x4e).r(this, FUNC(berzerk_state::intercept_v256_r)).nopw(); // note reading from here should clear pending frame interrupts, see zfb-1.tiff 74ls74 at 3D pin 13 /CLR
+	map(0x4f, 0x4f).nopr().w(this, FUNC(berzerk_state::irq_enable_w));
+	map(0x50, 0x57).noprw(); /* second sound board, initialized but not used */
+	map(0x58, 0x5f).noprw();
+	map(0x60, 0x60).mirror(0x18).portr("F3").nopw();
+	map(0x61, 0x61).mirror(0x18).portr("F2").nopw();
+	map(0x62, 0x62).mirror(0x18).portr("F6").nopw();
+	map(0x63, 0x63).mirror(0x18).portr("F5").nopw();
+	map(0x64, 0x64).mirror(0x18).portr("F4").nopw();
+	map(0x65, 0x65).mirror(0x18).portr("SW2").nopw();
+	map(0x66, 0x66).mirror(0x18).rw(this, FUNC(berzerk_state::led_off_r), FUNC(berzerk_state::led_off_w));
+	map(0x67, 0x67).mirror(0x18).rw(this, FUNC(berzerk_state::led_on_r), FUNC(berzerk_state::led_on_w));
+	map(0x80, 0xff).noprw();
+}
 
 
 
@@ -1103,7 +1111,7 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( berzerk )
+MACHINE_CONFIG_START(berzerk_state::berzerk)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MAIN_CPU_CLOCK)
@@ -1130,7 +1138,8 @@ static MACHINE_CONFIG_START( berzerk )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( frenzy, berzerk )
+MACHINE_CONFIG_START(berzerk_state::frenzy)
+	berzerk(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")

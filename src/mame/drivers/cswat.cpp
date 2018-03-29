@@ -62,6 +62,8 @@ public:
 	virtual void video_start() override;
 	virtual void machine_reset() override;
 	virtual void machine_start() override;
+	void cswat(machine_config &config);
+	void cswat_map(address_map &map);
 };
 
 
@@ -135,18 +137,19 @@ READ8_MEMBER(cswat_state::sensors_r)
 	return machine().rand();
 }
 
-static ADDRESS_MAP_START( cswat_map, AS_PROGRAM, 8, cswat_state )
-	AM_RANGE(0x0000, 0x0bff) AM_RAM_WRITE(videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x0c00, 0x0fff) AM_RAM
+void cswat_state::cswat_map(address_map &map)
+{
+	map(0x0000, 0x0bff).ram().w(this, FUNC(cswat_state::videoram_w)).share("videoram");
+	map(0x0c00, 0x0fff).ram();
 //  AM_RANGE(0x1800, 0x1800) AM_READNOP // ? reads here after writing to $4000
-	AM_RANGE(0x2000, 0x2000) AM_WRITE(irq_ack_w) // writes 1 at end of vblank irq, 0 at gamestart
-	AM_RANGE(0x2000, 0x2001) AM_READ(dipswitch_r)
-	AM_RANGE(0x2002, 0x2002) AM_WRITE(irq_ack_w) // writes 0 at start of vblank irq
-	AM_RANGE(0x2002, 0x2002) AM_READ(sensors_r)
-	AM_RANGE(0x2003, 0x2003) AM_READ_PORT("IN0")
+	map(0x2000, 0x2000).w(this, FUNC(cswat_state::irq_ack_w)); // writes 1 at end of vblank irq, 0 at gamestart
+	map(0x2000, 0x2001).r(this, FUNC(cswat_state::dipswitch_r));
+	map(0x2002, 0x2002).w(this, FUNC(cswat_state::irq_ack_w)); // writes 0 at start of vblank irq
+	map(0x2002, 0x2002).r(this, FUNC(cswat_state::sensors_r));
+	map(0x2003, 0x2003).portr("IN0");
 //  AM_RANGE(0x4000, 0x4009) AM_NOP // ?
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+	map(0x8000, 0xffff).rom();
+}
 
 
 /***************************************************************************
@@ -253,10 +256,10 @@ void cswat_state::machine_start()
 	save_item(NAME(m_nmi_enabled));
 }
 
-static MACHINE_CONFIG_START( cswat )
+MACHINE_CONFIG_START(cswat_state::cswat)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809E, XTAL_18_432MHz/3/4) // HD68A09EP, 1.5MHz?
+	MCFG_CPU_ADD("maincpu", MC6809E, XTAL(18'432'000)/3/4) // HD68A09EP, 1.5MHz?
 	MCFG_CPU_PROGRAM_MAP(cswat_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", cswat_state, irq0_line_assert)
 	MCFG_CPU_PERIODIC_INT_DRIVER(cswat_state, nmi_handler, 300) // ?

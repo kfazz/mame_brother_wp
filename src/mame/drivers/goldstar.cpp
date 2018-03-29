@@ -212,12 +212,6 @@
 ***************************************************************************/
 
 
-#define MASTER_CLOCK    XTAL_12MHz
-#define CPU_CLOCK       MASTER_CLOCK / 4
-#define PSG_CLOCK       MASTER_CLOCK / 4
-#define AY_CLOCK        MASTER_CLOCK / 8
-#define OKI_CLOCK       1056000     /* unverified resonator */
-
 #include "emu.h"
 #include "includes/goldstar.h"
 
@@ -253,6 +247,17 @@
 #include "skill98.lh"
 #include "tonypok.lh"
 #include "unkch.lh"
+
+namespace {
+
+constexpr XTAL MASTER_CLOCK = 12_MHz_XTAL;
+constexpr XTAL CPU_CLOCK    = MASTER_CLOCK / 4;
+constexpr XTAL PSG_CLOCK    = MASTER_CLOCK / 4;
+constexpr XTAL AY_CLOCK     = MASTER_CLOCK / 8;
+#define OKI_CLOCK       1056000      /* unverified resonator */
+
+}
+
 
 
 WRITE8_MEMBER(goldstar_state::protection_w)
@@ -325,75 +330,76 @@ WRITE8_MEMBER(goldstar_state::p2_lamps_w)
 }
 
 
-static ADDRESS_MAP_START( goldstar_map, AS_PROGRAM, 8, goldstar_state )
-	AM_RANGE(0x0000, 0xb7ff) AM_ROM
-	AM_RANGE(0xb800, 0xbfff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0xc000, 0xc7ff) AM_ROM
-	AM_RANGE(0xc800, 0xcfff) AM_RAM_WRITE(goldstar_fg_vidram_w ) AM_SHARE("fg_vidram")
-	AM_RANGE(0xd000, 0xd7ff) AM_RAM_WRITE(goldstar_fg_atrram_w ) AM_SHARE("fg_atrram")
-	AM_RANGE(0xd800, 0xd9ff) AM_RAM_WRITE(goldstar_reel1_ram_w ) AM_SHARE("reel1_ram")
-	AM_RANGE(0xe000, 0xe1ff) AM_RAM_WRITE(goldstar_reel2_ram_w ) AM_SHARE("reel2_ram")
-	AM_RANGE(0xe800, 0xe9ff) AM_RAM_WRITE(goldstar_reel3_ram_w ) AM_SHARE("reel3_ram")
-	AM_RANGE(0xf040, 0xf07f) AM_RAM AM_SHARE("reel1_scroll")
-	AM_RANGE(0xf080, 0xf0bf) AM_RAM AM_SHARE("reel2_scroll")
-	AM_RANGE(0xf0c0, 0xf0ff) AM_RAM AM_SHARE("reel3_scroll")
+void goldstar_state::goldstar_map(address_map &map)
+{
+	map(0x0000, 0xb7ff).rom();
+	map(0xb800, 0xbfff).ram().share("nvram");
+	map(0xc000, 0xc7ff).rom();
+	map(0xc800, 0xcfff).ram().w(this, FUNC(goldstar_state::goldstar_fg_vidram_w)).share("fg_vidram");
+	map(0xd000, 0xd7ff).ram().w(this, FUNC(goldstar_state::goldstar_fg_atrram_w)).share("fg_atrram");
+	map(0xd800, 0xd9ff).ram().w(this, FUNC(goldstar_state::goldstar_reel1_ram_w)).share("reel1_ram");
+	map(0xe000, 0xe1ff).ram().w(this, FUNC(goldstar_state::goldstar_reel2_ram_w)).share("reel2_ram");
+	map(0xe800, 0xe9ff).ram().w(this, FUNC(goldstar_state::goldstar_reel3_ram_w)).share("reel3_ram");
+	map(0xf040, 0xf07f).ram().share("reel1_scroll");
+	map(0xf080, 0xf0bf).ram().share("reel2_scroll");
+	map(0xf0c0, 0xf0ff).ram().share("reel3_scroll");
 
-	AM_RANGE(0xf800, 0xf800) AM_READ_PORT("IN0")
-	AM_RANGE(0xf801, 0xf801) AM_READ_PORT("IN1")    /* Test Mode */
-	AM_RANGE(0xf802, 0xf802) AM_READ_PORT("DSW1")
+	map(0xf800, 0xf800).portr("IN0");
+	map(0xf801, 0xf801).portr("IN1");    /* Test Mode */
+	map(0xf802, 0xf802).portr("DSW1");
 //  AM_RANGE(0xf803, 0xf803)
 //  AM_RANGE(0xf804, 0xf804)
-	AM_RANGE(0xf805, 0xf805) AM_READ_PORT("DSW4")   /* DSW 4 (also appears in 8910 port) */
-	AM_RANGE(0xf806, 0xf806) AM_READ_PORT("DSW7")   /* (don't know to which one of the */
-	AM_RANGE(0xf810, 0xf810) AM_READ_PORT("UNK1")
-	AM_RANGE(0xf811, 0xf811) AM_READ_PORT("UNK2")
-	AM_RANGE(0xf820, 0xf820) AM_READ_PORT("DSW2")
-	AM_RANGE(0xf830, 0xf830) AM_DEVREADWRITE("aysnd", ay8910_device, data_r, data_w)
-	AM_RANGE(0xf840, 0xf840) AM_DEVWRITE("aysnd", ay8910_device, address_w)
-	AM_RANGE(0xf900, 0xf900) AM_WRITE(p1_lamps_w)
-	AM_RANGE(0xfa00, 0xfa00) AM_WRITE(goldstar_fa00_w)
-	AM_RANGE(0xfb00, 0xfb00) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0xfd00, 0xfdff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0xfe00, 0xfe00) AM_READWRITE(protection_r,protection_w)
-ADDRESS_MAP_END
+	map(0xf805, 0xf805).portr("DSW4");   /* DSW 4 (also appears in 8910 port) */
+	map(0xf806, 0xf806).portr("DSW7");   /* (don't know to which one of the */
+	map(0xf810, 0xf810).portr("UNK1");
+	map(0xf811, 0xf811).portr("UNK2");
+	map(0xf820, 0xf820).portr("DSW2");
+	map(0xf830, 0xf830).rw("aysnd", FUNC(ay8910_device::data_r), FUNC(ay8910_device::data_w));
+	map(0xf840, 0xf840).w("aysnd", FUNC(ay8910_device::address_w));
+	map(0xf900, 0xf900).w(this, FUNC(goldstar_state::p1_lamps_w));
+	map(0xfa00, 0xfa00).w(this, FUNC(goldstar_state::goldstar_fa00_w));
+	map(0xfb00, 0xfb00).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0xfd00, 0xfdff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+	map(0xfe00, 0xfe00).rw(this, FUNC(goldstar_state::protection_r), FUNC(goldstar_state::protection_w));
+}
 
-static ADDRESS_MAP_START( goldstar_readport, AS_IO, 8, goldstar_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x10, 0x10) AM_READ_PORT("DSW6")
-ADDRESS_MAP_END
+void goldstar_state::goldstar_readport(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x10, 0x10).portr("DSW6");
+}
 
 
-static ADDRESS_MAP_START( star100_map, AS_PROGRAM, 8, sanghopm_state )
-	AM_RANGE(0x0000, 0xbfff) AM_ROM
+void sanghopm_state::star100_map(address_map &map)
+{
+	map(0x0000, 0xbfff).rom();
 
-	AM_RANGE(0xc800, 0xcfff) AM_RAM_WRITE(fg_vidram_w) AM_SHARE("fg_vidram")    // videoram 1
-	AM_RANGE(0xd000, 0xd7ff) AM_RAM_WRITE(fg_atrram_w) AM_SHARE("fg_atrram")    // atrram 1
+	map(0xc800, 0xcfff).ram().w(this, FUNC(sanghopm_state::fg_vidram_w)).share("fg_vidram");    // videoram 1
+	map(0xd000, 0xd7ff).ram().w(this, FUNC(sanghopm_state::fg_atrram_w)).share("fg_atrram");    // atrram 1
 
-	AM_RANGE(0xd800, 0xd83f) AM_RAM AM_SHARE("reel1_scroll")
-	AM_RANGE(0xd840, 0xd9ff) AM_RAM
-	AM_RANGE(0xda00, 0xda3f) AM_RAM AM_SHARE("reel2_scroll")
-	AM_RANGE(0xda40, 0xdbff) AM_RAM
-	AM_RANGE(0xdc00, 0xdc3f) AM_RAM AM_SHARE("reel3_scroll")
-	AM_RANGE(0xdc40, 0xdfff) AM_RAM
+	map(0xd800, 0xd83f).ram().share("reel1_scroll");
+	map(0xd840, 0xd9ff).ram();
+	map(0xda00, 0xda3f).ram().share("reel2_scroll");
+	map(0xda40, 0xdbff).ram();
+	map(0xdc00, 0xdc3f).ram().share("reel3_scroll");
+	map(0xdc40, 0xdfff).ram();
 
-	AM_RANGE(0xe000, 0xe1ff) AM_RAM_WRITE(goldstar_reel1_ram_w) AM_SHARE("reel1_ram")
-	AM_RANGE(0xe200, 0xe3ff) AM_RAM_WRITE(goldstar_reel2_ram_w) AM_SHARE("reel2_ram")
-	AM_RANGE(0xe400, 0xe5ff) AM_RAM_WRITE(goldstar_reel3_ram_w) AM_SHARE("reel3_ram")
+	map(0xe000, 0xe1ff).ram().w(this, FUNC(sanghopm_state::goldstar_reel1_ram_w)).share("reel1_ram");
+	map(0xe200, 0xe3ff).ram().w(this, FUNC(sanghopm_state::goldstar_reel2_ram_w)).share("reel2_ram");
+	map(0xe400, 0xe5ff).ram().w(this, FUNC(sanghopm_state::goldstar_reel3_ram_w)).share("reel3_ram");
 
-	AM_RANGE(0xe600, 0xe7ff) AM_RAM_WRITE(bg_vidram_w) AM_SHARE("bg_vidram")    // videoram 2
+	map(0xe600, 0xe7ff).ram().w(this, FUNC(sanghopm_state::bg_vidram_w)).share("bg_vidram");    // videoram 2
 
-	AM_RANGE(0xe800, 0xe9ff) AM_RAM_WRITE(reel1_attrram_w) AM_SHARE("reel1_attrram")
-	AM_RANGE(0xea00, 0xebff) AM_RAM_WRITE(reel2_attrram_w) AM_SHARE("reel2_attrram")
-	AM_RANGE(0xec00, 0xedff) AM_RAM_WRITE(reel3_attrram_w) AM_SHARE("reel3_attrram")
+	map(0xe800, 0xe9ff).ram().w(this, FUNC(sanghopm_state::reel1_attrram_w)).share("reel1_attrram");
+	map(0xea00, 0xebff).ram().w(this, FUNC(sanghopm_state::reel2_attrram_w)).share("reel2_attrram");
+	map(0xec00, 0xedff).ram().w(this, FUNC(sanghopm_state::reel3_attrram_w)).share("reel3_attrram");
 
-	AM_RANGE(0xee00, 0xefff) AM_RAM_WRITE(bg_atrram_w) AM_SHARE("bg_atrram")    // atrram 2
+	map(0xee00, 0xefff).ram().w(this, FUNC(sanghopm_state::bg_atrram_w)).share("bg_atrram");    // atrram 2
 
-	AM_RANGE(0xf000, 0xf7ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0xf800, 0xffff) AM_RAM
+	map(0xf000, 0xf7ff).ram().share("nvram");
+	map(0xf800, 0xffff).ram();
 
-	AM_RANGE(0xfb00, 0xfb00) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-
-ADDRESS_MAP_END
+}
 
 
 WRITE8_MEMBER(sanghopm_state::coincount_w)
@@ -420,34 +426,35 @@ WRITE8_MEMBER(sanghopm_state::enable_w)
 	m_enable_reg = data;
 }
 
-static ADDRESS_MAP_START( star100_readport, AS_IO, 8, sanghopm_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
+void sanghopm_state::star100_readport(address_map &map)
+{
+	map.global_mask(0xff);
 
-	AM_RANGE(0x08, 0x08) AM_DEVREADWRITE("aysnd", ay8910_device, data_r, data_w)
-	AM_RANGE(0x0c, 0x0c) AM_DEVWRITE("aysnd", ay8910_device, address_w)
+	map(0x08, 0x08).rw("aysnd", FUNC(ay8910_device::data_r), FUNC(ay8910_device::data_w));
+	map(0x0c, 0x0c).w("aysnd", FUNC(ay8910_device::address_w));
 
-	AM_RANGE(0x10, 0x10) AM_READ_PORT("IN0")
-	AM_RANGE(0x11, 0x11) AM_READ_PORT("IN1")
-	AM_RANGE(0x12, 0x12) AM_READ_PORT("IN2")
-	AM_RANGE(0x13, 0x13) AM_READ_PORT("IN3")
-	AM_RANGE(0x14, 0x14) AM_READ_PORT("DSW1")
+	map(0x10, 0x10).portr("IN0");
+	map(0x11, 0x11).portr("IN1");
+	map(0x12, 0x12).portr("IN2");
+	map(0x13, 0x13).portr("IN3");
+	map(0x14, 0x14).portr("DSW1");
 
-	AM_RANGE(0x1c, 0x1c) AM_DEVWRITE("ramdac", ramdac_device, index_w)
-	AM_RANGE(0x1d ,0x1d) AM_DEVWRITE("ramdac", ramdac_device, pal_w)
-	AM_RANGE(0x1e ,0x1e) AM_DEVWRITE("ramdac", ramdac_device, mask_w)
+	map(0x1c, 0x1c).w("ramdac", FUNC(ramdac_device::index_w));
+	map(0x1d, 0x1d).w("ramdac", FUNC(ramdac_device::pal_w));
+	map(0x1e, 0x1e).w("ramdac", FUNC(ramdac_device::mask_w));
 
-	AM_RANGE(0x20, 0x20) AM_READ_PORT("DSW4-0")     // the first 4 bits map to DSW4 1 to 4.
-	AM_RANGE(0x21, 0x21) AM_READ_PORT("DSW4-1")     // the first 4 bits map to DSW4 5 to 8.
+	map(0x20, 0x20).portr("DSW4-0");     // the first 4 bits map to DSW4 1 to 4.
+	map(0x21, 0x21).portr("DSW4-1");     // the first 4 bits map to DSW4 5 to 8.
 
-	AM_RANGE(0x24, 0x24) AM_WRITE(coincount_w)      // coin counters.
+	map(0x24, 0x24).w(this, FUNC(sanghopm_state::coincount_w));      // coin counters.
 
-	AM_RANGE(0x25, 0x25) AM_READ_PORT("DSW2")
-	AM_RANGE(0x26, 0x26) AM_READ_PORT("DSW3")
+	map(0x25, 0x25).portr("DSW2");
+	map(0x26, 0x26).portr("DSW3");
 
-	AM_RANGE(0xe0, 0xe0) AM_WRITENOP                // Writing 0's and 1's constantly.  Watchdog feeder?
-	AM_RANGE(0xe1, 0xe1) AM_WRITE(enable_w)         // enable/disable reels register.
+	map(0xe0, 0xe0).nopw();                // Writing 0's and 1's constantly.  Watchdog feeder?
+	map(0xe1, 0xe1).w(this, FUNC(sanghopm_state::enable_w));         // enable/disable reels register.
 
-ADDRESS_MAP_END
+}
 
 /*
   08:  W (3F)   AY8910 data
@@ -479,7 +486,7 @@ ADDRESS_MAP_END
   E1:  W    Reels enable/disable register
  */
 
-static ADDRESS_MAP_START( ramdac_map, 0, 8, goldstar_state )
+ADDRESS_MAP_START(goldstar_state::ramdac_map)
 	AM_RANGE(0x000, 0x3ff) AM_DEVREADWRITE("ramdac", ramdac_device, ramdac_pal_r, ramdac_rgb666_w)
 ADDRESS_MAP_END
 
@@ -598,32 +605,33 @@ WRITE8_MEMBER(goldstar_state::ncb3_port81_w)
 }
 
 
-static ADDRESS_MAP_START( ncb3_map, AS_PROGRAM, 8, cb3_state )
-	AM_RANGE(0x0000, 0xb7ff) AM_ROM
-	AM_RANGE(0xb800, 0xbfff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0xc000, 0xc7ff) AM_ROM
-	AM_RANGE(0xc800, 0xcfff) AM_RAM_WRITE(goldstar_fg_vidram_w) AM_SHARE("fg_vidram")
-	AM_RANGE(0xd000, 0xd7ff) AM_RAM_WRITE(goldstar_fg_atrram_w) AM_SHARE("fg_atrram")
-	AM_RANGE(0xd800, 0xd9ff) AM_RAM_WRITE(goldstar_reel1_ram_w) AM_SHARE("reel1_ram")
-	AM_RANGE(0xe000, 0xe1ff) AM_RAM_WRITE(goldstar_reel2_ram_w) AM_SHARE("reel2_ram")
-	AM_RANGE(0xe800, 0xe9ff) AM_RAM_WRITE(goldstar_reel3_ram_w) AM_SHARE("reel3_ram")
-	AM_RANGE(0xf040, 0xf07f) AM_RAM AM_SHARE("reel1_scroll")
-	AM_RANGE(0xf080, 0xf0bf) AM_RAM AM_SHARE("reel2_scroll")
-	AM_RANGE(0xf100, 0xf17f) AM_RAM AM_SHARE("reel3_scroll") // moved compared to goldstar
+void cb3_state::ncb3_map(address_map &map)
+{
+	map(0x0000, 0xb7ff).rom();
+	map(0xb800, 0xbfff).ram().share("nvram");
+	map(0xc000, 0xc7ff).rom();
+	map(0xc800, 0xcfff).ram().w(this, FUNC(cb3_state::goldstar_fg_vidram_w)).share("fg_vidram");
+	map(0xd000, 0xd7ff).ram().w(this, FUNC(cb3_state::goldstar_fg_atrram_w)).share("fg_atrram");
+	map(0xd800, 0xd9ff).ram().w(this, FUNC(cb3_state::goldstar_reel1_ram_w)).share("reel1_ram");
+	map(0xe000, 0xe1ff).ram().w(this, FUNC(cb3_state::goldstar_reel2_ram_w)).share("reel2_ram");
+	map(0xe800, 0xe9ff).ram().w(this, FUNC(cb3_state::goldstar_reel3_ram_w)).share("reel3_ram");
+	map(0xf040, 0xf07f).ram().share("reel1_scroll");
+	map(0xf080, 0xf0bf).ram().share("reel2_scroll");
+	map(0xf100, 0xf17f).ram().share("reel3_scroll"); // moved compared to goldstar
 
-	AM_RANGE(0xf800, 0xf803) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)    /* Input Ports */
-	AM_RANGE(0xf810, 0xf813) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)    /* Input Ports */
-	AM_RANGE(0xf822, 0xf822) AM_WRITE(goldstar_fa00_w) // hack (connected to ppi output port?, needed for colour banking)
-	AM_RANGE(0xf820, 0xf823) AM_DEVREADWRITE("ppi8255_2", i8255_device, read, write)    /* Input/Output Ports */
+	map(0xf800, 0xf803).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Ports */
+	map(0xf810, 0xf813).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Ports */
+	map(0xf820, 0xf823).rw("ppi8255_2", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input/Output Ports */
+	map(0xf822, 0xf822).w(this, FUNC(cb3_state::goldstar_fa00_w)); // hack (connected to ppi output port?, needed for colour banking)
 
-	AM_RANGE(0xf830, 0xf830) AM_DEVREADWRITE("aysnd", ay8910_device, data_r, data_w)
-	AM_RANGE(0xf840, 0xf840) AM_DEVWRITE("aysnd", ay8910_device, address_w)
-	AM_RANGE(0xf850, 0xf850) AM_WRITE(p1_lamps_w)       /* Control Set 1 lamps */
-	AM_RANGE(0xf860, 0xf860) AM_WRITE(p2_lamps_w)       /* Control Set 2 lamps */
-	AM_RANGE(0xf870, 0xf870) AM_DEVWRITE("snsnd", sn76489_device, write)    /* guess... device is initialized, but doesn't seems to be used.*/
-ADDRESS_MAP_END
+	map(0xf830, 0xf830).rw("aysnd", FUNC(ay8910_device::data_r), FUNC(ay8910_device::data_w));
+	map(0xf840, 0xf840).w("aysnd", FUNC(ay8910_device::address_w));
+	map(0xf850, 0xf850).w(this, FUNC(cb3_state::p1_lamps_w));       /* Control Set 1 lamps */
+	map(0xf860, 0xf860).w(this, FUNC(cb3_state::p2_lamps_w));       /* Control Set 2 lamps */
+	map(0xf870, 0xf870).w("snsnd", FUNC(sn76489_device::write));    /* guess... device is initialized, but doesn't seems to be used.*/
+}
 
-static ADDRESS_MAP_START( ncb3_readwriteport, AS_IO, 8, goldstar_state )
+ADDRESS_MAP_START(goldstar_state::ncb3_readwriteport)
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 //  AM_RANGE(0x00, 0x00) AM_READ(ncb3_unkread_r)    // read from 0x00 when controls set 1 is used...
 //  AM_RANGE(0x02, 0x02) AM_READ(ncb3_unkread_r)    // read from 0x02 when controls set 2 is used...
@@ -666,38 +674,40 @@ ADDRESS_MAP_END
 */
 
 
-static ADDRESS_MAP_START( wcherry_map, AS_PROGRAM, 8, goldstar_state )
-	AM_RANGE(0x0000, 0xb7ff) AM_ROM
-	AM_RANGE(0xb800, 0xbfff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0xc000, 0xc7ff) AM_ROM
+void goldstar_state::wcherry_map(address_map &map)
+{
+	map(0x0000, 0xb7ff).rom();
+	map(0xb800, 0xbfff).ram().share("nvram");
+	map(0xc000, 0xc7ff).rom();
 
 	/* Video RAM and reels stuff are there just as placeholder, and obviously in wrong offset */
-	AM_RANGE(0xc800, 0xcfff) AM_RAM_WRITE(goldstar_fg_vidram_w ) AM_SHARE("fg_vidram")
-	AM_RANGE(0xd000, 0xd7ff) AM_RAM_WRITE(goldstar_fg_atrram_w ) AM_SHARE("fg_atrram")
-	AM_RANGE(0xd800, 0xd9ff) AM_RAM_WRITE(goldstar_reel1_ram_w ) AM_SHARE("reel1_ram")
-	AM_RANGE(0xe000, 0xe1ff) AM_RAM_WRITE(goldstar_reel2_ram_w ) AM_SHARE("reel2_ram")
-	AM_RANGE(0xe800, 0xe9ff) AM_RAM_WRITE(goldstar_reel3_ram_w ) AM_SHARE("reel3_ram")
-	AM_RANGE(0xf040, 0xf07f) AM_RAM AM_SHARE("reel1_scroll")
-	AM_RANGE(0xf080, 0xf0bf) AM_RAM AM_SHARE("reel2_scroll")
-	AM_RANGE(0xf0c0, 0xf0ff) AM_RAM AM_SHARE("reel3_scroll")
+	map(0xc800, 0xcfff).ram().w(this, FUNC(goldstar_state::goldstar_fg_vidram_w)).share("fg_vidram");
+	map(0xd000, 0xd7ff).ram().w(this, FUNC(goldstar_state::goldstar_fg_atrram_w)).share("fg_atrram");
+	map(0xd800, 0xd9ff).ram().w(this, FUNC(goldstar_state::goldstar_reel1_ram_w)).share("reel1_ram");
+	map(0xe000, 0xe1ff).ram().w(this, FUNC(goldstar_state::goldstar_reel2_ram_w)).share("reel2_ram");
+	map(0xe800, 0xe9ff).ram().w(this, FUNC(goldstar_state::goldstar_reel3_ram_w)).share("reel3_ram");
+	map(0xf040, 0xf07f).ram().share("reel1_scroll");
+	map(0xf080, 0xf0bf).ram().share("reel2_scroll");
+	map(0xf0c0, 0xf0ff).ram().share("reel3_scroll");
 
 	/* Not really PPI's... They are emulated/simulated inside the CPLDs */
-	AM_RANGE(0xf600, 0xf603) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)    /* Input Ports */
-	AM_RANGE(0xf610, 0xf613) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)    /* Input Ports */
-	AM_RANGE(0xf620, 0xf623) AM_DEVREADWRITE("ppi8255_2", i8255_device, read, write)    /* Input/Output Ports */
+	map(0xf600, 0xf603).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Ports */
+	map(0xf610, 0xf613).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Ports */
+	map(0xf620, 0xf623).rw("ppi8255_2", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input/Output Ports */
 
-	AM_RANGE(0xf630, 0xf630) AM_DEVREADWRITE("aysnd", ay8910_device, data_r, data_w)
-	AM_RANGE(0xf640, 0xf640) AM_DEVWRITE("aysnd", ay8910_device, address_w)
-	AM_RANGE(0xf650, 0xf650) AM_WRITENOP    // AM_WRITE(output_w)  // unknown register: 0x3e
-	AM_RANGE(0xf660, 0xf660) AM_WRITENOP    // AM_WRITE(output_w)  // unknown register: 0x3e
-	AM_RANGE(0xf670, 0xf670) AM_DEVWRITE("snsnd", sn76489_device, write)    /* guess... device is initialized, but doesn't seems to be used.*/
+	map(0xf630, 0xf630).rw("aysnd", FUNC(ay8910_device::data_r), FUNC(ay8910_device::data_w));
+	map(0xf640, 0xf640).w("aysnd", FUNC(ay8910_device::address_w));
+	map(0xf650, 0xf650).nopw();    // AM_WRITE(output_w)  // unknown register: 0x3e
+	map(0xf660, 0xf660).nopw();    // AM_WRITE(output_w)  // unknown register: 0x3e
+	map(0xf670, 0xf670).w("snsnd", FUNC(sn76489_device::write));    /* guess... device is initialized, but doesn't seems to be used.*/
 
-	AM_RANGE(0xf800, 0xffff) AM_RAM
-ADDRESS_MAP_END
+	map(0xf800, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START( wcherry_readwriteport, AS_IO, 8, goldstar_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	ADDRESS_MAP_END
+void goldstar_state::wcherry_readwriteport(address_map &map)
+{
+	map.global_mask(0xff);
+	}
 
 /* wcherry findings...
 
@@ -720,30 +730,31 @@ static ADDRESS_MAP_START( wcherry_readwriteport, AS_IO, 8, goldstar_state )
 */
 
 
-static ADDRESS_MAP_START( cm_map, AS_PROGRAM, 8, goldstar_state )
-	AM_RANGE(0x0000, 0xcfff) AM_ROM AM_WRITENOP
+void goldstar_state::cm_map(address_map &map)
+{
+	map(0x0000, 0xcfff).rom().nopw();
 
-	AM_RANGE(0xd000, 0xd7ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0xd800, 0xdfff) AM_RAM
+	map(0xd000, 0xd7ff).ram().share("nvram");
+	map(0xd800, 0xdfff).ram();
 
-	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(goldstar_fg_vidram_w) AM_SHARE("fg_vidram")
-	AM_RANGE(0xe800, 0xefff) AM_RAM_WRITE(goldstar_fg_atrram_w) AM_SHARE("fg_atrram")
+	map(0xe000, 0xe7ff).ram().w(this, FUNC(goldstar_state::goldstar_fg_vidram_w)).share("fg_vidram");
+	map(0xe800, 0xefff).ram().w(this, FUNC(goldstar_state::goldstar_fg_atrram_w)).share("fg_atrram");
 
-	AM_RANGE(0xf000, 0xf1ff) AM_RAM_WRITE(goldstar_reel1_ram_w ) AM_SHARE("reel1_ram")
-	AM_RANGE(0xf200, 0xf3ff) AM_RAM_WRITE(goldstar_reel2_ram_w ) AM_SHARE("reel2_ram")
-	AM_RANGE(0xf400, 0xf5ff) AM_RAM_WRITE(goldstar_reel3_ram_w ) AM_SHARE("reel3_ram")
-	AM_RANGE(0xf600, 0xf7ff) AM_RAM
+	map(0xf000, 0xf1ff).ram().w(this, FUNC(goldstar_state::goldstar_reel1_ram_w)).share("reel1_ram");
+	map(0xf200, 0xf3ff).ram().w(this, FUNC(goldstar_state::goldstar_reel2_ram_w)).share("reel2_ram");
+	map(0xf400, 0xf5ff).ram().w(this, FUNC(goldstar_state::goldstar_reel3_ram_w)).share("reel3_ram");
+	map(0xf600, 0xf7ff).ram();
 
-	AM_RANGE(0xf800, 0xf87f) AM_RAM AM_SHARE("reel1_scroll")
-	AM_RANGE(0xf880, 0xf9ff) AM_RAM
-	AM_RANGE(0xfa00, 0xfa7f) AM_RAM AM_SHARE("reel2_scroll")
-	AM_RANGE(0xfa80, 0xfbff) AM_RAM
-	AM_RANGE(0xfc00, 0xfc7f) AM_RAM AM_SHARE("reel3_scroll")
-	AM_RANGE(0xfc80, 0xffff) AM_RAM
-ADDRESS_MAP_END
+	map(0xf800, 0xf87f).ram().share("reel1_scroll");
+	map(0xf880, 0xf9ff).ram();
+	map(0xfa00, 0xfa7f).ram().share("reel2_scroll");
+	map(0xfa80, 0xfbff).ram();
+	map(0xfc00, 0xfc7f).ram().share("reel3_scroll");
+	map(0xfc80, 0xffff).ram();
+}
 
 
-static ADDRESS_MAP_START( nfm_map, AS_PROGRAM, 8, goldstar_state )
+ADDRESS_MAP_START(goldstar_state::nfm_map)
 	AM_RANGE(0x0000, 0xd7ff) AM_ROM AM_WRITENOP
 
 	AM_RANGE(0xd800, 0xdfff) AM_RAM AM_SHARE("nvram")
@@ -790,79 +801,84 @@ WRITE8_MEMBER(goldstar_state::cm_coincount_w)
 		popmessage("counters: %02X", data);
 }
 
-static ADDRESS_MAP_START( cm_portmap, AS_IO, 8, cmaster_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x01, 0x01) AM_DEVREAD("aysnd", ay8910_device, data_r)
-	AM_RANGE(0x02, 0x03) AM_DEVWRITE("aysnd", ay8910_device, data_address_w)
-	AM_RANGE(0x04, 0x07) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)    /* Inputs */
-	AM_RANGE(0x08, 0x0b) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)    /* DIP switches */
-	AM_RANGE(0x10, 0x10) AM_WRITE(outport0_w)
-	AM_RANGE(0x11, 0x11) AM_WRITE(cm_coincount_w)
-	AM_RANGE(0x12, 0x12) AM_WRITE(p1_lamps_w)
-	AM_RANGE(0x13, 0x13) AM_WRITE(background_col_w)
-	AM_RANGE(0x14, 0x14) AM_WRITE(girl_scroll_w)
-ADDRESS_MAP_END
+void cmaster_state::cm_portmap(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x01, 0x01).r("aysnd", FUNC(ay8910_device::data_r));
+	map(0x02, 0x03).w("aysnd", FUNC(ay8910_device::data_address_w));
+	map(0x04, 0x07).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Inputs */
+	map(0x08, 0x0b).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* DIP switches */
+	map(0x10, 0x10).w(this, FUNC(cmaster_state::outport0_w));
+	map(0x11, 0x11).w(this, FUNC(cmaster_state::cm_coincount_w));
+	map(0x12, 0x12).w(this, FUNC(cmaster_state::p1_lamps_w));
+	map(0x13, 0x13).w(this, FUNC(cmaster_state::background_col_w));
+	map(0x14, 0x14).w(this, FUNC(cmaster_state::girl_scroll_w));
+}
 
 
-static ADDRESS_MAP_START( pkrmast_portmap, AS_IO, 8, goldstar_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
+void goldstar_state::pkrmast_portmap(address_map &map)
+{
+	map.global_mask(0xff);
 
-	AM_RANGE(0x04, 0x04) AM_DEVREAD("aysnd", ay8910_device, data_r)
-	AM_RANGE(0x08, 0x08) AM_DEVWRITE("aysnd", ay8910_device, data_w)
-	AM_RANGE(0x0c, 0x0c) AM_DEVWRITE("aysnd", ay8910_device, address_w)
+	map(0x04, 0x04).r("aysnd", FUNC(ay8910_device::data_r));
+	map(0x08, 0x08).w("aysnd", FUNC(ay8910_device::data_w));
+	map(0x0c, 0x0c).w("aysnd", FUNC(ay8910_device::address_w));
 
-	AM_RANGE(0x10, 0x10) AM_READ_PORT("IN0")
-	AM_RANGE(0x11, 0x11) AM_READ_PORT("IN1")
-	AM_RANGE(0x12, 0x12) AM_READ_PORT("IN2")
+	map(0x10, 0x10).portr("IN0");
+	map(0x11, 0x11).portr("IN1");
+	map(0x12, 0x12).portr("IN2");
 
-	AM_RANGE(0x20, 0x20) AM_READ_PORT("DSW3-0")
-	AM_RANGE(0x21, 0x21) AM_READ_PORT("DSW3-1")
-	AM_RANGE(0x22, 0x22) AM_WRITE(p1_lamps_w)
+	map(0x20, 0x20).portr("DSW3-0");
+	map(0x21, 0x21).portr("DSW3-1");
+	map(0x22, 0x22).w(this, FUNC(goldstar_state::p1_lamps_w));
 
-	AM_RANGE(0x24, 0x24) AM_WRITE(cm_coincount_w)
-	AM_RANGE(0x25, 0x25) AM_READ_PORT("DSW1")
-	AM_RANGE(0x26, 0x26) AM_READ_PORT("DSW2")
+	map(0x24, 0x24).w(this, FUNC(goldstar_state::cm_coincount_w));
+	map(0x25, 0x25).portr("DSW1");
+	map(0x26, 0x26).portr("DSW2");
 
-	AM_RANGE(0xf0, 0xf0) AM_WRITENOP    /* Writing 0's and 1's constantly.  Watchdog feeder? */
-ADDRESS_MAP_END
-
-
-static ADDRESS_MAP_START( cmast91_portmap, AS_IO, 8, goldstar_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x03) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)    /* Input Ports */
-	AM_RANGE(0x10, 0x13) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)    /* DIP switches */
-	AM_RANGE(0x21, 0x21) AM_DEVREAD("aysnd", ay8910_device, data_r)
-	AM_RANGE(0x22, 0x23) AM_DEVWRITE("aysnd", ay8910_device, data_address_w)
-ADDRESS_MAP_END
+	map(0xf0, 0xf0).nopw();    /* Writing 0's and 1's constantly.  Watchdog feeder? */
+}
 
 
-static ADDRESS_MAP_START( amcoe1_portmap, AS_IO, 8, cmaster_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x01, 0x01) AM_DEVREAD("aysnd", ay8910_device, data_r)
-	AM_RANGE(0x02, 0x03) AM_DEVWRITE("aysnd", ay8910_device, data_address_w)
-	AM_RANGE(0x04, 0x07) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)    /* Input Ports */
-	AM_RANGE(0x08, 0x0b) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)    /* DIP switches */
-	AM_RANGE(0x10, 0x10) AM_WRITE(outport0_w)
-	AM_RANGE(0x11, 0x11) AM_WRITE(cm_coincount_w)
-	AM_RANGE(0x12, 0x12) AM_WRITE(p1_lamps_w)
-	AM_RANGE(0x13, 0x13) AM_WRITE(background_col_w)
-	AM_RANGE(0x20, 0x20) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-ADDRESS_MAP_END
-
-static ADDRESS_MAP_START( amcoe2_portmap, AS_IO, 8, cmaster_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x01, 0x01) AM_DEVREAD("aysnd", ay8910_device, data_r)
-	AM_RANGE(0x02, 0x03) AM_DEVWRITE("aysnd", ay8910_device, data_address_w)
-	AM_RANGE(0x04, 0x07) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)    /* Input Ports */
-	AM_RANGE(0x08, 0x0b) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)    /* DIP switches */
-	AM_RANGE(0x10, 0x10) AM_WRITE(outport0_w)
-	AM_RANGE(0x11, 0x11) AM_WRITE(cm_coincount_w)
-	AM_RANGE(0x12, 0x12) AM_WRITE(p1_lamps_w)
-	AM_RANGE(0x13, 0x13) AM_WRITE(background_col_w)
-ADDRESS_MAP_END
+void goldstar_state::cmast91_portmap(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x03).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Ports */
+	map(0x10, 0x13).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* DIP switches */
+	map(0x21, 0x21).r("aysnd", FUNC(ay8910_device::data_r));
+	map(0x22, 0x23).w("aysnd", FUNC(ay8910_device::data_address_w));
+}
 
 
-static ADDRESS_MAP_START( lucky8_map, AS_PROGRAM, 8, goldstar_state )
+void cmaster_state::amcoe1_portmap(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x01, 0x01).r("aysnd", FUNC(ay8910_device::data_r));
+	map(0x02, 0x03).w("aysnd", FUNC(ay8910_device::data_address_w));
+	map(0x04, 0x07).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Ports */
+	map(0x08, 0x0b).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* DIP switches */
+	map(0x10, 0x10).w(this, FUNC(cmaster_state::outport0_w));
+	map(0x11, 0x11).w(this, FUNC(cmaster_state::cm_coincount_w));
+	map(0x12, 0x12).w(this, FUNC(cmaster_state::p1_lamps_w));
+	map(0x13, 0x13).w(this, FUNC(cmaster_state::background_col_w));
+	map(0x20, 0x20).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+}
+
+void cmaster_state::amcoe2_portmap(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x01, 0x01).r("aysnd", FUNC(ay8910_device::data_r));
+	map(0x02, 0x03).w("aysnd", FUNC(ay8910_device::data_address_w));
+	map(0x04, 0x07).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Ports */
+	map(0x08, 0x0b).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* DIP switches */
+	map(0x10, 0x10).w(this, FUNC(cmaster_state::outport0_w));
+	map(0x11, 0x11).w(this, FUNC(cmaster_state::cm_coincount_w));
+	map(0x12, 0x12).w(this, FUNC(cmaster_state::p1_lamps_w));
+	map(0x13, 0x13).w(this, FUNC(cmaster_state::background_col_w));
+}
+
+
+ADDRESS_MAP_START(goldstar_state::lucky8_map)
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x8800, 0x8fff) AM_RAM_WRITE(goldstar_fg_vidram_w) AM_SHARE("fg_vidram")
@@ -882,10 +898,11 @@ static ADDRESS_MAP_START( lucky8_map, AS_PROGRAM, 8, goldstar_state )
 	AM_RANGE(0xb850, 0xb850) AM_WRITE(p1_lamps_w)
 	AM_RANGE(0xb860, 0xb860) AM_WRITE(p2_lamps_w)
 	AM_RANGE(0xb870, 0xb870) AM_DEVWRITE("snsnd", sn76489_device, write)    /* sound */
+	AM_RANGE(0xc000, 0xf7ff) AM_ROM  // could be used by some sets like super972.
 	AM_RANGE(0xf800, 0xffff) AM_RAM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( flaming7_map, AS_PROGRAM, 8, goldstar_state )
+ADDRESS_MAP_START(goldstar_state::flaming7_map)
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x8800, 0x8fff) AM_RAM_WRITE(goldstar_fg_vidram_w) AM_SHARE("fg_vidram")
@@ -944,7 +961,7 @@ ADDRESS_MAP_END
 
     AY8910 ports are OK.
 */
-static ADDRESS_MAP_START( mbstar_map, AS_PROGRAM, 8, goldstar_state )
+ADDRESS_MAP_START(goldstar_state::mbstar_map)
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x8800, 0x8fff) AM_RAM_WRITE(goldstar_fg_vidram_w) AM_SHARE("fg_vidram")
@@ -995,51 +1012,53 @@ WRITE8_MEMBER(wingco_state::fl7w4_outc802_w)
 	m_fl7w4_id->write((data >> 6) & 0x01);
 }
 
-static ADDRESS_MAP_START( magodds_map, AS_PROGRAM, 8, wingco_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
+void wingco_state::magodds_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
 	// where does the extra rom data map?? it seems like it should come straight after the existing rom, but it can't if this is a plain z80?
-	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x8800, 0x8fff) AM_RAM_WRITE(goldstar_fg_vidram_w) AM_SHARE("fg_vidram")
-	AM_RANGE(0x9000, 0x97ff) AM_RAM_WRITE(goldstar_fg_atrram_w) AM_SHARE("fg_atrram")
-	AM_RANGE(0x9800, 0x99ff) AM_RAM_WRITE(goldstar_reel1_ram_w) AM_SHARE("reel1_ram")
-	AM_RANGE(0xa000, 0xa1ff) AM_RAM_WRITE(goldstar_reel2_ram_w) AM_SHARE("reel2_ram")
-	AM_RANGE(0xa900, 0xaaff) AM_RAM_WRITE(goldstar_reel3_ram_w) AM_SHARE("reel3_ram") // +0x100 compared to lucky8
-	AM_RANGE(0xb040, 0xb07f) AM_RAM AM_SHARE("reel1_scroll")
-	AM_RANGE(0xb080, 0xb0bf) AM_RAM AM_SHARE("reel2_scroll")
-	AM_RANGE(0xb100, 0xb17f) AM_RAM AM_SHARE("reel3_scroll")
+	map(0x8000, 0x87ff).ram().share("nvram");
+	map(0x8800, 0x8fff).ram().w(this, FUNC(wingco_state::goldstar_fg_vidram_w)).share("fg_vidram");
+	map(0x9000, 0x97ff).ram().w(this, FUNC(wingco_state::goldstar_fg_atrram_w)).share("fg_atrram");
+	map(0x9800, 0x99ff).ram().w(this, FUNC(wingco_state::goldstar_reel1_ram_w)).share("reel1_ram");
+	map(0xa000, 0xa1ff).ram().w(this, FUNC(wingco_state::goldstar_reel2_ram_w)).share("reel2_ram");
+	map(0xa900, 0xaaff).ram().w(this, FUNC(wingco_state::goldstar_reel3_ram_w)).share("reel3_ram"); // +0x100 compared to lucky8
+	map(0xb040, 0xb07f).ram().share("reel1_scroll");
+	map(0xb080, 0xb0bf).ram().share("reel2_scroll");
+	map(0xb100, 0xb17f).ram().share("reel3_scroll");
 
-	AM_RANGE(0xb800, 0xb803) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)    /* Input Ports */
-	AM_RANGE(0xb810, 0xb813) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)    /* Input Ports */
-	AM_RANGE(0xb820, 0xb823) AM_DEVREADWRITE("ppi8255_2", i8255_device, read, write)    /* Input/Output Ports */
-	AM_RANGE(0xb830, 0xb830) AM_DEVREADWRITE("aysnd", ay8910_device, data_r, data_w)
-	AM_RANGE(0xb840, 0xb840) AM_DEVWRITE("aysnd", ay8910_device, address_w)             /* no sound... only use both ports for DSWs */
-	AM_RANGE(0xb850, 0xb850) AM_WRITE(magodds_outb850_w)                                /* lamps */
-	AM_RANGE(0xb860, 0xb860) AM_WRITE(magodds_outb860_w)                                /* watchdog */
-	AM_RANGE(0xb870, 0xb870) AM_DEVWRITE("snsnd", sn76489_device, write)                /* sound */
-	AM_RANGE(0xc000, 0xffff) AM_ROM AM_REGION("maincpu",0xc000)
-ADDRESS_MAP_END
+	map(0xb800, 0xb803).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Ports */
+	map(0xb810, 0xb813).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Ports */
+	map(0xb820, 0xb823).rw("ppi8255_2", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input/Output Ports */
+	map(0xb830, 0xb830).rw("aysnd", FUNC(ay8910_device::data_r), FUNC(ay8910_device::data_w));
+	map(0xb840, 0xb840).w("aysnd", FUNC(ay8910_device::address_w));             /* no sound... only use both ports for DSWs */
+	map(0xb850, 0xb850).w(this, FUNC(wingco_state::magodds_outb850_w));                                /* lamps */
+	map(0xb860, 0xb860).w(this, FUNC(wingco_state::magodds_outb860_w));                                /* watchdog */
+	map(0xb870, 0xb870).w("snsnd", FUNC(sn76489_device::write));                /* sound */
+	map(0xc000, 0xffff).rom().region("maincpu", 0xc000);
+}
 
-static ADDRESS_MAP_START( kkotnoli_map, AS_PROGRAM, 8, goldstar_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM /* definitely no NVRAM */
-	AM_RANGE(0x8800, 0x8fff) AM_RAM_WRITE(goldstar_fg_vidram_w) AM_SHARE("fg_vidram")
-	AM_RANGE(0x9000, 0x97ff) AM_RAM_WRITE(goldstar_fg_atrram_w) AM_SHARE("fg_atrram")
-	AM_RANGE(0x9800, 0x99ff) AM_RAM_WRITE(goldstar_reel1_ram_w) AM_SHARE("reel1_ram")
-	AM_RANGE(0xa000, 0xa1ff) AM_RAM_WRITE(goldstar_reel2_ram_w) AM_SHARE("reel2_ram")
-	AM_RANGE(0xa800, 0xa9ff) AM_RAM_WRITE(goldstar_reel3_ram_w) AM_SHARE("reel3_ram")
-	AM_RANGE(0xb040, 0xb07f) AM_RAM AM_SHARE("reel1_scroll")
-	AM_RANGE(0xb080, 0xb0bf) AM_RAM AM_SHARE("reel2_scroll")
-	AM_RANGE(0xb100, 0xb17f) AM_RAM AM_SHARE("reel3_scroll")
+void goldstar_state::kkotnoli_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x87ff).ram(); /* definitely no NVRAM */
+	map(0x8800, 0x8fff).ram().w(this, FUNC(goldstar_state::goldstar_fg_vidram_w)).share("fg_vidram");
+	map(0x9000, 0x97ff).ram().w(this, FUNC(goldstar_state::goldstar_fg_atrram_w)).share("fg_atrram");
+	map(0x9800, 0x99ff).ram().w(this, FUNC(goldstar_state::goldstar_reel1_ram_w)).share("reel1_ram");
+	map(0xa000, 0xa1ff).ram().w(this, FUNC(goldstar_state::goldstar_reel2_ram_w)).share("reel2_ram");
+	map(0xa800, 0xa9ff).ram().w(this, FUNC(goldstar_state::goldstar_reel3_ram_w)).share("reel3_ram");
+	map(0xb040, 0xb07f).ram().share("reel1_scroll");
+	map(0xb080, 0xb0bf).ram().share("reel2_scroll");
+	map(0xb100, 0xb17f).ram().share("reel3_scroll");
 
-	AM_RANGE(0xb800, 0xb803) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)    /* Input Ports */
-	AM_RANGE(0xb810, 0xb813) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)    /* Input Ports */
-	AM_RANGE(0xb820, 0xb823) AM_DEVREADWRITE("ppi8255_2", i8255_device, read, write)    /* Input Port */
-	AM_RANGE(0xb830, 0xb830) AM_WRITENOP                                                /* no ay8910 */
-	AM_RANGE(0xb840, 0xb840) AM_WRITENOP                                                /* no ay8910 */
-	AM_RANGE(0xb850, 0xb850) AM_WRITE(p1_lamps_w)
-	AM_RANGE(0xb870, 0xb870) AM_DEVWRITE("snsnd", sn76489_device, write)                /* sound */
-	AM_RANGE(0xf800, 0xffff) AM_RAM
-ADDRESS_MAP_END
+	map(0xb800, 0xb803).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Ports */
+	map(0xb810, 0xb813).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Ports */
+	map(0xb820, 0xb823).rw("ppi8255_2", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Port */
+	map(0xb830, 0xb830).nopw();                                                /* no ay8910 */
+	map(0xb840, 0xb840).nopw();                                                /* no ay8910 */
+	map(0xb850, 0xb850).w(this, FUNC(goldstar_state::p1_lamps_w));
+	map(0xb870, 0xb870).w("snsnd", FUNC(sn76489_device::write));                /* sound */
+	map(0xf800, 0xffff).ram();
+}
 
 
 //WRITE8_MEMBER(goldstar_state::ladylinr_outport_w)
@@ -1058,28 +1077,29 @@ ADDRESS_MAP_END
 //  popmessage("Output: %02X", data);
 //}
 
-static ADDRESS_MAP_START( ladylinr_map, AS_PROGRAM, 8, goldstar_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x8800, 0x8fff) AM_RAM_WRITE(goldstar_fg_vidram_w) AM_SHARE("fg_vidram")
-	AM_RANGE(0x9000, 0x97ff) AM_RAM_WRITE(goldstar_fg_atrram_w) AM_SHARE("fg_atrram")
-	AM_RANGE(0x9800, 0x99ff) AM_RAM_WRITE(goldstar_reel1_ram_w) AM_SHARE("reel1_ram")
-	AM_RANGE(0xa000, 0xa1ff) AM_RAM_WRITE(goldstar_reel2_ram_w) AM_SHARE("reel2_ram")
-	AM_RANGE(0xa800, 0xa9ff) AM_RAM_WRITE(goldstar_reel3_ram_w) AM_SHARE("reel3_ram")
-	AM_RANGE(0xb040, 0xb07f) AM_RAM AM_SHARE("reel1_scroll")
-	AM_RANGE(0xb080, 0xb0bf) AM_RAM AM_SHARE("reel2_scroll")
-	AM_RANGE(0xb100, 0xb17f) AM_RAM AM_SHARE("reel3_scroll")
+void goldstar_state::ladylinr_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x87ff).ram().share("nvram");
+	map(0x8800, 0x8fff).ram().w(this, FUNC(goldstar_state::goldstar_fg_vidram_w)).share("fg_vidram");
+	map(0x9000, 0x97ff).ram().w(this, FUNC(goldstar_state::goldstar_fg_atrram_w)).share("fg_atrram");
+	map(0x9800, 0x99ff).ram().w(this, FUNC(goldstar_state::goldstar_reel1_ram_w)).share("reel1_ram");
+	map(0xa000, 0xa1ff).ram().w(this, FUNC(goldstar_state::goldstar_reel2_ram_w)).share("reel2_ram");
+	map(0xa800, 0xa9ff).ram().w(this, FUNC(goldstar_state::goldstar_reel3_ram_w)).share("reel3_ram");
+	map(0xb040, 0xb07f).ram().share("reel1_scroll");
+	map(0xb080, 0xb0bf).ram().share("reel2_scroll");
+	map(0xb100, 0xb17f).ram().share("reel3_scroll");
 
-	AM_RANGE(0xb800, 0xb803) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)    /* Input Ports */
-	AM_RANGE(0xb810, 0xb813) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)    /* DSW bank */
-	AM_RANGE(0xb830, 0xb830) AM_DEVWRITE("aysnd", ay8910_device, address_w)             /* no sound... unused? */
-	AM_RANGE(0xb840, 0xb840) AM_DEVREADWRITE("aysnd", ay8910_device, data_r, data_w)
-	AM_RANGE(0xb850, 0xb850) AM_WRITENOP                                                /* just turn off the lamps, if exist */
-	AM_RANGE(0xb870, 0xb870) AM_DEVWRITE("snsnd", sn76489_device, write)                /* sound */
-	AM_RANGE(0xf800, 0xffff) AM_RAM
-ADDRESS_MAP_END
+	map(0xb800, 0xb803).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Ports */
+	map(0xb810, 0xb813).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* DSW bank */
+	map(0xb830, 0xb830).w("aysnd", FUNC(ay8910_device::address_w));             /* no sound... unused? */
+	map(0xb840, 0xb840).rw("aysnd", FUNC(ay8910_device::data_r), FUNC(ay8910_device::data_w));
+	map(0xb850, 0xb850).nopw();                                                /* just turn off the lamps, if exist */
+	map(0xb870, 0xb870).w("snsnd", FUNC(sn76489_device::write));                /* sound */
+	map(0xf800, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START( wcat3_map, AS_PROGRAM, 8, goldstar_state )
+ADDRESS_MAP_START(goldstar_state::wcat3_map)
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x8800, 0x8fff) AM_RAM_WRITE(goldstar_fg_vidram_w) AM_SHARE("fg_vidram")
@@ -1105,30 +1125,31 @@ ADDRESS_MAP_END
 
 
 /* newer / more capable hw */
-static ADDRESS_MAP_START( unkch_map, AS_PROGRAM, 8, unkch_state )
-	AM_RANGE(0x0000, 0x9fff) AM_ROM
-	AM_RANGE(0xc000, 0xc1ff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0xc800, 0xc9ff) AM_RAM_DEVWRITE("palette", palette_device, write_ext) AM_SHARE("palette_ext")
+void unkch_state::unkch_map(address_map &map)
+{
+	map(0x0000, 0x9fff).rom();
+	map(0xc000, 0xc1ff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+	map(0xc800, 0xc9ff).ram().w(m_palette, FUNC(palette_device::write8_ext)).share("palette_ext");
 
-	AM_RANGE(0xd000, 0xd7ff) AM_RAM AM_SHARE("nvram")
+	map(0xd000, 0xd7ff).ram().share("nvram");
 
-	AM_RANGE(0xd840, 0xd87f) AM_RAM AM_SHARE("reel1_scroll")
-	AM_RANGE(0xd880, 0xd8bf) AM_RAM AM_SHARE("reel2_scroll")
-	AM_RANGE(0xd900, 0xd93f) AM_RAM AM_SHARE("reel3_scroll")
-	AM_RANGE(0xdfc0, 0xdfff) AM_RAM
+	map(0xd840, 0xd87f).ram().share("reel1_scroll");
+	map(0xd880, 0xd8bf).ram().share("reel2_scroll");
+	map(0xd900, 0xd93f).ram().share("reel3_scroll");
+	map(0xdfc0, 0xdfff).ram();
 
-	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(goldstar_fg_vidram_w) AM_SHARE("fg_vidram")
-	AM_RANGE(0xe800, 0xefff) AM_RAM_WRITE(goldstar_fg_atrram_w) AM_SHARE("fg_atrram")
+	map(0xe000, 0xe7ff).ram().w(this, FUNC(unkch_state::goldstar_fg_vidram_w)).share("fg_vidram");
+	map(0xe800, 0xefff).ram().w(this, FUNC(unkch_state::goldstar_fg_atrram_w)).share("fg_atrram");
 
-	AM_RANGE(0xf000, 0xf1ff) AM_RAM_WRITE(goldstar_reel1_ram_w) AM_SHARE("reel1_ram")
-	AM_RANGE(0xf200, 0xf3ff) AM_RAM_WRITE(goldstar_reel2_ram_w) AM_SHARE("reel2_ram")
-	AM_RANGE(0xf400, 0xf5ff) AM_RAM_WRITE(goldstar_reel3_ram_w) AM_SHARE("reel3_ram")
-	AM_RANGE(0xf600, 0xf7ff) AM_RAM
-	AM_RANGE(0xf800, 0xf9ff) AM_RAM_WRITE(reel1_attrram_w) AM_SHARE("reel1_attrram")
-	AM_RANGE(0xfa00, 0xfbff) AM_RAM_WRITE(reel2_attrram_w) AM_SHARE("reel2_attrram")
-	AM_RANGE(0xfc00, 0xfdff) AM_RAM_WRITE(reel3_attrram_w) AM_SHARE("reel3_attrram")
-	AM_RANGE(0xfe00, 0xffff) AM_RAM
-ADDRESS_MAP_END
+	map(0xf000, 0xf1ff).ram().w(this, FUNC(unkch_state::goldstar_reel1_ram_w)).share("reel1_ram");
+	map(0xf200, 0xf3ff).ram().w(this, FUNC(unkch_state::goldstar_reel2_ram_w)).share("reel2_ram");
+	map(0xf400, 0xf5ff).ram().w(this, FUNC(unkch_state::goldstar_reel3_ram_w)).share("reel3_ram");
+	map(0xf600, 0xf7ff).ram();
+	map(0xf800, 0xf9ff).ram().w(this, FUNC(unkch_state::reel1_attrram_w)).share("reel1_attrram");
+	map(0xfa00, 0xfbff).ram().w(this, FUNC(unkch_state::reel2_attrram_w)).share("reel2_attrram");
+	map(0xfc00, 0xfdff).ram().w(this, FUNC(unkch_state::reel3_attrram_w)).share("reel3_attrram");
+	map(0xfe00, 0xffff).ram();
+}
 
 
 WRITE8_MEMBER(unkch_state::coincount_w)
@@ -1144,7 +1165,7 @@ WRITE8_MEMBER(unkch_state::coincount_w)
 
 */
 
-	m_ticket_dispenser->write(space, offset, data & 0x80);
+	m_ticket_dispenser->motor_w(BIT(data, 7));
 
 	machine().bookkeeping().coin_counter_w(0, data & 0x04);  /* Credit counter */
 	machine().bookkeeping().coin_counter_w(1, data & 0x08);  /* Key In counter */
@@ -1191,47 +1212,49 @@ WRITE8_MEMBER(unkch_state::unkcm_0x03_w)
 }
 
 
-static ADDRESS_MAP_START( unkch_portmap, AS_IO, 8, unkch_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
+void unkch_state::unkch_portmap(address_map &map)
+{
+	map.global_mask(0xff);
 
-	AM_RANGE(0x01, 0x01) AM_WRITE(coincount_w)
-	AM_RANGE(0x02, 0x02) AM_WRITE(unkcm_0x02_w)
-	AM_RANGE(0x03, 0x03) AM_WRITE(unkcm_0x03_w)
+	map(0x01, 0x01).w(this, FUNC(unkch_state::coincount_w));
+	map(0x02, 0x02).w(this, FUNC(unkch_state::unkcm_0x02_w));
+	map(0x03, 0x03).w(this, FUNC(unkch_state::unkcm_0x03_w));
 
-	AM_RANGE(0x08, 0x08) AM_READ_PORT("IN0")
-	AM_RANGE(0x09, 0x09) AM_READ_PORT("IN1")
-	AM_RANGE(0x0a, 0x0a) AM_READ_PORT("DSW4")
-	AM_RANGE(0x0b, 0x0b) AM_READ_PORT("DSW3")
+	map(0x08, 0x08).portr("IN0");
+	map(0x09, 0x09).portr("IN1");
+	map(0x0a, 0x0a).portr("DSW4");
+	map(0x0b, 0x0b).portr("DSW3");
 
-	AM_RANGE(0x10, 0x10) AM_DEVREAD("aysnd", ay8910_device, data_r)
-	AM_RANGE(0x11, 0x11) AM_DEVWRITE("aysnd", ay8910_device, data_w)
-	AM_RANGE(0x12, 0x12) AM_DEVWRITE("aysnd", ay8910_device, address_w)
-ADDRESS_MAP_END
+	map(0x10, 0x10).r("aysnd", FUNC(ay8910_device::data_r));
+	map(0x11, 0x11).w("aysnd", FUNC(ay8910_device::data_w));
+	map(0x12, 0x12).w("aysnd", FUNC(ay8910_device::address_w));
+}
 
 
-static ADDRESS_MAP_START( megaline_map, AS_PROGRAM, 8, unkch_state )
+void unkch_state::megaline_map(address_map &map)
+{
 /* Reels stuff are there just as placeholder, and obviously in wrong offset */
-	AM_RANGE(0x0000, 0x9fff) AM_ROM
+	map(0x0000, 0x9fff).rom();
 
-	AM_RANGE(0xd000, 0xd7ff) AM_RAM //AM_SHARE("nvram")
+	map(0xd000, 0xd7ff).ram(); //AM_SHARE("nvram")
 
-	AM_RANGE(0xd840, 0xd87f) AM_RAM AM_SHARE("reel1_scroll")
-	AM_RANGE(0xd880, 0xd8bf) AM_RAM AM_SHARE("reel2_scroll")
-	AM_RANGE(0xd900, 0xd93f) AM_RAM AM_SHARE("reel3_scroll")
-	AM_RANGE(0xdfc0, 0xdfff) AM_RAM
+	map(0xd840, 0xd87f).ram().share("reel1_scroll");
+	map(0xd880, 0xd8bf).ram().share("reel2_scroll");
+	map(0xd900, 0xd93f).ram().share("reel3_scroll");
+	map(0xdfc0, 0xdfff).ram();
 
-	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(goldstar_fg_vidram_w) AM_SHARE("fg_vidram")
-	AM_RANGE(0xe800, 0xefff) AM_RAM_WRITE(goldstar_fg_atrram_w) AM_SHARE("fg_atrram")
+	map(0xe000, 0xe7ff).ram().w(this, FUNC(unkch_state::goldstar_fg_vidram_w)).share("fg_vidram");
+	map(0xe800, 0xefff).ram().w(this, FUNC(unkch_state::goldstar_fg_atrram_w)).share("fg_atrram");
 
-	AM_RANGE(0xf000, 0xf1ff) AM_RAM_WRITE(goldstar_reel1_ram_w) AM_SHARE("reel1_ram")
-	AM_RANGE(0xf200, 0xf3ff) AM_RAM_WRITE(goldstar_reel2_ram_w) AM_SHARE("reel2_ram")
-	AM_RANGE(0xf400, 0xf5ff) AM_RAM_WRITE(goldstar_reel3_ram_w) AM_SHARE("reel3_ram")
-	AM_RANGE(0xf600, 0xf7ff) AM_RAM
-	AM_RANGE(0xf800, 0xf9ff) AM_RAM_WRITE(reel1_attrram_w) AM_SHARE("reel1_attrram")
-	AM_RANGE(0xfa00, 0xfbff) AM_RAM_WRITE(reel2_attrram_w) AM_SHARE("reel2_attrram")
-	AM_RANGE(0xfc00, 0xfdff) AM_RAM_WRITE(reel3_attrram_w) AM_SHARE("reel3_attrram")
-	AM_RANGE(0xfe00, 0xffff) AM_RAM
-ADDRESS_MAP_END
+	map(0xf000, 0xf1ff).ram().w(this, FUNC(unkch_state::goldstar_reel1_ram_w)).share("reel1_ram");
+	map(0xf200, 0xf3ff).ram().w(this, FUNC(unkch_state::goldstar_reel2_ram_w)).share("reel2_ram");
+	map(0xf400, 0xf5ff).ram().w(this, FUNC(unkch_state::goldstar_reel3_ram_w)).share("reel3_ram");
+	map(0xf600, 0xf7ff).ram();
+	map(0xf800, 0xf9ff).ram().w(this, FUNC(unkch_state::reel1_attrram_w)).share("reel1_attrram");
+	map(0xfa00, 0xfbff).ram().w(this, FUNC(unkch_state::reel2_attrram_w)).share("reel2_attrram");
+	map(0xfc00, 0xfdff).ram().w(this, FUNC(unkch_state::reel3_attrram_w)).share("reel3_attrram");
+	map(0xfe00, 0xffff).ram();
+}
 
 /* unknown I/O byte R/W
 
@@ -1239,7 +1262,7 @@ ADDRESS_MAP_END
   AY8910?: 60 - 80
 
 */
-static ADDRESS_MAP_START( megaline_portmap, AS_IO, 8, goldstar_state )
+ADDRESS_MAP_START(goldstar_state::megaline_portmap)
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0xa0, 0xa0) AM_DEVWRITE("sn1", sn76489_device, write)                      /* SN76489 #1 */
 	AM_RANGE(0xc0, 0xc0) AM_DEVWRITE("sn2", sn76489_device, write)                      /* SN76489 #2 */
@@ -1251,30 +1274,30 @@ static ADDRESS_MAP_START( megaline_portmap, AS_IO, 8, goldstar_state )
 ADDRESS_MAP_END
 
 
-static ADDRESS_MAP_START( bonusch_map, AS_PROGRAM, 8, unkch_state )
+void unkch_state::bonusch_map(address_map &map)
+{
 /* Reels stuff and RAM are there just as placeholder, and obviously in wrong offset */
 
-	AM_RANGE(0x0000, 0xbfff) AM_ROM     // ok
+	map(0x0000, 0xbfff).rom();     // ok
 
-	AM_RANGE(0xd800, 0xdfff) AM_RAM //AM_SHARE("nvram")
-	AM_RANGE(0xf000, 0xffff) AM_RAM
+	map(0xd800, 0xdfff).ram(); //AM_SHARE("nvram")
 
-	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(goldstar_fg_vidram_w) AM_SHARE("fg_vidram")
-	AM_RANGE(0xe800, 0xefff) AM_RAM_WRITE(goldstar_fg_atrram_w) AM_SHARE("fg_atrram")
+	map(0xe000, 0xe7ff).ram().w(this, FUNC(unkch_state::goldstar_fg_vidram_w)).share("fg_vidram");
+	map(0xe800, 0xefff).ram().w(this, FUNC(unkch_state::goldstar_fg_atrram_w)).share("fg_atrram");
 
 /* just placeholders */
-	AM_RANGE(0xf000, 0xf1ff) AM_RAM_WRITE(goldstar_reel1_ram_w ) AM_SHARE("reel1_ram")
-	AM_RANGE(0xf200, 0xf3ff) AM_RAM_WRITE(goldstar_reel2_ram_w ) AM_SHARE("reel2_ram")
-	AM_RANGE(0xf400, 0xf5ff) AM_RAM_WRITE(goldstar_reel3_ram_w ) AM_SHARE("reel3_ram")
+	map(0xf000, 0xf1ff).ram().w(this, FUNC(unkch_state::goldstar_reel1_ram_w)).share("reel1_ram");
+	map(0xf200, 0xf3ff).ram().w(this, FUNC(unkch_state::goldstar_reel2_ram_w)).share("reel2_ram");
+	map(0xf400, 0xf5ff).ram().w(this, FUNC(unkch_state::goldstar_reel3_ram_w)).share("reel3_ram");
 
-	AM_RANGE(0xf640, 0xf67f) AM_RAM AM_SHARE("reel1_scroll")
-	AM_RANGE(0xf680, 0xf6bf) AM_RAM AM_SHARE("reel2_scroll")
-	AM_RANGE(0xf700, 0xf73f) AM_RAM AM_SHARE("reel3_scroll")
+	map(0xf640, 0xf67f).ram().share("reel1_scroll");
+	map(0xf680, 0xf6bf).ram().share("reel2_scroll");
+	map(0xf700, 0xf73f).ram().share("reel3_scroll");
 
-	AM_RANGE(0xf800, 0xf9ff) AM_RAM_WRITE(reel1_attrram_w) AM_SHARE("reel1_attrram")
-	AM_RANGE(0xfa00, 0xfbff) AM_RAM_WRITE(reel2_attrram_w) AM_SHARE("reel2_attrram")
-	AM_RANGE(0xfc00, 0xfdff) AM_RAM_WRITE(reel3_attrram_w) AM_SHARE("reel3_attrram")
-ADDRESS_MAP_END
+	map(0xf800, 0xf9ff).ram().w(this, FUNC(unkch_state::reel1_attrram_w)).share("reel1_attrram");
+	map(0xfa00, 0xfbff).ram().w(this, FUNC(unkch_state::reel2_attrram_w)).share("reel2_attrram");
+	map(0xfc00, 0xfdff).ram().w(this, FUNC(unkch_state::reel3_attrram_w)).share("reel3_attrram");
+}
 
 /* Bonus Chance W-8
 
@@ -1293,7 +1316,7 @@ ADDRESS_MAP_END
   60h = R
 
 */
-static ADDRESS_MAP_START( bonusch_portmap, AS_IO, 8, goldstar_state )
+ADDRESS_MAP_START(goldstar_state::bonusch_portmap)
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x10, 0x10) AM_READ_PORT("IN0")
 	AM_RANGE(0x20, 0x20) AM_READ_PORT("IN1")
@@ -8059,7 +8082,7 @@ WRITE8_MEMBER(goldstar_state::ay8910_outputb_w)
 }
 
 
-static MACHINE_CONFIG_START( goldstar )
+MACHINE_CONFIG_START(goldstar_state::goldstar)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8096,7 +8119,7 @@ static MACHINE_CONFIG_START( goldstar )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( goldstbl )
+MACHINE_CONFIG_START(goldstar_state::goldstbl)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8131,16 +8154,18 @@ static MACHINE_CONFIG_START( goldstbl )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( moonlght, goldstbl )
+MACHINE_CONFIG_START(goldstar_state::moonlght)
+	goldstbl(config);
 	MCFG_GFXDECODE_MODIFY("gfxdecode", ml)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( goldfrui, goldstbl )
+MACHINE_CONFIG_START(goldstar_state::goldfrui)
+	goldstbl(config);
 	MCFG_GFXDECODE_MODIFY("gfxdecode", goldfrui)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( star100 )
+MACHINE_CONFIG_START(sanghopm_state::star100)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8179,7 +8204,7 @@ static MACHINE_CONFIG_START( star100 )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( super9 )
+MACHINE_CONFIG_START(goldstar_state::super9)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8277,7 +8302,7 @@ PALETTE_INIT_MEMBER(goldstar_state, lucky8)
 }
 
 
-static MACHINE_CONFIG_START( ncb3 )
+MACHINE_CONFIG_START(cb3_state::ncb3)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8326,28 +8351,33 @@ static MACHINE_CONFIG_START( ncb3 )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( cb3c, ncb3 )
+MACHINE_CONFIG_START(cb3_state::cb3c)
+	ncb3(config);
 	MCFG_GFXDECODE_MODIFY("gfxdecode", cb3c)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( cb3e, ncb3 )
+MACHINE_CONFIG_START(cb3_state::cb3e)
+	ncb3(config);
 	MCFG_GFXDECODE_MODIFY("gfxdecode", cb3e)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( chrygld, ncb3 )
+MACHINE_CONFIG_START(cb3_state::chrygld)
+	ncb3(config);
 	MCFG_GFXDECODE_MODIFY("gfxdecode", chry10)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( cherrys, ncb3 )
+MACHINE_CONFIG_START(cb3_state::cherrys)
+	ncb3(config);
 	MCFG_GFXDECODE_MODIFY("gfxdecode", cherrys)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( cm97, ncb3 )
+MACHINE_CONFIG_START(cb3_state::cm97)
+	ncb3(config);
 	MCFG_GFXDECODE_MODIFY("gfxdecode", cm97)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( wcherry )
+MACHINE_CONFIG_START(goldstar_state::wcherry)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8396,7 +8426,7 @@ static MACHINE_CONFIG_START( wcherry )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( cm )
+MACHINE_CONFIG_START(cmaster_state::cm)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8438,12 +8468,13 @@ static MACHINE_CONFIG_START( cm )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( cmasterc, cm )
+MACHINE_CONFIG_START(cmaster_state::cmasterc)
+	cm(config);
 	MCFG_GFXDECODE_MODIFY("gfxdecode", cmasterc)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( cmast91 )
+MACHINE_CONFIG_START(goldstar_state::cmast91)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8493,7 +8524,7 @@ INTERRUPT_GEN_MEMBER(wingco_state::masked_irq)
 		device.execute().set_input_line(INPUT_LINE_NMI, PULSE_LINE);
 }
 
-static MACHINE_CONFIG_START( lucky8 )
+MACHINE_CONFIG_START(wingco_state::lucky8)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8548,7 +8579,7 @@ static MACHINE_CONFIG_START( lucky8 )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( bingowng )
+MACHINE_CONFIG_START(wingco_state::bingowng)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8602,12 +8633,14 @@ static MACHINE_CONFIG_START( bingowng )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( bingownga, bingowng )
+MACHINE_CONFIG_START(wingco_state::bingownga)
+	bingowng(config);
 	MCFG_GFXDECODE_MODIFY("gfxdecode", bingownga)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( flam7_w4, lucky8 )
+MACHINE_CONFIG_START(wingco_state::flam7_w4)
+	lucky8(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(flaming7_map)
@@ -8618,7 +8651,8 @@ static MACHINE_CONFIG_DERIVED( flam7_w4, lucky8 )
 	MCFG_DS2401_ADD("fl7w4_id")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( flaming7, lucky8 )
+MACHINE_CONFIG_START(wingco_state::flaming7)
+	lucky8(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(flaming7_map)
@@ -8632,7 +8666,8 @@ static MACHINE_CONFIG_DERIVED( flaming7, lucky8 )
 	MCFG_DS2401_ADD("fl7w4_id")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( flam7_tw, lucky8 )
+MACHINE_CONFIG_START(wingco_state::flam7_tw)
+	lucky8(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(flaming7_map)
@@ -8646,7 +8681,8 @@ static MACHINE_CONFIG_DERIVED( flam7_tw, lucky8 )
 	MCFG_DS2401_ADD("fl7w4_id")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( mbstar, lucky8 )
+MACHINE_CONFIG_START(wingco_state::mbstar)
+	lucky8(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(mbstar_map)
@@ -8670,7 +8706,7 @@ PALETTE_INIT_MEMBER(wingco_state, magodds)
 	}
 }
 
-static MACHINE_CONFIG_START( magodds )
+MACHINE_CONFIG_START(wingco_state::magodds)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8725,7 +8761,7 @@ static MACHINE_CONFIG_START( magodds )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( kkotnoli )
+MACHINE_CONFIG_START(goldstar_state::kkotnoli)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8769,7 +8805,7 @@ static MACHINE_CONFIG_START( kkotnoli )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( ladylinr )
+MACHINE_CONFIG_START(goldstar_state::ladylinr)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8812,7 +8848,7 @@ static MACHINE_CONFIG_START( ladylinr )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( wcat3 )
+MACHINE_CONFIG_START(wingco_state::wcat3)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8869,7 +8905,7 @@ MACHINE_CONFIG_END
 
 
 /* diff with cm machine driver: gfxdecode, OKI & portmap */
-static MACHINE_CONFIG_START( amcoe1 )
+MACHINE_CONFIG_START(cmaster_state::amcoe1)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8916,7 +8952,8 @@ MACHINE_CONFIG_END
 
 
 /* diff with cm machine driver: gfxdecode, OKI, portmap & tilemaps rect size/position */
-static MACHINE_CONFIG_DERIVED( amcoe1a, amcoe1 )
+MACHINE_CONFIG_START(cmaster_state::amcoe1a)
+	amcoe1(config);
 
 	/* video hardware */
 	MCFG_SCREEN_MODIFY("screen")
@@ -8925,7 +8962,7 @@ MACHINE_CONFIG_END
 
 
 /* diff with cm machine driver: gfxdecode, AY8910 volume & portmap */
-static MACHINE_CONFIG_START( amcoe2 )
+MACHINE_CONFIG_START(cmaster_state::amcoe2)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -8967,7 +9004,8 @@ static MACHINE_CONFIG_START( amcoe2 )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 2.00) /* analyzed for clips */
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( nfm, amcoe2 )
+MACHINE_CONFIG_START(cmaster_state::nfm)
+	amcoe2(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -8983,7 +9021,7 @@ INTERRUPT_GEN_MEMBER(unkch_state::vblank_irq)
 		device.execute().set_input_line(INPUT_LINE_NMI, PULSE_LINE);
 }
 
-static MACHINE_CONFIG_START( unkch )
+MACHINE_CONFIG_START(unkch_state::unkch)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -9022,7 +9060,7 @@ MACHINE_CONFIG_END
 
 
 // hw unknown - should be somewhat similar to cm
-static MACHINE_CONFIG_START( pkrmast )
+MACHINE_CONFIG_START(goldstar_state::pkrmast)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -9055,7 +9093,7 @@ static MACHINE_CONFIG_START( pkrmast )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( megaline )
+MACHINE_CONFIG_START(unkch_state::megaline)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, CPU_CLOCK)
@@ -9105,15 +9143,15 @@ static MACHINE_CONFIG_START( megaline )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( bonusch )
+MACHINE_CONFIG_START(unkch_state::bonusch)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_12MHz / 2)
+	MCFG_CPU_ADD("maincpu", Z80, 12_MHz_XTAL / 2)
 	MCFG_CPU_PROGRAM_MAP(bonusch_map)
 	MCFG_CPU_IO_MAP(bonusch_portmap)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", goldstar_state,  nmi_line_pulse)
 
-	MCFG_CPU_ADD("mcu", I80C51, XTAL_12MHz)
+	MCFG_CPU_ADD("mcu", I80C51, 12_MHz_XTAL)
 	MCFG_DEVICE_DISABLE()
 
 	/* video hardware */
@@ -9813,6 +9851,49 @@ ROM_START( cmv801 )
 	ROM_LOAD( "prom1.287", 0x0000, 0x0100, CRC(50ec383b) SHA1(ae95b92bd3946b40134bcdc22708d5c6b0f4c23e) )
 ROM_END
 
+
+/*
+Super Seven - 199? (>= 1995 since it cites an Italian law from 1995)
+Bootleg /licensed version of Cherry Master (Dyna CM-1 V1.01 at 0xd000 of the program ROM).
+
+PCB with a New Impeuropex sticker
+
+- Main cpu is a Z80B (Z8400B) clocked @3MHz (derived by a 12MHZ quartz)
+- Sound is generated by a AY-3-8910 clocked @1.5MHz (derived by the same 12MHZ quartz)
+- One 27C512 for storing program code
+- Two 27C010 for storing GFX data
+- One 82S191AN BPROM
+- One 82S137AN
+- Five PLDs (two PALCE16V8 and three GAL20V8)
+- One 3.6V lithium battery probably for storing high-scores
+*/
+
+ROM_START( super7 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
+	ROM_LOAD( "27c512_1", 0x00000, 0x10000, CRC(ddfa6fe7) SHA1(0d86ec5029afd565e039fe84f7001b2dc77c919c) ) // first 0x8000 encrypted
+
+	ROM_REGION( 0x20000, "gfx1", 0 ) // very similar to most cmv4 sets, but differently arranged
+	ROM_LOAD( "27c010_2", 0x00000, 0x20000, CRC(9636d785) SHA1(8f851aae0b05ad909c48cf94142ab927145da464) )
+
+	ROM_REGION( 0x20000, "gfx2", 0 )
+	ROM_LOAD( "27c010_3", 0x00000, 0x20000, CRC(a6db1162) SHA1(05019166526b0797e3eca8b72d90c325573b3d74) )
+
+	ROM_REGION( 0x10000, "user1", ROMREGION_ERASEFF ) // no girls ROM
+
+	ROM_REGION( 0x800, "proms", 0 ) // RGB generation
+	ROM_LOAD( "82s191an.bin",  0x000, 0x800, CRC(ec546abe) SHA1(1bd92c0715ec1821fa977a67499dc8971deec9c7) )
+
+	ROM_REGION( 0x400, "proms2", 0 )
+	ROM_LOAD( "82s137an.bin",  0x000, 0x400, CRC(92975789) SHA1(4a85d169db5e298ee201fe7d4b9964b1df16992e) )
+
+	ROM_REGION( 0xa00, "plds", 0 )
+	ROM_LOAD( "palce16v8.bin", 0x000, 0x114, NO_DUMP )
+	ROM_LOAD( "palce16v8.bin", 0x000, 0x114, NO_DUMP )
+	ROM_LOAD( "gal20v8.bin",   0x000, 0x114, NO_DUMP )
+	ROM_LOAD( "gal20v8.bin",   0x000, 0x114, NO_DUMP )
+	ROM_LOAD( "gal20v8.bin",   0x000, 0x114, NO_DUMP )
+ROM_END
+
 /*
 2764.u10                m4.64                   IDENTICAL
 27256.u11               m6.256                  IDENTICAL
@@ -10444,7 +10525,7 @@ ROM_END
 /* Cherry Master I (V1.10)
    Original Dyna upgrade for Cherry Master boards.
    The game runs in an original Dyna D9001 PCB.
-   It laks of STOP ALL button.
+   It lacks the STOP ALL button.
 
    From the owner (sic):
    - The reels cannot be stop, not exist all stop button or cannot be stop from small, big, double-up button.
@@ -10573,7 +10654,22 @@ ROM_END
 
 ROM_START( aplan ) // Has "DYNA QL-1  V1.01" string.
 	ROM_REGION( 0x10000, "maincpu", 0 )
-	ROM_LOAD( "u18", 0x00000, 0x10000, CRC(e0e5328d) SHA1(fd02c65fecada69a0953372a39e520a80c744109) )
+	ROM_LOAD( "u18", 0x02000, 0x1000, CRC(e0e5328d) SHA1(fd02c65fecada69a0953372a39e520a80c744109) )
+	ROM_CONTINUE(0xf000,0x1000)
+	ROM_CONTINUE(0x3000,0x1000)
+	ROM_CONTINUE(0xa000,0x1000)
+	ROM_CONTINUE(0x1000,0x1000)
+	ROM_CONTINUE(0xc000,0x1000)
+	ROM_CONTINUE(0x0000,0x1000)
+	ROM_CONTINUE(0x8000,0x1000)
+	ROM_CONTINUE(0x5000,0x1000)
+	ROM_CONTINUE(0xe000,0x1000)
+	ROM_CONTINUE(0x7000,0x1000)
+	ROM_CONTINUE(0xb000,0x1000)
+	ROM_CONTINUE(0x6000,0x1000)
+	ROM_CONTINUE(0xd000,0x1000)
+	ROM_CONTINUE(0x4000,0x1000)
+	ROM_CONTINUE(0x9000,0x1000)
 
 	ROM_REGION( 0x18000, "gfx1", 0 )
 	ROM_LOAD( "u64",   0x00000, 0x8000, CRC(2e593152) SHA1(ca0f587b26ed6e962e100d9178b6f79995a26fec) )
@@ -10836,7 +10932,7 @@ ROM_END
 
 */
 ROM_START( lucky8 )
-	ROM_REGION( 0x8000, "maincpu", 0 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
 	ROM_LOAD( "8",   0x0000, 0x4000, CRC(a187573e) SHA1(864627502025dbc83a0049fc98505655cec7b181) )
 	ROM_LOAD( "9",   0x4000, 0x4000, CRC(6f62672e) SHA1(05662ef1a70f93b09e48de497b049a282f070735) )
 
@@ -10917,7 +11013,7 @@ Seems to be related to timing since once patched the game is very fast.
 
 */
 ROM_START( lucky8a )
-	ROM_REGION( 0x8000, "maincpu", 0 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
 	// we have to patch this, it might be bad
 	ROM_LOAD( "1",  0x0000, 0x8000, BAD_DUMP CRC(554cddff) SHA1(8a0678993c7010f70adc9e9443b51cf5929bf110) ) // sldh
 
@@ -10956,7 +11052,7 @@ ROM_END
 
 */
 ROM_START( lucky8b )
-	ROM_REGION( 0x8000, "maincpu", 0 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
 	ROM_LOAD( "8.bin",  0x0000, 0x8000, CRC(ab7c58f2) SHA1(74782772bcc91178fa381074ddca99e0515f7693) ) // sldh
 
 	ROM_REGION( 0x18000, "gfx1", 0 )
@@ -10986,7 +11082,7 @@ ROM_END
 
 
 ROM_START( lucky8c )
-	ROM_REGION( 0x8000, "maincpu", 0 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
 	ROM_LOAD( "8.bin",   0x0000, 0x8000, CRC(6890f8d8) SHA1(7e9d974acf199c78972299bfa3e275a30a3f6eaa) ) // sldh
 
 	ROM_REGION( 0x18000, "gfx1", 0 )
@@ -11017,9 +11113,9 @@ ROM_END
 
 
 ROM_START( lucky8d )
-	ROM_REGION( 0x8000, "maincpu", 0 )
-	ROM_LOAD( "8-40%.bin",   0x0000, 0x4000, CRC(4c79db5a) SHA1(b959030856f54776841092c4c2bccc6565faa587) )
-	ROM_LOAD( "9-40%.bin",   0x4000, 0x4000, CRC(fb0d511f) SHA1(c2c1868339d4f20bf1f5d6b66802e8f8deed4611) )
+	ROM_REGION( 0x10000, "maincpu", 0 )
+	ROM_LOAD( "8-40_.bin",   0x0000, 0x4000, CRC(4c79db5a) SHA1(b959030856f54776841092c4c2bccc6565faa587) )
+	ROM_LOAD( "9-40_.bin",   0x4000, 0x4000, CRC(fb0d511f) SHA1(c2c1868339d4f20bf1f5d6b66802e8f8deed4611) )
 
 	ROM_REGION( 0x18000, "gfx1", 0 )
 	ROM_LOAD( "5",  0x00000, 0x8000, CRC(59026af3) SHA1(3d7f7e78968ca26275635aeaa0e994468a3da575) )
@@ -11107,7 +11203,7 @@ but merged in only one 27128 EPROM instead of two.
 
 */
 ROM_START( lucky8e )
-	ROM_REGION( 0x8000, "maincpu", 0 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
 	ROM_LOAD( "27256.8",   0x0000, 0x8000, CRC(65decc53) SHA1(100f26ef796557182ba894d1e30b18ac58a793be) )
 
 	ROM_REGION( 0x18000, "gfx1", 0 )
@@ -11249,7 +11345,7 @@ ROM_END
 
 */
 ROM_START( ns8lines )
-	ROM_REGION( 0x8000, "maincpu", 0 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
 	ROM_LOAD( "8.bin",  0x0000, 0x8000, CRC(ab7c58f2) SHA1(74782772bcc91178fa381074ddca99e0515f7693) )
 
 	ROM_REGION( 0x18000, "gfx1", 0 )
@@ -11310,7 +11406,7 @@ ROM_END
 
 */
 ROM_START( ns8linew )
-	ROM_REGION( 0x8000, "maincpu", 0 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
 	ROM_LOAD( "f5-8.14b",   0x0000, 0x8000, CRC(63dd3005) SHA1(62d71dbfa0a00c6b050db067ad55e80225e1589d) )
 
 	ROM_REGION( 0x18000, "gfx1", 0 )
@@ -11468,7 +11564,7 @@ ROM_END
 
 */
 ROM_START( ns8linewa )
-	ROM_REGION( 0x8000, "maincpu", 0 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
 	ROM_LOAD( "8.13b",   0x0000, 0x8000, CRC(c5692077) SHA1(423e0fe49ac450f22e693d9ac5ac1c3c662b17d3) )  // no match...
 
 	ROM_REGION( 0x18000, "gfx1", 0 )
@@ -11512,7 +11608,7 @@ ROM_END
   Program ROM is different.
 */
 ROM_START( ns8linesa )
-	ROM_REGION( 0x8000, "maincpu", 0 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
 	ROM_LOAD( "8__27c256_main.14b",  0x0000, 0x8000, CRC(a3574e81) SHA1(60b037d2cfbad495897fa3e0fe6f6b81143103c6) )
 
 	ROM_REGION( 0x18000, "gfx1", 0 )
@@ -11542,6 +11638,45 @@ ROM_START( ns8linesa )
 
 	ROM_REGION( 0x20, "unkprom2", 0 )  // Taken from ns8lines. Seems to match 100%.
 	ROM_LOAD( "u1.bin", 0x0000, 0x0020, BAD_DUMP CRC(6df3f972) SHA1(0096a7f7452b70cac6c0752cb62e24b643015b5c) )
+ROM_END
+
+
+/*
+  Super 97-2
+
+  Code jumps above $C000, so offset range C000-F7FF was defined
+  as ROM space. However, the game isn't working due to the high
+  memory code looks strange. Maybe the program needs some sort
+  of address/data descramble...
+
+*/
+ROM_START( super972 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
+	ROM_LOAD( "subboard_27c512.bin",   0x0000, 0x10000, CRC(e5316735) SHA1(fc39a72e0146bb1190ccdeaec5eb59f779d0a3f7) )
+
+	ROM_REGION( 0x18000, "gfx1", 0 )
+	ROM_LOAD( "5_27c256.bin",  0x00000, 0x8000, CRC(19713d36) SHA1(ae04b8b72b0c9a279f24d7c4d619bac4629d9a4f) )
+	ROM_LOAD( "6_27c256.bin",  0x08000, 0x8000, CRC(576197b9) SHA1(22273365cfe181f95efb895a28825f388b901a49) )
+	ROM_LOAD( "7_27c256.bin",  0x10000, 0x8000, CRC(7a21f08b) SHA1(5795d06dcbbaee91e02dcc2e99451954ff45f768) )
+
+	ROM_REGION( 0x8000, "gfx2", 0 )
+	ROM_LOAD( "1_27c64.bin",  0x0000, 0x2000, CRC(b45f41e2) SHA1(890c94c802f5ada97bc73f5a7a09e69c3207966c) )
+	ROM_LOAD( "2_27c64.bin",  0x2000, 0x2000, CRC(0463413a) SHA1(061b8335fdd44767e8c1832f5b5101276ad0f689) )
+	ROM_LOAD( "3_27c64.bin",  0x4000, 0x2000, CRC(b4e58020) SHA1(5c0fcc4b5d484ca7de5f2bd568a391a45967a9cc) )
+	ROM_LOAD( "4_27c64.bin",  0x6000, 0x2000, CRC(0a25964b) SHA1(d41eda201bb01229fb6e2ff437196dd65eebe577) )
+
+	ROM_REGION( 0x200, "proms", 0 ) /* proper dumps */
+	ROM_LOAD( "dm74s287.g13", 0x0000, 0x0100, CRC(23e81049) SHA1(78071dae70fad870e972d944642fb3a2374be5e4) )
+	ROM_LOAD( "dm74s287.g14", 0x0100, 0x0100, CRC(526cf9d3) SHA1(eb779d70f2507d0f26d225ac8f5de8f2243599ca) )
+
+	ROM_REGION( 0x20, "proms2", 0 )
+	ROM_LOAD( "dm74s288.d13", 0x0000, 0x0020, CRC(c6b41352) SHA1(d7c3b5aa32e4e456c9432a13bede1db6d62eb270) )
+
+	ROM_REGION( 0x100, "unkprom", 0 )
+	ROM_LOAD( "dm74s287.f3",  0x0000, 0x0100, CRC(1d668d4a) SHA1(459117f78323ea264d3a29f1da2889bbabe9e4be) )
+
+	ROM_REGION( 0x20, "unkprom2", 0 )
+	ROM_LOAD( "dm74s288.d12", 0x0000, 0x0020, CRC(6df3f972) SHA1(0096a7f7452b70cac6c0752cb62e24b643015b5c) )
 ROM_END
 
 
@@ -11703,7 +11838,7 @@ ROM_END
     Game seems to be meant for progressive modes...
 */
 ROM_START( luckybar )
-	ROM_REGION( 0x8000, "maincpu", 0 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
 	ROM_LOAD( "27c256_subboard.ic4",   0x0000, 0x8000, CRC(b987115b) SHA1(1c2f6369170c9667996e5dde8ac93100a7234e19) )
 
 	ROM_REGION( 0x18000, "gfx1", 0 )
@@ -11822,7 +11957,7 @@ ROM_END
 
 ******************************************************************************/
 ROM_START( luckylad )
-	ROM_REGION( 0x8000, "maincpu", 0 )  /* encrypted CPU */
+	ROM_REGION( 0x10000, "maincpu", 0 )  /* encrypted CPU */
 	ROM_LOAD( "18.b12",  0x0000, 0x4000, CRC(2d178126) SHA1(5fc490e115e5c9073a7e3f56894fe19be6adb2b5) )
 	ROM_LOAD( "19.b13",  0x4000, 0x4000, CRC(ad02b9fd) SHA1(1a85da2d418350e5cebdb889fa146565a72f37c4) )
 
@@ -11885,7 +12020,7 @@ ROM_END
 
 */
 ROM_START( bingowng )
-	ROM_REGION( 0x8000, "maincpu", 0 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
 	ROM_LOAD( "bingo9.14b", 0x0000, 0x8000, CRC(e041092e) SHA1(2aa3e7af08c336e49bed817ddad7c3604398e296) )
 
 	ROM_REGION( 0x18000, "gfx1", 0 )
@@ -11915,7 +12050,7 @@ ROM_END
 
 
 ROM_START( bingownga )  /* This set is coming from Dumping Union */
-	ROM_REGION( 0x8000, "maincpu", 0 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
 	ROM_LOAD( "bingo.14b",  0x0000, 0x8000, CRC(e041092e) SHA1(2aa3e7af08c336e49bed817ddad7c3604398e296) )  // identical halves, same original program
 
 	ROM_REGION( 0x18000, "gfx1", 0 )
@@ -11967,7 +12102,7 @@ DRIVER_INIT_MEMBER(wingco_state, magoddsc)
 		if ((A & 4) == 4)
 			ROM[A] ^= 0x01;
 
-		ROM[A] = BITSWAP8(ROM[A], 3,6,5,4,7,2,1,0);
+		ROM[A] = bitswap<8>(ROM[A], 3,6,5,4,7,2,1,0);
 	}
 }
 
@@ -13361,10 +13496,10 @@ DRIVER_INIT_MEMBER(cmaster_state, fb2010)
 
 		switch(i & 0x22)
 		{
-			case 0x00: x = BITSWAP8(x^0x4c^0xff, 0,4,7,6,5,1,3,2); break;
-			case 0x02: x = BITSWAP8(x^0xc0^0xff, 7,6,0,5,3,2,1,4); break; //   67053214
-			case 0x20: x = BITSWAP8(x^0x6b^0xff, 4,3,2,7,5,6,0,1); break;
-			case 0x22: x = BITSWAP8(x^0x23^0xff, 0,6,1,3,4,5,2,7); break;
+			case 0x00: x = bitswap<8>(x^0x4c^0xff, 0,4,7,6,5,1,3,2); break;
+			case 0x02: x = bitswap<8>(x^0xc0^0xff, 7,6,0,5,3,2,1,4); break; //   67053214
+			case 0x20: x = bitswap<8>(x^0x6b^0xff, 4,3,2,7,5,6,0,1); break;
+			case 0x22: x = bitswap<8>(x^0x23^0xff, 0,6,1,3,4,5,2,7); break;
 		}
 
 		ROM[i] = x;
@@ -14387,7 +14522,7 @@ ROM_END
 
 ROM_START( wcherry )
 	ROM_REGION( 0x10000, "maincpu", 0 )
-	ROM_LOAD( "wc20%388.ic2",  0x00000, 0x10000, CRC(b1ea0e6a) SHA1(2dd3f2cfffc1e47b45c29daa9d7df7af956b599c) )
+	ROM_LOAD( "wc20_388.ic2",  0x00000, 0x10000, CRC(b1ea0e6a) SHA1(2dd3f2cfffc1e47b45c29daa9d7df7af956b599c) )
 
 	ROM_REGION( 0x20000, "gfx1", 0 )
 	ROM_LOAD( "wincherryb.ic6",  0x00000, 0x20000, CRC(cace16f5) SHA1(a6caddc6ccd30901e2332a42f339a1da022de410) )
@@ -14399,6 +14534,67 @@ ROM_START( wcherry )
 	ROM_LOAD( "am27c29pc",      0x00000, 0x0200, BAD_DUMP CRC(5c8f2b8f) SHA1(67d2121e75813dd85d83858c5fc5ec6ad9cc2a7d) )    // borrowed from other game.
 ROM_END
 
+/*
+Taiwan Chess Legend
+Uniwang, 1995
+
+Preliminary driver by Tomasz Slanina
+
+PCB Layout
+----------
+
+|-----------------------------------------------|
+|  AY8930   DSW5  TCL.1E                        |
+|           DSW4  TCL.3E   TCL.3F  TCL.3H       |
+|           DSW3  TCL.4E   TCL.4F  TCL.4H       |
+|           DSW2  6116                          |
+|           DSW1  6116          6116            |
+|                               6116            |
+|  8255                               12MHz     |
+|                                               |
+|                                               |
+|                 TCL_PR3.9E                    |
+|                                               |
+|  8255                     PAL                 |
+|                                               |
+|                           PAL                 |
+|  BATTERY                    LATTICE           |
+|                       PAL   PLSI 1016 Z80 PAL |
+|           TCL_PR1.15C                     PAL |
+|  SW1      TCL_PR2.16C 6116      TCL.16F       |
+|-----------------------------------------------|
+
+Notes:
+      Z80 Clock: 3.000MHz
+          VSync: 60Hz
+          HSync: 15.15kHz
+
+ This appears to be based off a Blue Dyna Cherry Master board but with extra protection (the sub-board with CPU)
+
+*/
+
+ROM_START( tcl )
+	ROM_REGION( 0x10000*2, "maincpu", 0 )
+	ROM_LOAD( "tcl.16f",   0x00000, 0x20000, CRC(8e694a58) SHA1(7a3c20a7c740065b71fe66ec581edce0dd32f145) )
+
+	ROM_REGION( 0x8000*3, "gfx1", 0 )
+	ROM_LOAD( "tcl.1e",   0x00000, 0x8000, CRC(37edf9b8) SHA1(9225728116d6edfe8476e565a12e1f1e59766d26) )
+	ROM_LOAD( "tcl.3e",   0x08000, 0x8000, CRC(396298cf) SHA1(0ee306179a9d3dd84f7e5799527e6825d2979ddb) )
+	ROM_LOAD( "tcl.4e",   0x10000, 0x8000, CRC(f880101c) SHA1(8417410a7dcb304a88e98f9199f44a4df1ee3fb7) )
+
+	ROM_REGION( 0x2000*4, "gfx2", 0 ) /* ??? */
+	ROM_LOAD( "tcl.3f",   0x0000, 0x2000, CRC(c290c1eb) SHA1(00eb5ff46affe01f240081211b7f9a40e9f76bd8) )
+	ROM_LOAD( "tcl.4f",   0x2000, 0x2000, CRC(225e0148) SHA1(26d8db263b1957fc6b2204765c8aa1f10f44b591) )
+	ROM_LOAD( "tcl.3h",   0x4000, 0x2000, CRC(ee63d380) SHA1(c1d9ca4584bb2ef0fa85e2afb0876040b473a924) )
+	ROM_LOAD( "tcl.4h",   0x6000, 0x2000, CRC(6afa36a1) SHA1(a87423f01dbf9b1e69feb049d6ae3fd63321ee1a) )
+
+	ROM_REGION( 0x10000, "user1", ROMREGION_ERASEFF ) // (girl bitmaps, not present)
+
+	ROM_REGION( 0x100*3, "proms", 0 )
+	ROM_LOAD( "tcl_pr1.15c",   0x000, 0x100, CRC(21eb5b19) SHA1(9b8425bdb97f11f4855c998c7792c3291fd07470) )
+	ROM_LOAD( "tcl_pr2.16c",   0x100, 0x100, CRC(0489b760) SHA1(78f8632b17a76335183c5c204cdec856988368b0) )
+	ROM_LOAD( "tcl_pr3.9e",    0x200, 0x100, CRC(50ec383b) SHA1(ae95b92bd3946b40134bcdc22708d5c6b0f4c23e) )
+ROM_END
 
 /****************************** Stealth Sets ******************************/
 
@@ -15373,9 +15569,9 @@ uint8_t cb3_state::cb3_decrypt(uint8_t cipherText, uint16_t address)
 	idx = BIT(cipherText, 1) | (BIT(address,0) << 1) | (BIT(address, 4) << 2);
 
 	if (rotation[idx] == 0)
-		output = BITSWAP8(cipherText, 5, 6, 3, 4, 7, 2, 1, 0);   // rotates bit #3, #5 and #7 in one direction...
+		output = bitswap<8>(cipherText, 5, 6, 3, 4, 7, 2, 1, 0);   // rotates bit #3, #5 and #7 in one direction...
 	else
-		output = BITSWAP8(cipherText, 3, 6, 7, 4, 5, 2, 1, 0);   // ... or in the other
+		output = bitswap<8>(cipherText, 3, 6, 7, 4, 5, 2, 1, 0);   // ... or in the other
 
 	return output ^ sbox[idx];
 }
@@ -15437,7 +15633,7 @@ DRIVER_INIT_MEMBER(cb3_state, chrygld)
 	for (A = 0; A < 0x10000; A++)
 	{
 		uint8_t dat = ROM[A];
-		dat =  BITSWAP8(dat, 5, 6, 3, 4, 7, 2, 1, 0);
+		dat =  bitswap<8>(dat, 5, 6, 3, 4, 7, 2, 1, 0);
 		ROM[A] = dat;
 	}
 
@@ -15494,14 +15690,14 @@ DRIVER_INIT_MEMBER(cmaster_state, nfb96sea)
 		uint8_t x = ROM[i];
 		switch(i & 7)
 		{
-			case 0: x = BITSWAP8(x ^ 0x80, 1, 6, 7, 4, 5, 2, 3, 0); break;
-			case 1: x = BITSWAP8(x ^ 0xa0, 5, 6, 3, 4, 1, 2, 7, 0); break;
-			case 2: x = BITSWAP8(x ^ 0x02, 5, 6, 3, 4, 1, 2, 7, 0); break;
-			case 3: x = BITSWAP8(x ^ 0xa0, 3, 6, 1, 4, 7, 2, 5, 0); break;
-			case 4: x = BITSWAP8(x ^ 0x82, 3, 6, 1, 4, 7, 2, 5, 0); break;
-			case 5: x = BITSWAP8(x ^ 0x02, 1, 6, 7, 4, 5, 2, 3, 0); break;
-			case 6: x = BITSWAP8(x ^ 0x08, 3, 6, 1, 4, 7, 2, 5, 0); break;
-			case 7: x = BITSWAP8(x ^ 0x80, 5, 6, 3, 4, 1, 2, 7, 0); break;
+			case 0: x = bitswap<8>(x ^ 0x80, 1, 6, 7, 4, 5, 2, 3, 0); break;
+			case 1: x = bitswap<8>(x ^ 0xa0, 5, 6, 3, 4, 1, 2, 7, 0); break;
+			case 2: x = bitswap<8>(x ^ 0x02, 5, 6, 3, 4, 1, 2, 7, 0); break;
+			case 3: x = bitswap<8>(x ^ 0xa0, 3, 6, 1, 4, 7, 2, 5, 0); break;
+			case 4: x = bitswap<8>(x ^ 0x82, 3, 6, 1, 4, 7, 2, 5, 0); break;
+			case 5: x = bitswap<8>(x ^ 0x02, 1, 6, 7, 4, 5, 2, 3, 0); break;
+			case 6: x = bitswap<8>(x ^ 0x08, 3, 6, 1, 4, 7, 2, 5, 0); break;
+			case 7: x = bitswap<8>(x ^ 0x80, 5, 6, 3, 4, 1, 2, 7, 0); break;
 		}
 
 		ROM[i] = x;
@@ -15518,10 +15714,10 @@ DRIVER_INIT_MEMBER(cmaster_state, schery97)
 		uint8_t x = ROM[i];
 		switch(i & 0x12)
 		{
-			case 0x00: x = BITSWAP8(x ^ 0x3e, 1, 0, 7, 6, 5, 4, 3, 2); break;
-			case 0x02: x = BITSWAP8(x ^ 0x4d, 0, 7, 6, 5, 4, 3, 2, 1); break;
-			case 0x10: x = BITSWAP8(x ^ 0x24, 2, 1, 0, 7, 6, 5, 4, 3); break;
-			case 0x12: x = BITSWAP8(x ^ 0xbb, 4, 3, 2, 1, 0, 7, 6, 5); break;
+			case 0x00: x = bitswap<8>(x ^ 0x3e, 1, 0, 7, 6, 5, 4, 3, 2); break;
+			case 0x02: x = bitswap<8>(x ^ 0x4d, 0, 7, 6, 5, 4, 3, 2, 1); break;
+			case 0x10: x = bitswap<8>(x ^ 0x24, 2, 1, 0, 7, 6, 5, 4, 3); break;
+			case 0x12: x = bitswap<8>(x ^ 0xbb, 4, 3, 2, 1, 0, 7, 6, 5); break;
 		}
 
 		ROM[i] = x;
@@ -15540,10 +15736,10 @@ DRIVER_INIT_MEMBER(cmaster_state, schery97a)
 		uint8_t x = ROM[i];
 		switch(i & 6)
 		{
-			case 0: x = BITSWAP8(x ^ 0xb9, 4, 0, 6, 7, 3, 1, 5, 2); break;
-			case 2: x = BITSWAP8(x ^ 0x8f, 6, 7, 4, 0, 3, 2, 1, 5); break;
-			case 4: x = BITSWAP8(x ^ 0xd2, 3, 4, 0, 2, 5, 6, 1, 7); break;
-			case 6: x = BITSWAP8(x ^ 0xd1, 6, 0, 2, 1, 4, 5, 3, 7); break;
+			case 0: x = bitswap<8>(x ^ 0xb9, 4, 0, 6, 7, 3, 1, 5, 2); break;
+			case 2: x = bitswap<8>(x ^ 0x8f, 6, 7, 4, 0, 3, 2, 1, 5); break;
+			case 4: x = bitswap<8>(x ^ 0xd2, 3, 4, 0, 2, 5, 6, 1, 7); break;
+			case 6: x = bitswap<8>(x ^ 0xd1, 6, 0, 2, 1, 4, 5, 3, 7); break;
 		}
 
 		ROM[i] = x;
@@ -15563,10 +15759,10 @@ DRIVER_INIT_MEMBER(cmaster_state, skill98)
 		uint8_t x = ROM[i];
 		switch(i & 0x12)
 		{
-			case 0x00: x = BITSWAP8(x ^ 0x21, 2, 1, 0, 7, 6, 5, 4, 3); break;
-			case 0x02: x = BITSWAP8(x ^ 0x45, 2, 1, 0, 7, 6, 5, 4, 3); break;
-			case 0x10: x = BITSWAP8(x ^ 0x23, 4, 3, 2, 1, 0, 7, 6, 5); break;
-			case 0x12: x = BITSWAP8(x ^ 0x5b, 4, 3, 2, 1, 0, 7, 6, 5); break;
+			case 0x00: x = bitswap<8>(x ^ 0x21, 2, 1, 0, 7, 6, 5, 4, 3); break;
+			case 0x02: x = bitswap<8>(x ^ 0x45, 2, 1, 0, 7, 6, 5, 4, 3); break;
+			case 0x10: x = bitswap<8>(x ^ 0x23, 4, 3, 2, 1, 0, 7, 6, 5); break;
+			case 0x12: x = bitswap<8>(x ^ 0x5b, 4, 3, 2, 1, 0, 7, 6, 5); break;
 		}
 
 		ROM[i] = x;
@@ -15585,10 +15781,10 @@ DRIVER_INIT_MEMBER(cmaster_state, nfb96_c1)
 
 		switch(i & 0x12)
 		{
-			case 0x00: x = BITSWAP8(x ^ 0xf5, 6, 4, 3, 7, 0, 1, 5, 2); break;
-			case 0x02: x = BITSWAP8(x ^ 0xe6, 4, 6, 3, 0, 7, 2, 1, 5); break;
-			case 0x10: x = BITSWAP8(x ^ 0x34, 0, 3, 5, 2, 4, 6, 1, 7); break;
-			case 0x12: x = BITSWAP8(x ^ 0xc6, 2, 0, 4, 1, 6, 5, 3, 7); break;
+			case 0x00: x = bitswap<8>(x ^ 0xf5, 6, 4, 3, 7, 0, 1, 5, 2); break;
+			case 0x02: x = bitswap<8>(x ^ 0xe6, 4, 6, 3, 0, 7, 2, 1, 5); break;
+			case 0x10: x = bitswap<8>(x ^ 0x34, 0, 3, 5, 2, 4, 6, 1, 7); break;
+			case 0x12: x = bitswap<8>(x ^ 0xc6, 2, 0, 4, 1, 6, 5, 3, 7); break;
 		}
 		ROM[i] = x;
 	}
@@ -15606,10 +15802,10 @@ DRIVER_INIT_MEMBER(cmaster_state, nfb96_c2)
 
 		switch(i & 0x22)
 		{
-			case 0x00: x = BITSWAP8(x ^ 0x5f, 6, 4, 3, 7, 0, 5, 2, 1); break;
-			case 0x02: x = BITSWAP8(x ^ 0xe7, 4, 6, 3, 0, 7, 5, 1, 2); break;
-			case 0x20: x = BITSWAP8(x ^ 0x18, 0, 3, 5, 2, 4, 7, 1, 6); break;
-			case 0x22: x = BITSWAP8(x ^ 0x74, 2, 0, 4, 1, 6, 7, 3, 5); break;
+			case 0x00: x = bitswap<8>(x ^ 0x5f, 6, 4, 3, 7, 0, 5, 2, 1); break;
+			case 0x02: x = bitswap<8>(x ^ 0xe7, 4, 6, 3, 0, 7, 5, 1, 2); break;
+			case 0x20: x = bitswap<8>(x ^ 0x18, 0, 3, 5, 2, 4, 7, 1, 6); break;
+			case 0x22: x = bitswap<8>(x ^ 0x74, 2, 0, 4, 1, 6, 7, 3, 5); break;
 		}
 
 		ROM[i] = x;
@@ -15627,10 +15823,10 @@ DRIVER_INIT_MEMBER(cmaster_state, nfb96_d)
 
 		switch(i & 5)
 		{
-			case 0: x = BITSWAP8(x ^ 0x6a, 2, 1, 0, 7, 6, 5, 4, 3); break;
-			case 1: x = BITSWAP8(x ^ 0xcc, 0, 7, 6, 5, 4, 3, 2, 1); break;
-			case 4: x = BITSWAP8(x ^ 0x8f, 3, 2, 1, 0, 7, 6, 5, 4); break;
-			case 5: x = BITSWAP8(x ^ 0x93, 4, 3, 2, 1, 0, 7, 6, 5); break;
+			case 0: x = bitswap<8>(x ^ 0x6a, 2, 1, 0, 7, 6, 5, 4, 3); break;
+			case 1: x = bitswap<8>(x ^ 0xcc, 0, 7, 6, 5, 4, 3, 2, 1); break;
+			case 4: x = bitswap<8>(x ^ 0x8f, 3, 2, 1, 0, 7, 6, 5, 4); break;
+			case 5: x = bitswap<8>(x ^ 0x93, 4, 3, 2, 1, 0, 7, 6, 5); break;
 		}
 		ROM[i] = x;
 	}
@@ -15654,10 +15850,10 @@ DRIVER_INIT_MEMBER(cmaster_state, nfb96_dk)
 
 		switch(i & 5)
 		{
-			case 0: x = BITSWAP8(x ^ 0xce, 1, 0, 7, 6, 5, 4, 3, 2); break;
-			case 1: x = BITSWAP8(x ^ 0x9e, 3, 2, 1, 0, 7, 6, 5, 4); break;
-			case 4: x = BITSWAP8(x ^ 0xc3, 0, 7, 6, 5, 4, 3, 2, 1); break;
-			case 5: x = BITSWAP8(x ^ 0xdb, 4, 3, 2, 1, 0, 7, 6, 5); break;
+			case 0: x = bitswap<8>(x ^ 0xce, 1, 0, 7, 6, 5, 4, 3, 2); break;
+			case 1: x = bitswap<8>(x ^ 0x9e, 3, 2, 1, 0, 7, 6, 5, 4); break;
+			case 4: x = bitswap<8>(x ^ 0xc3, 0, 7, 6, 5, 4, 3, 2, 1); break;
+			case 5: x = bitswap<8>(x ^ 0xdb, 4, 3, 2, 1, 0, 7, 6, 5); break;
 		}
 		ROM[i] = x;
 	}
@@ -15675,10 +15871,10 @@ DRIVER_INIT_MEMBER(cmaster_state, rp35)
 
 		switch(i & 3)
 		{
-			case 0: x = BITSWAP8(x ^ 0x2a, 0, 7, 6, 5, 4, 3, 2, 1); break;
-			case 1: x = BITSWAP8(x ^ 0x1c, 4, 3, 2, 1, 0, 7, 6, 5); break;
-			case 2: x = BITSWAP8(x ^ 0x4f, 3, 2, 1, 0, 7, 6, 5, 4); break;
-			case 3: x = BITSWAP8(x ^ 0x23, 1, 0, 7, 6, 5, 4, 3, 2); break;
+			case 0: x = bitswap<8>(x ^ 0x2a, 0, 7, 6, 5, 4, 3, 2, 1); break;
+			case 1: x = bitswap<8>(x ^ 0x1c, 4, 3, 2, 1, 0, 7, 6, 5); break;
+			case 2: x = bitswap<8>(x ^ 0x4f, 3, 2, 1, 0, 7, 6, 5, 4); break;
+			case 3: x = bitswap<8>(x ^ 0x23, 1, 0, 7, 6, 5, 4, 3, 2); break;
 		}
 		ROM[i] = x;
 	}
@@ -15697,10 +15893,10 @@ DRIVER_INIT_MEMBER(cmaster_state, rp36)
 
 		switch(i & 5)
 		{
-			case 0: x = BITSWAP8(x ^ 0xee, 2, 1, 0, 7, 6, 5, 4, 3); break;
-			case 1: x = BITSWAP8(x ^ 0x9f, 3, 2, 1, 0, 7, 6, 5, 4); break;
-			case 4: x = BITSWAP8(x ^ 0xc7, 3, 2, 1, 0, 7, 6, 5, 4); break;
-			case 5: x = BITSWAP8(x ^ 0xc3, 3, 2, 1, 0, 7, 6, 5, 4); break;
+			case 0: x = bitswap<8>(x ^ 0xee, 2, 1, 0, 7, 6, 5, 4, 3); break;
+			case 1: x = bitswap<8>(x ^ 0x9f, 3, 2, 1, 0, 7, 6, 5, 4); break;
+			case 4: x = bitswap<8>(x ^ 0xc7, 3, 2, 1, 0, 7, 6, 5, 4); break;
+			case 5: x = bitswap<8>(x ^ 0xc3, 3, 2, 1, 0, 7, 6, 5, 4); break;
 		}
 
 		ROM[i] = x;
@@ -15719,10 +15915,10 @@ DRIVER_INIT_MEMBER(cmaster_state, rp36c3)
 
 		switch(i & 0xa)
 		{
-			case 0x0: x = BITSWAP8(x ^ 0xfd, 6, 4, 0, 7, 3, 1, 5, 2); break;
-			case 0x2: x = BITSWAP8(x ^ 0xee, 4, 6, 7, 0, 3, 2, 1, 5); break;
-			case 0x8: x = BITSWAP8(x ^ 0x2c, 0, 3, 4, 2, 5, 6, 1, 7); break;
-			case 0xa: x = BITSWAP8(x ^ 0xd6, 2, 0, 6, 1, 4, 5, 3, 7); break;
+			case 0x0: x = bitswap<8>(x ^ 0xfd, 6, 4, 0, 7, 3, 1, 5, 2); break;
+			case 0x2: x = bitswap<8>(x ^ 0xee, 4, 6, 7, 0, 3, 2, 1, 5); break;
+			case 0x8: x = bitswap<8>(x ^ 0x2c, 0, 3, 4, 2, 5, 6, 1, 7); break;
+			case 0xa: x = bitswap<8>(x ^ 0xd6, 2, 0, 6, 1, 4, 5, 3, 7); break;
 		}
 
 		ROM[i] = x;
@@ -15741,10 +15937,10 @@ DRIVER_INIT_MEMBER(cmaster_state, rp96sub)  // 95 33 95 33 70 6C 70 6C... XORs s
 
 		switch(i & 5)
 		{
-			case 0: x = BITSWAP8(x ^ 0x6a, 7, 6, 5, 4, 3, 2, 1, 0); break;
-			case 1: x = BITSWAP8(x ^ 0xcc, 7, 6, 5, 4, 3, 2, 1, 0); break;
-			case 4: x = BITSWAP8(x ^ 0x8f, 7, 6, 5, 4, 3, 2, 1, 0); break;
-			case 5: x = BITSWAP8(x ^ 0x93, 7, 6, 5, 4, 3, 2, 1, 0); break;
+			case 0: x = bitswap<8>(x ^ 0x6a, 7, 6, 5, 4, 3, 2, 1, 0); break;
+			case 1: x = bitswap<8>(x ^ 0xcc, 7, 6, 5, 4, 3, 2, 1, 0); break;
+			case 4: x = bitswap<8>(x ^ 0x8f, 7, 6, 5, 4, 3, 2, 1, 0); break;
+			case 5: x = bitswap<8>(x ^ 0x93, 7, 6, 5, 4, 3, 2, 1, 0); break;
 		}
 
 		ROM[i] = x;
@@ -15764,10 +15960,10 @@ DRIVER_INIT_MEMBER(cmaster_state, po33)
 
 		switch(i & 0x14)
 		{
-			case 0x00: x = BITSWAP8(x ^ 0xde, 2, 1, 0, 7, 6, 5, 4, 3); break;
-			case 0x04: x = BITSWAP8(x ^ 0x3c, 0, 7, 6, 5, 4, 3, 2, 1); break;
-			case 0x10: x = BITSWAP8(x ^ 0x2f, 3, 2, 1, 0, 7, 6, 5, 4); break;
-			case 0x14: x = BITSWAP8(x ^ 0x5b, 4, 3, 2, 1, 0, 7, 6, 5); break;
+			case 0x00: x = bitswap<8>(x ^ 0xde, 2, 1, 0, 7, 6, 5, 4, 3); break;
+			case 0x04: x = bitswap<8>(x ^ 0x3c, 0, 7, 6, 5, 4, 3, 2, 1); break;
+			case 0x10: x = bitswap<8>(x ^ 0x2f, 3, 2, 1, 0, 7, 6, 5, 4); break;
+			case 0x14: x = bitswap<8>(x ^ 0x5b, 4, 3, 2, 1, 0, 7, 6, 5); break;
 		}
 
 		ROM[i] = x;
@@ -15787,10 +15983,10 @@ DRIVER_INIT_MEMBER(cmaster_state, match133)
 
 		switch(i & 0x12)
 		{
-			case 0x00: x = BITSWAP8(x ^ 0xde, 3, 2, 1, 0, 7, 6, 5, 4); break;
-			case 0x02: x = BITSWAP8(x ^ 0x3d, 1, 0, 7, 6, 5, 4, 3, 2); break;
-			case 0x10: x = BITSWAP8(x ^ 0x2f, 4, 3, 2, 1, 0, 7, 6, 5); break;
-			case 0x12: x = BITSWAP8(x ^ 0x5c, 4, 3, 2, 1, 0, 7, 6, 5); break;
+			case 0x00: x = bitswap<8>(x ^ 0xde, 3, 2, 1, 0, 7, 6, 5, 4); break;
+			case 0x02: x = bitswap<8>(x ^ 0x3d, 1, 0, 7, 6, 5, 4, 3, 2); break;
+			case 0x10: x = bitswap<8>(x ^ 0x2f, 4, 3, 2, 1, 0, 7, 6, 5); break;
+			case 0x12: x = bitswap<8>(x ^ 0x5c, 4, 3, 2, 1, 0, 7, 6, 5); break;
 		}
 
 		ROM[i] = x;
@@ -15884,17 +16080,17 @@ DRIVER_INIT_MEMBER(goldstar_state, super9)
 	uint8_t *src = memregion("gfx1")->base();
 	for (i = 0; i < 0x20000; i++)
 	{
-//      src[i] = BITSWAP8(src[i], 7, 4, 2, 1, 6, 5, 3, 0);
-//      src[i] = BITSWAP8(src[i], 7, 3, 2, 6, 1, 5, 4, 0);
-		src[i] = BITSWAP8(src[i], 7, 3, 2, 6, 5, 1, 4, 0);
+//      src[i] = bitswap<8>(src[i], 7, 4, 2, 1, 6, 5, 3, 0);
+//      src[i] = bitswap<8>(src[i], 7, 3, 2, 6, 1, 5, 4, 0);
+		src[i] = bitswap<8>(src[i], 7, 3, 2, 6, 5, 1, 4, 0);
 	}
 
 	uint8_t *src2 = memregion("gfx2")->base();
 	for (i = 0; i < 0x8000; i++)
 	{
-//      src2[i] = BITSWAP8(src2[i], 7, 4, 2, 1, 6, 5, 3, 0);
-//      src2[i] = BITSWAP8(src2[i], 7, 3, 2, 6, 1, 5, 4, 0);
-		src2[i] = BITSWAP8(src2[i], 3, 7, 6, 2, 5, 1, 0, 4);   // endianess
+//      src2[i] = bitswap<8>(src2[i], 7, 4, 2, 1, 6, 5, 3, 0);
+//      src2[i] = bitswap<8>(src2[i], 7, 3, 2, 6, 1, 5, 4, 0);
+		src2[i] = bitswap<8>(src2[i], 3, 7, 6, 2, 5, 1, 0, 4);   // endianess
 	}
 
 }
@@ -15909,7 +16105,7 @@ DRIVER_INIT_MEMBER(cb3_state, cb3e)
 	for (i = 0; i < 0x10000; i++)
 	{
 		uint8_t dat = ROM[i];
-		dat =  BITSWAP8(dat, 5, 6, 3, 4, 7, 2, 1, 0);
+		dat =  bitswap<8>(dat, 5, 6, 3, 4, 7, 2, 1, 0);
 		ROM[i] = dat;
 	}
 
@@ -15918,14 +16114,14 @@ DRIVER_INIT_MEMBER(cb3_state, cb3e)
 	uint8_t *src = memregion("gfx1")->base();
 	for (i = 0; i < 0x20000; i++)
 	{
-		src[i] = BITSWAP8(src[i], 4, 3, 2, 5, 1, 6, 0, 7);      // OK
+		src[i] = bitswap<8>(src[i], 4, 3, 2, 5, 1, 6, 0, 7);      // OK
 	}
 
 /*  bank 2 graphics */
 	uint8_t *src2 = memregion("gfx2")->base();
 	for (i = 0; i < 0x8000; i++)
 	{
-		src2[i] = BITSWAP8(src2[i], 3, 4, 2, 5, 1, 6, 0, 7);    // OK
+		src2[i] = bitswap<8>(src2[i], 3, 4, 2, 5, 1, 6, 0, 7);    // OK
 	}
 }
 
@@ -15936,14 +16132,14 @@ DRIVER_INIT_MEMBER(goldstar_state, wcherry)
 	uint8_t *src = memregion("gfx1")->base();
 	for (i = 0; i < 0x20000; i++)
 	{
-		src[i] = BITSWAP8(src[i], 4, 3, 2, 5, 1, 6, 0, 7);      // OK
+		src[i] = bitswap<8>(src[i], 4, 3, 2, 5, 1, 6, 0, 7);      // OK
 	}
 
 /*  bank 2 graphics */
 	uint8_t *src2 = memregion("gfx2")->base();
 	for (i = 0; i < 0x8000; i++)
 	{
-		src2[i] = BITSWAP8(src2[i], 3, 4, 2, 5, 1, 6, 0, 7);    // OK
+		src2[i] = bitswap<8>(src2[i], 3, 4, 2, 5, 1, 6, 0, 7);    // OK
 	}
 }
 
@@ -15961,14 +16157,14 @@ DRIVER_INIT_MEMBER(wingco_state, flaming7)
 	uint8_t *src = memregion("gfx1")->base();
 	for (i = 0; i < 0x20000; i++)
 	{
-		src[i] = BITSWAP8(src[i], 4, 3, 2, 5, 1, 6, 0, 7);      // OK
+		src[i] = bitswap<8>(src[i], 4, 3, 2, 5, 1, 6, 0, 7);      // OK
 	}
 
 /*  bank 2 graphics */
 	uint8_t *src2 = memregion("gfx2")->base();
 	for (i = 0; i < 0x8000; i++)
 	{
-		src2[i] = BITSWAP8(src2[i], 3, 4, 2, 5, 1, 6, 0, 7);    // OK
+		src2[i] = bitswap<8>(src2[i], 3, 4, 2, 5, 1, 6, 0, 7);    // OK
 	}
 
 /*  Patch to bypass the iButton electronic serial number check.
@@ -15994,13 +16190,66 @@ DRIVER_INIT_MEMBER(wingco_state, flam7_tw)
 
     60B2: After last compare, code jumps to $60BC for the demo game.
           Just patched to jump to $60B9 (jmp $644E) where the check
-          is succesfull.
+          is successful.
 */
 	uint8_t *ROM = memregion("maincpu")->base();
 	ROM[0x60b3] = 0x05;
 
 }
 
+DRIVER_INIT_MEMBER(cmaster_state,tcl)
+{
+	/* only the first part is decrypted (and verified)*/
+
+	uint8_t *dest = memregion("maincpu")->base();
+	int len = memregion("maincpu")->bytes();
+	std::vector<uint8_t> src(len);
+
+	int idx=0;
+	memcpy(&src[0], dest, len);
+
+	auto const rol =
+		[] (int src, int n)
+		{
+			return bitswap<8>(src,(7+8-n)&7,(6+8-n)&7,(5+8-n)&7,(4+8-n)&7,(3+8-n)&7,(2+8-n)&7,(1+8-n)&7,(0+8-n)&7);
+		};
+
+	auto const writedest =
+		[dest, &idx] (int n)
+		{
+			dest[idx]=n;
+			dest[idx+0x10000]=n^0xff;
+			idx++;
+		};
+
+	for(int i=0;i<64*1024;i+=4)
+	{
+		if(i&0x8000)
+		{
+			writedest(rol(src[idx]^0x44,4)); // abcdefgh -> aFghaBcd
+			writedest(rol(src[idx]^0x44,7)); // abcdefgh -> haBcdeFg
+			writedest(rol(src[idx]^0x44,2)); // abcdefgh -> cdeFghaB
+			writedest((src[idx]^0x44)^0xf0); // abcdefgh -> AbCEeFgh
+		}
+		else
+		{
+			writedest(rol(src[idx]^0x11,4)); // abcdefgh -> efgHabcD
+			writedest(rol(src[idx]^0x11,7)); // abcdefgh -> HabcDefg
+			writedest(rol(src[idx]^0x11,2)); // abcdefgh -> cDefgHab
+			writedest((src[idx]^0x11)^0xf0); // abcdefgh -> ABCdefgH
+		}
+	}
+}
+
+DRIVER_INIT_MEMBER(cmaster_state,super7)
+{
+	uint8_t *ROM = memregion("maincpu")->base();
+
+	for (int A = 0; A < 0x8000; A++)
+	{
+		ROM[A] = (ROM[A] << 1) | BIT(ROM[A], 7);
+	}
+}
 
 /*********************************************
 *                Game Drivers                *
@@ -16019,7 +16268,6 @@ GAME(  199?, goldfrui,  goldstar, goldfrui, goldstar, goldstar_state, 0,        
 GAME(  2001, super9,    goldstar, super9,   goldstar, goldstar_state, super9,    ROT0, "Playmark",          "Super Nove (Playmark)",                       MACHINE_NOT_WORKING )   // need to decode gfx and see the program loops/reset...
 GAME(  2001, wcherry,   0,        wcherry,  chrygld,  goldstar_state, wcherry,   ROT0, "bootleg",           "Win Cherry (ver 0.16 - 19990219)",            MACHINE_NOT_WORKING )
 GAME(  199?, star100,   0,        star100,  star100,  sanghopm_state, 0,         ROT0, "Sang Ho",           "Ming Xing 100 (Star 100)",                    MACHINE_IMPERFECT_COLORS )
-
 
 // are these really dyna, or bootlegs?
 GAMEL( 199?, ncb3,      0,        ncb3,     ncb3,     cb3_state,      0,         ROT0, "Dyna",              "Cherry Bonus III (ver.1.40, set 1)",          0,                 layout_cherryb3 )
@@ -16059,7 +16307,7 @@ GAMEL( 1991, cmastere,  cmaster,  cm,       cmasterb, cmaster_state,  cmv4,     
 GAMEL( 1991, cmasterf,  cmaster,  cm,       cmasterb, cmaster_state,  cmv4,      ROT0, "Dyna",              "Cherry Master I (ver.1.01, set 7)",           0,                 layout_cmasterb )
 GAMEL( 1991, cmasterg,  cmaster,  cm,       cmasterg, cmaster_state,  cmv4,      ROT0, "Dyna",              "Cherry Master I (ver.1.01, set 8, V4-B-)",    0,                 layout_cmasterb )
 GAMEL( 1991, cmasterh,  cmaster,  cm,       cmasterb, cmaster_state,  cmv4,      ROT0, "Dyna",              "Cherry Master I (ver.1.10)",                  0,                 layout_cmasterb )
-
+GAMEL( 199?, super7,    cmaster,  cm,       cmaster,  cmaster_state,  super7,    ROT0, "bootleg",           "Super Seven",                                 MACHINE_NOT_WORKING, layout_cmasterb )
 
 GAMEL( 1991, tonypok,   0,        cm,       tonypok,  cmaster_state,  tonypok,   ROT0, "Corsica",           "Poker Master (Tony-Poker V3.A, hack?)",       0 ,                layout_tonypok )
 GAME(  199?, jkrmast,   0,        pkrmast,  pkrmast,  goldstar_state, 0,         ROT0, "<unknown>",         "Joker Master",                                MACHINE_NOT_WORKING ) // encrypted?
@@ -16073,6 +16321,7 @@ GAME(  1999, cmast99,   0,        cm,       cmast99,  cmaster_state,  cmv4,     
 GAME(  1999, cmast99b,  cmast99,  cm,       cmast99,  cmaster_state,  cmv4,      ROT0, "bootleg",           "Cherry Master '99 (V9B.00 bootleg / hack)",   MACHINE_NOT_WORKING )
 GAME(  1993, aplan,     0,        cm,       cmast99,  cmaster_state,  cmv4,      ROT0, "WeaShing H.K.",     "A-Plan",                                      MACHINE_NOT_WORKING )
 
+GAME(  1995, tcl,       0,        cm,       cmaster,  cmaster_state,  tcl,       ROT0, "Uniwang",           "Taiwan Chess Legend",                         MACHINE_NOT_WORKING ) // incomplete decryption
 
 // --- Wing W-4 hardware ---
 GAMEL( 1989, lucky8,    0,        lucky8,   lucky8,   wingco_state,   0,         ROT0, "Wing Co., Ltd.",    "New Lucky 8 Lines (set 1, W-4)",                           0,                     layout_lucky8 )    // 2 control sets...
@@ -16085,6 +16334,7 @@ GAMEL( 198?, ns8lines,  0,        lucky8,   lucky8b,  wingco_state,   0,        
 GAMEL( 1985, ns8linesa, ns8lines, lucky8,   lucky8b,  wingco_state,   0,         ROT0, "Yamate (bootleg)",  "New Lucky 8 Lines / New Super 8 Lines (W-4, Lucky97 HW)",  0,                     layout_lucky8p1 )  // only 1 control set...
 GAMEL( 198?, ns8linew,  ns8lines, lucky8,   ns8linew, wingco_state,   0,         ROT0, "<unknown>",         "New Lucky 8 Lines / New Super 8 Lines (F-5, Witch Bonus)", 0,                     layout_lucky8 )    // 2 control sets...
 GAMEL( 198?, ns8linewa, ns8lines, lucky8,   ns8linwa, wingco_state,   0,         ROT0, "<unknown>",         "New Lucky 8 Lines / New Super 8 Lines (W-4, Witch Bonus)", 0,                     layout_lucky8p1 )  // only 1 control set...
+GAMEL( 198?, super972,  ns8lines, lucky8,   ns8linew, wingco_state,   0,         ROT0, "<unknown>",         "Super 97-2 (Witch Bonus)",                                 MACHINE_NOT_WORKING,   layout_lucky8 )    // ???
 GAME(  198?, luckybar,  0,        lucky8,   ns8linew, wingco_state,   0,         ROT0, "<unknown>",         "Lucky Bar (W-4 with mc68705 MCU)",                         MACHINE_NOT_WORKING )  // MC68705 MCU
 GAME(  198?, chryangla, ncb3,     lucky8,   ns8linew, wingco_state,   0,         ROT0, "<unknown>",         "Cherry Angel (encrypted, W-4 hardware)",                   MACHINE_NOT_WORKING )
 GAMEL( 198?, kkotnoli,  0,        kkotnoli, kkotnoli, goldstar_state, 0,         ROT0, "hack",              "Kkot No Li (Kill the Bees)",                               MACHINE_IMPERFECT_COLORS, layout_lucky8 )

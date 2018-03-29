@@ -192,12 +192,13 @@ WRITE_LINE_MEMBER( pcw_state::pcw_fdc_interrupt )
     block 3 could be paged into any bank, and this explains the
     setup of the memory below.
 */
-static ADDRESS_MAP_START(pcw_map, AS_PROGRAM, 8, pcw_state )
-	AM_RANGE(0x0000, 0x3fff) AM_READ_BANK("bank1") AM_WRITE_BANK("bank5")
-	AM_RANGE(0x4000, 0x7fff) AM_READ_BANK("bank2") AM_WRITE_BANK("bank6")
-	AM_RANGE(0x8000, 0xbfff) AM_READ_BANK("bank3") AM_WRITE_BANK("bank7")
-	AM_RANGE(0xc000, 0xffff) AM_READ_BANK("bank4") AM_WRITE_BANK("bank8")
-ADDRESS_MAP_END
+void pcw_state::pcw_map(address_map &map)
+{
+	map(0x0000, 0x3fff).bankr("bank1").bankw("bank5");
+	map(0x4000, 0x7fff).bankr("bank2").bankw("bank6");
+	map(0x8000, 0xbfff).bankr("bank3").bankw("bank7");
+	map(0xc000, 0xffff).bankr("bank4").bankw("bank8");
+}
 
 
 /* Keyboard is read by the MCU and sent as serial data to the gate array ASIC */
@@ -948,34 +949,36 @@ WRITE8_MEMBER(pcw_state::pcw9512_parallel_w)
 	logerror("pcw9512 parallel w: offs: %04x data: %02x\n",offset,data);
 }
 
-static ADDRESS_MAP_START(pcw_io, AS_IO, 8, pcw_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x000, 0x001) AM_MIRROR(0x7e) AM_DEVICE("upd765",      upd765a_device, map)
-	AM_RANGE(0x080, 0x0ef) AM_READWRITE(pcw_expansion_r,            pcw_expansion_w)
-	AM_RANGE(0x0f0, 0x0f3) AM_WRITE(                                pcw_bank_select_w)
-	AM_RANGE(0x0f4, 0x0f4) AM_READWRITE(pcw_interrupt_counter_r,    pcw_bank_force_selection_w)
-	AM_RANGE(0x0f5, 0x0f5) AM_WRITE(                                pcw_roller_ram_addr_w)
-	AM_RANGE(0x0f6, 0x0f6) AM_WRITE(                                pcw_pointer_table_top_scan_w)
-	AM_RANGE(0x0f7, 0x0f7) AM_WRITE(                                pcw_vdu_video_control_register_w)
-	AM_RANGE(0x0f8, 0x0f8) AM_READWRITE(pcw_system_status_r,        pcw_system_control_w)
-	AM_RANGE(0x0fc, 0x0fc) AM_READWRITE(pcw_printer_data_r,         pcw_printer_data_w)
-	AM_RANGE(0x0fd, 0x0fd) AM_READWRITE(pcw_printer_status_r,       pcw_printer_command_w)
-ADDRESS_MAP_END
+void pcw_state::pcw_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x000, 0x001).mirror(0x7e).m(m_fdc, FUNC(upd765a_device::map));
+	map(0x080, 0x0ef).rw(this, FUNC(pcw_state::pcw_expansion_r), FUNC(pcw_state::pcw_expansion_w));
+	map(0x0f0, 0x0f3).w(this, FUNC(pcw_state::pcw_bank_select_w));
+	map(0x0f4, 0x0f4).rw(this, FUNC(pcw_state::pcw_interrupt_counter_r), FUNC(pcw_state::pcw_bank_force_selection_w));
+	map(0x0f5, 0x0f5).w(this, FUNC(pcw_state::pcw_roller_ram_addr_w));
+	map(0x0f6, 0x0f6).w(this, FUNC(pcw_state::pcw_pointer_table_top_scan_w));
+	map(0x0f7, 0x0f7).w(this, FUNC(pcw_state::pcw_vdu_video_control_register_w));
+	map(0x0f8, 0x0f8).rw(this, FUNC(pcw_state::pcw_system_status_r), FUNC(pcw_state::pcw_system_control_w));
+	map(0x0fc, 0x0fc).rw(this, FUNC(pcw_state::pcw_printer_data_r), FUNC(pcw_state::pcw_printer_data_w));
+	map(0x0fd, 0x0fd).rw(this, FUNC(pcw_state::pcw_printer_status_r), FUNC(pcw_state::pcw_printer_command_w));
+}
 
 
 
-static ADDRESS_MAP_START(pcw9512_io, AS_IO, 8, pcw_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x000, 0x001) AM_MIRROR(0x7e) AM_DEVICE("upd765",      upd765a_device, map)
-	AM_RANGE(0x080, 0x0ef) AM_READWRITE(pcw_expansion_r,            pcw_expansion_w)
-	AM_RANGE(0x0f0, 0x0f3) AM_WRITE(                                pcw_bank_select_w)
-	AM_RANGE(0x0f4, 0x0f4) AM_READWRITE(pcw_interrupt_counter_r,    pcw_bank_force_selection_w)
-	AM_RANGE(0x0f5, 0x0f5) AM_WRITE(                                pcw_roller_ram_addr_w)
-	AM_RANGE(0x0f6, 0x0f6) AM_WRITE(                                pcw_pointer_table_top_scan_w)
-	AM_RANGE(0x0f7, 0x0f7) AM_WRITE(                                pcw_vdu_video_control_register_w)
-	AM_RANGE(0x0f8, 0x0f8) AM_READWRITE(pcw_system_status_r,        pcw_system_control_w)
-	AM_RANGE(0x0fc, 0x0fd) AM_READWRITE(pcw9512_parallel_r,         pcw9512_parallel_w)
-ADDRESS_MAP_END
+void pcw_state::pcw9512_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x000, 0x001).mirror(0x7e).m(m_fdc, FUNC(upd765a_device::map));
+	map(0x080, 0x0ef).rw(this, FUNC(pcw_state::pcw_expansion_r), FUNC(pcw_state::pcw_expansion_w));
+	map(0x0f0, 0x0f3).w(this, FUNC(pcw_state::pcw_bank_select_w));
+	map(0x0f4, 0x0f4).rw(this, FUNC(pcw_state::pcw_interrupt_counter_r), FUNC(pcw_state::pcw_bank_force_selection_w));
+	map(0x0f5, 0x0f5).w(this, FUNC(pcw_state::pcw_roller_ram_addr_w));
+	map(0x0f6, 0x0f6).w(this, FUNC(pcw_state::pcw_pointer_table_top_scan_w));
+	map(0x0f7, 0x0f7).w(this, FUNC(pcw_state::pcw_vdu_video_control_register_w));
+	map(0x0f8, 0x0f8).rw(this, FUNC(pcw_state::pcw_system_status_r), FUNC(pcw_state::pcw_system_control_w));
+	map(0x0fc, 0x0fd).rw(this, FUNC(pcw_state::pcw9512_parallel_r), FUNC(pcw_state::pcw9512_parallel_w));
+}
 
 
 TIMER_CALLBACK_MEMBER(pcw_state::setup_beep)
@@ -1110,7 +1113,7 @@ static INPUT_PORTS_START(pcw)
 	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_MINUS)                        PORT_CHAR('-') PORT_CHAR('_')
 	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_OPENBRACE)                    PORT_CHAR('[') PORT_CHAR('{')
 	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_P)                            PORT_CHAR('p') PORT_CHAR('P')
-	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_QUOTE)                        PORT_CHAR('\xA7') PORT_CHAR('<')
+	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_QUOTE)                        PORT_CHAR(0xA7) PORT_CHAR('<')
 	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_COLON)                        PORT_CHAR(';') PORT_CHAR(':')
 	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_SLASH)                        PORT_CHAR('/') PORT_CHAR('?')
 	PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_STOP)                     PORT_CHAR('.')
@@ -1147,7 +1150,7 @@ static INPUT_PORTS_START(pcw)
 
 	PORT_START("LINE7")     /* 0x03ff7 */
 	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_4)                            PORT_CHAR('4') PORT_CHAR('$')
-	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_3)                            PORT_CHAR('3') PORT_CHAR('\xA3')
+	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_3)                            PORT_CHAR('3') PORT_CHAR(0xA3)
 	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_E)                            PORT_CHAR('e') PORT_CHAR('E')
 	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_W)                            PORT_CHAR('w') PORT_CHAR('W')
 	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_S)                            PORT_CHAR('s') PORT_CHAR('S')
@@ -1242,7 +1245,7 @@ static SLOT_INTERFACE_START( pcw_floppies )
 SLOT_INTERFACE_END
 
 /* PCW8256, PCW8512, PCW9256 */
-static MACHINE_CONFIG_START( pcw )
+MACHINE_CONFIG_START(pcw_state::pcw)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 4000000)       /* clock supplied to chip, but in reality it is 3.4 MHz */
 	MCFG_CPU_PROGRAM_MAP(pcw_map)
@@ -1301,7 +1304,8 @@ static MACHINE_CONFIG_START( pcw )
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("pcw_timer", pcw_state, pcw_timer_interrupt, attotime::from_hz(300))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( pcw8256, pcw )
+MACHINE_CONFIG_START(pcw_state::pcw8256)
+	pcw(config);
 	MCFG_SCREEN_ADD("printer",RASTER)
 	MCFG_SCREEN_REFRESH_RATE(50)
 	MCFG_SCREEN_SIZE( PCW_PRINTER_WIDTH, PCW_PRINTER_HEIGHT )
@@ -1313,7 +1317,8 @@ static MACHINE_CONFIG_DERIVED( pcw8256, pcw )
 
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( pcw8512, pcw )
+MACHINE_CONFIG_START(pcw_state::pcw8512)
+	pcw(config);
 	MCFG_SCREEN_ADD("printer",RASTER)
 	MCFG_SCREEN_REFRESH_RATE(50)
 	MCFG_SCREEN_SIZE( PCW_PRINTER_WIDTH, PCW_PRINTER_HEIGHT )
@@ -1329,7 +1334,8 @@ static MACHINE_CONFIG_DERIVED( pcw8512, pcw )
 MACHINE_CONFIG_END
 
 /* PCW9512, PCW9512+, PCW10 */
-static MACHINE_CONFIG_DERIVED( pcw9512, pcw )
+MACHINE_CONFIG_START(pcw_state::pcw9512)
+	pcw(config);
 	MCFG_CPU_MODIFY( "maincpu" )
 	MCFG_CPU_IO_MAP(pcw9512_io)
 

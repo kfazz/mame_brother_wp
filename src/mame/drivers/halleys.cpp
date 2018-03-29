@@ -167,6 +167,7 @@ Video sync   6 F   Video sync                 Post   6 F   Post
 #include "cpu/m6809/m6809.h"
 #include "cpu/z80/z80.h"
 #include "machine/gen_latch.h"
+#include "machine/timer.h"
 #include "sound/ay8910.h"
 #include "screen.h"
 #include "speaker.h"
@@ -291,6 +292,10 @@ public:
 	required_device<cpu_device> m_audiocpu;
 	required_device<palette_device> m_palette;
 	required_device<generic_latch_8_device> m_soundlatch;
+	void benberob(machine_config &config);
+	void halleys(machine_config &config);
+	void halleys_map(address_map &map);
+	void sound_map(address_map &map);
 };
 
 
@@ -1038,7 +1043,7 @@ WRITE8_MEMBER(halleys_state::bgtile_w)
 
 READ8_MEMBER(halleys_state::blitter_status_r)
 {
-	if (m_game_id==GAME_HALLEYS && space.device().safe_pc()==0x8017) return(0x55); // HACK: trick SRAM test on startup
+	if (m_game_id==GAME_HALLEYS && m_maincpu->pc()==0x8017) return(0x55); // HACK: trick SRAM test on startup
 
 	return(0);
 }
@@ -1078,7 +1083,7 @@ WRITE8_MEMBER(halleys_state::blitter_w)
 		else
 		{
 			m_blitter_busy = 1;
-			m_blitter_reset_timer->adjust(downcast<cpu_device *>(&space.device())->cycles_to_attotime(100)); // free blitter if no updates in 100 cycles
+			m_blitter_reset_timer->adjust(m_maincpu->cycles_to_attotime(100)); // free blitter if no updates in 100 cycles
 		}
 	}
 }
@@ -1108,7 +1113,7 @@ READ8_MEMBER(halleys_state::collision_id_r)
     UPDATE: re-implemented pixel collision to accompany the hack method.
 */
 
-	if (m_game_id==GAME_HALLEYS && space.device().safe_pc()==m_collision_detection) // HACK: collision detection bypass
+	if (m_game_id==GAME_HALLEYS && m_maincpu->pc()==m_collision_detection) // HACK: collision detection bypass
 	{
 		if (m_collision_count) { m_collision_count--; return(m_collision_list[m_collision_count]); }
 
@@ -1628,44 +1633,47 @@ READ8_MEMBER(halleys_state::io_mirror_r)
 //**************************************************************************
 // Memory Maps
 
-static ADDRESS_MAP_START( halleys_map, AS_PROGRAM, 8, halleys_state )
-	AM_RANGE(0x0000, 0x0fff) AM_READWRITE(blitter_r, blitter_w) AM_SHARE("blitter_ram")
-	AM_RANGE(0x1f00, 0x1fff) AM_WRITE(bgtile_w)     // background tiles?(Ben Bero Beh only)
-	AM_RANGE(0x1000, 0xefff) AM_ROM
-	AM_RANGE(0xf000, 0xfeff) AM_RAM                 // work ram
+void halleys_state::halleys_map(address_map &map)
+{
+	map(0x0000, 0x0fff).rw(this, FUNC(halleys_state::blitter_r), FUNC(halleys_state::blitter_w)).share("blitter_ram");
+	map(0x1f00, 0x1fff).w(this, FUNC(halleys_state::bgtile_w));     // background tiles?(Ben Bero Beh only)
+	map(0x1000, 0xefff).rom();
+	map(0xf000, 0xfeff).ram();                 // work ram
 
-	AM_RANGE(0xff66, 0xff66) AM_READ(collision_id_r) // HACK: collision detection bypass(Halley's Comet only)
-	AM_RANGE(0xff71, 0xff71) AM_READ(blitter_status_r)
-	AM_RANGE(0xff80, 0xff83) AM_READ(io_mirror_r)
-	AM_RANGE(0xff8a, 0xff8a) AM_WRITE(soundcommand_w)
-	AM_RANGE(0xff90, 0xff90) AM_READ_PORT("IN0")    // coin/start
-	AM_RANGE(0xff91, 0xff91) AM_READ_PORT("IN1")    // player 1
-	AM_RANGE(0xff92, 0xff92) AM_READ_PORT("IN2")    // player 2
-	AM_RANGE(0xff93, 0xff93) AM_READ_PORT("IN3")    // unused?
-	AM_RANGE(0xff94, 0xff94) AM_READ(coin_lockout_r)
-	AM_RANGE(0xff95, 0xff95) AM_READ_PORT("DSW1")   // dipswitch 4
-	AM_RANGE(0xff96, 0xff96) AM_READ_PORT("DSW2")   // dipswitch 3
-	AM_RANGE(0xff97, 0xff97) AM_READ_PORT("DSW3")   // dipswitch 2
-	AM_RANGE(0xff9c, 0xff9c) AM_WRITE(firq_ack_w)
-	AM_RANGE(0xff00, 0xffbf) AM_RAM AM_SHARE("io_ram")  // I/O write fall-through
+	map(0xff00, 0xffbf).ram().share("io_ram");  // I/O write fall-through
 
-	AM_RANGE(0xffc0, 0xffdf) AM_READWRITE(paletteram_r, paletteram_w)
-	AM_RANGE(0xffe0, 0xffff) AM_READ(vector_r)
-ADDRESS_MAP_END
+	map(0xff66, 0xff66).r(this, FUNC(halleys_state::collision_id_r)); // HACK: collision detection bypass(Halley's Comet only)
+	map(0xff71, 0xff71).r(this, FUNC(halleys_state::blitter_status_r));
+	map(0xff80, 0xff83).r(this, FUNC(halleys_state::io_mirror_r));
+	map(0xff8a, 0xff8a).w(this, FUNC(halleys_state::soundcommand_w));
+	map(0xff90, 0xff90).portr("IN0");    // coin/start
+	map(0xff91, 0xff91).portr("IN1");    // player 1
+	map(0xff92, 0xff92).portr("IN2");    // player 2
+	map(0xff93, 0xff93).portr("IN3");    // unused?
+	map(0xff94, 0xff94).r(this, FUNC(halleys_state::coin_lockout_r));
+	map(0xff95, 0xff95).portr("DSW1");   // dipswitch 4
+	map(0xff96, 0xff96).portr("DSW2");   // dipswitch 3
+	map(0xff97, 0xff97).portr("DSW3");   // dipswitch 2
+	map(0xff9c, 0xff9c).w(this, FUNC(halleys_state::firq_ack_w));
+
+	map(0xffc0, 0xffdf).rw(this, FUNC(halleys_state::paletteram_r), FUNC(halleys_state::paletteram_w));
+	map(0xffe0, 0xffff).r(this, FUNC(halleys_state::vector_r));
+}
 
 
-static ADDRESS_MAP_START( sound_map, AS_PROGRAM, 8, halleys_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x47ff) AM_RAM
-	AM_RANGE(0x4800, 0x4801) AM_DEVWRITE("ay2", ay8910_device, address_data_w)
-	AM_RANGE(0x4801, 0x4801) AM_DEVREAD("ay2", ay8910_device, data_r)
-	AM_RANGE(0x4802, 0x4803) AM_DEVWRITE("ay3", ay8910_device, address_data_w)
-	AM_RANGE(0x4803, 0x4803) AM_DEVREAD("ay3", ay8910_device, data_r)
-	AM_RANGE(0x4804, 0x4805) AM_DEVWRITE("ay4", ay8910_device, address_data_w)
-	AM_RANGE(0x4805, 0x4805) AM_DEVREAD("ay4", ay8910_device, data_r)
-	AM_RANGE(0x5000, 0x5000) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-	AM_RANGE(0xe000, 0xefff) AM_ROM // space for diagnostic ROM
-ADDRESS_MAP_END
+void halleys_state::sound_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x47ff).ram();
+	map(0x4800, 0x4801).w("ay2", FUNC(ay8910_device::address_data_w));
+	map(0x4801, 0x4801).r("ay2", FUNC(ay8910_device::data_r));
+	map(0x4802, 0x4803).w("ay3", FUNC(ay8910_device::address_data_w));
+	map(0x4803, 0x4803).r("ay3", FUNC(ay8910_device::data_r));
+	map(0x4804, 0x4805).w("ay4", FUNC(ay8910_device::address_data_w));
+	map(0x4805, 0x4805).r("ay4", FUNC(ay8910_device::data_r));
+	map(0x5000, 0x5000).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+	map(0xe000, 0xefff).rom(); // space for diagnostic ROM
+}
 
 
 //**************************************************************************
@@ -1919,12 +1927,12 @@ void halleys_state::machine_reset()
 }
 
 
-static MACHINE_CONFIG_START( halleys )
-	MCFG_CPU_ADD("maincpu", M6809, XTAL_19_968MHz/12) /* verified on pcb */
+MACHINE_CONFIG_START(halleys_state::halleys)
+	MCFG_CPU_ADD("maincpu", MC6809E, XTAL(19'968'000)/12) /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(halleys_map)
 	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", halleys_state, halleys_scanline, "screen", 0, 1)
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_6MHz/2) /* verified on pcb */
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(6'000'000)/2) /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(sound_map)
 	MCFG_CPU_PERIODIC_INT_DRIVER(halleys_state, irq0_line_hold,  (double)6000000/(4*16*16*10*16))
 
@@ -1947,24 +1955,25 @@ static MACHINE_CONFIG_START( halleys )
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
 
-	MCFG_SOUND_ADD("ay1", AY8910, XTAL_6MHz/4) /* verified on pcb */
+	MCFG_SOUND_ADD("ay1", AY8910, XTAL(6'000'000)/4) /* verified on pcb */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MCFG_SOUND_ADD("ay2", AY8910, XTAL_6MHz/4) /* verified on pcb */
+	MCFG_SOUND_ADD("ay2", AY8910, XTAL(6'000'000)/4) /* verified on pcb */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MCFG_SOUND_ADD("ay3", AY8910, XTAL_6MHz/4) /* verified on pcb */
+	MCFG_SOUND_ADD("ay3", AY8910, XTAL(6'000'000)/4) /* verified on pcb */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MCFG_SOUND_ADD("ay4", AY8910, XTAL_6MHz/4) /* verified on pcb */
+	MCFG_SOUND_ADD("ay4", AY8910, XTAL(6'000'000)/4) /* verified on pcb */
 	MCFG_AY8910_PORT_B_WRITE_CB(WRITE8(halleys_state, sndnmi_msk_w)) // port Bwrite
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( benberob, halleys )
+MACHINE_CONFIG_START(halleys_state::benberob)
+	halleys(config);
 	MCFG_CPU_MODIFY("maincpu")
-	MCFG_CPU_CLOCK(XTAL_19_968MHz/12) /* not verified but pcb identical to halley's comet */
+	MCFG_CPU_CLOCK(XTAL(19'968'000)/12) /* not verified but pcb identical to halley's comet */
 	MCFG_TIMER_MODIFY("scantimer")
 	MCFG_TIMER_DRIVER_CALLBACK(halleys_state, benberob_scanline)
 
@@ -2153,8 +2162,8 @@ void halleys_state::init_common()
 
 	for (i=0; i<0x10000; i++)
 	{
-		addr = BITSWAP16(i,15,14,13,12,11,10,1,0,4,5,6,3,7,8,9,2);
-		buf[i] = BITSWAP8(rom[addr],0,7,6,5,1,4,2,3);
+		addr = bitswap<16>(i,15,14,13,12,11,10,1,0,4,5,6,3,7,8,9,2);
+		buf[i] = bitswap<8>(rom[addr],0,7,6,5,1,4,2,3);
 	}
 
 	memcpy(rom, buf, 0x10000);

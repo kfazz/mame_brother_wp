@@ -29,6 +29,9 @@ public:
 
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
+	void atronic(machine_config &config);
+	void atronic_map(address_map &map);
+	void atronic_portmap(address_map &map);
 protected:
 
 	// devices
@@ -41,24 +44,26 @@ uint32_t atronic_state::screen_update( screen_device &screen, bitmap_ind16 &bitm
 }
 
 
-static ADDRESS_MAP_START( atronic_map, AS_PROGRAM, 8, atronic_state )
-	AM_RANGE(0x00000, 0x7ffff) AM_ROM
-	AM_RANGE(0xf8000, 0xfffff) AM_RAM
-ADDRESS_MAP_END
+void atronic_state::atronic_map(address_map &map)
+{
+	map(0x00000, 0x7ffff).rom();
+	map(0xf8000, 0xfffff).ram();
+}
 
 
-static ADDRESS_MAP_START( atronic_portmap, AS_IO, 8, atronic_state )
+void atronic_state::atronic_portmap(address_map &map)
+{
 //  ADDRESS_MAP_GLOBAL_MASK(0xff)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00, 0x3f) AM_RAM
-ADDRESS_MAP_END
+	map.unmap_value_high();
+	map(0x00, 0x3f).ram();
+}
 
 
 static INPUT_PORTS_START( atronic )
 INPUT_PORTS_END
 
 
-static MACHINE_CONFIG_START( atronic )
+MACHINE_CONFIG_START(atronic_state::atronic)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z180, 6000000)
 	MCFG_CPU_PROGRAM_MAP(atronic_map)

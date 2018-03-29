@@ -46,7 +46,7 @@ Notes:
 #include "screen.h"
 #include "speaker.h"
 
-#define MAIN_CLOCK XTAL_10MHz
+#define MAIN_CLOCK XTAL(10'000'000)
 
 class _3x3puzzle_state : public driver_device
 {
@@ -96,6 +96,8 @@ public:
 	DECLARE_WRITE16_MEMBER(tilemap1_scrollx_w);
 	DECLARE_WRITE16_MEMBER(tilemap1_scrolly_w);
 
+	void _3x3puzzle(machine_config &config);
+	void _3x3puzzle_map(address_map &map);
 protected:
 	virtual void video_start() override;
 	virtual void machine_start() override;
@@ -207,23 +209,24 @@ uint32_t _3x3puzzle_state::screen_update( screen_device &screen, bitmap_rgb32 &b
 	return 0;
 }
 
-static ADDRESS_MAP_START( _3x3puzzle_map, AS_PROGRAM, 16, _3x3puzzle_state )
-	AM_RANGE(0x000000, 0x07ffff) AM_ROM
-	AM_RANGE(0x100000, 0x10ffff) AM_RAM
-	AM_RANGE(0x200000, 0x2007ff) AM_RAM AM_SHARE("videoram1")
-	AM_RANGE(0x201000, 0x201fff) AM_RAM AM_SHARE("videoram2")
-	AM_RANGE(0x202000, 0x202fff) AM_RAM AM_SHARE("videoram3")
-	AM_RANGE(0x280000, 0x280001) AM_READ_PORT("VBLANK")
-	AM_RANGE(0x300000, 0x3005ff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0x400000, 0x400001) AM_WRITE(tilemap1_scrollx_w)
-	AM_RANGE(0x480000, 0x480001) AM_WRITE(tilemap1_scrolly_w)
-	AM_RANGE(0x500000, 0x500001) AM_READ_PORT("P1")
-	AM_RANGE(0x580000, 0x580001) AM_READ_PORT("SYS")
-	AM_RANGE(0x600000, 0x600001) AM_READ_PORT("DSW01")
-	AM_RANGE(0x700000, 0x700001) AM_DEVREADWRITE8("oki", okim6295_device, read, write, 0x00ff)
-	AM_RANGE(0x800000, 0x800001) AM_WRITE(gfx_ctrl_w)
-	AM_RANGE(0x880000, 0x880001) AM_READNOP // read, but no tested afterwards
-ADDRESS_MAP_END
+void _3x3puzzle_state::_3x3puzzle_map(address_map &map)
+{
+	map(0x000000, 0x07ffff).rom();
+	map(0x100000, 0x10ffff).ram();
+	map(0x200000, 0x2007ff).ram().share("videoram1");
+	map(0x201000, 0x201fff).ram().share("videoram2");
+	map(0x202000, 0x202fff).ram().share("videoram3");
+	map(0x280000, 0x280001).portr("VBLANK");
+	map(0x300000, 0x3005ff).ram().w("palette", FUNC(palette_device::write16)).share("palette");
+	map(0x400000, 0x400001).w(this, FUNC(_3x3puzzle_state::tilemap1_scrollx_w));
+	map(0x480000, 0x480001).w(this, FUNC(_3x3puzzle_state::tilemap1_scrolly_w));
+	map(0x500000, 0x500001).portr("P1");
+	map(0x580000, 0x580001).portr("SYS");
+	map(0x600000, 0x600001).portr("DSW01");
+	map(0x700001, 0x700001).rw(m_oki, FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0x800000, 0x800001).w(this, FUNC(_3x3puzzle_state::gfx_ctrl_w));
+	map(0x880000, 0x880001).nopr(); // read, but no tested afterwards
+}
 
 static INPUT_PORTS_START( _3x3puzzle )
 	PORT_START("P1")
@@ -382,7 +385,7 @@ void _3x3puzzle_state::machine_reset()
 }
 
 
-static MACHINE_CONFIG_START( _3x3puzzle )
+MACHINE_CONFIG_START(_3x3puzzle_state::_3x3puzzle)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu",M68000,MAIN_CLOCK)
@@ -404,7 +407,7 @@ static MACHINE_CONFIG_START( _3x3puzzle )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_OKIM6295_ADD("oki", XTAL_4MHz/4, PIN7_HIGH)
+	MCFG_OKIM6295_ADD("oki", XTAL(4'000'000)/4, PIN7_HIGH)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 

@@ -24,20 +24,25 @@ public:
 	virtual void video_start() override;
 	uint32_t screen_update_uknc(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	required_device<cpu_device> m_maincpu;
+	void uknc(machine_config &config);
+	void uknc_mem(address_map &map);
+	void uknc_sub_mem(address_map &map);
 };
 
 
-static ADDRESS_MAP_START(uknc_mem, AS_PROGRAM, 16, uknc_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x0000, 0x7fff ) AM_RAM  // RAM
-	AM_RANGE( 0x8000, 0xffff ) AM_ROM  // ROM
-ADDRESS_MAP_END
+void uknc_state::uknc_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x7fff).ram();  // RAM
+	map(0x8000, 0xffff).rom();  // ROM
+}
 
-static ADDRESS_MAP_START(uknc_sub_mem, AS_PROGRAM, 16, uknc_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x0000, 0x7fff ) AM_RAM  // RAM
-	AM_RANGE( 0x8000, 0xffff ) AM_ROM  // ROM
-ADDRESS_MAP_END
+void uknc_state::uknc_sub_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x7fff).ram();  // RAM
+	map(0x8000, 0xffff).rom();  // ROM
+}
 
 /* Input ports */
 static INPUT_PORTS_START( uknc )
@@ -57,7 +62,7 @@ uint32_t uknc_state::screen_update_uknc(screen_device &screen, bitmap_ind16 &bit
 	return 0;
 }
 
-static MACHINE_CONFIG_START( uknc )
+MACHINE_CONFIG_START(uknc_state::uknc)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", K1801VM2, 8000000)
 	MCFG_T11_INITIAL_MODE(0x8000)

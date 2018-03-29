@@ -142,9 +142,10 @@ TIMER_DEVICE_CALLBACK_MEMBER(pcw16_state::pcw16_timer_callback)
 	}
 }
 
-static ADDRESS_MAP_START(pcw16_map, AS_PROGRAM, 8, pcw16_state )
-	AM_RANGE(0x0000, 0xffff) AM_READWRITE(pcw16_mem_r, pcw16_mem_w)
-ADDRESS_MAP_END
+void pcw16_state::pcw16_map(address_map &map)
+{
+	map(0x0000, 0xffff).rw(this, FUNC(pcw16_state::pcw16_mem_r), FUNC(pcw16_state::pcw16_mem_w));
+}
 
 
 WRITE8_MEMBER(pcw16_state::pcw16_palette_w)
@@ -934,28 +935,29 @@ static SLOT_INTERFACE_START( pcw16_floppies )
 SLOT_INTERFACE_END
 
 
-static ADDRESS_MAP_START(pcw16_io, AS_IO, 8, pcw16_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
+void pcw16_state::pcw16_io(address_map &map)
+{
+	map.global_mask(0xff);
 	/* super i/o chip */
-	AM_RANGE(0x018, 0x01f) AM_DEVICE("fdc", pc_fdc_superio_device, map)
-	AM_RANGE(0x020, 0x027) AM_DEVREADWRITE("ns16550_1", ns16550_device, ins8250_r, ins8250_w)
-	AM_RANGE(0x028, 0x02f) AM_DEVREADWRITE("ns16550_2", ns16550_device, ins8250_r, ins8250_w)
-	AM_RANGE(0x038, 0x03a) AM_DEVREADWRITE("lpt", pc_lpt_device, read, write)
+	map(0x018, 0x01f).m(m_fdc, FUNC(pc_fdc_superio_device::map));
+	map(0x020, 0x027).rw("ns16550_1", FUNC(ns16550_device::ins8250_r), FUNC(ns16550_device::ins8250_w));
+	map(0x028, 0x02f).rw(m_uart2, FUNC(ns16550_device::ins8250_r), FUNC(ns16550_device::ins8250_w));
+	map(0x038, 0x03a).rw("lpt", FUNC(pc_lpt_device::read), FUNC(pc_lpt_device::write));
 	/* anne asic */
-	AM_RANGE(0x0e0, 0x0ef) AM_WRITE(pcw16_palette_w)
-	AM_RANGE(0x0f0, 0x0f3) AM_READWRITE(pcw16_bankhw_r, pcw16_bankhw_w)
-	AM_RANGE(0x0f4, 0x0f4) AM_READWRITE(pcw16_keyboard_data_shift_r, pcw16_keyboard_data_shift_w)
-	AM_RANGE(0x0f5, 0x0f5) AM_READWRITE(pcw16_keyboard_status_r, pcw16_keyboard_control_w)
-	AM_RANGE(0x0f7, 0x0f7) AM_READWRITE(pcw16_timer_interrupt_counter_r, pcw16_video_control_w)
-	AM_RANGE(0x0f8, 0x0f8) AM_READWRITE(pcw16_system_status_r, pcw16_system_control_w)
-	AM_RANGE(0x0f9, 0x0f9) AM_READWRITE(rtc_256ths_seconds_r, rtc_control_w)
-	AM_RANGE(0x0fa, 0x0fa) AM_READWRITE(rtc_seconds_r, rtc_seconds_w)
-	AM_RANGE(0x0fb, 0x0fb) AM_READWRITE(rtc_minutes_r, rtc_minutes_w)
-	AM_RANGE(0x0fc, 0x0fc) AM_READWRITE(rtc_hours_r, rtc_hours_w)
-	AM_RANGE(0x0fd, 0x0fd) AM_READWRITE(rtc_days_r, rtc_days_w)
-	AM_RANGE(0x0fe, 0x0fe) AM_READWRITE(rtc_month_r, rtc_month_w)
-	AM_RANGE(0x0ff, 0x0ff) AM_READWRITE(rtc_year_invalid_r, rtc_year_w)
-ADDRESS_MAP_END
+	map(0x0e0, 0x0ef).w(this, FUNC(pcw16_state::pcw16_palette_w));
+	map(0x0f0, 0x0f3).rw(this, FUNC(pcw16_state::pcw16_bankhw_r), FUNC(pcw16_state::pcw16_bankhw_w));
+	map(0x0f4, 0x0f4).rw(this, FUNC(pcw16_state::pcw16_keyboard_data_shift_r), FUNC(pcw16_state::pcw16_keyboard_data_shift_w));
+	map(0x0f5, 0x0f5).rw(this, FUNC(pcw16_state::pcw16_keyboard_status_r), FUNC(pcw16_state::pcw16_keyboard_control_w));
+	map(0x0f7, 0x0f7).rw(this, FUNC(pcw16_state::pcw16_timer_interrupt_counter_r), FUNC(pcw16_state::pcw16_video_control_w));
+	map(0x0f8, 0x0f8).rw(this, FUNC(pcw16_state::pcw16_system_status_r), FUNC(pcw16_state::pcw16_system_control_w));
+	map(0x0f9, 0x0f9).rw(this, FUNC(pcw16_state::rtc_256ths_seconds_r), FUNC(pcw16_state::rtc_control_w));
+	map(0x0fa, 0x0fa).rw(this, FUNC(pcw16_state::rtc_seconds_r), FUNC(pcw16_state::rtc_seconds_w));
+	map(0x0fb, 0x0fb).rw(this, FUNC(pcw16_state::rtc_minutes_r), FUNC(pcw16_state::rtc_minutes_w));
+	map(0x0fc, 0x0fc).rw(this, FUNC(pcw16_state::rtc_hours_r), FUNC(pcw16_state::rtc_hours_w));
+	map(0x0fd, 0x0fd).rw(this, FUNC(pcw16_state::rtc_days_r), FUNC(pcw16_state::rtc_days_w));
+	map(0x0fe, 0x0fe).rw(this, FUNC(pcw16_state::rtc_month_r), FUNC(pcw16_state::rtc_month_w));
+	map(0x0ff, 0x0ff).rw(this, FUNC(pcw16_state::rtc_year_invalid_r), FUNC(pcw16_state::rtc_year_w));
+}
 
 
 void pcw16_state::machine_reset()
@@ -1006,7 +1008,7 @@ static SLOT_INTERFACE_START(pcw16_com)
 	SLOT_INTERFACE("msystems_mouse", MSYSTEM_SERIAL_MOUSE)
 SLOT_INTERFACE_END
 
-static MACHINE_CONFIG_START( pcw16 )
+MACHINE_CONFIG_START(pcw16_state::pcw16)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 16000000)
 	MCFG_CPU_PROGRAM_MAP(pcw16_map)
@@ -1014,7 +1016,7 @@ static MACHINE_CONFIG_START( pcw16 )
 	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 
-	MCFG_DEVICE_ADD( "ns16550_1", NS16550, XTAL_1_8432MHz )     /* TODO: Verify uart model */
+	MCFG_DEVICE_ADD( "ns16550_1", NS16550, XTAL(1'843'200) )     /* TODO: Verify uart model */
 	MCFG_INS8250_OUT_TX_CB(DEVWRITELINE("serport1", rs232_port_device, write_txd))
 	MCFG_INS8250_OUT_DTR_CB(DEVWRITELINE("serport1", rs232_port_device, write_dtr))
 	MCFG_INS8250_OUT_RTS_CB(DEVWRITELINE("serport1", rs232_port_device, write_rts))
@@ -1026,7 +1028,7 @@ static MACHINE_CONFIG_START( pcw16 )
 	MCFG_RS232_RI_HANDLER(DEVWRITELINE("ns16550_1", ins8250_uart_device, ri_w))
 	MCFG_RS232_CTS_HANDLER(DEVWRITELINE("ns16550_1", ins8250_uart_device, cts_w))
 
-	MCFG_DEVICE_ADD( "ns16550_2", NS16550, XTAL_1_8432MHz )     /* TODO: Verify uart model */
+	MCFG_DEVICE_ADD( "ns16550_2", NS16550, XTAL(1'843'200) )     /* TODO: Verify uart model */
 	MCFG_INS8250_OUT_TX_CB(DEVWRITELINE("serport2", rs232_port_device, write_txd))
 	MCFG_INS8250_OUT_DTR_CB(DEVWRITELINE("serport2", rs232_port_device, write_dtr))
 	MCFG_INS8250_OUT_RTS_CB(DEVWRITELINE("serport2", rs232_port_device, write_rts))

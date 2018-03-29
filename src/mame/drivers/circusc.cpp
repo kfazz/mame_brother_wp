@@ -152,34 +152,36 @@ WRITE_LINE_MEMBER(circusc_state::irq_mask_w)
 		m_maincpu->set_input_line(M6809_IRQ_LINE, CLEAR_LINE);
 }
 
-static ADDRESS_MAP_START( circusc_map, AS_PROGRAM, 8, circusc_state )
-	AM_RANGE(0x0000, 0x0007) AM_MIRROR(0x03f8) AM_DEVWRITE("mainlatch", ls259_device, write_d0)
-	AM_RANGE(0x0400, 0x0400) AM_MIRROR(0x03ff) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w) /* WDOG */
-	AM_RANGE(0x0800, 0x0800) AM_MIRROR(0x03ff) AM_DEVWRITE("soundlatch", generic_latch_8_device, write)              /* SOUND DATA */
-	AM_RANGE(0x0c00, 0x0c00) AM_MIRROR(0x03ff) AM_WRITE(circusc_sh_irqtrigger_w)    /* SOUND-ON causes interrupt on audio CPU */
-	AM_RANGE(0x1000, 0x1000) AM_MIRROR(0x03fc) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0x1001, 0x1001) AM_MIRROR(0x03fc) AM_READ_PORT("P1")
-	AM_RANGE(0x1002, 0x1002) AM_MIRROR(0x03fc) AM_READ_PORT("P2")
-	AM_RANGE(0x1003, 0x1003) AM_MIRROR(0x03fc) AM_READNOP              /* unpopulated DIPSW 3*/
-	AM_RANGE(0x1400, 0x1400) AM_MIRROR(0x03ff) AM_READ_PORT("DSW1")
-	AM_RANGE(0x1800, 0x1800) AM_MIRROR(0x03ff) AM_READ_PORT("DSW2")
-	AM_RANGE(0x1c00, 0x1c00) AM_MIRROR(0x03ff) AM_WRITEONLY AM_SHARE("scroll") /* VGAP */
-	AM_RANGE(0x2000, 0x2fff) AM_RAM
-	AM_RANGE(0x3000, 0x33ff) AM_RAM_WRITE(circusc_colorram_w) AM_SHARE("colorram") /* colorram */
-	AM_RANGE(0x3400, 0x37ff) AM_RAM_WRITE(circusc_videoram_w) AM_SHARE("videoram") /* videoram */
-	AM_RANGE(0x3800, 0x38ff) AM_RAM AM_SHARE("spriteram_2") /* spriteram2 */
-	AM_RANGE(0x3900, 0x39ff) AM_RAM AM_SHARE("spriteram") /* spriteram */
-	AM_RANGE(0x3a00, 0x3fff) AM_RAM
-	AM_RANGE(0x6000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void circusc_state::circusc_map(address_map &map)
+{
+	map(0x0000, 0x0007).mirror(0x03f8).w("mainlatch", FUNC(ls259_device::write_d0));
+	map(0x0400, 0x0400).mirror(0x03ff).w("watchdog", FUNC(watchdog_timer_device::reset_w)); /* WDOG */
+	map(0x0800, 0x0800).mirror(0x03ff).w("soundlatch", FUNC(generic_latch_8_device::write));              /* SOUND DATA */
+	map(0x0c00, 0x0c00).mirror(0x03ff).w(this, FUNC(circusc_state::circusc_sh_irqtrigger_w));    /* SOUND-ON causes interrupt on audio CPU */
+	map(0x1000, 0x1000).mirror(0x03fc).portr("SYSTEM");
+	map(0x1001, 0x1001).mirror(0x03fc).portr("P1");
+	map(0x1002, 0x1002).mirror(0x03fc).portr("P2");
+	map(0x1003, 0x1003).mirror(0x03fc).nopr();              /* unpopulated DIPSW 3*/
+	map(0x1400, 0x1400).mirror(0x03ff).portr("DSW1");
+	map(0x1800, 0x1800).mirror(0x03ff).portr("DSW2");
+	map(0x1c00, 0x1c00).mirror(0x03ff).writeonly().share("scroll"); /* VGAP */
+	map(0x2000, 0x2fff).ram();
+	map(0x3000, 0x33ff).ram().w(this, FUNC(circusc_state::circusc_colorram_w)).share("colorram"); /* colorram */
+	map(0x3400, 0x37ff).ram().w(this, FUNC(circusc_state::circusc_videoram_w)).share("videoram"); /* videoram */
+	map(0x3800, 0x38ff).ram().share("spriteram_2"); /* spriteram2 */
+	map(0x3900, 0x39ff).ram().share("spriteram"); /* spriteram */
+	map(0x3a00, 0x3fff).ram();
+	map(0x6000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START( sound_map, AS_PROGRAM, 8, circusc_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x43ff) AM_MIRROR(0x1c00) AM_RAM
-	AM_RANGE(0x6000, 0x6000) AM_MIRROR(0x1fff) AM_DEVREAD("soundlatch", generic_latch_8_device, read)       /* CS0 */
-	AM_RANGE(0x8000, 0x8000) AM_MIRROR(0x1fff) AM_READ(circusc_sh_timer_r)  /* CS1 */
-	AM_RANGE(0xa000, 0xa07f) AM_MIRROR(0x1f80) AM_WRITE(circusc_sound_w)    /* CS2 - CS6 */
-ADDRESS_MAP_END
+void circusc_state::sound_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x43ff).mirror(0x1c00).ram();
+	map(0x6000, 0x6000).mirror(0x1fff).r("soundlatch", FUNC(generic_latch_8_device::read));       /* CS0 */
+	map(0x8000, 0x8000).mirror(0x1fff).r(this, FUNC(circusc_state::circusc_sh_timer_r));  /* CS1 */
+	map(0xa000, 0xa07f).mirror(0x1f80).w(this, FUNC(circusc_state::circusc_sound_w));    /* CS2 - CS6 */
+}
 
 
 
@@ -341,7 +343,7 @@ INTERRUPT_GEN_MEMBER(circusc_state::vblank_irq)
 		device.execute().set_input_line(M6809_IRQ_LINE, ASSERT_LINE);
 }
 
-static MACHINE_CONFIG_START( circusc )
+MACHINE_CONFIG_START(circusc_state::circusc)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", KONAMI1, 2048000)        /* 2 MHz? */
@@ -359,7 +361,7 @@ static MACHINE_CONFIG_START( circusc )
 	MCFG_WATCHDOG_ADD("watchdog")
 	MCFG_WATCHDOG_VBLANK_INIT("screen", 8)
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_14_31818MHz/4)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(14'318'181)/4)
 	MCFG_CPU_PROGRAM_MAP(sound_map)
 
 
@@ -382,10 +384,10 @@ static MACHINE_CONFIG_START( circusc )
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
 
-	MCFG_SOUND_ADD("sn1", SN76496, XTAL_14_31818MHz/8)
+	MCFG_SOUND_ADD("sn1", SN76496, XTAL(14'318'181)/8)
 	MCFG_SOUND_ROUTE_EX(0, "fltdisc", 1.0, 0)
 
-	MCFG_SOUND_ADD("sn2", SN76496, XTAL_14_31818MHz/8)
+	MCFG_SOUND_ADD("sn2", SN76496, XTAL(14'318'181)/8)
 	MCFG_SOUND_ROUTE_EX(0, "fltdisc", 1.0, 1)
 
 	MCFG_SOUND_ADD("dac", DAC_8BIT_R2R, 0) MCFG_SOUND_ROUTE_EX(0, "fltdisc", 1.0, 2) // ls374.7g + r44+r45+r47+r48+r50+r56+r57+r58+r59 (20k) + r46+r49+r51+r52+r53+r54+r55 (10k) + upc324.3h

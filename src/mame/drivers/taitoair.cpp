@@ -220,7 +220,7 @@ WRITE16_MEMBER(taitoair_state::system_control_w)
 	m_dsp->set_input_line(INPUT_LINE_RESET, (data & 1) ? CLEAR_LINE : ASSERT_LINE);
 
 	m_gradbank = (data & 0x40);
-	logerror("68K:%06x writing %04x to TMS32025.  %s HOLD , %s RESET\n", space.device().safe_pcbase(), data, ((data & 4) ? "Clear" : "Assert"), ((data & 1) ? "Clear" : "Assert"));
+	logerror("68K:%06x writing %04x to TMS32025.  %s HOLD , %s RESET\n", m_maincpu->pcbase(), data, ((data & 4) ? "Clear" : "Assert"), ((data & 1) ? "Clear" : "Assert"));
 }
 
 READ16_MEMBER(taitoair_state::lineram_r)
@@ -251,7 +251,7 @@ WRITE16_MEMBER(taitoair_state::dspram_w)
 READ16_MEMBER(taitoair_state::dsp_HOLD_signal_r)
 {
 	/* HOLD signal is active low */
-	//  logerror("TMS32025:%04x Reading %01x level from HOLD signal\n", space.device().safe_pcbase(), m_dsp_hold_signal);
+	//  logerror("TMS32025:%04x Reading %01x level from HOLD signal\n", m_dsp->pcbase(), m_dsp_hold_signal);
 
 	return m_dsp_hold_signal;
 }
@@ -259,7 +259,7 @@ READ16_MEMBER(taitoair_state::dsp_HOLD_signal_r)
 WRITE16_MEMBER(taitoair_state::dsp_HOLDA_signal_w)
 {
 	if (offset)
-		logerror("TMS32025:%04x Writing %01x level to HOLD-Acknowledge signal\n", space.device().safe_pcbase(), data);
+		logerror("TMS32025:%04x Writing %01x level to HOLD-Acknowledge signal\n", m_dsp->pcbase(), data);
 }
 
 
@@ -379,40 +379,43 @@ WRITE8_MEMBER(taitoair_state::coin_control_w)
              MEMORY STRUCTURES
 ***********************************************************/
 
-static ADDRESS_MAP_START( airsys_map, AS_PROGRAM, 16, taitoair_state )
-	AM_RANGE(0x000000, 0x0bffff) AM_ROM
-	AM_RANGE(0x0c0000, 0x0cffff) AM_RAM AM_SHARE("m68000_mainram")
-	AM_RANGE(0x140000, 0x140001) AM_WRITE(system_control_w) /* Pause the TMS32025 */
-	AM_RANGE(0x180000, 0x187fff) AM_RAM_WRITE(airsys_gradram_w) AM_SHARE("gradram") /* "gradiation ram (0/1)" */
-	AM_RANGE(0x188000, 0x189fff) AM_MIRROR(0x2000) AM_RAM_WRITE(airsys_paletteram16_w) AM_SHARE("paletteram")
-	AM_RANGE(0x800000, 0x820fff) AM_DEVREADWRITE("tc0080vco", tc0080vco_device, word_r, word_w)    /* tilemaps, sprites */
-	AM_RANGE(0x906000, 0x906007) AM_WRITE(dma_regs_w) // DMA?
-	AM_RANGE(0x908000, 0x90ffff) AM_RAM AM_SHARE("line_ram")    /* "line ram" */
-	AM_RANGE(0x910000, 0x91ffff) AM_RAM AM_SHARE("dsp_ram") /* "dsp common ram" (TMS320C25) */
-	AM_RANGE(0x980000, 0x98000f) AM_RAM AM_SHARE("tc0430grw") /* TC0430GRW roz transform coefficients */
-	AM_RANGE(0xa00000, 0xa00007) AM_READ(stick_input_r)
-	AM_RANGE(0xa00100, 0xa00107) AM_READ(stick2_input_r)
-	AM_RANGE(0xa00200, 0xa0020f) AM_DEVREADWRITE8("tc0220ioc", tc0220ioc_device, read, write, 0x00ff) /* other I/O */
-	AM_RANGE(0xa80000, 0xa80001) AM_READNOP AM_DEVWRITE8("tc0140syt", tc0140syt_device, master_port_w, 0x00ff)
-	AM_RANGE(0xa80002, 0xa80003) AM_DEVREADWRITE8("tc0140syt", tc0140syt_device, master_comm_r, master_comm_w, 0x00ff)
-	AM_RANGE(0xb00000, 0xb007ff) AM_RAM                     /* "power common ram" (mecha drive) */
-ADDRESS_MAP_END
+void taitoair_state::airsys_map(address_map &map)
+{
+	map(0x000000, 0x0bffff).rom();
+	map(0x0c0000, 0x0cffff).ram().share("m68000_mainram");
+	map(0x140000, 0x140001).w(this, FUNC(taitoair_state::system_control_w)); /* Pause the TMS32025 */
+	map(0x180000, 0x187fff).ram().w(this, FUNC(taitoair_state::airsys_gradram_w)).share("gradram"); /* "gradiation ram (0/1)" */
+	map(0x188000, 0x189fff).mirror(0x2000).ram().w(this, FUNC(taitoair_state::airsys_paletteram16_w)).share("paletteram");
+	map(0x800000, 0x820fff).rw(m_tc0080vco, FUNC(tc0080vco_device::word_r), FUNC(tc0080vco_device::word_w));    /* tilemaps, sprites */
+	map(0x906000, 0x906007).w(this, FUNC(taitoair_state::dma_regs_w)); // DMA?
+	map(0x908000, 0x90ffff).ram().share("line_ram");    /* "line ram" */
+	map(0x910000, 0x91ffff).ram().share("dsp_ram"); /* "dsp common ram" (TMS320C25) */
+	map(0x980000, 0x98000f).ram().share("tc0430grw"); /* TC0430GRW roz transform coefficients */
+	map(0xa00000, 0xa00007).r(this, FUNC(taitoair_state::stick_input_r));
+	map(0xa00100, 0xa00107).r(this, FUNC(taitoair_state::stick2_input_r));
+	map(0xa00200, 0xa0020f).rw(m_tc0220ioc, FUNC(tc0220ioc_device::read), FUNC(tc0220ioc_device::write)).umask16(0x00ff); /* other I/O */
+	map(0xa80000, 0xa80001).nopr();
+	map(0xa80001, 0xa80001).w("tc0140syt", FUNC(tc0140syt_device::master_port_w));
+	map(0xa80003, 0xa80003).rw("tc0140syt", FUNC(tc0140syt_device::master_comm_r), FUNC(tc0140syt_device::master_comm_w));
+	map(0xb00000, 0xb007ff).ram();                     /* "power common ram" (mecha drive) */
+}
 
 /************************** Z80 ****************************/
 
-static ADDRESS_MAP_START( sound_map, AS_PROGRAM, 8, taitoair_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("z80bank")
-	AM_RANGE(0xc000, 0xdfff) AM_RAM
-	AM_RANGE(0xe000, 0xe003) AM_DEVREADWRITE("ymsnd", ym2610_device, read, write)
-	AM_RANGE(0xe200, 0xe200) AM_READNOP AM_DEVWRITE("tc0140syt", tc0140syt_device, slave_port_w)
-	AM_RANGE(0xe201, 0xe201) AM_DEVREADWRITE("tc0140syt", tc0140syt_device, slave_comm_r, slave_comm_w)
-	AM_RANGE(0xe400, 0xe403) AM_WRITENOP        /* pan control */
-	AM_RANGE(0xea00, 0xea00) AM_READNOP
-	AM_RANGE(0xee00, 0xee00) AM_WRITENOP        /* ? */
-	AM_RANGE(0xf000, 0xf000) AM_WRITENOP        /* ? */
-	AM_RANGE(0xf200, 0xf200) AM_WRITE(sound_bankswitch_w)
-ADDRESS_MAP_END
+void taitoair_state::sound_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x7fff).bankr("z80bank");
+	map(0xc000, 0xdfff).ram();
+	map(0xe000, 0xe003).rw("ymsnd", FUNC(ym2610_device::read), FUNC(ym2610_device::write));
+	map(0xe200, 0xe200).nopr().w("tc0140syt", FUNC(tc0140syt_device::slave_port_w));
+	map(0xe201, 0xe201).rw("tc0140syt", FUNC(tc0140syt_device::slave_comm_r), FUNC(tc0140syt_device::slave_comm_w));
+	map(0xe400, 0xe403).nopw();        /* pan control */
+	map(0xea00, 0xea00).nopr();
+	map(0xee00, 0xee00).nopw();        /* ? */
+	map(0xf000, 0xf000).nopw();        /* ? */
+	map(0xf200, 0xf200).w(this, FUNC(taitoair_state::sound_bankswitch_w));
+}
 
 /********************************** TMS32025 ********************************/
 
@@ -512,33 +515,35 @@ READ16_MEMBER(taitoair_state::dsp_muldiv_2_r)
 }
 
 
-static ADDRESS_MAP_START( DSP_map_program, AS_PROGRAM, 16, taitoair_state )
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-ADDRESS_MAP_END
+void taitoair_state::DSP_map_program(address_map &map)
+{
+	map(0x0000, 0x1fff).rom();
+}
 
-static ADDRESS_MAP_START( DSP_map_data, AS_DATA, 16, taitoair_state )
-	AM_RANGE(0x2003, 0x2003) AM_READNOP //bit 0 DMA status flag or vblank
-	AM_RANGE(0x3000, 0x3002) AM_WRITE(dsp_flags_w)
-	AM_RANGE(0x3404, 0x3404) AM_WRITE(dsp_muldiv_a_1_w)
-	AM_RANGE(0x3405, 0x3405) AM_WRITE(dsp_muldiv_b_1_w)
-	AM_RANGE(0x3406, 0x3406) AM_WRITE(dsp_muldiv_c_1_w)
-	AM_RANGE(0x3407, 0x3407) AM_READ(dsp_muldiv_1_r)
+void taitoair_state::DSP_map_data(address_map &map)
+{
+	map(0x2003, 0x2003).nopr(); //bit 0 DMA status flag or vblank
+	map(0x3000, 0x3002).w(this, FUNC(taitoair_state::dsp_flags_w));
+	map(0x3404, 0x3404).w(this, FUNC(taitoair_state::dsp_muldiv_a_1_w));
+	map(0x3405, 0x3405).w(this, FUNC(taitoair_state::dsp_muldiv_b_1_w));
+	map(0x3406, 0x3406).w(this, FUNC(taitoair_state::dsp_muldiv_c_1_w));
+	map(0x3407, 0x3407).r(this, FUNC(taitoair_state::dsp_muldiv_1_r));
 
-	AM_RANGE(0x3408, 0x3408) AM_WRITE(dsp_muldiv_a_2_w)
-	AM_RANGE(0x3409, 0x3409) AM_WRITE(dsp_muldiv_b_2_w)
-	AM_RANGE(0x340a, 0x340a) AM_WRITE(dsp_muldiv_c_2_w)
-	AM_RANGE(0x340b, 0x340b) AM_READ(dsp_muldiv_2_r)
+	map(0x3408, 0x3408).w(this, FUNC(taitoair_state::dsp_muldiv_a_2_w));
+	map(0x3409, 0x3409).w(this, FUNC(taitoair_state::dsp_muldiv_b_2_w));
+	map(0x340a, 0x340a).w(this, FUNC(taitoair_state::dsp_muldiv_c_2_w));
+	map(0x340b, 0x340b).r(this, FUNC(taitoair_state::dsp_muldiv_2_r));
 
-	AM_RANGE(0x3418, 0x3418) AM_WRITE(dsp_test_x_w)
-	AM_RANGE(0x3419, 0x3419) AM_WRITE(dsp_test_y_w)
-	AM_RANGE(0x341a, 0x341a) AM_WRITE(dsp_test_z_w)
-	AM_RANGE(0x341b, 0x341b) AM_READWRITE(dsp_test_point_r, dsp_test_start_w)
-	AM_RANGE(0x341c, 0x341c) AM_READ(dsp_test_and_clip_r)
-	AM_RANGE(0x341d, 0x341d) AM_READ(dsp_test_or_clip_r)
+	map(0x3418, 0x3418).w(this, FUNC(taitoair_state::dsp_test_x_w));
+	map(0x3419, 0x3419).w(this, FUNC(taitoair_state::dsp_test_y_w));
+	map(0x341a, 0x341a).w(this, FUNC(taitoair_state::dsp_test_z_w));
+	map(0x341b, 0x341b).rw(this, FUNC(taitoair_state::dsp_test_point_r), FUNC(taitoair_state::dsp_test_start_w));
+	map(0x341c, 0x341c).r(this, FUNC(taitoair_state::dsp_test_and_clip_r));
+	map(0x341d, 0x341d).r(this, FUNC(taitoair_state::dsp_test_or_clip_r));
 
-	AM_RANGE(0x4000, 0x7fff) AM_READWRITE(lineram_r, lineram_w)
-	AM_RANGE(0x8000, 0xffff) AM_READWRITE(dspram_r, dspram_w)
-ADDRESS_MAP_END
+	map(0x4000, 0x7fff).rw(this, FUNC(taitoair_state::lineram_r), FUNC(taitoair_state::lineram_w));
+	map(0x8000, 0xffff).rw(this, FUNC(taitoair_state::dspram_r), FUNC(taitoair_state::dspram_w));
+}
 
 
 /************************************************************
@@ -697,17 +702,17 @@ void taitoair_state::machine_reset()
 	}
 }
 
-static MACHINE_CONFIG_START( airsys )
+MACHINE_CONFIG_START(taitoair_state::airsys)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M68000, XTAL_12MHz) // MC68000P12
+	MCFG_CPU_ADD("maincpu", M68000, XTAL(12'000'000)) // MC68000P12
 	MCFG_CPU_PROGRAM_MAP(airsys_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", taitoair_state,  irq5_line_hold)
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_16MHz / 4)   // Z8400AB1
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(16'000'000) / 4)   // Z8400AB1
 	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MCFG_CPU_ADD("dsp", TMS32025, XTAL_36MHz) // Unverified
+	MCFG_CPU_ADD("dsp", TMS32025, XTAL(36'000'000)) // Unverified
 	MCFG_CPU_PROGRAM_MAP(DSP_map_program)
 	MCFG_CPU_DATA_MAP(DSP_map_data)
 	MCFG_TMS32025_HOLD_IN_CB(READ16(taitoair_state, dsp_HOLD_signal_r))
@@ -750,7 +755,7 @@ static MACHINE_CONFIG_START( airsys )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_SOUND_ADD("ymsnd", YM2610, XTAL_16MHz / 2)
+	MCFG_SOUND_ADD("ymsnd", YM2610, XTAL(16'000'000) / 2)
 	MCFG_YM2610_IRQ_HANDLER(INPUTLINE("audiocpu", 0))
 	MCFG_SOUND_ROUTE(0, "mono", 0.30)
 	MCFG_SOUND_ROUTE(1, "mono", 0.60)
@@ -900,8 +905,8 @@ ROM_START( ainferno )
 	ROM_LOAD16_BYTE( "c45-25.35", 0x00000, 0x02000, CRC(c0d39f95) SHA1(542aa6e2af510aea00db40bf803cb6653d4e7747) )
 	ROM_LOAD16_BYTE( "c45-24.6",  0x00001, 0x02000, CRC(1013d937) SHA1(817769d21583f5281ba044ce8c134c9239d1e83e) )
 
-	ROM_REGION( 0x10000, "mechacpu", 0 )
-	ROM_LOAD( "c45_mecha.rom", 0x00000, 0x08000, NO_DUMP )
+	ROM_REGION( 0x10000, "mechacpu", 0 ) // on "Controller P.C.B."
+	ROM_LOAD( "c45-30.9", 0x00000, 0x10000, CRC(fa2db40f) SHA1(91c34a53d2fec619f2536ca79fdc6a17fb0d21e4) ) // 27c512, 1111xxxxxxxxxxxx = 0xFF
 
 	ROM_REGION( 0x100000, "gfx1", 0 )   /* 16x16 tiles */
 	ROM_LOAD16_BYTE( "c45-11.28", 0x000000, 0x20000, CRC(d9b4b77c) SHA1(69d570efa8146fb0a712ff45e77bda6fd85769f8) )
@@ -955,8 +960,8 @@ ROM_START( ainfernoj )
 	ROM_LOAD16_BYTE( "c45-25.35", 0x00000, 0x02000, CRC(c0d39f95) SHA1(542aa6e2af510aea00db40bf803cb6653d4e7747) )
 	ROM_LOAD16_BYTE( "c45-24.6",  0x00001, 0x02000, CRC(1013d937) SHA1(817769d21583f5281ba044ce8c134c9239d1e83e) )
 
-	ROM_REGION( 0x10000, "mechacpu", 0 )
-	ROM_LOAD( "c45_mecha.rom", 0x00000, 0x08000, NO_DUMP )
+	ROM_REGION( 0x10000, "mechacpu", 0 ) // on "Controller P.C.B."
+	ROM_LOAD( "c45-30.9", 0x00000, 0x10000,  CRC(fa2db40f) SHA1(91c34a53d2fec619f2536ca79fdc6a17fb0d21e4) ) // 27c512, 1111xxxxxxxxxxxx = 0xFF
 
 	ROM_REGION( 0x100000, "gfx1", 0 )   /* 16x16 tiles */
 	ROM_LOAD16_BYTE( "c45-11.28", 0x000000, 0x20000, CRC(d9b4b77c) SHA1(69d570efa8146fb0a712ff45e77bda6fd85769f8) )

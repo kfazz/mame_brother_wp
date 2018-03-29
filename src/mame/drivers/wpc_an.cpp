@@ -30,6 +30,10 @@ public:
 			m_wpc(*this,"wpc")
 	{ }
 
+	void wpc_an_dd(machine_config &config);
+	void wpc_an(machine_config &config);
+	void wpc_an_base(machine_config &config);
+	void wpc_an_map(address_map &map);
 protected:
 
 	// devices
@@ -67,13 +71,14 @@ private:
 };
 
 
-static ADDRESS_MAP_START( wpc_an_map, AS_PROGRAM, 8, wpc_an_state )
-	AM_RANGE(0x0000, 0x2fff) AM_READWRITE(ram_r,ram_w)
-	AM_RANGE(0x3000, 0x3faf) AM_RAM
-	AM_RANGE(0x3fb0, 0x3fff) AM_DEVREADWRITE("wpc",wpc_device,read,write) // WPC device
-	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("cpubank")
-	AM_RANGE(0x8000, 0xffff) AM_ROM AM_REGION("fixed",0)
-ADDRESS_MAP_END
+void wpc_an_state::wpc_an_map(address_map &map)
+{
+	map(0x0000, 0x2fff).rw(this, FUNC(wpc_an_state::ram_r), FUNC(wpc_an_state::ram_w));
+	map(0x3000, 0x3faf).ram();
+	map(0x3fb0, 0x3fff).rw(m_wpc, FUNC(wpc_device::read), FUNC(wpc_device::write)); // WPC device
+	map(0x4000, 0x7fff).bankr("cpubank");
+	map(0x8000, 0xffff).rom().region("fixed", 0);
+}
 
 static INPUT_PORTS_START( wpc_an )
 	PORT_START("INP0")
@@ -199,8 +204,8 @@ void wpc_an_state::device_timer(emu_timer &timer, device_timer_id id, int param,
 		// update LED segments
 		for(x=0;x<16;x++)
 		{
-			output().set_digit_value(x,BITSWAP16(m_wpc->get_alphanumeric(x), 15, 7, 12, 10, 8, 14, 13, 9, 11, 6, 5, 4, 3, 2, 1, 0));
-			output().set_digit_value(x+16,BITSWAP16(m_wpc->get_alphanumeric(20+x), 15, 7, 12, 10, 8, 14, 13, 9, 11, 6, 5, 4, 3, 2, 1, 0));
+			output().set_digit_value(x,bitswap<16>(m_wpc->get_alphanumeric(x), 15, 7, 12, 10, 8, 14, 13, 9, 11, 6, 5, 4, 3, 2, 1, 0));
+			output().set_digit_value(x+16,bitswap<16>(m_wpc->get_alphanumeric(20+x), 15, 7, 12, 10, 8, 14, 13, 9, 11, 6, 5, 4, 3, 2, 1, 0));
 		}
 		m_wpc->reset_alphanumeric();
 		m_vblank_count++;
@@ -315,9 +320,9 @@ DRIVER_INIT_MEMBER(wpc_an_state,wpc_an)
 	memcpy(fixed,&ROM[codeoff],0x8000);  // copy static code from end of U6 ROM.
 }
 
-static MACHINE_CONFIG_START( wpc_an_base )
+MACHINE_CONFIG_START(wpc_an_state::wpc_an_base)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809, 2000000)
+	MCFG_CPU_ADD("maincpu", MC6809E, XTAL(8'000'000) / 4) // 68B09E
 	MCFG_CPU_PROGRAM_MAP(wpc_an_map)
 
 	MCFG_WMS_WPC_ADD("wpc")
@@ -331,8 +336,8 @@ static MACHINE_CONFIG_START( wpc_an_base )
 	MCFG_DEFAULT_LAYOUT(layout_wpc_an)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( wpc_an )
-	MCFG_FRAGMENT_ADD(wpc_an_base)
+MACHINE_CONFIG_START(wpc_an_state::wpc_an)
+	wpc_an_base(config);
 
 	MCFG_SPEAKER_STANDARD_MONO("speaker")
 	MCFG_SOUND_ADD("wpcsnd", WPCSND, 0)
@@ -341,8 +346,8 @@ static MACHINE_CONFIG_START( wpc_an )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( wpc_an_dd )
-	MCFG_FRAGMENT_ADD(wpc_an_base)
+MACHINE_CONFIG_START(wpc_an_state::wpc_an_dd)
+	wpc_an_base(config);
 
 	MCFG_SPEAKER_STANDARD_MONO("speaker")
 	MCFG_SOUND_ADD("bg", S11C_BG, 0)

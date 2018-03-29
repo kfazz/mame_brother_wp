@@ -71,33 +71,34 @@ ToDo:
 #include "speaker.h"
 
 
+void zorba_state::zorba_mem(address_map &map)
+{
+	map(0x0000, 0x3fff).bankr("bankr0").bankw("bankw0");
+	map(0x4000, 0xffff).ram();
+}
+
+
+void zorba_state::zorba_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x03).rw("pit", FUNC(pit8254_device::read), FUNC(pit8254_device::write));
+	map(0x04, 0x04).rw(this, FUNC(zorba_state::rom_r), FUNC(zorba_state::rom_w));
+	map(0x05, 0x05).rw(this, FUNC(zorba_state::ram_r), FUNC(zorba_state::ram_w));
+	map(0x10, 0x11).rw(m_crtc, FUNC(i8275_device::read), FUNC(i8275_device::write));
+	map(0x20, 0x20).rw(m_uart0, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x21, 0x21).rw(m_uart0, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x22, 0x22).rw(m_uart1, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x23, 0x23).rw(m_uart1, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x24, 0x24).rw(m_uart2, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x25, 0x25).rw(m_uart2, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x26, 0x26).w(this, FUNC(zorba_state::intmask_w));
+	map(0x30, 0x30).rw(m_dma, FUNC(z80dma_device::read), FUNC(z80dma_device::write));
+	map(0x40, 0x43).rw(m_fdc, FUNC(fd1793_device::read), FUNC(fd1793_device::write));
+	map(0x50, 0x53).rw(m_pia0, FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x60, 0x63).rw(m_pia1, FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+}
+
 namespace {
-
-ADDRESS_MAP_START( zorba_mem, AS_PROGRAM, 8, zorba_state )
-	AM_RANGE( 0x0000, 0x3fff ) AM_READ_BANK("bankr0") AM_WRITE_BANK("bankw0")
-	AM_RANGE( 0x4000, 0xffff ) AM_RAM
-ADDRESS_MAP_END
-
-
-ADDRESS_MAP_START( zorba_io, AS_IO, 8, zorba_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x03) AM_DEVREADWRITE("pit", pit8254_device, read, write)
-	AM_RANGE(0x04, 0x04) AM_READWRITE(rom_r, rom_w)
-	AM_RANGE(0x05, 0x05) AM_READWRITE(ram_r, ram_w)
-	AM_RANGE(0x10, 0x11) AM_DEVREADWRITE("crtc", i8275_device, read, write)
-	AM_RANGE(0x20, 0x20) AM_DEVREADWRITE("uart0", i8251_device, data_r, data_w)
-	AM_RANGE(0x21, 0x21) AM_DEVREADWRITE("uart0", i8251_device, status_r, control_w)
-	AM_RANGE(0x22, 0x22) AM_DEVREADWRITE("uart1", i8251_device, data_r, data_w)
-	AM_RANGE(0x23, 0x23) AM_DEVREADWRITE("uart1", i8251_device, status_r, control_w)
-	AM_RANGE(0x24, 0x24) AM_DEVREADWRITE("uart2", i8251_device, data_r, data_w)
-	AM_RANGE(0x25, 0x25) AM_DEVREADWRITE("uart2", i8251_device, status_r, control_w)
-	AM_RANGE(0x26, 0x26) AM_WRITE(intmask_w)
-	AM_RANGE(0x30, 0x30) AM_DEVREADWRITE("dma", z80dma_device, read, write)
-	AM_RANGE(0x40, 0x43) AM_DEVREADWRITE("fdc", fd1793_device, read, write)
-	AM_RANGE(0x50, 0x53) AM_DEVREADWRITE("pia0", pia6821_device, read, write)
-	AM_RANGE(0x60, 0x63) AM_DEVREADWRITE("pia1", pia6821_device, read, write)
-ADDRESS_MAP_END
-
 
 INPUT_PORTS_START( zorba )
 	PORT_START("CNF")
@@ -130,13 +131,14 @@ GFXDECODE_START( zorba )
 	GFXDECODE_ENTRY( "chargen", 0x0000, u5_charlayout, 0, 1 )
 GFXDECODE_END
 
+} // anonymous namespace
 
-MACHINE_CONFIG_START( zorba )
+
+MACHINE_CONFIG_START(zorba_state::zorba)
 	// basic machine hardware
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_24MHz / 6)
+	MCFG_CPU_ADD("maincpu", Z80, 24_MHz_XTAL / 6)
 	MCFG_CPU_PROGRAM_MAP(zorba_mem)
 	MCFG_CPU_IO_MAP(zorba_io)
-	MCFG_MACHINE_RESET_OVERRIDE(zorba_state, zorba)
 
 	/* video hardware */
 	MCFG_SCREEN_ADD_MONOCHROME("screen", RASTER, rgb_t::green())
@@ -158,7 +160,7 @@ MACHINE_CONFIG_START( zorba )
 	MCFG_INPUT_MERGER_OUTPUT_HANDLER(WRITELINE(zorba_state, irq_w<2>))
 
 	/* devices */
-	MCFG_DEVICE_ADD("dma", Z80DMA, XTAL_24MHz/6)
+	MCFG_DEVICE_ADD("dma", Z80DMA, 24_MHz_XTAL / 6)
 	// busack on cpu connects to bai pin
 	MCFG_Z80DMA_OUT_BUSREQ_CB(WRITELINE(zorba_state, busreq_w))  //connects to busreq on cpu
 	MCFG_Z80DMA_OUT_INT_CB(DEVWRITELINE("irq0", input_merger_device, in_w<0>))
@@ -206,9 +208,9 @@ MACHINE_CONFIG_START( zorba )
 
 	// PIT
 	MCFG_DEVICE_ADD("pit", PIT8254, 0)
-	MCFG_PIT8253_CLK0(XTAL_24MHz / 3)
-	MCFG_PIT8253_CLK1(XTAL_24MHz / 3)
-	MCFG_PIT8253_CLK2(XTAL_24MHz / 3)
+	MCFG_PIT8253_CLK0(24_MHz_XTAL / 3)
+	MCFG_PIT8253_CLK1(24_MHz_XTAL / 3)
+	MCFG_PIT8253_CLK2(24_MHz_XTAL / 3)
 	MCFG_PIT8253_OUT0_HANDLER(WRITELINE(zorba_state, br1_w))
 	MCFG_PIT8253_OUT1_HANDLER(DEVWRITELINE("uart1", i8251_device, write_txc))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("uart1", i8251_device, write_rxc))
@@ -216,7 +218,7 @@ MACHINE_CONFIG_START( zorba )
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("uart2", i8251_device, write_rxc))
 
 	// CRTC
-	MCFG_DEVICE_ADD("crtc", I8275, XTAL_14_31818MHz/7)
+	MCFG_DEVICE_ADD("crtc", I8275, 14.318'181_MHz_XTAL / 7)
 	MCFG_I8275_CHARACTER_WIDTH(8)
 	MCFG_I8275_DRAW_CHARACTER_CALLBACK_OWNER(zorba_state, zorba_update_chr)
 	MCFG_I8275_DRQ_CALLBACK(DEVWRITELINE("dma", z80dma_device, rdy_w))
@@ -224,7 +226,7 @@ MACHINE_CONFIG_START( zorba )
 	MCFG_VIDEO_SET_SCREEN("screen")
 
 	// Floppies
-	MCFG_FD1793_ADD("fdc", XTAL_24MHz / 24)
+	MCFG_FD1793_ADD("fdc", 24_MHz_XTAL / 24)
 	MCFG_WD_FDC_INTRQ_CALLBACK(DEVWRITELINE("irq2", input_merger_device, in_w<0>))
 	MCFG_WD_FDC_DRQ_CALLBACK(DEVWRITELINE("irq2", input_merger_device, in_w<1>))
 	MCFG_FLOPPY_DRIVE_ADD("fdc:0", zorba_floppies, "525dd", floppy_image_device::default_floppy_formats)
@@ -262,14 +264,12 @@ MACHINE_CONFIG_START( zorba )
 	MCFG_SOFTWARE_LIST_ADD("flop_list", "zorba")
 MACHINE_CONFIG_END
 
-} // anonymous namespace
-
 
 //-------------------------------------------------
 //  Initialise/reset
 //-------------------------------------------------
 
-DRIVER_INIT_MEMBER( zorba_state, zorba )
+void zorba_state::machine_start()
 {
 	uint8_t *main = memregion("maincpu")->base();
 
@@ -292,7 +292,7 @@ DRIVER_INIT_MEMBER( zorba_state, zorba )
 	m_printer_select = 0;
 }
 
-MACHINE_RESET_MEMBER( zorba_state, zorba )
+void zorba_state::machine_reset()
 {
 	m_uart2->write_cts(0); // always asserted
 
@@ -316,7 +316,7 @@ MACHINE_RESET_MEMBER( zorba_state, zorba )
 
 READ8_MEMBER( zorba_state::ram_r )
 {
-	if (!machine().side_effect_disabled())
+	if (!machine().side_effects_disabled())
 		m_read_bank->set_entry(0);
 	return 0;
 }
@@ -328,7 +328,7 @@ WRITE8_MEMBER( zorba_state::ram_w )
 
 READ8_MEMBER( zorba_state::rom_r )
 {
-	if (!machine().side_effect_disabled())
+	if (!machine().side_effects_disabled())
 		m_read_bank->set_entry(1);
 	return 0;
 }
@@ -562,8 +562,8 @@ ROM_START( zorba )
 	ROM_LOAD( "74ls288.u77", 0x0040, 0x0020, CRC(946e03b0) SHA1(24240bdd7bdf507a5b51628fb36ad1266fc53a28) BAD_DUMP ) // looks like bad dump of address decode PROM
 ROM_END
 
-COMP( 1984?, zorba, 0, 0, zorba, zorba, zorba_state, zorba, "Modular Micros", "Zorba (Modular Micros)", MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )
+COMP( 1984?, zorba, 0, 0, zorba, zorba, zorba_state, 0, "Modular Micros", "Zorba (Modular Micros)", MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )
 
 // Undumped versions (see startup screen notes at top of file)
-// COMP( 1983, zorbat, zorba, 0, zorba, zorba, zorba_state, zorba, "Telcon Industries",  "Zorba (Telcon Industries)",  MACHINE_NOT_WORKING )
-// COMP( 1984, zorbag, zorba, 0, zorba, zorba, zorba_state, zorba, "Gemini Electronics", "Zorba (Gemini Electronics)", MACHINE_NOT_WORKING )
+// COMP( 1983, zorbat, zorba, 0, zorba, zorba, zorba_state, 0, "Telcon Industries",  "Zorba (Telcon Industries)",  MACHINE_NOT_WORKING )
+// COMP( 1984, zorbag, zorba, 0, zorba, zorba, zorba_state, 0, "Gemini Electronics", "Zorba (Gemini Electronics)", MACHINE_NOT_WORKING )

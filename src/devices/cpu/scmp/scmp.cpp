@@ -10,6 +10,7 @@
 
 #include "emu.h"
 #include "scmp.h"
+#include "scmpdasm.h"
 
 #include "debugger.h"
 
@@ -17,8 +18,8 @@
 #include "logmacro.h"
 
 
-DEFINE_DEVICE_TYPE(SCMP,    scmp_device,    "ins8050", "INS 8050 SC/MP")
-DEFINE_DEVICE_TYPE(INS8060, ins8060_device, "ins8060", "INS 8060 SC/MP II")
+DEFINE_DEVICE_TYPE(SCMP,    scmp_device,    "ins8050", "National Semiconductor INS 8050 SC/MP")
+DEFINE_DEVICE_TYPE(INS8060, ins8060_device, "ins8060", "National Semiconductor INS 8060 SC/MP II")
 
 
 scmp_device::scmp_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
@@ -54,10 +55,9 @@ ins8060_device::ins8060_device(const machine_config &mconfig, const char *tag, d
 }
 
 
-offs_t scmp_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> scmp_device::create_disassembler()
 {
-	extern CPU_DISASSEMBLE( scmp );
-	return CPU_DISASSEMBLE_NAME(scmp)(this, stream, pc, oprom, opram, options);
+	return std::make_unique<scmp_disassembler>();
 }
 
 
@@ -502,7 +502,7 @@ void scmp_device::device_start()
 	}
 
 	m_program = &space(AS_PROGRAM);
-	m_direct = &m_program->direct();
+	m_direct = m_program->direct<0>();
 
 	/* resolve callbacks */
 	m_flag_out_func.resolve_safe();

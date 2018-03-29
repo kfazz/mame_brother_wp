@@ -2,7 +2,7 @@
 // copyright-holders:Wilbert Pol
 /***************************************************************************
 
-  pcfx.c
+  pcfx.cpp
 
   Driver file to handle emulation of the NEC PC-FX.
 
@@ -17,13 +17,6 @@
 #include "video/huc6272.h"
 #include "screen.h"
 
-struct pcfx_pad_t
-{
-	uint8_t ctrl[2];
-	uint8_t status[2];
-	uint32_t latch[2];
-};
-
 class pcfx_state : public driver_device
 {
 public:
@@ -37,19 +30,7 @@ public:
 		m_maincpu(*this, "maincpu"),
 		m_huc6261(*this, "huc6261") { }
 
-	required_device<cpu_device> m_maincpu;
-	required_device<huc6261_device> m_huc6261;
-
-	virtual void machine_reset() override;
-
 	uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
-
-	// Interrupt controller (component unknown)
-	uint16_t m_irq_mask;
-	uint16_t m_irq_pending;
-	uint8_t m_irq_priority[8];
-
-	pcfx_pad_t m_pad;
 
 	DECLARE_READ16_MEMBER( irq_read );
 	DECLARE_WRITE16_MEMBER( irq_write );
@@ -58,8 +39,6 @@ public:
 	DECLARE_READ8_MEMBER( extio_r );
 	DECLARE_WRITE8_MEMBER( extio_w );
 
-	inline void check_irqs();
-	inline void set_irq_line(int line, int state);
 	DECLARE_WRITE_LINE_MEMBER( irq8_w );
 	DECLARE_WRITE_LINE_MEMBER( irq9_w );
 	DECLARE_WRITE_LINE_MEMBER( irq10_w );
@@ -70,8 +49,34 @@ public:
 	DECLARE_WRITE_LINE_MEMBER( irq15_w );
 	TIMER_CALLBACK_MEMBER(pad_func);
 
+	void pcfx(machine_config &config);
+	void pcfx_io(address_map &map);
+	void pcfx_mem(address_map &map);
 protected:
 	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+
+	virtual void machine_reset() override;
+
+private:
+	// Interrupt controller (component unknown)
+	uint16_t m_irq_mask;
+	uint16_t m_irq_pending;
+	uint8_t m_irq_priority[8];
+
+	struct pcfx_pad_t
+	{
+		uint8_t ctrl[2];
+		uint8_t status[2];
+		uint32_t latch[2];
+	};
+
+	pcfx_pad_t m_pad;
+
+	inline void check_irqs();
+	inline void set_irq_line(int line, int state);
+
+	required_device<cpu_device> m_maincpu;
+	required_device<huc6261_device> m_huc6261;
 };
 
 
@@ -89,14 +94,15 @@ WRITE8_MEMBER(pcfx_state::extio_w)
 	io_space.write_byte(offset, data);
 }
 
-static ADDRESS_MAP_START( pcfx_mem, AS_PROGRAM, 32, pcfx_state )
-	AM_RANGE( 0x00000000, 0x001FFFFF ) AM_RAM   /* RAM */
+void pcfx_state::pcfx_mem(address_map &map)
+{
+	map(0x00000000, 0x001FFFFF).ram();   /* RAM */
 //  AM_RANGE( 0x80000000, 0x807FFFFF ) AM_READWRITE8(extio_r,extio_w,0xffffffff)    /* EXTIO */
-	AM_RANGE( 0xE0000000, 0xE7FFFFFF ) AM_NOP   /* BackUp RAM */
-	AM_RANGE( 0xE8000000, 0xE9FFFFFF ) AM_NOP   /* Extended BackUp RAM */
-	AM_RANGE( 0xF8000000, 0xF8000007 ) AM_NOP   /* PIO */
-	AM_RANGE( 0xFFF00000, 0xFFFFFFFF ) AM_ROM AM_REGION("ipl", 0)  /* ROM */
-ADDRESS_MAP_END
+	map(0xE0000000, 0xE7FFFFFF).noprw();   /* BackUp RAM */
+	map(0xE8000000, 0xE9FFFFFF).noprw();   /* Extended BackUp RAM */
+	map(0xF8000000, 0xF8000007).noprw();   /* PIO */
+	map(0xFFF00000, 0xFFFFFFFF).rom().region("ipl", 0);  /* ROM */
+}
 
 READ16_MEMBER( pcfx_state::pad_r )
 {
@@ -180,21 +186,22 @@ WRITE16_MEMBER( pcfx_state::pad_w )
 }
 
 
-static ADDRESS_MAP_START( pcfx_io, AS_IO, 32, pcfx_state )
-	AM_RANGE( 0x00000000, 0x000000FF ) AM_READWRITE16(pad_r, pad_w, 0xffffffff) /* PAD */
-	AM_RANGE( 0x00000100, 0x000001FF ) AM_NOP   /* HuC6230 */
-	AM_RANGE( 0x00000200, 0x000002FF ) AM_DEVICE16( "huc6271", huc6271_device, regs, 0xffff )   /* HuC6271 */
-	AM_RANGE( 0x00000300, 0x000003FF ) AM_DEVREADWRITE16( "huc6261", huc6261_device, read, write, 0xffff )  /* HuC6261 */
-	AM_RANGE( 0x00000400, 0x000004FF ) AM_DEVREADWRITE8( "huc6270_a", huc6270_device, read, write, 0xffff ) /* HuC6270-A */
-	AM_RANGE( 0x00000500, 0x000005FF ) AM_DEVREADWRITE8( "huc6270_b", huc6270_device, read, write, 0xffff ) /* HuC6270-B */
-	AM_RANGE( 0x00000600, 0x000006FF ) AM_DEVREADWRITE( "huc6272", huc6272_device, read, write )    /* HuC6272 */
-	AM_RANGE( 0x00000C80, 0x00000C83 ) AM_NOP
-	AM_RANGE( 0x00000E00, 0x00000EFF ) AM_READWRITE16( irq_read, irq_write, 0xffff )    /* Interrupt controller */
-	AM_RANGE( 0x00000F00, 0x00000FFF ) AM_NOP
+void pcfx_state::pcfx_io(address_map &map)
+{
+	map(0x00000000, 0x000000FF).rw(this, FUNC(pcfx_state::pad_r), FUNC(pcfx_state::pad_w)); /* PAD */
+	map(0x00000100, 0x000001FF).noprw();   /* HuC6230 */
+	map(0x00000200, 0x000002FF).m("huc6271", FUNC(huc6271_device::regs)).umask32(0x0000ffff);   /* HuC6271 */
+	map(0x00000300, 0x000003FF).rw(m_huc6261, FUNC(huc6261_device::read), FUNC(huc6261_device::write)).umask32(0x0000ffff);  /* HuC6261 */
+	map(0x00000400, 0x000004FF).rw("huc6270_a", FUNC(huc6270_device::read), FUNC(huc6270_device::write)).umask32(0x0000ffff); /* HuC6270-A */
+	map(0x00000500, 0x000005FF).rw("huc6270_b", FUNC(huc6270_device::read), FUNC(huc6270_device::write)).umask32(0x0000ffff); /* HuC6270-B */
+	map(0x00000600, 0x000006FF).rw("huc6272", FUNC(huc6272_device::read), FUNC(huc6272_device::write));    /* HuC6272 */
+	map(0x00000C80, 0x00000C83).noprw();
+	map(0x00000E00, 0x00000EFF).rw(this, FUNC(pcfx_state::irq_read), FUNC(pcfx_state::irq_write)).umask32(0x0000ffff);    /* Interrupt controller */
+	map(0x00000F00, 0x00000FFF).noprw();
 //  AM_RANGE( 0x00600000, 0x006FFFFF ) AM_READ(scsi_ctrl_r)
-	AM_RANGE( 0x00780000, 0x007FFFFF ) AM_ROM AM_REGION("scsi_rom", 0 )
-	AM_RANGE( 0x80500000, 0x805000FF ) AM_NOP   /* HuC6273 */
-ADDRESS_MAP_END
+	map(0x00780000, 0x007FFFFF).rom().region("scsi_rom", 0);
+	map(0x80500000, 0x805000FF).noprw();   /* HuC6273 */
+}
 
 
 static INPUT_PORTS_START( pcfx )
@@ -408,14 +415,14 @@ uint32_t pcfx_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, 
 }
 
 
-static MACHINE_CONFIG_START( pcfx )
-	MCFG_CPU_ADD( "maincpu", V810, XTAL_21_4772MHz )
+MACHINE_CONFIG_START(pcfx_state::pcfx)
+	MCFG_CPU_ADD( "maincpu", V810, XTAL(21'477'272) )
 	MCFG_CPU_PROGRAM_MAP( pcfx_mem)
 	MCFG_CPU_IO_MAP( pcfx_io)
 
 	MCFG_SCREEN_ADD( "screen", RASTER )
 	MCFG_SCREEN_UPDATE_DRIVER(pcfx_state, screen_update)
-	MCFG_SCREEN_RAW_PARAMS(XTAL_21_4772MHz, huc6261_device::WPF, 64, 64 + 1024 + 64, huc6261_device::LPF, 18, 18 + 242)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(21'477'272), huc6261_device::WPF, 64, 64 + 1024 + 64, huc6261_device::LPF, 18, 18 + 242)
 
 	MCFG_DEVICE_ADD( "huc6270_a", HUC6270, 0 )
 	MCFG_HUC6270_VRAM_SIZE(0x20000)
@@ -425,16 +432,18 @@ static MACHINE_CONFIG_START( pcfx )
 	MCFG_HUC6270_VRAM_SIZE(0x20000)
 	MCFG_HUC6270_IRQ_CHANGED_CB(WRITELINE(pcfx_state, irq14_w))
 
-	MCFG_DEVICE_ADD("huc6261", HUC6261, XTAL_21_4772MHz)
+	MCFG_DEVICE_ADD("huc6261", HUC6261, XTAL(21'477'272))
 	MCFG_HUC6261_VDC1("huc6270_a")
 	MCFG_HUC6261_VDC2("huc6270_b")
 	MCFG_HUC6261_KING("huc6272")
 
-	MCFG_HUC6272_ADD( "huc6272", XTAL_21_4772MHz )
+	MCFG_HUC6272_ADD( "huc6272", XTAL(21'477'272) )
 	MCFG_HUC6272_IRQ_CHANGED_CB(WRITELINE(pcfx_state, irq13_w))
 	MCFG_HUC6272_RAINBOW("huc6271")
 
-	MCFG_HUC6271_ADD( "huc6271", XTAL_21_4772MHz )
+	MCFG_HUC6271_ADD( "huc6271", XTAL(21'477'272) )
+
+	MCFG_SOFTWARE_LIST_ADD("cd_list", "pcfx")
 MACHINE_CONFIG_END
 
 

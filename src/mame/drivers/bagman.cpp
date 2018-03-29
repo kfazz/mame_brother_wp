@@ -80,20 +80,21 @@ void bagman_state::machine_start()
 	save_item(NAME(m_video_enable));
 }
 
-MACHINE_START_MEMBER(bagman_state, squaitsa)
+void squaitsa_state::machine_start()
 {
 	bagman_state::machine_start();
-	save_item(NAME(m_p1_res));
-	save_item(NAME(m_p1_old_val));
-	save_item(NAME(m_p2_res));
-	save_item(NAME(m_p2_old_val));
+
+	save_item(NAME(m_res));
+	save_item(NAME(m_old_val));
 }
 
 
 WRITE8_MEMBER(bagman_state::ls259_w)
 {
 	pal16r6_w(space, offset,data); /*this is just a simulation*/
-	m_tmslatch->write_bit(offset, data & 1);
+
+	if (m_tmslatch.found())
+		m_tmslatch->write_bit(offset, data & 1);
 }
 
 WRITE_LINE_MEMBER(bagman_state::tmsprom_bit_w)
@@ -108,7 +109,11 @@ WRITE_LINE_MEMBER(bagman_state::tmsprom_csq0_w)
 
 WRITE_LINE_MEMBER(bagman_state::tmsprom_csq1_w)
 {
-	m_tmsprom->rom_csq_w(machine().dummy_space(), 1, state);
+	// HACK: Schematics suggest that this LS259 does in fact respond to the master
+	// reset signal, which would pull /OE active low on both 2732s at once. How
+	// does that situation manage not to overload the circuitry?
+	if (state || m_tmslatch->q4_r())
+		m_tmsprom->rom_csq_w(machine().dummy_space(), 1, state);
 }
 
 WRITE_LINE_MEMBER(bagman_state::coin_counter_w)
@@ -123,53 +128,56 @@ WRITE_LINE_MEMBER(bagman_state::irq_mask_w)
 		m_maincpu->set_input_line(0, CLEAR_LINE);
 }
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 8, bagman_state )
-	AM_RANGE(0x0000, 0x5fff) AM_ROM
-	AM_RANGE(0x6000, 0x67ff) AM_RAM
-	AM_RANGE(0x9000, 0x93ff) AM_RAM_WRITE(videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x9800, 0x9bff) AM_RAM_WRITE(colorram_w) AM_SHARE("colorram")
-	AM_RANGE(0x9c00, 0x9fff) AM_WRITENOP    /* written to, but unused */
-	AM_RANGE(0xa000, 0xa000) AM_READ(pal16r6_r)
-	AM_RANGE(0xa000, 0xa007) AM_DEVWRITE("mainlatch", ls259_device, write_d0)
-	AM_RANGE(0xc000, 0xffff) AM_ROM /* Super Bagman only */
-	AM_RANGE(0x9800, 0x981f) AM_WRITEONLY AM_SHARE("spriteram") /* hidden portion of color RAM */
+void bagman_state::main_map(address_map &map)
+{
+	map(0x0000, 0x5fff).rom();
+	map(0x6000, 0x67ff).ram();
+	map(0x9000, 0x93ff).ram().w(this, FUNC(bagman_state::videoram_w)).share("videoram");
+	map(0x9800, 0x9bff).ram().w(this, FUNC(bagman_state::colorram_w)).share("colorram");
+	map(0x9c00, 0x9fff).nopw();    /* written to, but unused */
+	map(0xa000, 0xa000).r(this, FUNC(bagman_state::pal16r6_r));
+	map(0xa000, 0xa007).w("mainlatch", FUNC(ls259_device::write_d0));
+	map(0xc000, 0xffff).rom(); /* Super Bagman only */
+	map(0x9800, 0x981f).writeonly().share("spriteram"); /* hidden portion of color RAM */
 									/* here only to initialize the pointer, */
 									/* writes are handled by colorram_w */
-	AM_RANGE(0xa800, 0xa807) AM_WRITE(ls259_w) /* TMS5110 driving state machine */
-	AM_RANGE(0xb000, 0xb000) AM_READ_PORT("DSW")
-	AM_RANGE(0xb800, 0xb800) AM_READNOP                             /* looks like watchdog from schematics */
+	map(0xa800, 0xa807).w(this, FUNC(bagman_state::ls259_w)); /* TMS5110 driving state machine */
+	map(0xb000, 0xb000).portr("DSW");
+	map(0xb800, 0xb800).nopr();                             /* looks like watchdog from schematics */
 
 #if 0
-	AM_RANGE(0xb000, 0xb000) AM_WRITENOP    /* ???? */
-	AM_RANGE(0xb800, 0xb800) AM_WRITENOP    /* ???? */
+	map(0xb000, 0xb000).nopw();    /* ???? */
+	map(0xb800, 0xb800).nopw();    /* ???? */
 #endif
-ADDRESS_MAP_END
+}
 
 
 
-static ADDRESS_MAP_START( pickin_map, AS_PROGRAM, 8, bagman_state )
-	AM_RANGE(0x0000, 0x5fff) AM_ROM
-	AM_RANGE(0x7000, 0x77ff) AM_RAM
-	AM_RANGE(0x8800, 0x8bff) AM_RAM_WRITE(videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x9800, 0x9bff) AM_RAM_WRITE(colorram_w) AM_SHARE("colorram")
-	AM_RANGE(0x9800, 0x981f) AM_WRITEONLY AM_SHARE("spriteram") /* hidden portion of color RAM */
+void bagman_state::pickin_map(address_map &map)
+{
+	map(0x0000, 0x5fff).rom();
+	map(0x7000, 0x77ff).ram();
+	map(0x8800, 0x8bff).ram().w(this, FUNC(bagman_state::videoram_w)).share("videoram");
+	map(0x9800, 0x9bff).ram().w(this, FUNC(bagman_state::colorram_w)).share("colorram");
+	map(0x9800, 0x981f).writeonly().share("spriteram"); /* hidden portion of color RAM */
 									/* here only to initialize the pointer, */
 									/* writes are handled by colorram_w */
-	AM_RANGE(0x9c00, 0x9fff) AM_WRITENOP    /* written to, but unused */
-	AM_RANGE(0xa000, 0xa007) AM_DEVWRITE("mainlatch", ls259_device, write_d0)
-	AM_RANGE(0xa800, 0xa800) AM_READ_PORT("DSW")
+	map(0x9c00, 0x9fff).nopw();    /* written to, but unused */
+	map(0xa000, 0xa007).w("mainlatch", FUNC(ls259_device::write_d0));
+	map(0xa800, 0xa800).portr("DSW");
 
 	/* guess */
-	AM_RANGE(0xb000, 0xb000) AM_DEVWRITE("ay2", ay8910_device, address_w)
-	AM_RANGE(0xb800, 0xb800) AM_DEVREADWRITE("ay2", ay8910_device, data_r, data_w)
-ADDRESS_MAP_END
+	map(0xb000, 0xb000).w("ay2", FUNC(ay8910_device::address_w));
+	map(0xb800, 0xb800).rw("ay2", FUNC(ay8910_device::data_r), FUNC(ay8910_device::data_w));
+}
 
-static ADDRESS_MAP_START( main_portmap, AS_IO, 8, bagman_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x08, 0x09) AM_DEVWRITE("aysnd", ay8910_device, address_data_w)
-	AM_RANGE(0x0c, 0x0c) AM_DEVREAD("aysnd", ay8910_device, data_r)
+void bagman_state::main_portmap(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x08, 0x09).w("aysnd", FUNC(ay8910_device::address_data_w));
+	map(0x0c, 0x0c).r("aysnd", FUNC(ay8910_device::data_r));
 	//AM_RANGE(0x56, 0x56) AM_WRITENOP
-ADDRESS_MAP_END
+}
 
 
 
@@ -309,8 +317,7 @@ static INPUT_PORTS_START( squaitsa )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_START1 )
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_2WAY
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_2WAY
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_SPECIAL ) // special handling for the p1 dial
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_SPECIAL ) // ^
+	PORT_BIT( 0x60, IP_ACTIVE_LOW, IPT_SPECIAL ) PORT_CUSTOM_MEMBER(DEVICE_SELF, squaitsa_state, dial_input_r<0>, nullptr)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_BUTTON1 )
 
 	PORT_START("P2")
@@ -319,8 +326,7 @@ static INPUT_PORTS_START( squaitsa )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_START2 )
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_2WAY PORT_COCKTAIL
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_2WAY PORT_COCKTAIL
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_SPECIAL ) // special handling for the p2 dial
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_SPECIAL ) // ^
+	PORT_BIT( 0x60, IP_ACTIVE_LOW, IPT_SPECIAL ) PORT_CUSTOM_MEMBER(DEVICE_SELF, squaitsa_state, dial_input_r<1>, nullptr)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_COCKTAIL
 
 	PORT_START("DSW")
@@ -394,44 +400,22 @@ GFXDECODE_END
 
 /* squaitsa doesn't map the dial directly, instead it polls the results of the dial through an external circuitry.
    I don't know if the following is correct, there can possibly be multiple solutions for the same problem. */
-READ8_MEMBER(bagman_state::dial_input_p1_r)
+template <unsigned N> CUSTOM_INPUT_MEMBER(squaitsa_state::dial_input_r)
 {
-	uint8_t dial_val;
+	uint8_t const dial_val = m_dial[N]->read();
 
-	dial_val = ioport("DIAL_P1")->read();
-
-	if(m_p1_res != 0x60)
-		m_p1_res = 0x60;
-	else if(dial_val > m_p1_old_val)
-		m_p1_res = 0x40;
-	else if(dial_val < m_p1_old_val)
-		m_p1_res = 0x20;
+	if(m_res[N] != 0x03)
+		m_res[N] = 0x03;
+	else if(dial_val > m_old_val[N])
+		m_res[N] = 0x02;
+	else if(dial_val < m_old_val[N])
+		m_res[N] = 0x01;
 	else
-		m_p1_res = 0x60;
+		m_res[N] = 0x03;
 
-	m_p1_old_val = dial_val;
+	m_old_val[N] = dial_val;
 
-	return (ioport("P1")->read() & 0x9f) | (m_p1_res);
-}
-
-READ8_MEMBER(bagman_state::dial_input_p2_r)
-{
-	uint8_t dial_val;
-
-	dial_val = ioport("DIAL_P2")->read();
-
-	if(m_p2_res != 0x60)
-		m_p2_res = 0x60;
-	else if(dial_val > m_p2_old_val)
-		m_p2_res = 0x40;
-	else if(dial_val < m_p2_old_val)
-		m_p2_res = 0x20;
-	else
-		m_p2_res = 0x60;
-
-	m_p2_old_val = dial_val;
-
-	return (ioport("P2")->read() & 0x9f) | (m_p2_res);
+	return m_res[N];
 }
 
 INTERRUPT_GEN_MEMBER(bagman_state::vblank_irq)
@@ -441,7 +425,7 @@ INTERRUPT_GEN_MEMBER(bagman_state::vblank_irq)
 }
 
 
-static MACHINE_CONFIG_START( bagman )
+MACHINE_CONFIG_START(bagman_state::bagman)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, BAGMAN_H0)
@@ -505,12 +489,22 @@ static MACHINE_CONFIG_START( bagman )
 	MCFG_ADDRESSABLE_LATCH_Q5_OUT_CB(WRITELINE(bagman_state, tmsprom_csq1_w))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( sbagman, bagman )
+MACHINE_CONFIG_START(bagman_state::sbagman)
+	bagman(config);
 	MCFG_DEVICE_MODIFY("mainlatch")
 	MCFG_ADDRESSABLE_LATCH_Q3_OUT_CB(WRITELINE(bagman_state, video_enable_w))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( pickin )
+MACHINE_CONFIG_START(bagman_state::sbagmani)
+	sbagman(config);
+
+	// only 1 AY8910
+	MCFG_DEVICE_REMOVE("tmsprom")
+	MCFG_DEVICE_REMOVE("tms")
+	MCFG_DEVICE_REMOVE("tmslatch")
+MACHINE_CONFIG_END
+
+MACHINE_CONFIG_START(bagman_state::pickin)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, BAGMAN_H0)
@@ -570,7 +564,7 @@ z80
 */
 
 
-static MACHINE_CONFIG_START( botanic )
+MACHINE_CONFIG_START(bagman_state::botanic)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, BAGMAN_H0)
@@ -609,15 +603,6 @@ static MACHINE_CONFIG_START( botanic )
 
 	MCFG_SOUND_ADD("ay2", AY8910, 1500000)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
-MACHINE_CONFIG_END
-
-static MACHINE_CONFIG_DERIVED( squaitsa, botanic )
-	MCFG_MACHINE_START_OVERRIDE(bagman_state, squaitsa)
-
-	MCFG_SOUND_MODIFY("aysnd")
-	MCFG_AY8910_PORT_A_READ_CB(READ8(bagman_state, dial_input_p1_r))
-	MCFG_AY8910_PORT_B_READ_CB(READ8(bagman_state, dial_input_p2_r))
-
 MACHINE_CONFIG_END
 
 
@@ -804,20 +789,20 @@ ROM_END
 
 ROM_START( bagmanj )
 	ROM_REGION( 0x10000, "maincpu", 0 )
-	ROM_LOAD( "BF8_06.E9",    0x0000, 0x1000, CRC(5fb0a1a3) SHA1(849cd60b58de9585a78a1c4c1747f666a4a4fcc3) ) // 2732
-	ROM_LOAD( "BF8_07.F9",    0x1000, 0x1000, CRC(7871206e) SHA1(14d9b7a0779d59a870e0d4b911797dff5435a16c) ) // 2732
-	ROM_LOAD( "BF8_08.J9",    0x2000, 0x1000, CRC(ae037d0a) SHA1(57d287b3968a4e7fdee2a98014dbdf4fae93d157) ) // 2732
-	ROM_LOAD( "BF8_09.K9",    0x3000, 0x1000, CRC(36b6a944) SHA1(270dd2566b36129366adcbdd5a8db396bec7631f) ) // 2732
-	ROM_LOAD( "BF8_10.M9",    0x4000, 0x1000, CRC(b8e75eb6) SHA1(433fd736512f10bc0879b15821eb55cc41d58d33) ) // 2732
-	ROM_LOAD( "BF8_11.N9",    0x5000, 0x1000, CRC(83fccb1c) SHA1(7225d738b64a2cdaaec8860017de4229f2852ed2) ) // 2732
+	ROM_LOAD( "bf8_06.e9",    0x0000, 0x1000, CRC(5fb0a1a3) SHA1(849cd60b58de9585a78a1c4c1747f666a4a4fcc3) ) // 2732
+	ROM_LOAD( "bf8_07.f9",    0x1000, 0x1000, CRC(7871206e) SHA1(14d9b7a0779d59a870e0d4b911797dff5435a16c) ) // 2732
+	ROM_LOAD( "bf8_08.j9",    0x2000, 0x1000, CRC(ae037d0a) SHA1(57d287b3968a4e7fdee2a98014dbdf4fae93d157) ) // 2732
+	ROM_LOAD( "bf8_09.k9",    0x3000, 0x1000, CRC(36b6a944) SHA1(270dd2566b36129366adcbdd5a8db396bec7631f) ) // 2732
+	ROM_LOAD( "bf8_10.m9",    0x4000, 0x1000, CRC(b8e75eb6) SHA1(433fd736512f10bc0879b15821eb55cc41d58d33) ) // 2732
+	ROM_LOAD( "bf8_11.n9",    0x5000, 0x1000, CRC(83fccb1c) SHA1(7225d738b64a2cdaaec8860017de4229f2852ed2) ) // 2732
 
 	ROM_REGION( 0x2000, "gfx1", 0 )
-	ROM_LOAD( "BF8_03.E1",    0x0000, 0x1000, CRC(f217ac09) SHA1(a9716674401dff27344a01df8121b6b648688680) ) // 2732
-	ROM_LOAD( "BF8_05.J1",    0x1000, 0x1000, CRC(c680ef04) SHA1(79406bc786374abfcd9f548268c445b5c8d8858d) ) // 2732
+	ROM_LOAD( "bf8_03.e1",    0x0000, 0x1000, CRC(f217ac09) SHA1(a9716674401dff27344a01df8121b6b648688680) ) // 2732
+	ROM_LOAD( "bf8_05.j1",    0x1000, 0x1000, CRC(c680ef04) SHA1(79406bc786374abfcd9f548268c445b5c8d8858d) ) // 2732
 
 	ROM_REGION( 0x2000, "gfx2", 0 )
-	ROM_LOAD( "BF8_02.C1",    0x0000, 0x1000, CRC(404283ed) SHA1(18613670cf23181089812c02429e222db0340a60) ) // 2732
-	ROM_LOAD( "BF8_04-1.F1",  0x1000, 0x1000, CRC(3f5c991e) SHA1(853c629ba0b4739dcb1af669fd600a3d83fb2072) ) // 2732
+	ROM_LOAD( "bf8_02.c1",    0x0000, 0x1000, CRC(404283ed) SHA1(18613670cf23181089812c02429e222db0340a60) ) // 2732
+	ROM_LOAD( "bf8_04-1.f1",  0x1000, 0x1000, CRC(3f5c991e) SHA1(853c629ba0b4739dcb1af669fd600a3d83fb2072) ) // 2732
 
 	ROM_REGION( 0x0040, "proms", 0 ) // not dumped for this set
 	ROM_LOAD( "p3.bin",       0x0000, 0x0020, CRC(2a855523) SHA1(91e032233fee397c90b7c1662934aca9e0671482) )
@@ -827,8 +812,8 @@ ROM_START( bagmanj )
 	ROM_LOAD( "r6.bin",       0x0000, 0x0020, CRC(c58a4f6a) SHA1(35ef244b3e94032df2610aa594ea5670b91e1449) ) /*state machine driving TMS5110*/
 
 	ROM_REGION( 0x2000, "tmsprom", 0 ) /* data for the TMS5110 speech chip */
-	ROM_LOAD( "BF8_12.R9",    0x0000, 0x1000, CRC(2e0057ff) SHA1(33e3ffa6418f86864eb81e5e9bda4bf540c143a6) ) // 2732
-	ROM_LOAD( "BF8_13.T9",    0x1000, 0x1000, CRC(b2120edd) SHA1(52b89dbcc749b084331fa82b13d0876e911fce52) ) // 2732
+	ROM_LOAD( "bf8_12.r9",    0x0000, 0x1000, CRC(2e0057ff) SHA1(33e3ffa6418f86864eb81e5e9bda4bf540c143a6) ) // 2732
+	ROM_LOAD( "bf8_13.t9",    0x1000, 0x1000, CRC(b2120edd) SHA1(52b89dbcc749b084331fa82b13d0876e911fce52) ) // 2732
 ROM_END
 
 ROM_START( sbagman )
@@ -907,6 +892,48 @@ ROM_START( sbagmans )
 	ROM_REGION( 0x2000, "tmsprom", 0 ) /* data for the TMS5110 speech chip */
 	ROM_LOAD( "11.9r",        0x0000, 0x1000, CRC(2e0057ff) SHA1(33e3ffa6418f86864eb81e5e9bda4bf540c143a6) )
 	ROM_LOAD( "12.9t",        0x1000, 0x1000, CRC(b2120edd) SHA1(52b89dbcc749b084331fa82b13d0876e911fce52) )
+ROM_END
+
+/*
+1x Nec D780C on sub PCB
+1x AY-3-8910 on main PCB 3s
+1x LM3900 on main PCB 1t
+1x LM380 on main PCB 0u
+1x oscillator 18.432 MHz on main PCB 5a
+
+sub PCB is marked: "10-27 P1"
+sound section is heavily modified with jumper wires
+*/
+
+ROM_START( sbagmani )
+	ROM_REGION( 0x10000, "maincpu", 0 )
+	ROM_LOAD( "sb1.5d",         0x0000, 0x1000, CRC(5e24f90f) SHA1(a3ab7ddf26b9fd7bf97720febbbda5773d5ef8d9) )
+	ROM_LOAD( "sb2.5f",         0x1000, 0x1000, CRC(746ed840) SHA1(ce23c90c04e8ad0c5ec98ffb18dcc2691639a503) )
+	ROM_LOAD( "sb3.5h",         0x2000, 0x1000, CRC(fdfc22ce) SHA1(2f6b9056706c3c5d139e66682572cafa9a361c9f) )
+	ROM_LOAD( "sb4.5k",         0x3000, 0x1000, CRC(b94fbb73) SHA1(5d676c5d1d864d70d98f0137c4072062a781b3a0) )
+	ROM_LOAD( "sb5.5l",         0x4000, 0x1000, CRC(98067a20) SHA1(f0858fd340584336dbb88f97c6423f11c5d83c25) )
+	ROM_LOAD( "sb6.5n",         0x5000, 0x1000, CRC(4726e997) SHA1(d1cc118272fc12f6df3398699b76480fb47a3abf) )
+	ROM_LOAD( "sb-a.bin",       0xc000, 0x1000, CRC(0d29a52d) SHA1(40c34114ff40c679b8ee414dd157ec0d77becc06) )
+	ROM_LOAD( "sb-b.bin",       0xd000, 0x1000, CRC(f48091c4) SHA1(871f5512d671c871328dcd89680cb8b4add0c867) )
+	ROM_LOAD( "sb-c.bin",       0xe000, 0x1000, CRC(7648a042) SHA1(ae387ec26edeb6c214f3026c296992b6b43119b7) )
+	ROM_LOAD( "sb-d.bin",       0xf000, 0x1000, CRC(ba82bf0c) SHA1(0a8b6eca476bf6c614da60c3e3a70bd8caf7fb65) )
+
+	ROM_REGION( 0x2000, "gfx1", 0 )
+	ROM_LOAD( "sb8.11k",          0x0000, 0x1000, CRC(189d9bd6) SHA1(9f540a8803298a9849811b40eee62ffc6cd403d9) )
+	ROM_LOAD( "sb10.11n",         0x1000, 0x1000, CRC(2c6a510d) SHA1(304064f11e80f4ec471174823b8aaf59844061ac) )
+
+	ROM_REGION( 0x2000, "gfx2", 0 )
+	ROM_LOAD( "sb7.11h",         0x0000, 0x1000, CRC(a046ff44) SHA1(af319cfb74e5efe435c26e971de13bd390f4b378) )
+	ROM_LOAD( "sb9.11l",         0x1000, 0x1000, CRC(a4422da4) SHA1(3aa55ca8c99566c1c9eb097b6d645c4216e09dfb) )
+
+	ROM_REGION( 0x0060, "proms", 0 ) // the two 6331 are the same as some Crazy Climber bootlegs
+	ROM_LOAD( "am27s19dc.6v",    0x0000, 0x0020, CRC(b3fc1505) SHA1(5b94adde0428a26b815c7eb9b3f3716470d349c7) )
+	ROM_LOAD( "6331-1n.6u",      0x0020, 0x0020, CRC(b4e827a5) SHA1(31a5a5ad54417a474d22bb16c473415d99a2b6f1) )
+	ROM_LOAD( "6331-1n.6t",      0x0040, 0x0020, CRC(ab1940fa) SHA1(8d98e05cbaa6f55770c12e0a9a8ed9c73cc54423) )
+
+	ROM_REGION( 0x0040, "maincpu_proms", 0 )
+	ROM_LOAD( "6331-1n.1",      0x0000, 0x0020, CRC(4d222e6f) SHA1(32133a44569a34fd82d56ca696dc6fd7b0b72436) )
+	ROM_LOAD( "6331-1n.2",      0x0020, 0x0020, CRC(ecd06ffb) SHA1(6a9073ed371d86f4def4f18cdd50457441aa2abc) )
 ROM_END
 
 ROM_START( pickin )
@@ -1034,20 +1061,21 @@ ROM_START( squaitsa )
 ROM_END
 
 
-GAME( 1982, bagman,   0,       bagman,   bagman,   bagman_state, 0,       ROT270, "Valadon Automation", "Bagman", MACHINE_SUPPORTS_SAVE )
-GAME( 1982, bagnard,  bagman,  bagman,   bagman,   bagman_state, 0,       ROT270, "Valadon Automation", "Le Bagnard (set 1)", MACHINE_SUPPORTS_SAVE )
-GAME( 1982, bagnarda, bagman,  bagman,   bagman,   bagman_state, 0,       ROT270, "Valadon Automation", "Le Bagnard (set 2)", MACHINE_SUPPORTS_SAVE )
-GAME( 1982, bagnardi, bagman,  bagman,   bagman,   bagman_state, 0,       ROT90,  "Valadon Automation (Itisa license)", "Le Bagnard (Itisa, Spain)", MACHINE_SUPPORTS_SAVE )
-GAME( 1982, bagmans,  bagman,  bagman,   bagmans,  bagman_state, 0,       ROT270, "Valadon Automation (Stern Electronics license)", "Bagman (Stern Electronics, set 1)", MACHINE_SUPPORTS_SAVE )
-GAME( 1982, bagmans2, bagman,  bagman,   bagman,   bagman_state, 0,       ROT270, "Valadon Automation (Stern Electronics license)", "Bagman (Stern Electronics, set 2)", MACHINE_SUPPORTS_SAVE )
-GAME( 1982, bagmanj,  bagman,  bagman,   bagman,   bagman_state, 0,       ROT270, "Valadon Automation (Taito license)", "Bagman (Taito)", MACHINE_SUPPORTS_SAVE ) // title screen actually doesn't mention Valadon, only Stern and Taito
+GAME( 1982, bagman,   0,       bagman,   bagman,   bagman_state,   0,       ROT270, "Valadon Automation", "Bagman", MACHINE_SUPPORTS_SAVE )
+GAME( 1982, bagnard,  bagman,  bagman,   bagman,   bagman_state,   0,       ROT270, "Valadon Automation", "Le Bagnard (set 1)", MACHINE_SUPPORTS_SAVE )
+GAME( 1982, bagnarda, bagman,  bagman,   bagman,   bagman_state,   0,       ROT270, "Valadon Automation", "Le Bagnard (set 2)", MACHINE_SUPPORTS_SAVE )
+GAME( 1982, bagnardi, bagman,  bagman,   bagman,   bagman_state,   0,       ROT90,  "Valadon Automation (Itisa license)", "Le Bagnard (Itisa, Spain)", MACHINE_SUPPORTS_SAVE )
+GAME( 1982, bagmans,  bagman,  bagman,   bagmans,  bagman_state,   0,       ROT270, "Valadon Automation (Stern Electronics license)", "Bagman (Stern Electronics, set 1)", MACHINE_SUPPORTS_SAVE )
+GAME( 1982, bagmans2, bagman,  bagman,   bagman,   bagman_state,   0,       ROT270, "Valadon Automation (Stern Electronics license)", "Bagman (Stern Electronics, set 2)", MACHINE_SUPPORTS_SAVE )
+GAME( 1982, bagmanj,  bagman,  bagman,   bagman,   bagman_state,   0,       ROT270, "Valadon Automation (Taito license)", "Bagman (Taito)", MACHINE_SUPPORTS_SAVE ) // title screen actually doesn't mention Valadon, only Stern and Taito
 
-GAME( 1984, sbagman,  0,       sbagman,  sbagman,  bagman_state, 0,       ROT270, "Valadon Automation", "Super Bagman", MACHINE_SUPPORTS_SAVE )
-GAME( 1984, sbagmans, sbagman, sbagman,  sbagman,  bagman_state, 0,       ROT270, "Valadon Automation (Stern Electronics license)", "Super Bagman (Stern Electronics)", MACHINE_SUPPORTS_SAVE )
+GAME( 1984, sbagman,  0,       sbagman,  sbagman,  bagman_state,   0,       ROT270, "Valadon Automation", "Super Bagman", MACHINE_SUPPORTS_SAVE )
+GAME( 1984, sbagmani, sbagman, sbagmani, sbagman,  bagman_state,   0,       ROT90,  "Valadon Automation (Itisa license)", "Super Bagman (Itisa, Spain)", MACHINE_WRONG_COLORS | MACHINE_SUPPORTS_SAVE ) // different color PROMs, needs correct decoding
+GAME( 1984, sbagmans, sbagman, sbagman,  sbagman,  bagman_state,   0,       ROT270, "Valadon Automation (Stern Electronics license)", "Super Bagman (Stern Electronics)", MACHINE_SUPPORTS_SAVE )
 
-GAME( 1983, pickin,   0,       pickin,   pickin,   bagman_state, 0,       ROT270, "Valadon Automation", "Pickin'", MACHINE_SUPPORTS_SAVE )
+GAME( 1983, pickin,   0,       pickin,   pickin,   bagman_state,   0,       ROT270, "Valadon Automation", "Pickin'", MACHINE_SUPPORTS_SAVE )
 
-GAME( 1983, botanic,  0,       botanic,  botanici, bagman_state, 0,       ROT90,  "Itisa",                              "Botanic (English / Spanish)", MACHINE_SUPPORTS_SAVE )
-GAME( 1984, botanicf, botanic, botanic,  botanicf, bagman_state, 0,       ROT270, "Itisa (Valadon Automation license)", "Botanic (French)", MACHINE_SUPPORTS_SAVE )
+GAME( 1983, botanic,  0,       botanic,  botanici, bagman_state,   0,       ROT90,  "Itisa",                              "Botanic (English / Spanish)", MACHINE_SUPPORTS_SAVE )
+GAME( 1984, botanicf, botanic, botanic,  botanicf, bagman_state,   0,       ROT270, "Itisa (Valadon Automation license)", "Botanic (French)", MACHINE_SUPPORTS_SAVE )
 
-GAME( 1984, squaitsa, 0,       squaitsa, squaitsa, bagman_state, 0,       ROT0,   "Itisa", "Squash (Itisa)", MACHINE_SUPPORTS_SAVE )
+GAME( 1984, squaitsa, 0,       botanic,  squaitsa, squaitsa_state, 0,       ROT0,   "Itisa", "Squash (Itisa)", MACHINE_SUPPORTS_SAVE )

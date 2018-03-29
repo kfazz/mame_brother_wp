@@ -31,6 +31,7 @@ ToDo:
 #include "cpu/z80/z80.h"
 #include "cpu/z80/z80daisy.h"
 #include "imagedev/cassette.h"
+#include "machine/timer.h"
 #include "machine/z80ctc.h"
 #include "machine/z80pio.h"
 #include "sound/beep.h"
@@ -62,6 +63,9 @@ public:
 	TIMER_DEVICE_CALLBACK_MEMBER(timer_callback);
 	uint32_t screen_update_z9001(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
+	void z9001(machine_config &config);
+	void z9001_io(address_map &map);
+	void z9001_mem(address_map &map);
 private:
 	uint8_t m_framecnt;
 	bool m_cassbit;
@@ -75,21 +79,23 @@ private:
 	required_region_ptr<u8> m_p_chargen;
 };
 
-static ADDRESS_MAP_START(z9001_mem, AS_PROGRAM, 8, z9001_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x0000, 0xe7ff ) AM_RAM
-	AM_RANGE( 0xe800, 0xebff ) AM_RAM AM_SHARE("colorram")
-	AM_RANGE( 0xec00, 0xefff ) AM_RAM AM_SHARE("videoram")
-	AM_RANGE( 0xf000, 0xffff ) AM_ROM
-ADDRESS_MAP_END
+void z9001_state::z9001_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0xe7ff).ram();
+	map(0xe800, 0xebff).ram().share("colorram");
+	map(0xec00, 0xefff).ram().share("videoram");
+	map(0xf000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START( z9001_io, AS_IO, 8, z9001_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x80, 0x83) AM_MIRROR(4) AM_DEVREADWRITE("z80ctc", z80ctc_device, read, write)
-	AM_RANGE(0x88, 0x8B) AM_MIRROR(4) AM_DEVREADWRITE("z80pio1", z80pio_device, read, write)
-	AM_RANGE(0x90, 0x93) AM_MIRROR(4) AM_DEVREADWRITE("z80pio2", z80pio_device, read, write)
-ADDRESS_MAP_END
+void z9001_state::z9001_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0x80, 0x83).mirror(4).rw("z80ctc", FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+	map(0x88, 0x8B).mirror(4).rw("z80pio1", FUNC(z80pio_device::read), FUNC(z80pio_device::write));
+	map(0x90, 0x93).mirror(4).rw("z80pio2", FUNC(z80pio_device::read), FUNC(z80pio_device::write));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( z9001 )
@@ -197,9 +203,9 @@ static GFXDECODE_START( z9001 )
 GFXDECODE_END
 
 
-static MACHINE_CONFIG_START( z9001 )
+MACHINE_CONFIG_START(z9001_state::z9001)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",Z80, XTAL_9_8304MHz / 4)
+	MCFG_CPU_ADD("maincpu",Z80, XTAL(9'830'400) / 4)
 	MCFG_CPU_PROGRAM_MAP(z9001_mem)
 	MCFG_CPU_IO_MAP(z9001_io)
 	MCFG_Z80_DAISY_CHAIN(z9001_daisy_chain)
@@ -228,14 +234,14 @@ static MACHINE_CONFIG_START( z9001 )
 	MCFG_GENERIC_KEYBOARD_CB(PUT(z9001_state, kbd_put))
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("z9001_timer", z9001_state, timer_callback, attotime::from_msec(10))
 
-	MCFG_DEVICE_ADD("z80pio1", Z80PIO, XTAL_9_8304MHz / 4)
+	MCFG_DEVICE_ADD("z80pio1", Z80PIO, XTAL(9'830'400) / 4)
 	MCFG_Z80PIO_OUT_INT_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 	MCFG_Z80PIO_OUT_PA_CB(WRITE8(z9001_state, port88_w))
 
-	MCFG_DEVICE_ADD("z80pio2", Z80PIO, XTAL_9_8304MHz / 4)   // keyboard PIO
+	MCFG_DEVICE_ADD("z80pio2", Z80PIO, XTAL(9'830'400) / 4)   // keyboard PIO
 	MCFG_Z80PIO_OUT_INT_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 
-	MCFG_DEVICE_ADD("z80ctc", Z80CTC, XTAL_9_8304MHz / 4)
+	MCFG_DEVICE_ADD("z80ctc", Z80CTC, XTAL(9'830'400) / 4)
 	MCFG_Z80CTC_INTR_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 	MCFG_Z80CTC_ZC0_CB(WRITELINE(z9001_state, cass_w))
 	MCFG_Z80CTC_ZC2_CB(DEVWRITELINE("z80ctc", z80ctc_device, trg3))

@@ -29,7 +29,9 @@ ToDo:
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "machine/upd765.h"
-#include "machine/terminal.h"
+#include "machine/clock.h"
+#include "machine/i8251.h"
+#include "bus/rs232/rs232.h"
 #include "softlist.h"
 
 
@@ -38,17 +40,12 @@ class microdec_state : public driver_device
 public:
 	microdec_state(const machine_config &mconfig, device_type type, const char *tag)
 		: driver_device(mconfig, type, tag)
-		, m_terminal(*this, "terminal")
 		, m_maincpu(*this, "maincpu")
 		, m_fdc(*this, "fdc")
 		, m_floppy0(*this, "fdc:0")
 		, m_floppy(nullptr)
-	{
-	}
+	{ }
 
-	DECLARE_READ8_MEMBER(status_r);
-	DECLARE_READ8_MEMBER(keyin_r);
-	void kbd_put(u8 data);
 	DECLARE_READ8_MEMBER(portf5_r);
 	DECLARE_READ8_MEMBER(portf6_r);
 	DECLARE_WRITE8_MEMBER(portf6_w);
@@ -56,31 +53,21 @@ public:
 	DECLARE_WRITE8_MEMBER(portf7_w);
 	DECLARE_WRITE8_MEMBER(portf8_w);
 	DECLARE_DRIVER_INIT(microdec);
+
+	void microdec(machine_config &config);
+	void microdec_io(address_map &map);
+	void microdec_mem(address_map &map);
 private:
-	uint8_t m_term_data;
 	uint8_t m_portf8;
 	bool m_fdc_rdy;
 	virtual void machine_reset() override;
 	virtual void machine_start() override;
-	required_device<generic_terminal_device> m_terminal;
 	required_device<cpu_device> m_maincpu;
 	required_device<upd765a_device> m_fdc;
 	required_device<floppy_connector> m_floppy0;
 	floppy_image_device *m_floppy;
 };
 
-
-READ8_MEMBER( microdec_state::status_r )
-{
-	return (m_term_data) ? 3 : 1;
-}
-
-READ8_MEMBER( microdec_state::keyin_r )
-{
-	uint8_t ret = m_term_data;
-	m_term_data = 0;
-	return ret;
-}
 
 /*
 d0-2 : motor on signals from f8
@@ -135,22 +122,26 @@ WRITE8_MEMBER( microdec_state::portf8_w )
 		m_floppy->mon_w(0);
 }
 
-static ADDRESS_MAP_START(microdec_mem, AS_PROGRAM, 8, microdec_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x0000, 0x0fff ) AM_READ_BANK("bankr0") AM_WRITE_BANK("bankw0")
-	AM_RANGE( 0x1000, 0xffff ) AM_RAM
-ADDRESS_MAP_END
+void microdec_state::microdec_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x0fff).bankr("bankr0").bankw("bankw0");
+	map(0x1000, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START(microdec_io, AS_IO, 8, microdec_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0xf5, 0xf5) AM_READ(portf5_r)
-	AM_RANGE(0xf6, 0xf6) AM_READWRITE(portf6_r,portf6_w)
-	AM_RANGE(0xf7, 0xf7) AM_READWRITE(portf7_r,portf7_w)
-	AM_RANGE(0xf8, 0xf8) AM_WRITE(portf8_w)
-	AM_RANGE(0xfa, 0xfb) AM_DEVICE("fdc", upd765a_device, map)
-	AM_RANGE(0xfc, 0xfc) AM_READ(keyin_r) AM_DEVWRITE("terminal", generic_terminal_device, write)
-	AM_RANGE(0xfd, 0xfd) AM_READ(status_r)
+void microdec_state::microdec_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0xf5, 0xf5).r(this, FUNC(microdec_state::portf5_r));
+	map(0xf6, 0xf6).rw(this, FUNC(microdec_state::portf6_r), FUNC(microdec_state::portf6_w));
+	map(0xf7, 0xf7).rw(this, FUNC(microdec_state::portf7_r), FUNC(microdec_state::portf7_w));
+	map(0xf8, 0xf8).w(this, FUNC(microdec_state::portf8_w));
+	map(0xfa, 0xfb).m(m_fdc, FUNC(upd765a_device::map));
+	map(0xfc, 0xfc).rw("uart1", FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0xfd, 0xfd).rw("uart1", FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0xfe, 0xfe).rw("uart2", FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0xff, 0xff).rw("uart2", FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
 	// AM_RANGE(0xf0, 0xf3) 8253 PIT (md3 only) used as a baud rate generator for serial ports
 	// AM_RANGE(0xf4, 0xf4) Centronics data
 	// AM_RANGE(0xf5, 0xf5) motor check (md1/2)
@@ -161,7 +152,7 @@ static ADDRESS_MAP_START(microdec_io, AS_IO, 8, microdec_state)
 	// AM_RANGE(0xfa, 0xfb) uPD765C fdc FA=status; FB=data
 	// AM_RANGE(0xfc, 0xfd) Serial Port 1 (terminal) FC=data FD=status
 	// AM_RANGE(0xfe, 0xff) Serial Port 2 (printer) FE=data FF=status
-ADDRESS_MAP_END
+}
 
 /* Input ports */
 static INPUT_PORTS_START( microdec )
@@ -180,12 +171,6 @@ void microdec_state::machine_reset()
 	membank("bankr0")->set_entry(1); // point at rom
 	membank("bankw0")->set_entry(0); // always write to ram
 	m_maincpu->set_input_line_vector(0, 0x7f);
-	m_term_data = 0;
-}
-
-void microdec_state::kbd_put(u8 data)
-{
-	m_term_data = data;
 }
 
 static SLOT_INTERFACE_START( microdec_floppies )
@@ -201,15 +186,38 @@ DRIVER_INIT_MEMBER( microdec_state, microdec )
 	membank("bankw0")->configure_entry(0, &main[0x1000]);
 }
 
-static MACHINE_CONFIG_START( microdec )
+MACHINE_CONFIG_START(microdec_state::microdec)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",Z80, XTAL_4MHz)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(16'000'000) / 4)
 	MCFG_CPU_PROGRAM_MAP(microdec_mem)
 	MCFG_CPU_IO_MAP(microdec_io)
 
 	/* video hardware */
-	MCFG_DEVICE_ADD("terminal", GENERIC_TERMINAL, 0)
-	MCFG_GENERIC_TERMINAL_KEYBOARD_CB(PUT(microdec_state, kbd_put))
+	MCFG_DEVICE_ADD("uart_clock", CLOCK, 153600)
+	MCFG_CLOCK_SIGNAL_HANDLER(DEVWRITELINE("uart1", i8251_device, write_txc))
+	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("uart1", i8251_device, write_rxc))
+	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("uart2", i8251_device, write_txc))
+	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("uart2", i8251_device, write_rxc))
+
+	MCFG_DEVICE_ADD("uart1", I8251, 0)
+	MCFG_I8251_TXD_HANDLER(DEVWRITELINE("rs232a", rs232_port_device, write_txd))
+	MCFG_I8251_DTR_HANDLER(DEVWRITELINE("rs232a", rs232_port_device, write_dtr))
+	MCFG_I8251_RTS_HANDLER(DEVWRITELINE("rs232a", rs232_port_device, write_rts))
+
+	MCFG_RS232_PORT_ADD("rs232a", default_rs232_devices, "terminal")
+	MCFG_RS232_RXD_HANDLER(DEVWRITELINE("uart1", i8251_device, write_rxd))
+	MCFG_RS232_DSR_HANDLER(DEVWRITELINE("uart1", i8251_device, write_dsr))
+	MCFG_RS232_CTS_HANDLER(DEVWRITELINE("uart1", i8251_device, write_cts))
+
+	MCFG_DEVICE_ADD("uart2", I8251, 0)
+	MCFG_I8251_TXD_HANDLER(DEVWRITELINE("rs232b", rs232_port_device, write_txd))
+	MCFG_I8251_DTR_HANDLER(DEVWRITELINE("rs232b", rs232_port_device, write_dtr))
+	MCFG_I8251_RTS_HANDLER(DEVWRITELINE("rs232b", rs232_port_device, write_rts))
+
+	MCFG_RS232_PORT_ADD("rs232b", default_rs232_devices, nullptr)
+	MCFG_RS232_RXD_HANDLER(DEVWRITELINE("uart2", i8251_device, write_rxd))
+	MCFG_RS232_DSR_HANDLER(DEVWRITELINE("uart2", i8251_device, write_dsr))
+	MCFG_RS232_CTS_HANDLER(DEVWRITELINE("uart2", i8251_device, write_cts))
 
 	MCFG_UPD765A_ADD("fdc", true, true)
 	MCFG_UPD765_INTRQ_CALLBACK(INPUTLINE("maincpu", INPUT_LINE_IRQ0))

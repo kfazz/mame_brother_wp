@@ -136,11 +136,11 @@ nevada TYPE2 :  64       45      51       06       32      02        31     31  
 #include "speaker.h"
 
 
-#define MASTER_CLOCK    XTAL_16MHz
+#define MASTER_CLOCK    XTAL(16'000'000)
 #define MASTER_CPU      ((MASTER_CLOCK)/2)    // 8mhz
 #define SOUND_CLOCK     ((MASTER_CLOCK) /8)   // 2mhz
 
-#define VIDEO_CLOCK     XTAL_33MHz
+#define VIDEO_CLOCK     XTAL(33'000'000)
 #define MC6845_CLOCK    ((VIDEO_CLOCK)/4/16)  // 0.515625 MHZ
 
 
@@ -209,6 +209,8 @@ public:
 
 	TILE_GET_INFO_MEMBER(get_bg_tile_info);
 
+	void nevada(machine_config &config);
+	void nevada_map(address_map &map);
 };
 
 /*
@@ -510,25 +512,26 @@ U40 MC68681 Pin27 OP4  JCM Bill Acceptor  (J4-6, J4-7 Control)
     00E000x0 68681 CS  UART U18 RS1..RS4 REGISTER (A4..A7 ON RS1..RS4)  Data bus on D15..D8
 */
 /***************************************************************************/
-static ADDRESS_MAP_START( nevada_map, AS_PROGRAM, 16,nevada_state )
-	AM_RANGE(0x00000000, 0x0000ffff) AM_RAM AM_SHARE("ram62256")
-	AM_RANGE(0x00010000, 0x00021fff) AM_RAM AM_SHARE("backup")
-	AM_RANGE(0x00900000, 0x00900001) AM_DEVWRITE8("crtc",mc6845_device, address_w,0x00ff )
-	AM_RANGE(0x00908000, 0x00908001) AM_DEVWRITE8("crtc",mc6845_device,register_w,0x00ff )
-	AM_RANGE(0x00a00000, 0x00a00001) AM_READWRITE(io_board_r,io_board_w)
-	AM_RANGE(0x00a08000, 0x00a08001) AM_WRITE(io_board_x)
-	AM_RANGE(0x00a10000, 0x00a10001) AM_DEVWRITE("watchdog", watchdog_timer_device, reset16_w)
-	AM_RANGE(0x00a20000, 0x00a20001) AM_DEVWRITE8("aysnd", ay8910_device, address_w, 0x00ff)
-	AM_RANGE(0x00a28000, 0x00a28001) AM_DEVWRITE8("aysnd", ay8910_device, data_w, 0x00ff)
-	AM_RANGE(0x00a30000, 0x00A300ff) AM_DEVREADWRITE8("rtc",msm6242_device, read, write, 0x00ff)
-	AM_RANGE(0x00a40000, 0x00A40001) AM_READWRITE( nevada_sec_r, nevada_sec_w)
-	AM_RANGE(0x00b00000, 0x00b03fff) AM_RAM_WRITE(vram_w) AM_SHARE("vram")
-	AM_RANGE(0x00b10000, 0x00b100ff) AM_DEVREADWRITE8( "duart40_68681", mc68681_device, read, write, 0x00ff ) // Lower byte
-	AM_RANGE(0x00b20000, 0x00b200ff) AM_DEVREADWRITE8( "duart39_68681", mc68681_device, read, write, 0x00ff ) // Lower byte
-	AM_RANGE(0x00e00000, 0x00e000ff) AM_DEVREADWRITE8( "duart18_68681", mc68681_device, read, write, 0xff00 ) // Upper byte
-	AM_RANGE(0x00fa0000, 0x00fbffff) AM_RAM  // not used
-	AM_RANGE(0x00fc0000, 0x00ffffff) AM_ROM  // ROM ext + ROM boot
-ADDRESS_MAP_END
+void nevada_state::nevada_map(address_map &map)
+{
+	map(0x00000000, 0x0000ffff).ram().share("ram62256");
+	map(0x00010000, 0x00021fff).ram().share("backup");
+	map(0x00900001, 0x00900001).w("crtc", FUNC(mc6845_device::address_w));
+	map(0x00908001, 0x00908001).w("crtc", FUNC(mc6845_device::register_w));
+	map(0x00a00000, 0x00a00001).rw(this, FUNC(nevada_state::io_board_r), FUNC(nevada_state::io_board_w));
+	map(0x00a08000, 0x00a08001).w(this, FUNC(nevada_state::io_board_x));
+	map(0x00a10000, 0x00a10001).w("watchdog", FUNC(watchdog_timer_device::reset16_w));
+	map(0x00a20001, 0x00a20001).w("aysnd", FUNC(ay8910_device::address_w));
+	map(0x00a28001, 0x00a28001).w("aysnd", FUNC(ay8910_device::data_w));
+	map(0x00a30000, 0x00A300ff).rw("rtc", FUNC(msm6242_device::read), FUNC(msm6242_device::write)).umask16(0x00ff);
+	map(0x00a40000, 0x00A40001).rw(this, FUNC(nevada_state::nevada_sec_r), FUNC(nevada_state::nevada_sec_w));
+	map(0x00b00000, 0x00b03fff).ram().w(this, FUNC(nevada_state::vram_w)).share("vram");
+	map(0x00b10000, 0x00b100ff).rw(m_duart40_68681, FUNC(mc68681_device::read), FUNC(mc68681_device::write)).umask16(0x00ff); // Lower byte
+	map(0x00b20000, 0x00b200ff).rw(m_duart39_68681, FUNC(mc68681_device::read), FUNC(mc68681_device::write)).umask16(0x00ff); // Lower byte
+	map(0x00e00000, 0x00e000ff).rw(m_duart18_68681, FUNC(mc68681_device::read), FUNC(mc68681_device::write)).umask16(0xff00); // Upper byte
+	map(0x00fa0000, 0x00fbffff).ram();  // not used
+	map(0x00fc0000, 0x00ffffff).rom();  // ROM ext + ROM boot
+}
 
 
 /***************************************************************************/
@@ -589,7 +592,7 @@ MACHINE_START_MEMBER(nevada_state, nevada)
 *     Machine Driver     *
 *************************/
 
-static MACHINE_CONFIG_START( nevada )
+MACHINE_CONFIG_START(nevada_state::nevada)
 	// basic machine hardware
 	MCFG_CPU_ADD("maincpu", M68000, MASTER_CPU)
 	MCFG_CPU_PROGRAM_MAP(nevada_map)
@@ -624,15 +627,15 @@ static MACHINE_CONFIG_START( nevada )
 	MCFG_SOUND_ADD("aysnd", AY8912, SOUND_CLOCK)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
 
-	MCFG_MC68681_ADD( "duart18_68681", XTAL_3_6864MHz )  // UARTA = Modem 1200Baud
+	MCFG_DEVICE_ADD("duart18_68681", MC68681, XTAL(3'686'400))  // UARTA = Modem 1200Baud
 	MCFG_MC68681_IRQ_CALLBACK(WRITELINE(nevada_state, duart18_irq_handler))
 	MCFG_MC68681_INPORT_CALLBACK(IOPORT("DSW1"))
 
-	MCFG_MC68681_ADD( "duart39_68681", XTAL_3_6864MHz )  // UARTA = Printer
+	MCFG_DEVICE_ADD("duart39_68681", MC68681, XTAL(3'686'400))  // UARTA = Printer
 	MCFG_MC68681_IRQ_CALLBACK(WRITELINE(nevada_state, duart39_irq_handler))
 	MCFG_MC68681_INPORT_CALLBACK(IOPORT("DSW2"))
 
-	MCFG_MC68681_ADD( "duart40_68681", XTAL_3_6864MHz )  // UARTA = Touch , UARTB = Bill Acceptor
+	MCFG_DEVICE_ADD("duart40_68681", MC68681, XTAL(3'686'400))  // UARTA = Touch , UARTB = Bill Acceptor
 	MCFG_MC68681_IRQ_CALLBACK(WRITELINE(nevada_state, duart40_irq_handler))
 	MCFG_MC68681_A_TX_CALLBACK(DEVWRITELINE("microtouch", microtouch_device, rx))
 	MCFG_MC68681_INPORT_CALLBACK(IOPORT("DSW3"))
@@ -640,7 +643,7 @@ static MACHINE_CONFIG_START( nevada )
 	MCFG_MICROTOUCH_ADD( "microtouch", 9600, DEVWRITELINE("duart40_68681", mc68681_device, rx_a_w) )
 
 	/* devices */
-	MCFG_DEVICE_ADD("rtc", MSM6242, XTAL_32_768kHz)
+	MCFG_DEVICE_ADD("rtc", MSM6242, XTAL(32'768))
 	MCFG_MSM6242_OUT_INT_HANDLER(WRITELINE(nevada_state, nevada_rtc_irq))
 
 MACHINE_CONFIG_END

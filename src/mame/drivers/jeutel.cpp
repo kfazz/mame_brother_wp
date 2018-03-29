@@ -20,6 +20,7 @@ ToDo:
 
 #include "cpu/z80/z80.h"
 #include "machine/i8255.h"
+#include "machine/timer.h"
 #include "sound/ay8910.h"
 #include "sound/tms5110.h"
 #include "speaker.h"
@@ -44,6 +45,11 @@ public:
 	DECLARE_WRITE8_MEMBER(ppi0b_w);
 	DECLARE_WRITE8_MEMBER(sndcmd_w);
 	TIMER_DEVICE_CALLBACK_MEMBER(timer_a);
+	void jeutel(machine_config &config);
+	void jeutel_cpu2(address_map &map);
+	void jeutel_cpu3(address_map &map);
+	void jeutel_cpu3_io(address_map &map);
+	void jeutel_map(address_map &map);
 private:
 	bool m_timer_a;
 	uint8_t m_sndcmd;
@@ -55,37 +61,41 @@ private:
 };
 
 
-static ADDRESS_MAP_START( jeutel_map, AS_PROGRAM, 8, jeutel_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x1fff) AM_ROM AM_REGION("roms", 0)
-	AM_RANGE(0xc000, 0xc3ff) AM_RAM AM_SHARE("shared")
-	AM_RANGE(0xc400, 0xc7ff) AM_RAM
-	AM_RANGE(0xe000, 0xe003) AM_DEVREADWRITE("ppi8255_2", i8255_device, read, write)
-ADDRESS_MAP_END
+void jeutel_state::jeutel_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x1fff).rom().region("roms", 0);
+	map(0xc000, 0xc3ff).ram().share("shared");
+	map(0xc400, 0xc7ff).ram();
+	map(0xe000, 0xe003).rw("ppi8255_2", FUNC(i8255_device::read), FUNC(i8255_device::write));
+}
 
-static ADDRESS_MAP_START( jeutel_cpu2, AS_PROGRAM, 8, jeutel_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x0fff) AM_ROM AM_REGION("roms", 0x2000)
-	AM_RANGE(0x2000, 0x2003) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)
-	AM_RANGE(0x3000, 0x3003) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)
-	AM_RANGE(0x4000, 0x4000) AM_WRITENOP // writes 12 here many times
-	AM_RANGE(0x8000, 0x83ff) AM_RAM
-	AM_RANGE(0xc000, 0xc3ff) AM_RAM AM_SHARE("shared")
-ADDRESS_MAP_END
+void jeutel_state::jeutel_cpu2(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x0fff).rom().region("roms", 0x2000);
+	map(0x2000, 0x2003).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x3000, 0x3003).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x4000, 0x4000).nopw(); // writes 12 here many times
+	map(0x8000, 0x83ff).ram();
+	map(0xc000, 0xc3ff).ram().share("shared");
+}
 
-static ADDRESS_MAP_START( jeutel_cpu3, AS_PROGRAM, 8, jeutel_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x0fff) AM_ROM AM_REGION("roms", 0x3000)
-	AM_RANGE(0x4000, 0x43ff) AM_RAM
-	AM_RANGE(0x8000, 0x8000) AM_WRITE(sndcmd_w)
-ADDRESS_MAP_END
+void jeutel_state::jeutel_cpu3(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x0fff).rom().region("roms", 0x3000);
+	map(0x4000, 0x43ff).ram();
+	map(0x8000, 0x8000).w(this, FUNC(jeutel_state::sndcmd_w));
+}
 
-static ADDRESS_MAP_START( jeutel_cpu3_io, AS_IO, 8, jeutel_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_DEVWRITE("aysnd", ay8910_device, address_w)
-	AM_RANGE(0x01, 0x01) AM_DEVWRITE("aysnd", ay8910_device, data_w)
-	AM_RANGE(0x04, 0x04) AM_DEVREAD("aysnd", ay8910_device, data_r)
-ADDRESS_MAP_END
+void jeutel_state::jeutel_cpu3_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).w("aysnd", FUNC(ay8910_device::address_w));
+	map(0x01, 0x01).w("aysnd", FUNC(ay8910_device::data_w));
+	map(0x04, 0x04).r("aysnd", FUNC(ay8910_device::data_r));
+}
 
 static INPUT_PORTS_START( jeutel )
 INPUT_PORTS_END
@@ -183,7 +193,7 @@ DRIVER_INIT_MEMBER( jeutel_state, jeutel )
 {
 }
 
-static MACHINE_CONFIG_START( jeutel )
+MACHINE_CONFIG_START(jeutel_state::jeutel)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 3300000)
 	MCFG_CPU_PROGRAM_MAP(jeutel_map)
@@ -197,7 +207,7 @@ static MACHINE_CONFIG_START( jeutel )
 	MCFG_DEFAULT_LAYOUT(layout_jeutel)
 
 	/* Sound */
-	MCFG_FRAGMENT_ADD( genpin_audio )
+	genpin_audio(config);
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")

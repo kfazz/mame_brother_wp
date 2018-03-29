@@ -83,6 +83,21 @@ public:
 	DECLARE_WRITE_LINE_MEMBER(led_ds1_w);
 	DECLARE_WRITE_LINE_MEMBER(led_ds3_w);
 	DECLARE_WRITE_LINE_MEMBER(megabyte_select_w);
+	void isbc2861(machine_config &config);
+	void isbc86(machine_config &config);
+	void rpc86(machine_config &config);
+	void isbc8605(machine_config &config);
+	void isbc286(machine_config &config);
+	void isbc8630(machine_config &config);
+	void isbc2861_mem(address_map &map);
+	void isbc286_io(address_map &map);
+	void isbc286_mem(address_map &map);
+	void isbc8605_io(address_map &map);
+	void isbc8630_io(address_map &map);
+	void isbc86_mem(address_map &map);
+	void isbc_io(address_map &map);
+	void rpc86_io(address_map &map);
+	void rpc86_mem(address_map &map);
 protected:
 	void machine_reset() override;
 private:
@@ -106,91 +121,100 @@ void isbc_state::machine_reset()
 	m_megabyte_page = 0;
 }
 
-static ADDRESS_MAP_START(rpc86_mem, AS_PROGRAM, 16, isbc_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000, 0xcffff) AM_RAM
-	AM_RANGE(0xf8000, 0xfffff) AM_ROM AM_REGION("user1",0)
-ADDRESS_MAP_END
+void isbc_state::rpc86_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000, 0xcffff).ram();
+	map(0xf8000, 0xfffff).rom().region("user1", 0);
+}
 
-static ADDRESS_MAP_START(rpc86_io, AS_IO, 16, isbc_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0080, 0x008f) AM_DEVREADWRITE8("sbx1", isbx_slot_device, mcs0_r, mcs0_w, 0x00ff)
-	AM_RANGE(0x0090, 0x009f) AM_DEVREADWRITE8("sbx1", isbx_slot_device, mcs1_r, mcs1_w, 0x00ff)
-	AM_RANGE(0x00a0, 0x00af) AM_DEVREADWRITE8("sbx2", isbx_slot_device, mcs0_r, mcs0_w, 0x00ff)
-	AM_RANGE(0x00b0, 0x00bf) AM_DEVREADWRITE8("sbx2", isbx_slot_device, mcs1_r, mcs1_w, 0x00ff)
-	AM_RANGE(0x00c0, 0x00c3) AM_DEVREADWRITE8("pic_0", pic8259_device, read, write, 0x00ff)
-	AM_RANGE(0x00c4, 0x00c7) AM_DEVREADWRITE8("pic_0", pic8259_device, read, write, 0x00ff)
-	AM_RANGE(0x00c8, 0x00cf) AM_DEVREADWRITE8("ppi", i8255_device, read, write, 0x00ff)
-	AM_RANGE(0x00d0, 0x00d7) AM_DEVREADWRITE8("pit", pit8253_device, read, write, 0x00ff)
-	AM_RANGE(0x00d8, 0x00d9) AM_DEVREADWRITE8("uart8251", i8251_device, data_r, data_w, 0x00ff)
-	AM_RANGE(0x00da, 0x00db) AM_DEVREADWRITE8("uart8251", i8251_device, status_r, control_w, 0x00ff)
-	AM_RANGE(0x00dc, 0x00dd) AM_DEVREADWRITE8("uart8251", i8251_device, data_r, data_w, 0x00ff)
-	AM_RANGE(0x00de, 0x00df) AM_DEVREADWRITE8("uart8251", i8251_device, status_r, control_w, 0x00ff)
-ADDRESS_MAP_END
+void isbc_state::rpc86_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0080, 0x008f).rw("sbx1", FUNC(isbx_slot_device::mcs0_r), FUNC(isbx_slot_device::mcs0_w)).umask16(0x00ff);
+	map(0x0090, 0x009f).rw("sbx1", FUNC(isbx_slot_device::mcs1_r), FUNC(isbx_slot_device::mcs1_w)).umask16(0x00ff);
+	map(0x00a0, 0x00af).rw("sbx2", FUNC(isbx_slot_device::mcs0_r), FUNC(isbx_slot_device::mcs0_w)).umask16(0x00ff);
+	map(0x00b0, 0x00bf).rw("sbx2", FUNC(isbx_slot_device::mcs1_r), FUNC(isbx_slot_device::mcs1_w)).umask16(0x00ff);
+	map(0x00c0, 0x00c3).rw(m_pic_0, FUNC(pic8259_device::read), FUNC(pic8259_device::write)).umask16(0x00ff);
+	map(0x00c4, 0x00c7).rw(m_pic_0, FUNC(pic8259_device::read), FUNC(pic8259_device::write)).umask16(0x00ff);
+	map(0x00c8, 0x00cf).rw("ppi", FUNC(i8255_device::read), FUNC(i8255_device::write)).umask16(0x00ff);
+	map(0x00d0, 0x00d7).rw("pit", FUNC(pit8253_device::read), FUNC(pit8253_device::write)).umask16(0x00ff);
+	map(0x00d8, 0x00d8).rw(m_uart8251, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x00da, 0x00da).rw(m_uart8251, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x00dc, 0x00dc).rw(m_uart8251, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x00de, 0x00de).rw(m_uart8251, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+}
 
-static ADDRESS_MAP_START(isbc8605_io, AS_IO, 16, isbc_state)
-	AM_RANGE(0x0000, 0x002f) AM_DEVICE8("isbc_208", isbc_208_device, map, 0xffff)
-	AM_IMPORT_FROM(rpc86_io)
-ADDRESS_MAP_END
+void isbc_state::isbc8605_io(address_map &map)
+{
+	rpc86_io(map);
+	map(0x0000, 0x002f).m("isbc_208", FUNC(isbc_208_device::map));
+}
 
-static ADDRESS_MAP_START(isbc8630_io, AS_IO, 16, isbc_state)
-	AM_RANGE(0x00c0, 0x00c7) AM_WRITE8(edge_intr_clear_w, 0xff00)
-	AM_RANGE(0x00c8, 0x00df) AM_WRITE8(status_register_w, 0xff00)
-	AM_RANGE(0x0100, 0x0101) AM_DEVWRITE8("isbc_215g", isbc_215g_device, write, 0x00ff)
-	AM_IMPORT_FROM(rpc86_io)
-ADDRESS_MAP_END
+void isbc_state::isbc8630_io(address_map &map)
+{
+	rpc86_io(map);
+	map(0x00c0, 0x00c7).w(this, FUNC(isbc_state::edge_intr_clear_w)).umask16(0xff00);
+	map(0x00c8, 0x00df).w(this, FUNC(isbc_state::status_register_w)).umask16(0xff00);
+	map(0x0100, 0x0100).w("isbc_215g", FUNC(isbc_215g_device::write));
+}
 
-static ADDRESS_MAP_START(isbc86_mem, AS_PROGRAM, 16, isbc_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000, 0xfbfff) AM_RAM
-	AM_RANGE(0xfc000, 0xfffff) AM_ROM AM_REGION("user1",0)
-ADDRESS_MAP_END
+void isbc_state::isbc86_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000, 0xfbfff).ram();
+	map(0xfc000, 0xfffff).rom().region("user1", 0);
+}
 
-static ADDRESS_MAP_START(isbc_io, AS_IO, 16, isbc_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00c0, 0x00c3) AM_DEVREADWRITE8("pic_0", pic8259_device, read, write, 0x00ff)
-	AM_RANGE(0x00c4, 0x00c7) AM_DEVREADWRITE8("pic_0", pic8259_device, read, write, 0x00ff)
-	AM_RANGE(0x00c8, 0x00cf) AM_DEVREADWRITE8("ppi", i8255_device, read, write, 0x00ff)
-	AM_RANGE(0x00d0, 0x00d7) AM_DEVREADWRITE8("pit", pit8253_device, read, write, 0x00ff)
-	AM_RANGE(0x00d8, 0x00d9) AM_DEVREADWRITE8("uart8251", i8251_device, data_r, data_w, 0x00ff)
-	AM_RANGE(0x00da, 0x00db) AM_DEVREADWRITE8("uart8251", i8251_device, status_r, control_w, 0x00ff)
-	AM_RANGE(0x00dc, 0x00dd) AM_DEVREADWRITE8("uart8251", i8251_device, data_r, data_w, 0x00ff)
-	AM_RANGE(0x00de, 0x00df) AM_DEVREADWRITE8("uart8251", i8251_device, status_r, control_w, 0x00ff)
-ADDRESS_MAP_END
+void isbc_state::isbc_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00c0, 0x00c3).rw(m_pic_0, FUNC(pic8259_device::read), FUNC(pic8259_device::write)).umask16(0x00ff);
+	map(0x00c4, 0x00c7).rw(m_pic_0, FUNC(pic8259_device::read), FUNC(pic8259_device::write)).umask16(0x00ff);
+	map(0x00c8, 0x00cf).rw("ppi", FUNC(i8255_device::read), FUNC(i8255_device::write)).umask16(0x00ff);
+	map(0x00d0, 0x00d7).rw("pit", FUNC(pit8253_device::read), FUNC(pit8253_device::write)).umask16(0x00ff);
+	map(0x00d8, 0x00d8).rw(m_uart8251, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x00da, 0x00da).rw(m_uart8251, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x00dc, 0x00dc).rw(m_uart8251, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x00de, 0x00de).rw(m_uart8251, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+}
 
-static ADDRESS_MAP_START(isbc286_io, AS_IO, 16, isbc_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0080, 0x008f) AM_DEVREADWRITE8("sbx1", isbx_slot_device, mcs0_r, mcs0_w, 0x00ff)
-	AM_RANGE(0x0080, 0x008f) AM_DEVREADWRITE8("sbx1", isbx_slot_device, mcs0_r, mcs0_w, 0xff00)
-	AM_RANGE(0x0090, 0x009f) AM_DEVREADWRITE8("sbx1", isbx_slot_device, mcs1_r, mcs1_w, 0x00ff)
-	AM_RANGE(0x0090, 0x009f) AM_DEVREADWRITE8("sbx1", isbx_slot_device, mcs1_r, mcs1_w, 0xff00)
-	AM_RANGE(0x00a0, 0x00af) AM_DEVREADWRITE8("sbx2", isbx_slot_device, mcs0_r, mcs0_w, 0x00ff)
-	AM_RANGE(0x00a0, 0x00af) AM_DEVREADWRITE8("sbx2", isbx_slot_device, mcs0_r, mcs0_w, 0xff00)
-	AM_RANGE(0x00b0, 0x00bf) AM_DEVREADWRITE8("sbx2", isbx_slot_device, mcs1_r, mcs1_w, 0x00ff)
-	AM_RANGE(0x00b0, 0x00bf) AM_DEVREADWRITE8("sbx2", isbx_slot_device, mcs1_r, mcs1_w, 0xff00)
-	AM_RANGE(0x00c0, 0x00c3) AM_DEVREADWRITE8("pic_0", pic8259_device, read, write, 0x00ff)
-	AM_RANGE(0x00c4, 0x00c7) AM_DEVREADWRITE8("pic_1", pic8259_device, read, write, 0x00ff)
-	AM_RANGE(0x00c8, 0x00cf) AM_DEVREADWRITE8("ppi", i8255_device, read, write, 0x00ff)
-	AM_RANGE(0x00c8, 0x00cf) AM_WRITE8(upperen_w, 0xff00)
-	AM_RANGE(0x00d0, 0x00d7) AM_DEVREADWRITE8("pit", pit8254_device, read, write, 0x00ff)
-	AM_RANGE(0x00d8, 0x00df) AM_DEVREADWRITE8("uart8274", i8274_new_device, cd_ba_r, cd_ba_w, 0x00ff)
-	AM_RANGE(0x0100, 0x0101) AM_DEVWRITE8("isbc_215g", isbc_215g_device, write, 0x00ff)
-ADDRESS_MAP_END
+void isbc_state::isbc286_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0080, 0x008f).rw("sbx1", FUNC(isbx_slot_device::mcs0_r), FUNC(isbx_slot_device::mcs0_w)).umask16(0x00ff);
+	map(0x0080, 0x008f).rw("sbx1", FUNC(isbx_slot_device::mcs0_r), FUNC(isbx_slot_device::mcs0_w)).umask16(0xff00);
+	map(0x0090, 0x009f).rw("sbx1", FUNC(isbx_slot_device::mcs1_r), FUNC(isbx_slot_device::mcs1_w)).umask16(0x00ff);
+	map(0x0090, 0x009f).rw("sbx1", FUNC(isbx_slot_device::mcs1_r), FUNC(isbx_slot_device::mcs1_w)).umask16(0xff00);
+	map(0x00a0, 0x00af).rw("sbx2", FUNC(isbx_slot_device::mcs0_r), FUNC(isbx_slot_device::mcs0_w)).umask16(0x00ff);
+	map(0x00a0, 0x00af).rw("sbx2", FUNC(isbx_slot_device::mcs0_r), FUNC(isbx_slot_device::mcs0_w)).umask16(0xff00);
+	map(0x00b0, 0x00bf).rw("sbx2", FUNC(isbx_slot_device::mcs1_r), FUNC(isbx_slot_device::mcs1_w)).umask16(0x00ff);
+	map(0x00b0, 0x00bf).rw("sbx2", FUNC(isbx_slot_device::mcs1_r), FUNC(isbx_slot_device::mcs1_w)).umask16(0xff00);
+	map(0x00c0, 0x00c3).rw(m_pic_0, FUNC(pic8259_device::read), FUNC(pic8259_device::write)).umask16(0x00ff);
+	map(0x00c4, 0x00c7).rw(m_pic_1, FUNC(pic8259_device::read), FUNC(pic8259_device::write)).umask16(0x00ff);
+	map(0x00c8, 0x00cf).rw("ppi", FUNC(i8255_device::read), FUNC(i8255_device::write)).umask16(0x00ff);
+	map(0x00c8, 0x00cf).w(this, FUNC(isbc_state::upperen_w)).umask16(0xff00);
+	map(0x00d0, 0x00d7).rw("pit", FUNC(pit8254_device::read), FUNC(pit8254_device::write)).umask16(0x00ff);
+	map(0x00d8, 0x00df).rw(m_uart8274, FUNC(i8274_new_device::cd_ba_r), FUNC(i8274_new_device::cd_ba_w)).umask16(0x00ff);
+	map(0x0100, 0x0100).w("isbc_215g", FUNC(isbc_215g_device::write));
+}
 
-static ADDRESS_MAP_START(isbc286_mem, AS_PROGRAM, 16, isbc_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000, 0xdffff) AM_RAM
-	AM_RANGE(0xe0000, 0xfffff) AM_ROM AM_REGION("user1",0)
-	AM_RANGE(0xfe0000, 0xffffff) AM_ROM AM_REGION("user1",0)
-ADDRESS_MAP_END
+void isbc_state::isbc286_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000, 0xdffff).ram();
+	map(0xe0000, 0xfffff).rom().region("user1", 0);
+	map(0xfe0000, 0xffffff).rom().region("user1", 0);
+}
 
-static ADDRESS_MAP_START(isbc2861_mem, AS_PROGRAM, 16, isbc_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000, 0xdffff) AM_RAM
-	AM_RANGE(0xe0000, 0xfffff) AM_READWRITE(bioslo_r, bioslo_w) AM_SHARE("biosram")
+void isbc_state::isbc2861_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000, 0xdffff).ram();
+	map(0xe0000, 0xfffff).rw(this, FUNC(isbc_state::bioslo_r), FUNC(isbc_state::bioslo_w)).share("biosram");
 //  AM_RANGE(0x100000, 0x1fffff) AM_RAM // FIXME: XENIX doesn't like this, IRMX is okay with it
-	AM_RANGE(0xff0000, 0xffffff) AM_ROM AM_REGION("user1",0)
-ADDRESS_MAP_END
+	map(0xff0000, 0xffffff).rom().region("user1", 0);
+}
 
 /* Input ports */
 static INPUT_PORTS_START( isbc )
@@ -326,20 +350,21 @@ WRITE_LINE_MEMBER(isbc_state::megabyte_select_w)
 	m_megabyte_enable = !state;
 }
 
-static MACHINE_CONFIG_START( isbc86 )
+MACHINE_CONFIG_START(isbc_state::isbc86)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", I8086, XTAL_5MHz)
+	MCFG_CPU_ADD("maincpu", I8086, XTAL(5'000'000))
 	MCFG_CPU_PROGRAM_MAP(isbc86_mem)
 	MCFG_CPU_IO_MAP(isbc_io)
 	MCFG_CPU_IRQ_ACKNOWLEDGE_DEVICE("pic_0", pic8259_device, inta_cb)
 
-	MCFG_PIC8259_ADD("pic_0", INPUTLINE(":maincpu", 0), VCC, NOOP)
+	MCFG_DEVICE_ADD("pic_0", PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(INPUTLINE("maincpu", 0))
 
 	MCFG_DEVICE_ADD("pit", PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_22_1184MHz/18)
+	MCFG_PIT8253_CLK0(XTAL(22'118'400)/18)
 	MCFG_PIT8253_OUT0_HANDLER(DEVWRITELINE("pic_0", pic8259_device, ir0_w))
-	MCFG_PIT8253_CLK1(XTAL_22_1184MHz/18)
-	MCFG_PIT8253_CLK2(XTAL_22_1184MHz/18)
+	MCFG_PIT8253_CLK1(XTAL(22'118'400)/18)
+	MCFG_PIT8253_CLK2(XTAL(22'118'400)/18)
 	MCFG_PIT8253_OUT2_HANDLER(WRITELINE(isbc_state, isbc86_tmr2_w))
 
 	MCFG_DEVICE_ADD("ppi", I8255A, 0)
@@ -358,20 +383,21 @@ static MACHINE_CONFIG_START( isbc86 )
 	MCFG_DEVICE_CARD_DEVICE_INPUT_DEFAULTS("terminal", isbc86_terminal)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( rpc86 )
+MACHINE_CONFIG_START(isbc_state::rpc86)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", I8086, XTAL_5MHz)
+	MCFG_CPU_ADD("maincpu", I8086, XTAL(5'000'000))
 	MCFG_CPU_PROGRAM_MAP(rpc86_mem)
 	MCFG_CPU_IO_MAP(rpc86_io)
 	MCFG_CPU_IRQ_ACKNOWLEDGE_DEVICE("pic_0", pic8259_device, inta_cb)
 
-	MCFG_PIC8259_ADD("pic_0", INPUTLINE(":maincpu", 0), VCC, NOOP)
+	MCFG_DEVICE_ADD("pic_0", PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(INPUTLINE("maincpu", 0))
 
 	MCFG_DEVICE_ADD("pit", PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_22_1184MHz/18)
+	MCFG_PIT8253_CLK0(XTAL(22'118'400)/18)
 	MCFG_PIT8253_OUT0_HANDLER(DEVWRITELINE("pic_0", pic8259_device, ir2_w))
-	MCFG_PIT8253_CLK1(XTAL_22_1184MHz/144)
-	MCFG_PIT8253_CLK2(XTAL_22_1184MHz/18)
+	MCFG_PIT8253_CLK1(XTAL(22'118'400)/144)
+	MCFG_PIT8253_CLK2(XTAL(22'118'400)/18)
 	MCFG_PIT8253_OUT2_HANDLER(WRITELINE(isbc_state, isbc86_tmr2_w))
 
 	MCFG_DEVICE_ADD("ppi", I8255A, 0)
@@ -398,7 +424,8 @@ static MACHINE_CONFIG_START( rpc86 )
 	//MCFG_ISBX_SLOT_MINTR1_CALLBACK(DEVWRITELINE("pic_0", pic8259_device, ir6_w))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( isbc8605, rpc86 )
+MACHINE_CONFIG_START(isbc_state::isbc8605)
+	rpc86(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_IO_MAP(isbc8605_io)
 
@@ -407,7 +434,8 @@ static MACHINE_CONFIG_DERIVED( isbc8605, rpc86 )
 	MCFG_ISBC_208_IRQ(DEVWRITELINE("pic_0", pic8259_device, ir5_w))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( isbc8630, rpc86 )
+MACHINE_CONFIG_START(isbc_state::isbc8630)
+	rpc86(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_IO_MAP(isbc8630_io)
 
@@ -415,8 +443,8 @@ static MACHINE_CONFIG_DERIVED( isbc8630, rpc86 )
 	MCFG_ISBC_215_IRQ(DEVWRITELINE("pic_0", pic8259_device, ir5_w))
 
 	MCFG_DEVICE_ADD("statuslatch", LS259, 0) // U14
-	MCFG_ADDRESSABLE_LATCH_Q0_OUT_CB(DEVWRITELINE("pit", pit8253_device, write_gate0))
-	MCFG_ADDRESSABLE_LATCH_Q1_OUT_CB(DEVWRITELINE("pit", pit8253_device, write_gate1))
+//  MCFG_ADDRESSABLE_LATCH_Q0_OUT_CB(DEVWRITELINE("pit", pit8253_device, write_gate0))
+//  MCFG_ADDRESSABLE_LATCH_Q1_OUT_CB(DEVWRITELINE("pit", pit8253_device, write_gate1))
 	MCFG_ADDRESSABLE_LATCH_Q2_OUT_CB(WRITELINE(isbc_state, nmi_mask_w))
 	MCFG_ADDRESSABLE_LATCH_Q3_OUT_CB(WRITELINE(isbc_state, override_w))
 	MCFG_ADDRESSABLE_LATCH_Q4_OUT_CB(WRITELINE(isbc_state, bus_intr_out1_w))
@@ -426,23 +454,29 @@ static MACHINE_CONFIG_DERIVED( isbc8630, rpc86 )
 	MCFG_ADDRESSABLE_LATCH_Q7_OUT_CB(WRITELINE(isbc_state, megabyte_select_w))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( isbc286 )
+MACHINE_CONFIG_START(isbc_state::isbc286)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", I80286, XTAL_16MHz/2)
+	MCFG_CPU_ADD("maincpu", I80286, XTAL(16'000'000)/2)
 	MCFG_CPU_PROGRAM_MAP(isbc286_mem)
 	MCFG_CPU_IO_MAP(isbc286_io)
 	MCFG_CPU_IRQ_ACKNOWLEDGE_DEVICE("pic_0", pic8259_device, inta_cb)
 
-	MCFG_PIC8259_ADD("pic_0", INPUTLINE(":maincpu", 0), VCC, READ8(isbc_state, get_slave_ack))
-	MCFG_PIC8259_ADD("pic_1", DEVWRITELINE("pic_0", pic8259_device, ir7_w), GND, NOOP)
+	MCFG_DEVICE_ADD("pic_0", PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(INPUTLINE("maincpu", 0))
+	MCFG_PIC8259_IN_SP_CB(VCC)
+	MCFG_PIC8259_CASCADE_ACK_CB(READ8(isbc_state, get_slave_ack))
+
+	MCFG_DEVICE_ADD("pic_1", PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(DEVWRITELINE("pic_0", pic8259_device, ir7_w))
+	MCFG_PIC8259_IN_SP_CB(GND)
 
 	MCFG_DEVICE_ADD("pit", PIT8254, 0)
-	MCFG_PIT8253_CLK0(XTAL_22_1184MHz/18)
+	MCFG_PIT8253_CLK0(XTAL(22'118'400)/18)
 	MCFG_PIT8253_OUT0_HANDLER(DEVWRITELINE("pic_0", pic8259_device, ir0_w))
-	MCFG_PIT8253_CLK1(XTAL_22_1184MHz/18)
+	MCFG_PIT8253_CLK1(XTAL(22'118'400)/18)
 //  MCFG_PIT8253_OUT1_HANDLER(DEVWRITELINE("uart8274", z80dart_device, rxtxcb_w))
 	MCFG_PIT8253_OUT1_HANDLER(DEVWRITELINE("uart8274", i8274_new_device, rxtxcb_w))
-	MCFG_PIT8253_CLK2(XTAL_22_1184MHz/18)
+	MCFG_PIT8253_CLK2(XTAL(22'118'400)/18)
 	MCFG_PIT8253_OUT2_HANDLER(WRITELINE(isbc_state, isbc286_tmr2_w))
 
 	MCFG_DEVICE_ADD("ppi", I8255A, 0)
@@ -459,8 +493,8 @@ static MACHINE_CONFIG_START( isbc286 )
 
 	MCFG_CENTRONICS_OUTPUT_LATCH_ADD("cent_data_out", "centronics")
 
-	MCFG_I8274_ADD("uart8274", XTAL_16MHz/4, 0, 0, 0, 0)
 #if 0
+	MCFG_DEVICE_ADD("uart8274", I8274, XTAL(16'000'000)/4)
 	MCFG_Z80DART_OUT_TXDA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_txd))
 	MCFG_Z80DART_OUT_DTRA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_dtr))
 	MCFG_Z80DART_OUT_RTSA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_rts))
@@ -469,6 +503,7 @@ static MACHINE_CONFIG_START( isbc286 )
 	MCFG_Z80DART_OUT_RTSB_CB(DEVWRITELINE("rs232b", rs232_port_device, write_rts))
 	MCFG_Z80DART_OUT_INT_CB(WRITELINE(isbc_state, isbc_uart8274_irq))
 #else
+	MCFG_DEVICE_ADD("uart8274", I8274_NEW, XTAL(16'000'000)/4)
 	MCFG_Z80SIO_OUT_TXDA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_txd))
 	MCFG_Z80SIO_OUT_DTRA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_dtr))
 	MCFG_Z80SIO_OUT_RTSA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_rts))
@@ -513,7 +548,8 @@ static MACHINE_CONFIG_START( isbc286 )
 	MCFG_ISBC_215_IRQ(DEVWRITELINE("pic_0", pic8259_device, ir5_w))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( isbc2861, isbc286 )
+MACHINE_CONFIG_START(isbc_state::isbc2861)
+	isbc286(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(isbc2861_mem)
 MACHINE_CONFIG_END

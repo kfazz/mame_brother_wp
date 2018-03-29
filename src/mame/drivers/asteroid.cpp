@@ -187,7 +187,6 @@ There is not a rev 03 known or dumped. An Asteroids rev 03 is not mentioned in a
 
 #include "emu.h"
 #include "includes/asteroid.h"
-#include "audio/llander.h"
 #include "cpu/m6502/m6502.h"
 #include "machine/74259.h"
 #include "machine/atari_vg.h"
@@ -199,8 +198,8 @@ There is not a rev 03 known or dumped. An Asteroids rev 03 is not mentioned in a
 
 #include "astdelux.lh"
 
-#define MASTER_CLOCK (XTAL_12_096MHz)
-#define CLOCK_3KHZ   (double(MASTER_CLOCK) / 4096)
+#define MASTER_CLOCK (XTAL(12'096'000))
+#define CLOCK_3KHZ   (MASTER_CLOCK / 4096)
 
 /*************************************
  *
@@ -249,66 +248,69 @@ WRITE8_MEMBER(asteroid_state::llander_led_w)
  *
  *************************************/
 
-static ADDRESS_MAP_START( asteroid_map, AS_PROGRAM, 8, asteroid_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
-	AM_RANGE(0x0000, 0x01ff) AM_RAM
-	AM_RANGE(0x0200, 0x02ff) AM_RAMBANK("ram1") AM_SHARE("ram1")
-	AM_RANGE(0x0300, 0x03ff) AM_RAMBANK("ram2") AM_SHARE("ram2")
-	AM_RANGE(0x2000, 0x2007) AM_READ(asteroid_IN0_r)    /* IN0 */
-	AM_RANGE(0x2400, 0x2407) AM_READ(asteroid_IN1_r)    /* IN1 */
-	AM_RANGE(0x2800, 0x2803) AM_READ(asteroid_DSW1_r)   /* DSW1 */
-	AM_RANGE(0x3000, 0x3000) AM_DEVWRITE("dvg", dvg_device, go_w)
-	AM_RANGE(0x3200, 0x3200) AM_WRITE(asteroid_bank_switch_w)
-	AM_RANGE(0x3400, 0x3400) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x3600, 0x3600) AM_WRITE(asteroid_explode_w)
-	AM_RANGE(0x3a00, 0x3a00) AM_WRITE(asteroid_thump_w)
-	AM_RANGE(0x3c00, 0x3c07) AM_DEVWRITE("audiolatch", ls259_device, write_d7)
-	AM_RANGE(0x3e00, 0x3e00) AM_WRITE(asteroid_noise_reset_w)
-	AM_RANGE(0x4000, 0x47ff) AM_RAM AM_SHARE("vectorram") AM_REGION("maincpu", 0x4000)
-	AM_RANGE(0x5000, 0x57ff) AM_ROM                     /* vector rom */
-	AM_RANGE(0x6800, 0x7fff) AM_ROM
-ADDRESS_MAP_END
+void asteroid_state::asteroid_map(address_map &map)
+{
+	map.global_mask(0x7fff);
+	map(0x0000, 0x01ff).ram();
+	map(0x0200, 0x02ff).bankrw("ram1").share("ram1");
+	map(0x0300, 0x03ff).bankrw("ram2").share("ram2");
+	map(0x2000, 0x2007).r(this, FUNC(asteroid_state::asteroid_IN0_r));    /* IN0 */
+	map(0x2400, 0x2407).r(this, FUNC(asteroid_state::asteroid_IN1_r));    /* IN1 */
+	map(0x2800, 0x2803).r(this, FUNC(asteroid_state::asteroid_DSW1_r));   /* DSW1 */
+	map(0x3000, 0x3000).w(m_dvg, FUNC(dvg_device::go_w));
+	map(0x3200, 0x3200).w(this, FUNC(asteroid_state::asteroid_bank_switch_w));
+	map(0x3400, 0x3400).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x3600, 0x3600).w(this, FUNC(asteroid_state::asteroid_explode_w));
+	map(0x3a00, 0x3a00).w(this, FUNC(asteroid_state::asteroid_thump_w));
+	map(0x3c00, 0x3c07).w("audiolatch", FUNC(ls259_device::write_d7));
+	map(0x3e00, 0x3e00).w(this, FUNC(asteroid_state::asteroid_noise_reset_w));
+	map(0x4000, 0x47ff).ram().share("vectorram").region("maincpu", 0x4000);
+	map(0x5000, 0x57ff).rom();                     /* vector rom */
+	map(0x6800, 0x7fff).rom();
+}
 
 
-static ADDRESS_MAP_START( astdelux_map, AS_PROGRAM, 8, asteroid_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
-	AM_RANGE(0x0000, 0x01ff) AM_RAM
-	AM_RANGE(0x0200, 0x02ff) AM_RAMBANK("ram1") AM_SHARE("ram1")
-	AM_RANGE(0x0300, 0x03ff) AM_RAMBANK("ram2") AM_SHARE("ram2")
-	AM_RANGE(0x2000, 0x2007) AM_READ(asteroid_IN0_r)    /* IN0 */
-	AM_RANGE(0x2400, 0x2407) AM_READ(asteroid_IN1_r)    /* IN1 */
-	AM_RANGE(0x2800, 0x2803) AM_READ(asteroid_DSW1_r)   /* DSW1 */
-	AM_RANGE(0x2c00, 0x2c0f) AM_DEVREADWRITE("pokey", pokey_device, read, write)
-	AM_RANGE(0x2c40, 0x2c7f) AM_DEVREAD("earom", atari_vg_earom_device, read)
-	AM_RANGE(0x3000, 0x3000) AM_DEVWRITE("dvg", dvg_device, go_w)
-	AM_RANGE(0x3200, 0x323f) AM_DEVWRITE("earom", atari_vg_earom_device, write)
-	AM_RANGE(0x3400, 0x3400) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x3600, 0x3600) AM_WRITE(asteroid_explode_w)
-	AM_RANGE(0x3a00, 0x3a00) AM_DEVWRITE("earom", atari_vg_earom_device, ctrl_w)
-	AM_RANGE(0x3c00, 0x3c07) AM_DEVWRITE("audiolatch", ls259_device, write_d7)
-	AM_RANGE(0x3e00, 0x3e00) AM_WRITE(asteroid_noise_reset_w)
-	AM_RANGE(0x4000, 0x47ff) AM_RAM AM_SHARE("vectorram") AM_REGION("maincpu", 0x4000)
-	AM_RANGE(0x4800, 0x57ff) AM_ROM                     /* vector rom */
-	AM_RANGE(0x6000, 0x7fff) AM_ROM
-ADDRESS_MAP_END
+void asteroid_state::astdelux_map(address_map &map)
+{
+	map.global_mask(0x7fff);
+	map(0x0000, 0x01ff).ram();
+	map(0x0200, 0x02ff).bankrw("ram1").share("ram1");
+	map(0x0300, 0x03ff).bankrw("ram2").share("ram2");
+	map(0x2000, 0x2007).r(this, FUNC(asteroid_state::asteroid_IN0_r));    /* IN0 */
+	map(0x2400, 0x2407).r(this, FUNC(asteroid_state::asteroid_IN1_r));    /* IN1 */
+	map(0x2800, 0x2803).r(this, FUNC(asteroid_state::asteroid_DSW1_r));   /* DSW1 */
+	map(0x2c00, 0x2c0f).rw("pokey", FUNC(pokey_device::read), FUNC(pokey_device::write));
+	map(0x2c40, 0x2c7f).r("earom", FUNC(atari_vg_earom_device::read));
+	map(0x3000, 0x3000).w(m_dvg, FUNC(dvg_device::go_w));
+	map(0x3200, 0x323f).w("earom", FUNC(atari_vg_earom_device::write));
+	map(0x3400, 0x3400).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x3600, 0x3600).w(this, FUNC(asteroid_state::asteroid_explode_w));
+	map(0x3a00, 0x3a00).w("earom", FUNC(atari_vg_earom_device::ctrl_w));
+	map(0x3c00, 0x3c07).w("audiolatch", FUNC(ls259_device::write_d7));
+	map(0x3e00, 0x3e00).w(this, FUNC(asteroid_state::asteroid_noise_reset_w));
+	map(0x4000, 0x47ff).ram().share("vectorram").region("maincpu", 0x4000);
+	map(0x4800, 0x57ff).rom();                     /* vector rom */
+	map(0x6000, 0x7fff).rom();
+}
 
 
-static ADDRESS_MAP_START( llander_map, AS_PROGRAM, 8, asteroid_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
-	AM_RANGE(0x0000, 0x00ff) AM_RAM AM_MIRROR(0x1f00)
-	AM_RANGE(0x2000, 0x2000) AM_READ_PORT("IN0")
-	AM_RANGE(0x2400, 0x2407) AM_READ(asteroid_IN1_r)    /* IN1 */
-	AM_RANGE(0x2800, 0x2803) AM_READ(asteroid_DSW1_r)   /* DSW1 */
-	AM_RANGE(0x2c00, 0x2c00) AM_READ_PORT("THRUST")
-	AM_RANGE(0x3000, 0x3000) AM_DEVWRITE("dvg", dvg_device, go_w)
-	AM_RANGE(0x3200, 0x3200) AM_WRITE(llander_led_w)
-	AM_RANGE(0x3400, 0x3400) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x3c00, 0x3c00) AM_WRITE(llander_sounds_w)
-	AM_RANGE(0x3e00, 0x3e00) AM_WRITE(llander_snd_reset_w)
-	AM_RANGE(0x4000, 0x47ff) AM_RAM AM_SHARE("vectorram") AM_REGION("maincpu", 0x4000)
-	AM_RANGE(0x4800, 0x5fff) AM_ROM                     /* vector rom */
-	AM_RANGE(0x6000, 0x7fff) AM_ROM
-ADDRESS_MAP_END
+void asteroid_state::llander_map(address_map &map)
+{
+	map.global_mask(0x7fff);
+	map(0x0000, 0x00ff).ram().mirror(0x1f00);
+	map(0x2000, 0x2000).portr("IN0");
+	map(0x2400, 0x2407).r(this, FUNC(asteroid_state::asteroid_IN1_r));    /* IN1 */
+	map(0x2800, 0x2803).r(this, FUNC(asteroid_state::asteroid_DSW1_r));   /* DSW1 */
+	map(0x2c00, 0x2c00).portr("THRUST");
+	map(0x3000, 0x3000).w(m_dvg, FUNC(dvg_device::go_w));
+	map(0x3200, 0x3200).w(this, FUNC(asteroid_state::llander_led_w));
+	map(0x3400, 0x3400).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x3c00, 0x3c00).w(this, FUNC(asteroid_state::llander_sounds_w));
+	map(0x3e00, 0x3e00).w(this, FUNC(asteroid_state::llander_snd_reset_w));
+	map(0x4000, 0x47ff).ram().share("vectorram").region("maincpu", 0x4000);
+	map(0x4800, 0x5fff).rom();                     /* vector rom */
+	map(0x6000, 0x7fff).rom();
+}
 
 
 
@@ -650,7 +652,7 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( asteroid_base )
+MACHINE_CONFIG_START(asteroid_state::asteroid_base)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M6502, MASTER_CLOCK/8)
@@ -658,6 +660,8 @@ static MACHINE_CONFIG_START( asteroid_base )
 	MCFG_CPU_PERIODIC_INT_DRIVER(asteroid_state, asteroid_interrupt, CLOCK_3KHZ/12)
 
 	MCFG_WATCHDOG_ADD("watchdog")
+
+	MCFG_TTL153_ADD("dsw_sel")
 
 	/* video hardware */
 	MCFG_VECTOR_ADD("vector")
@@ -671,13 +675,15 @@ static MACHINE_CONFIG_START( asteroid_base )
 	MCFG_AVGDVG_VECTOR("vector")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( asteroid, asteroid_base )
+MACHINE_CONFIG_START(asteroid_state::asteroid)
+	asteroid_base(config);
 
 	/* sound hardware */
-	MCFG_FRAGMENT_ADD(asteroid_sound)
+	asteroid_sound(config);
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( asterock, asteroid )
+MACHINE_CONFIG_START(asteroid_state::asterock)
+	asteroid(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -685,7 +691,8 @@ static MACHINE_CONFIG_DERIVED( asterock, asteroid )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( astdelux, asteroid_base )
+MACHINE_CONFIG_START(asteroid_state::astdelux)
+	asteroid_base(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -694,7 +701,7 @@ static MACHINE_CONFIG_DERIVED( astdelux, asteroid_base )
 	MCFG_ATARIVGEAROM_ADD("earom")
 
 	/* sound hardware */
-	MCFG_FRAGMENT_ADD(astdelux_sound)
+	astdelux_sound(config);
 
 	MCFG_SOUND_ADD("pokey", POKEY, MASTER_CLOCK/8)
 	MCFG_POKEY_ALLPOT_R_CB(IOPORT("DSW2"))
@@ -712,12 +719,13 @@ static MACHINE_CONFIG_DERIVED( astdelux, asteroid_base )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( llander, asteroid_base )
+MACHINE_CONFIG_START(asteroid_state::llander)
+	asteroid_base(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(llander_map)
-	MCFG_CPU_PERIODIC_INT_DRIVER(asteroid_state, llander_interrupt,  (double)MASTER_CLOCK/4096/12)
+	MCFG_CPU_PERIODIC_INT_DRIVER(asteroid_state, llander_interrupt,  MASTER_CLOCK/4096/12)
 
 	MCFG_SCREEN_MODIFY("screen")
 	MCFG_SCREEN_REFRESH_RATE(CLOCK_3KHZ/12/6)
@@ -725,7 +733,7 @@ static MACHINE_CONFIG_DERIVED( llander, asteroid_base )
 	MCFG_SCREEN_UPDATE_DEVICE("vector", vector_device, screen_update)
 
 	/* sound hardware */
-	MCFG_FRAGMENT_ADD(llander_sound)
+	llander_sound(config);
 MACHINE_CONFIG_END
 
 
@@ -987,7 +995,7 @@ ROM_START( llander )
 	/* Vector ROM */
 	ROM_LOAD( "034599-01.r3",  0x4800, 0x0800, CRC(355a9371) SHA1(6ecb40169b797d9eb623bcb17872f745b1bf20fa) )
 	ROM_LOAD( "034598-01.np3", 0x5000, 0x0800, CRC(9c4ffa68) SHA1(eb4ffc289d254f699f821df3146aa2c6cd78597f) )
-	ROM_LOAD( "034597-01.m3",  0x5800, 0x0800, CRC(503f992e) SHA1(3e88a110ced9ee1927b0ba760b8d92cbc93e645d) ) /* built from original Atari source code */
+	ROM_LOAD( "034597-01.m3",  0x5800, 0x0800, CRC(ebb744f2) SHA1(e685b094c1261a351e4e82dfb487462163f136a4) ) /* built from original Atari source code */
 
 	/* DVG PROM */
 	ROM_REGION( 0x100, "user1", 0 )
@@ -1003,7 +1011,7 @@ ROM_START( llander1 )
 	/* Vector ROM */
 	ROM_LOAD( "034599-01.r3",  0x4800, 0x0800, CRC(355a9371) SHA1(6ecb40169b797d9eb623bcb17872f745b1bf20fa) )
 	ROM_LOAD( "034598-01.np3", 0x5000, 0x0800, CRC(9c4ffa68) SHA1(eb4ffc289d254f699f821df3146aa2c6cd78597f) )
-	ROM_LOAD( "034597-01.m3",  0x5800, 0x0800, CRC(503f992e) SHA1(3e88a110ced9ee1927b0ba760b8d92cbc93e645d) ) /* built from original Atari source code */
+	ROM_LOAD( "034597-01.m3",  0x5800, 0x0800, CRC(ebb744f2) SHA1(e685b094c1261a351e4e82dfb487462163f136a4) ) /* built from original Atari source code */
 
 	/* DVG PROM */
 	ROM_REGION( 0x100, "user1", 0 )

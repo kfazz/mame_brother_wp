@@ -37,7 +37,7 @@ public:
 		, m_centronics(*this, "centronics")
 		, m_cent_data_out(*this, "cent_data_out")
 		, m_cent_status_in(*this, "cent_status_in")
-		, m_ay31015(*this, "tr1602")
+		, m_uart(*this, "uart")
 		, m_fdc(*this, "fdc")
 		, m_floppy0(*this, "fdc:0")
 		, m_floppy1(*this, "fdc:1")
@@ -75,7 +75,6 @@ public:
 	DECLARE_WRITE8_MEMBER ( trs80m4_ff_w );
 	DECLARE_WRITE8_MEMBER ( trs80m4_f4_w );
 	DECLARE_WRITE8_MEMBER ( trs80m4_ec_w );
-	DECLARE_WRITE8_MEMBER ( trs80m4_eb_w );
 	DECLARE_WRITE8_MEMBER ( trs80m4_ea_w );
 	DECLARE_WRITE8_MEMBER ( trs80m4_e9_w );
 	DECLARE_WRITE8_MEMBER ( trs80m4_e8_w );
@@ -89,7 +88,6 @@ public:
 	DECLARE_READ8_MEMBER ( sys80_f9_r );
 	DECLARE_READ8_MEMBER ( trs80m4_ff_r );
 	DECLARE_READ8_MEMBER ( trs80m4_ec_r );
-	DECLARE_READ8_MEMBER ( trs80m4_eb_r );
 	DECLARE_READ8_MEMBER ( trs80m4_ea_r );
 	DECLARE_READ8_MEMBER ( trs80m4_e8_r );
 	DECLARE_READ8_MEMBER ( trs80m4_e4_r );
@@ -106,6 +104,7 @@ public:
 	DECLARE_READ8_MEMBER( trs80_gfxram_r );
 	DECLARE_WRITE8_MEMBER( trs80_gfxram_w );
 	DECLARE_READ8_MEMBER (trs80_wd179x_r);
+	DECLARE_READ8_MEMBER (cp500_a11_flipflop_toggle);
 	DECLARE_DRIVER_INIT(trs80m4);
 	DECLARE_DRIVER_INIT(trs80l2);
 	DECLARE_DRIVER_INIT(trs80m4p);
@@ -118,6 +117,7 @@ public:
 	DECLARE_QUICKLOAD_LOAD_MEMBER( trs80_cmd );
 	DECLARE_MACHINE_RESET(trs80m4);
 	DECLARE_MACHINE_RESET(lnw80);
+	DECLARE_MACHINE_RESET(cp500);
 	DECLARE_PALETTE_INIT(lnw80);
 	uint32_t screen_update_trs80(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	uint32_t screen_update_trs80m4(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
@@ -126,6 +126,31 @@ public:
 	uint32_t screen_update_radionic(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	uint32_t screen_update_meritum(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
+	void sys80(machine_config &config);
+	void trs80(machine_config &config);
+	void lnw80(machine_config &config);
+	void model4p(machine_config &config);
+	void meritum(machine_config &config);
+	void model3(machine_config &config);
+	void radionic(machine_config &config);
+	void model1(machine_config &config);
+	void ht1080z(machine_config &config);
+	void cp500(machine_config &config);
+	void model4(machine_config &config);
+	void cp500_io(address_map &map);
+	void lnw80_io(address_map &map);
+	void lnw80_map(address_map &map);
+	void meritum_io(address_map &map);
+	void meritum_map(address_map &map);
+	void model1_io(address_map &map);
+	void model1_map(address_map &map);
+	void model3_io(address_map &map);
+	void model3_map(address_map &map);
+	void model4_io(address_map &map);
+	void model4p_io(address_map &map);
+	void sys80_io(address_map &map);
+	void trs80_io(address_map &map);
+	void trs80_map(address_map &map);
 private:
 	uint8_t *m_p_gfxram;
 	uint8_t m_model4;
@@ -150,6 +175,7 @@ private:
 	uint16_t m_start_address;
 	uint8_t m_crtc_reg;
 	uint8_t m_size_store;
+	bool m_a11_flipflop;
 	void trs80_fdc_interrupt_internal();
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
@@ -161,7 +187,7 @@ private:
 	optional_device<centronics_device> m_centronics;
 	optional_device<output_latch_device> m_cent_data_out;
 	optional_device<input_buffer_device> m_cent_status_in;
-	optional_device<ay31015_device> m_ay31015;
+	optional_device<ay31015_device> m_uart;
 	optional_device<fd1793_device> m_fdc;
 	optional_device<floppy_connector> m_floppy0;
 	optional_device<floppy_connector> m_floppy1;

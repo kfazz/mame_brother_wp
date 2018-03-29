@@ -237,8 +237,8 @@
 #include "speaker.h"
 
 
-#define MASTER_CLOCK    XTAL_8MHz   /* from CPU Board */
-#define SECONDARY_CLOCK XTAL_6MHz   /* from GFX Board */
+#define MASTER_CLOCK    XTAL(8'000'000)   /* from CPU Board */
+#define SECONDARY_CLOCK XTAL(6'000'000)   /* from GFX Board */
 
 
 class goldngam_state : public driver_device
@@ -255,6 +255,10 @@ public:
 	DECLARE_PALETTE_INIT(goldngam);
 	uint32_t screen_update_goldngam(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	required_device<cpu_device> m_maincpu;
+	void swisspkr(machine_config &config);
+	void moviecrd(machine_config &config);
+	void moviecrd_map(address_map &map);
+	void swisspkr_map(address_map &map);
 };
 
 
@@ -303,21 +307,22 @@ READ16_MEMBER(goldngam_state::unk_r)
 	return test1;
 }
 
-static ADDRESS_MAP_START( swisspkr_map, AS_PROGRAM, 16, goldngam_state )
-	AM_RANGE(0x000000, 0x03ffff) AM_ROM
-	AM_RANGE(0x200000, 0x20ffff) AM_RAM
-	AM_RANGE(0x400002, 0x400003) AM_NOP // hopper status read ?
-	AM_RANGE(0x40000c, 0x40000d) AM_READ(unk_r)
-	AM_RANGE(0x40000e, 0x40000f) AM_READ_PORT("DSW2")   // not sure...
-	AM_RANGE(0x402000, 0x402001) AM_DEVREAD8("aysnd", ay8910_device, data_r, 0x00ff)
-	AM_RANGE(0x402000, 0x402003) AM_DEVWRITE8("aysnd", ay8910_device, address_data_w, 0x00ff) //wrong
+void goldngam_state::swisspkr_map(address_map &map)
+{
+	map(0x000000, 0x03ffff).rom();
+	map(0x200000, 0x20ffff).ram();
+	map(0x400002, 0x400003).noprw(); // hopper status read ?
+	map(0x40000c, 0x40000d).r(this, FUNC(goldngam_state::unk_r));
+	map(0x40000e, 0x40000f).portr("DSW2");   // not sure...
+	map(0x402001, 0x402001).r("aysnd", FUNC(ay8910_device::data_r));
+	map(0x402000, 0x402003).w("aysnd", FUNC(ay8910_device::address_data_w)).umask16(0x00ff); //wrong
 
-	AM_RANGE(0xc00000, 0xc3ffff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x500200, 0x50020f) AM_RAM //?
-	AM_RANGE(0x503000, 0x503001) AM_RAM //int ack ?
-	AM_RANGE(0x503002, 0x503003) AM_RAM //int ack ?
-	AM_RANGE(0x503006, 0x503007) AM_RAM //int ack ?
-ADDRESS_MAP_END
+	map(0xc00000, 0xc3ffff).ram().share("videoram");
+	map(0x500200, 0x50020f).ram(); //?
+	map(0x503000, 0x503001).ram(); //int ack ?
+	map(0x503002, 0x503003).ram(); //int ack ?
+	map(0x503006, 0x503007).ram(); //int ack ?
+}
 
 
 /* unknown R/W:
@@ -353,12 +358,13 @@ ADDRESS_MAP_END
 
 */
 
-static ADDRESS_MAP_START( moviecrd_map, AS_PROGRAM, 16, goldngam_state )
-	AM_RANGE(0x000000, 0x07ffff) AM_ROM
-	AM_RANGE(0x200000, 0x20ffff) AM_RAM
-	AM_RANGE(0xc00000, 0xc3ffff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x503000, 0x5031ff) AM_RAM //int ack ?
-ADDRESS_MAP_END
+void goldngam_state::moviecrd_map(address_map &map)
+{
+	map(0x000000, 0x07ffff).rom();
+	map(0x200000, 0x20ffff).ram();
+	map(0xc00000, 0xc3ffff).ram().share("videoram");
+	map(0x503000, 0x5031ff).ram(); //int ack ?
+}
 
 /*
 
@@ -546,7 +552,7 @@ GFXDECODE_END
 *************************/
 
 
-static MACHINE_CONFIG_START( swisspkr )
+MACHINE_CONFIG_START(goldngam_state::swisspkr)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, MASTER_CLOCK)
@@ -575,7 +581,8 @@ static MACHINE_CONFIG_START( swisspkr )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( moviecrd, swisspkr )
+MACHINE_CONFIG_START(goldngam_state::moviecrd)
+	swisspkr(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")

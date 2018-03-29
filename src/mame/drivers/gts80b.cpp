@@ -41,6 +41,13 @@ public:
 	DECLARE_WRITE8_MEMBER(port2b_w);
 	DECLARE_WRITE8_MEMBER(port3a_w);
 	DECLARE_WRITE8_MEMBER(port3b_w);
+	void gts80b_s2(machine_config &config);
+	void gts80b_s3(machine_config &config);
+	void bonebstr(machine_config &config);
+	void gts80b_s1(machine_config &config);
+	void gts80b_s(machine_config &config);
+	void gts80b(machine_config &config);
+	void gts80b_map(address_map &map);
 private:
 	uint8_t m_dispcmd;
 	uint8_t m_port2a;
@@ -55,17 +62,18 @@ private:
 	optional_device<gottlieb_sound_r1_device> m_r1_sound;
 };
 
-static ADDRESS_MAP_START( gts80b_map, AS_PROGRAM, 8, gts80b_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x3fff)
-	AM_RANGE(0x0000, 0x017f) AM_RAM
-	AM_RANGE(0x0200, 0x027f) AM_DEVREADWRITE("riot1", riot6532_device, read, write)
-	AM_RANGE(0x0280, 0x02ff) AM_DEVREADWRITE("riot2", riot6532_device, read, write)
-	AM_RANGE(0x0300, 0x037f) AM_DEVREADWRITE("riot3", riot6532_device, read, write)
-	AM_RANGE(0x1000, 0x17ff) AM_ROM
-	AM_RANGE(0x1800, 0x18ff) AM_RAM AM_SHARE("nvram") // 5101L-1 256x4
-	AM_RANGE(0x2000, 0x2fff) AM_ROM
-	AM_RANGE(0x3000, 0x3fff) AM_ROM
-ADDRESS_MAP_END
+void gts80b_state::gts80b_map(address_map &map)
+{
+	map.global_mask(0x3fff);
+	map(0x0000, 0x017f).ram();
+	map(0x0200, 0x027f).rw("riot1", FUNC(riot6532_device::read), FUNC(riot6532_device::write));
+	map(0x0280, 0x02ff).rw("riot2", FUNC(riot6532_device::read), FUNC(riot6532_device::write));
+	map(0x0300, 0x037f).rw("riot3", FUNC(riot6532_device::read), FUNC(riot6532_device::write));
+	map(0x1000, 0x17ff).rom();
+	map(0x1800, 0x18ff).ram().share("nvram"); // 5101L-1 256x4
+	map(0x2000, 0x2fff).rom();
+	map(0x3000, 0x3fff).rom();
+}
 
 static INPUT_PORTS_START( gts80b )
 	PORT_START("DSW.0")
@@ -338,7 +346,7 @@ WRITE8_MEMBER( gts80b_state::port2b_w )
 			else
 			{ // display a character
 				segment = patterns[m_dispcmd & 0x7f]; // ignore blank/inverse bit
-				segment = BITSWAP16(segment, 12, 10, 8, 14, 13, 9, 11, 6, 5, 4, 3, 3, 2, 1, 0, 0);
+				segment = bitswap<16>(segment, 12, 10, 8, 14, 13, 9, 11, 6, 5, 4, 3, 3, 2, 1, 0, 0);
 				output().set_digit_value(m_digit[i]+i*20, segment);
 				m_digit[i]++; // auto-increment pointer
 				if (m_digit[i] > 19) m_digit[i] = 0; // check for overflow
@@ -374,9 +382,9 @@ DRIVER_INIT_MEMBER( gts80b_state, gts80b )
 }
 
 /* with Sound Board */
-static MACHINE_CONFIG_START( gts80b )
+MACHINE_CONFIG_START(gts80b_state::gts80b)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6502, XTAL_3_579545MHz/4)
+	MCFG_CPU_ADD("maincpu", M6502, XTAL(3'579'545)/4)
 	MCFG_CPU_PROGRAM_MAP(gts80b_map)
 
 	MCFG_NVRAM_ADD_1FILL("nvram") // must be 1
@@ -385,19 +393,19 @@ static MACHINE_CONFIG_START( gts80b )
 	MCFG_DEFAULT_LAYOUT(layout_gts80b)
 
 	/* Devices */
-	MCFG_DEVICE_ADD("riot1", RIOT6532, XTAL_3_579545MHz/4)
+	MCFG_DEVICE_ADD("riot1", RIOT6532, XTAL(3'579'545)/4)
 	MCFG_RIOT6532_IN_PA_CB(READ8(gts80b_state, port1a_r)) // sw_r
 	//MCFG_RIOT6532_OUT_PA_CB(WRITE8(gts80b_state, port1a_w))
 	//MCFG_RIOT6532_IN_PB_CB(READ8(gts80b_state, port1b_r))
 	MCFG_RIOT6532_OUT_PB_CB(WRITE8(gts80b_state, port1b_w)) // sw_w
 	MCFG_RIOT6532_IRQ_CB(INPUTLINE("maincpu", M6502_IRQ_LINE))
-	MCFG_DEVICE_ADD("riot2", RIOT6532, XTAL_3_579545MHz/4)
+	MCFG_DEVICE_ADD("riot2", RIOT6532, XTAL(3'579'545)/4)
 	MCFG_RIOT6532_IN_PA_CB(READ8(gts80b_state, port2a_r)) // pa7 - slam tilt
 	MCFG_RIOT6532_OUT_PA_CB(WRITE8(gts80b_state, port2a_w)) // digit select
 	//MCFG_RIOT6532_IN_PB_CB(READ8(gts80b_state, port2b_r))
 	MCFG_RIOT6532_OUT_PB_CB(WRITE8(gts80b_state, port2b_w)) // seg
 	MCFG_RIOT6532_IRQ_CB(INPUTLINE("maincpu", M6502_IRQ_LINE))
-	MCFG_DEVICE_ADD("riot3", RIOT6532, XTAL_3_579545MHz/4)
+	MCFG_DEVICE_ADD("riot3", RIOT6532, XTAL(3'579'545)/4)
 	//MCFG_RIOT6532_IN_PA_CB(READ8(gts80b_state, port3a_r))
 	MCFG_RIOT6532_OUT_PA_CB(WRITE8(gts80b_state, port3a_w)) // sol, snd
 	//MCFG_RIOT6532_IN_PB_CB(READ8(gts80b_state, port3b_r))
@@ -405,40 +413,46 @@ static MACHINE_CONFIG_START( gts80b )
 	MCFG_RIOT6532_IRQ_CB(INPUTLINE("maincpu", M6502_IRQ_LINE))
 
 	/* Sound */
-	MCFG_FRAGMENT_ADD( genpin_audio )
+	genpin_audio(config);
 	MCFG_SPEAKER_STANDARD_MONO("speaker")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( gts80b_s, gts80b )
+MACHINE_CONFIG_START(gts80b_state::gts80b_s)
+	gts80b(config);
 	MCFG_SOUND_ADD("r0sound", GOTTLIEB_SOUND_REV0, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 MACHINE_CONFIG_END
 
-//static MACHINE_CONFIG_DERIVED( gts80b_ss, gts80b )
+//static MACHINE_CONFIG_START( gts80b_ss )
+//static    gts80b(config);
 //  MCFG_SOUND_ADD("r1sound", GOTTLIEB_SOUND_REV1, 0)
 //  //MCFG_SOUND_ADD("r1sound", GOTTLIEB_SOUND_REV1_WITH_VOTRAX, 0)  // votrax crashes
 //  MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 //MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( gts80b_s1, gts80b )
+MACHINE_CONFIG_START(gts80b_state::gts80b_s1)
+	gts80b(config);
 
 	/* related to src/mame/audio/gottlieb.c? */
 //  MCFG_IMPORT_FROM(gts80s_b1)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( gts80b_s2, gts80b )
+MACHINE_CONFIG_START(gts80b_state::gts80b_s2)
+	gts80b(config);
 
 	/* related to src/mame/audio/gottlieb.c? */
 //  MCFG_IMPORT_FROM(gts80s_b2)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( gts80b_s3, gts80b )
+MACHINE_CONFIG_START(gts80b_state::gts80b_s3)
+	gts80b(config);
 
 	/* related to src/mame/audio/gottlieb.c? */
 //  MCFG_IMPORT_FROM(gts80s_b3)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( bonebstr, gts80b )
+MACHINE_CONFIG_START(gts80b_state::bonebstr)
+	gts80b(config);
 
 	/* related to src/mame/audio/gottlieb.c? */
 //  MCFG_IMPORT_FROM(gts80s_b3a)

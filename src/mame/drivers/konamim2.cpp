@@ -261,7 +261,7 @@ public:
 	DECLARE_READ64_MEMBER(cde_r);
 	DECLARE_WRITE64_MEMBER(cde_w);
 	DECLARE_READ64_MEMBER(device2_r);
-	DECLARE_READ64_MEMBER(cpu_r);
+	template<bool maincpu> DECLARE_READ64_MEMBER(cpu_r);
 	DECLARE_READ8_MEMBER(id3_r);
 	DECLARE_READ8_MEMBER(id4_r);
 	DECLARE_READ8_MEMBER(id5_r);
@@ -279,6 +279,14 @@ public:
 	void cde_dma_transfer(address_space &space, int channel, int next);
 	required_device<cpu_device> m_maincpu;
 	required_device<cpu_device> m_subcpu;
+	void m2(machine_config &config);
+	void _3do_m2(machine_config &config);
+	void _3do_m2_main(address_map &map);
+	void _3do_m2_main_m(address_map &map);
+	void _3do_m2_main_s(address_map &map);
+	void m2_main(address_map &map);
+	void m2_main_m(address_map &map);
+	void m2_main_s(address_map &map);
 };
 
 
@@ -387,7 +395,7 @@ READ64_MEMBER(konamim2_state::unk3_r)
 READ64_MEMBER(konamim2_state::unk4_r)
 {
 	uint64_t r = 0;
-//  logerror("unk4_r: %08X, %08X%08X at %08X\n", offset, (uint32_t)(mem_mask>>32), (uint32_t)(mem_mask), space.device().safe_pc());
+//  logerror("unk4_r: %08X, %08X%08X %s\n", offset, (uint32_t)(mem_mask>>32), (uint32_t)(mem_mask), machine().describe_context());
 
 	if (ACCESSING_BITS_32_63)
 	{
@@ -403,14 +411,13 @@ READ64_MEMBER(konamim2_state::unk4_r)
 
 WRITE64_MEMBER(konamim2_state::unk4_w)
 {
-//  logerror("unk4_w: %08X%08X, %08X, %08X%08X at %08X\n", (uint32_t)(data >> 32), (uint32_t)(data),
-//      offset, (uint32_t)(mem_mask>>32), (uint32_t)(mem_mask), space.device().safe_pc());
+//  logerror("unk4_w: %08X%08X, %08X, %08X%08X %s\n", (uint32_t)(data >> 32), (uint32_t)(data),
+//      offset, (uint32_t)(mem_mask>>32), (uint32_t)(mem_mask), machine().describe_context());
 
 	if (ACCESSING_BITS_0_31)
 	{
 		if (data & 0x800000)
 		{
-//          osd_printf_debug("CPU '%s': CPU1 IRQ at %08X\n", device().tag(), space.device().safe_pc());
 			m_subcpu->set_input_line(PPC_IRQ, ASSERT_LINE);
 		}
 
@@ -929,7 +936,6 @@ READ64_MEMBER(konamim2_state::cde_r)
 
 		default:
 		{
-//                      osd_printf_debug("cde_r: %08X at %08X\n", reg*4, space.device().safe_pc());
 			break;
 		}
 	}
@@ -963,8 +969,6 @@ WRITE64_MEMBER(konamim2_state::cde_w)
 	{
 		case 0x028/4:       // Command write
 		{
-			//printf("cde_w: %08X, %08X at %08X\n", d, reg*4, space.device().safe_pc());
-
 			if (d == 0x0180)
 			{
 				if (m_cde_response)
@@ -1091,7 +1095,6 @@ WRITE64_MEMBER(konamim2_state::cde_w)
 
 		default:
 		{
-//                      osd_printf_debug("cde_w: %08X, %08X at %08X\n", d, reg*4, space.device().safe_pc());
 			break;
 		}
 	}
@@ -1128,13 +1131,13 @@ READ64_MEMBER(konamim2_state::device2_r)
 	}
 }
 
-READ64_MEMBER(konamim2_state::cpu_r)
+template<bool maincpu> READ64_MEMBER(konamim2_state::cpu_r)
 {
 	uint64_t r = 0;
 
 	if (ACCESSING_BITS_32_63)
 	{
-		r = (uint64_t)((&space.device() != m_maincpu) ? 0x80000000 : 0);
+		r = (uint64_t)(maincpu ? 0 : 0x80000000);
 		r |= m_in_monitor->read() << 30;
 		return r << 32;
 	}
@@ -1167,52 +1170,78 @@ READ8_MEMBER(konamim2_state::id7_r)
 	return 0x07;
 }
 
-static ADDRESS_MAP_START( m2_main, AS_PROGRAM, 64, konamim2_state )
-	AM_RANGE(0x00000000, 0x0000007f) AM_RAM // ???
-	AM_RANGE(0x00010040, 0x00010047) AM_READWRITE(irq_enable_r, irq_enable_w)
-	AM_RANGE(0x00010050, 0x00010057) AM_READ(irq_active_r)
-	AM_RANGE(0x00020000, 0x00020007) AM_READWRITE(unk4_r, unk4_w)
-	AM_RANGE(0x00020400, 0x000207ff) AM_RAM // ???
-	AM_RANGE(0x00020800, 0x00020807) AM_RAM // ???
-	AM_RANGE(0x00030000, 0x00030007) AM_READ(unk30000_r)
-	AM_RANGE(0x00030010, 0x00030017) AM_WRITE(video_w)
-	AM_RANGE(0x00030030, 0x00030037) AM_READ(unk30030_r)
-	AM_RANGE(0x00030400, 0x00030407) AM_WRITE32(video_irq_ack_w,0x00000000ffffffffU)
+void konamim2_state::m2_main(address_map &map)
+{
+	map(0x00000000, 0x0000007f).ram(); // ???
+	map(0x00010040, 0x00010047).rw(this, FUNC(konamim2_state::irq_enable_r), FUNC(konamim2_state::irq_enable_w));
+	map(0x00010050, 0x00010057).r(this, FUNC(konamim2_state::irq_active_r));
+	map(0x00020000, 0x00020007).rw(this, FUNC(konamim2_state::unk4_r), FUNC(konamim2_state::unk4_w));
+	map(0x00020400, 0x000207ff).ram(); // ???
+	map(0x00020800, 0x00020807).ram(); // ???
+	map(0x00030000, 0x00030007).r(this, FUNC(konamim2_state::unk30000_r));
+	map(0x00030010, 0x00030017).w(this, FUNC(konamim2_state::video_w));
+	map(0x00030030, 0x00030037).r(this, FUNC(konamim2_state::unk30030_r));
+	map(0x00030404, 0x00030407).w(this, FUNC(konamim2_state::video_irq_ack_w));
 
-	AM_RANGE(0x01000000, 0x01000fff) AM_READWRITE(cde_r, cde_w)
+	map(0x01000000, 0x01000fff).rw(this, FUNC(konamim2_state::cde_r), FUNC(konamim2_state::cde_w));
 
-	AM_RANGE(0x02000000, 0x02000fff) AM_READ(device2_r)
+	map(0x02000000, 0x02000fff).r(this, FUNC(konamim2_state::device2_r));
 
-	AM_RANGE(0x03000000, 0x03000007) AM_READ8(id3_r, 0x00ff000000000000U)
+	map(0x03000001, 0x03000001).r(this, FUNC(konamim2_state::id3_r));
 
-	AM_RANGE(0x04000000, 0x04000007) AM_READ8(id4_r, 0x00ff000000000000U)
-	AM_RANGE(0x04000010, 0x04000017) AM_WRITE8(serial_w,0x00000000000000ffU)
-	AM_RANGE(0x04000018, 0x0400001f) AM_READ(unk1_r) // serial status
-	AM_RANGE(0x04000020, 0x04000027) AM_WRITE(reset_w)
-	AM_RANGE(0x04000418, 0x0400041f) AM_WRITE(unk4000418_w) // serial status ack
-	AM_RANGE(0x04000208, 0x0400020f) AM_READ(unk3_r)
-	AM_RANGE(0x04000280, 0x04000287) AM_READ(unk4000280_r)
+	map(0x04000001, 0x04000001).r(this, FUNC(konamim2_state::id4_r));
+	map(0x04000017, 0x04000017).w(this, FUNC(konamim2_state::serial_w));
+	map(0x04000018, 0x0400001f).r(this, FUNC(konamim2_state::unk1_r)); // serial status
+	map(0x04000020, 0x04000027).w(this, FUNC(konamim2_state::reset_w));
+	map(0x04000418, 0x0400041f).w(this, FUNC(konamim2_state::unk4000418_w)); // serial status ack
+	map(0x04000208, 0x0400020f).r(this, FUNC(konamim2_state::unk3_r));
+	map(0x04000280, 0x04000287).r(this, FUNC(konamim2_state::unk4000280_r));
 
-	AM_RANGE(0x05000000, 0x05000007) AM_READ8(id5_r, 0x00ff000000000000U)
+	map(0x05000001, 0x05000001).r(this, FUNC(konamim2_state::id5_r));
 
-	AM_RANGE(0x06000000, 0x06000007) AM_READ8(id6_r, 0x00ff000000000000U)
+	map(0x06000001, 0x06000001).r(this, FUNC(konamim2_state::id6_r));
 
-	AM_RANGE(0x07000000, 0x07000007) AM_READ8(id7_r, 0x00ff000000000000U)
+	map(0x07000001, 0x07000001).r(this, FUNC(konamim2_state::id7_r));
 
-	AM_RANGE(0x10000000, 0x10000007) AM_READ(cpu_r)
-	AM_RANGE(0x10000008, 0x10001007) AM_NOP     // ???
+	map(0x10000008, 0x10001007).noprw();     // ???
 
-	AM_RANGE(0x20000000, 0x201fffff) AM_ROM AM_SHARE("share2")
-	AM_RANGE(0x40000000, 0x407fffff) AM_RAM AM_SHARE("main_ram")
-	AM_RANGE(0xfff00000, 0xffffffff) AM_ROM AM_REGION("boot", 0) AM_SHARE("share2")
-ADDRESS_MAP_END
+	map(0x20000000, 0x201fffff).rom().share("share2");
+	map(0x40000000, 0x407fffff).ram().share("main_ram");
+	map(0xfff00000, 0xffffffff).rom().region("boot", 0).share("share2");
+}
 
-static ADDRESS_MAP_START( 3do_m2_main, AS_PROGRAM, 64, konamim2_state )
+void konamim2_state::m2_main_m(address_map &map)
+{
+	m2_main(map);
+	map(0x10000000, 0x10000007).r(this, FUNC(konamim2_state::cpu_r<true>));
+}
+
+void konamim2_state::m2_main_s(address_map &map)
+{
+	m2_main(map);
+	map(0x10000000, 0x10000007).r(this, FUNC(konamim2_state::cpu_r<false>));
+}
+
+void konamim2_state::_3do_m2_main(address_map &map)
+{
 //  ADDRESS_MAP_UNMAP_HIGH
-	AM_IMPORT_FROM( m2_main )
+	m2_main(map);
 
 //  AM_RANGE(0x00000000, 0x000cffff) devices?
-ADDRESS_MAP_END
+}
+
+void konamim2_state::_3do_m2_main_m(address_map &map)
+{
+	_3do_m2_main(map);
+	map(0x10000000, 0x10000007).r(this, FUNC(konamim2_state::cpu_r<true>));
+}
+
+void konamim2_state::_3do_m2_main_s(address_map &map)
+{
+	_3do_m2_main(map);
+	map(0x10000000, 0x10000007).r(this, FUNC(konamim2_state::cpu_r<false>));
+}
+
 
 static INPUT_PORTS_START( m2 )
 	// TODO: it's unknown if these are actual dip-switches or internal to something
@@ -1269,17 +1298,17 @@ void konamim2_state::machine_reset()
 	cde_init();
 }
 
-static MACHINE_CONFIG_START( m2 )
+MACHINE_CONFIG_START(konamim2_state::m2)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", PPC602, 66000000)   /* actually PPC602, 66MHz */
 	MCFG_PPC_BUS_FREQUENCY(33000000)  /* Multiplier 2, Bus = 33MHz, Core = 66MHz */
-	MCFG_CPU_PROGRAM_MAP(m2_main)
+	MCFG_CPU_PROGRAM_MAP(m2_main_m)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", konamim2_state,  m2)
 
 	MCFG_CPU_ADD("sub", PPC602, 66000000)   /* actually PPC602, 66MHz */
 	MCFG_PPC_BUS_FREQUENCY(33000000)  /* Multiplier 2, Bus = 33MHz, Core = 66MHz */
-	MCFG_CPU_PROGRAM_MAP(m2_main)
+	MCFG_CPU_PROGRAM_MAP(m2_main_s)
 
 	// TODO: declaring as second screen causes palette confusion (wants to use palette from the other screen?)
 	MCFG_DEVICE_ADD("terminal", GENERIC_TERMINAL, 0)
@@ -1302,16 +1331,15 @@ static MACHINE_CONFIG_START( m2 )
 
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED ( 3do_m2, m2 )
-
+MACHINE_CONFIG_START(konamim2_state::_3do_m2)
+	m2(config);
 	MCFG_CPU_MODIFY("maincpu")
-	MCFG_CPU_PROGRAM_MAP(3do_m2_main)
+	MCFG_CPU_PROGRAM_MAP(_3do_m2_main_m)
 
 	MCFG_CPU_MODIFY("sub")
-	MCFG_CPU_PROGRAM_MAP(3do_m2_main)
+	MCFG_CPU_PROGRAM_MAP(_3do_m2_main_s)
 
 	MCFG_SOFTWARE_LIST_ADD("cd_list","3do_m2")
-
 MACHINE_CONFIG_END
 
 
@@ -1458,4 +1486,4 @@ GAME( 1998, evilngt,  0,        m2, m2, konamim2_state, m2, ROT0, "Konami", "Evi
 GAME( 1998, evilngte, evilngt,  m2, m2, konamim2_state, m2, ROT0, "Konami", "Evil Night (ver EAA)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
 GAME( 1998, hellngt,  evilngt,  m2, m2, konamim2_state, m2, ROT0, "Konami", "Hell Night (ver EAA)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
 
-CONS( 199?, 3do_m2,     0,      0,    3do_m2,    m2,    konamim2_state, 0,      "3DO",  "3DO M2",    MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+CONS( 199?, 3do_m2,     0,      0,    _3do_m2,    m2,    konamim2_state, 0,      "3DO",  "3DO M2",    MACHINE_NOT_WORKING | MACHINE_NO_SOUND )

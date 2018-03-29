@@ -148,7 +148,7 @@ MCU simulation TODO:
 			return 0x45;
 
 		default:
-			logerror("CPU#0 read from MCU pc=%4x, mcu_val=%2x\n", space.device().safe_pc(), m_mcu_val);
+			logerror("CPU#0 read from MCU pc=%4x, mcu_val=%2x\n", m_maincpu->pc(), m_mcu_val);
 			return m_mcu_val;
 	}
 #endif
@@ -169,73 +169,49 @@ WRITE8_MEMBER(msisaac_state::msisaac_mcu_w)
 	m_bmcu->buggychl_mcu_w(offset,data);
 #else
 	//if(data != 0x0a && data != 0x42 && data != 0x02)
-	//  popmessage("PC = %04x %02x", space.device().safe_pc(), data);
+	//  popmessage("PC = %04x %02x", m_maincpu->pc(), data);
 	m_mcu_val = data;
 #endif
 }
 
-static ADDRESS_MAP_START( msisaac_map, AS_PROGRAM, 8, msisaac_state )
-	AM_RANGE(0x0000, 0xdfff) AM_ROM
-	AM_RANGE(0xe000, 0xe7ff) AM_RAM
-	AM_RANGE(0xe800, 0xefff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0xf000, 0xf000) AM_WRITE(msisaac_bg2_textbank_w)
-	AM_RANGE(0xf001, 0xf001) AM_WRITENOP                    //???
-	AM_RANGE(0xf002, 0xf002) AM_WRITENOP                    //???
+void msisaac_state::msisaac_map(address_map &map)
+{
+	map(0x0000, 0xdfff).rom();
+	map(0xe000, 0xe7ff).ram();
+	map(0xe800, 0xefff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+	map(0xf000, 0xf000).w(this, FUNC(msisaac_state::msisaac_bg2_textbank_w));
+	map(0xf001, 0xf001).nopw();                    //???
+	map(0xf002, 0xf002).nopw();                    //???
 
-	AM_RANGE(0xf060, 0xf060) AM_WRITE(sound_command_w)      //sound command
-	AM_RANGE(0xf061, 0xf061) AM_WRITENOP /*sound_reset*/    //????
+	map(0xf060, 0xf060).w(this, FUNC(msisaac_state::sound_command_w));      //sound command
+	map(0xf061, 0xf061).nopw(); /*sound_reset*/    //????
 
-	AM_RANGE(0xf0a3, 0xf0a3) AM_WRITE(ms_unknown_w)         //???? written in interrupt routine
+	map(0xf0a3, 0xf0a3).w(this, FUNC(msisaac_state::ms_unknown_w));         //???? written in interrupt routine
 
-	AM_RANGE(0xf0c0, 0xf0c0) AM_WRITE(msisaac_fg_scrollx_w)
-	AM_RANGE(0xf0c1, 0xf0c1) AM_WRITE(msisaac_fg_scrolly_w)
-	AM_RANGE(0xf0c2, 0xf0c2) AM_WRITE(msisaac_bg2_scrollx_w)
-	AM_RANGE(0xf0c3, 0xf0c3) AM_WRITE(msisaac_bg2_scrolly_w)
-	AM_RANGE(0xf0c4, 0xf0c4) AM_WRITE(msisaac_bg_scrollx_w)
-	AM_RANGE(0xf0c5, 0xf0c5) AM_WRITE(msisaac_bg_scrolly_w)
+	map(0xf0c0, 0xf0c0).w(this, FUNC(msisaac_state::msisaac_fg_scrollx_w));
+	map(0xf0c1, 0xf0c1).w(this, FUNC(msisaac_state::msisaac_fg_scrolly_w));
+	map(0xf0c2, 0xf0c2).w(this, FUNC(msisaac_state::msisaac_bg2_scrollx_w));
+	map(0xf0c3, 0xf0c3).w(this, FUNC(msisaac_state::msisaac_bg2_scrolly_w));
+	map(0xf0c4, 0xf0c4).w(this, FUNC(msisaac_state::msisaac_bg_scrollx_w));
+	map(0xf0c5, 0xf0c5).w(this, FUNC(msisaac_state::msisaac_bg_scrolly_w));
 
-	AM_RANGE(0xf0e0, 0xf0e0) AM_READWRITE(msisaac_mcu_r, msisaac_mcu_w)
-	AM_RANGE(0xf0e1, 0xf0e1) AM_READ(msisaac_mcu_status_r)
+	map(0xf0e0, 0xf0e0).rw(this, FUNC(msisaac_state::msisaac_mcu_r), FUNC(msisaac_state::msisaac_mcu_w));
+	map(0xf0e1, 0xf0e1).r(this, FUNC(msisaac_state::msisaac_mcu_status_r));
 
-	AM_RANGE(0xf080, 0xf080) AM_READ_PORT("DSW1")
-	AM_RANGE(0xf081, 0xf081) AM_READ_PORT("DSW2")
-	AM_RANGE(0xf082, 0xf082) AM_READ_PORT("DSW3")
-	AM_RANGE(0xf083, 0xf083) AM_READ_PORT("IN0")
-	AM_RANGE(0xf084, 0xf084) AM_READ_PORT("IN1")
+	map(0xf080, 0xf080).portr("DSW1");
+	map(0xf081, 0xf081).portr("DSW2");
+	map(0xf082, 0xf082).portr("DSW3");
+	map(0xf083, 0xf083).portr("IN0");
+	map(0xf084, 0xf084).portr("IN1");
 //  AM_RANGE(0xf086, 0xf086) AM_READ_PORT("IN2")
 
-	AM_RANGE(0xf100, 0xf17f) AM_RAM AM_SHARE("spriteram")   //sprites
-	AM_RANGE(0xf400, 0xf7ff) AM_RAM_WRITE(msisaac_fg_videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0xf800, 0xfbff) AM_RAM_WRITE(msisaac_bg2_videoram_w) AM_SHARE("videoram3")
-	AM_RANGE(0xfc00, 0xffff) AM_RAM_WRITE(msisaac_bg_videoram_w) AM_SHARE("videoram2")
+	map(0xf100, 0xf17f).ram().share("spriteram");   //sprites
+	map(0xf400, 0xf7ff).ram().w(this, FUNC(msisaac_state::msisaac_fg_videoram_w)).share("videoram");
+	map(0xf800, 0xfbff).ram().w(this, FUNC(msisaac_state::msisaac_bg2_videoram_w)).share("videoram3");
+	map(0xfc00, 0xffff).ram().w(this, FUNC(msisaac_state::msisaac_bg_videoram_w)).share("videoram2");
 //  AM_RANGE(0xf801, 0xf801) AM_WRITE(msisaac_bgcolor_w)
 //  AM_RANGE(0xfc00, 0xfc00) AM_WRITE(flip_screen_w)
 //  AM_RANGE(0xfc03, 0xfc04) AM_WRITE(msisaac_coin_counter_w)
-ADDRESS_MAP_END
-
-MACHINE_RESET_MEMBER(msisaac_state,ta7630)
-{
-	int i;
-
-	double db           = 0.0;
-	double db_step      = 0.50; /* 0.50 dB step (at least, maybe more) */
-	double db_step_inc  = 0.275;
-	for (i=0; i<16; i++)
-	{
-		double max = 100.0 / pow(10.0, db/20.0 );
-		m_vol_ctrl[15 - i] = max;
-		/*logerror("vol_ctrl[%x] = %i (%f dB)\n",15 - i, m_vol_ctrl[15 - i], db);*/
-		db += db_step;
-		db_step += db_step_inc;
-	}
-
-	/*for (i=0; i<8; i++)
-	    logerror("SOUND Chan#%i name=%s\n", i, mixer_get_name(i) );*/
-/*
-  channels 0-2 AY#0
-  channels 3-5 AY#1
-  channels 6,7 MSM5232 group1,group2
-*/
 }
 
 WRITE8_MEMBER(msisaac_state::sound_control_0_w)
@@ -243,14 +219,21 @@ WRITE8_MEMBER(msisaac_state::sound_control_0_w)
 	m_snd_ctrl0 = data & 0xff;
 	//popmessage("SND0 0=%2x 1=%2x", m_snd_ctrl0, m_snd_ctrl1);
 
-	m_msm->set_output_gain(0, m_vol_ctrl[m_snd_ctrl0 & 15] / 100.0);    /* group1 from msm5232 */
-	m_msm->set_output_gain(1, m_vol_ctrl[m_snd_ctrl0 & 15] / 100.0);    /* group1 from msm5232 */
-	m_msm->set_output_gain(2, m_vol_ctrl[m_snd_ctrl0 & 15] / 100.0);    /* group1 from msm5232 */
-	m_msm->set_output_gain(3, m_vol_ctrl[m_snd_ctrl0 & 15] / 100.0);    /* group1 from msm5232 */
-	m_msm->set_output_gain(4, m_vol_ctrl[(m_snd_ctrl0 >> 4) & 15] / 100.0); /* group2 from msm5232 */
-	m_msm->set_output_gain(5, m_vol_ctrl[(m_snd_ctrl0 >> 4) & 15] / 100.0); /* group2 from msm5232 */
-	m_msm->set_output_gain(6, m_vol_ctrl[(m_snd_ctrl0 >> 4) & 15] / 100.0); /* group2 from msm5232 */
-	m_msm->set_output_gain(7, m_vol_ctrl[(m_snd_ctrl0 >> 4) & 15] / 100.0); /* group2 from msm5232 */
+	for(int i=0;i<4;i++)
+	{
+		// group1
+		m_ta7630->set_channel_volume(m_msm,i,   m_snd_ctrl0 & 0xf);
+		// group2
+		m_ta7630->set_channel_volume(m_msm,i+4, m_snd_ctrl0 >> 4);
+	}
+//  m_msm->set_output_gain(0, m_vol_ctrl[m_snd_ctrl0 & 15] / 100.0);    /* group1 from msm5232 */
+//  m_msm->set_output_gain(1, m_vol_ctrl[m_snd_ctrl0 & 15] / 100.0);    /* group1 from msm5232 */
+//  m_msm->set_output_gain(2, m_vol_ctrl[m_snd_ctrl0 & 15] / 100.0);    /* group1 from msm5232 */
+//  m_msm->set_output_gain(3, m_vol_ctrl[m_snd_ctrl0 & 15] / 100.0);    /* group1 from msm5232 */
+//  m_msm->set_output_gain(4, m_vol_ctrl[(m_snd_ctrl0 >> 4) & 15] / 100.0); /* group2 from msm5232 */
+//  m_msm->set_output_gain(5, m_vol_ctrl[(m_snd_ctrl0 >> 4) & 15] / 100.0); /* group2 from msm5232 */
+//  m_msm->set_output_gain(6, m_vol_ctrl[(m_snd_ctrl0 >> 4) & 15] / 100.0); /* group2 from msm5232 */
+//  m_msm->set_output_gain(7, m_vol_ctrl[(m_snd_ctrl0 >> 4) & 15] / 100.0); /* group2 from msm5232 */
 }
 WRITE8_MEMBER(msisaac_state::sound_control_1_w)
 {
@@ -258,20 +241,21 @@ WRITE8_MEMBER(msisaac_state::sound_control_1_w)
 	//popmessage("SND1 0=%2x 1=%2x", m_snd_ctrl0, m_snd_ctrl1);
 }
 
-static ADDRESS_MAP_START( msisaac_sound_map, AS_PROGRAM, 8, msisaac_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x47ff) AM_RAM
-	AM_RANGE(0x8000, 0x8001) AM_DEVWRITE("ay1", ay8910_device, address_data_w)
-	AM_RANGE(0x8002, 0x8003) AM_DEVWRITE("ay2", ay8910_device, address_data_w)
-	AM_RANGE(0x8010, 0x801d) AM_DEVWRITE("msm", msm5232_device, write)
-	AM_RANGE(0x8020, 0x8020) AM_WRITE(sound_control_0_w)
-	AM_RANGE(0x8030, 0x8030) AM_WRITE(sound_control_1_w)
-	AM_RANGE(0xc000, 0xc000) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-	AM_RANGE(0xc001, 0xc001) AM_WRITE(nmi_enable_w)
-	AM_RANGE(0xc002, 0xc002) AM_WRITE(nmi_disable_w)
-	AM_RANGE(0xc003, 0xc003) AM_WRITENOP /*???*/ /* this is NOT mixer_enable */
-	AM_RANGE(0xe000, 0xffff) AM_READNOP /*space for diagnostic ROM (not dumped, not reachable) */
-ADDRESS_MAP_END
+void msisaac_state::msisaac_sound_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x47ff).ram();
+	map(0x8000, 0x8001).w("ay1", FUNC(ay8910_device::address_data_w));
+	map(0x8002, 0x8003).w("ay2", FUNC(ay8910_device::address_data_w));
+	map(0x8010, 0x801d).w(m_msm, FUNC(msm5232_device::write));
+	map(0x8020, 0x8020).w(this, FUNC(msisaac_state::sound_control_0_w));
+	map(0x8030, 0x8030).w(this, FUNC(msisaac_state::sound_control_1_w));
+	map(0xc000, 0xc000).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+	map(0xc001, 0xc001).w(this, FUNC(msisaac_state::nmi_enable_w));
+	map(0xc002, 0xc002).w(this, FUNC(msisaac_state::nmi_disable_w));
+	map(0xc003, 0xc003).nopw(); /*???*/ /* this is NOT mixer_enable */
+	map(0xe000, 0xffff).nopr(); /*space for diagnostic ROM (not dumped, not reachable) */
+}
 
 static INPUT_PORTS_START( msisaac )
 	PORT_START("DSW1")
@@ -432,7 +416,6 @@ void msisaac_state::machine_start()
 	/* sound */
 	save_item(NAME(m_sound_nmi_enable));
 	save_item(NAME(m_pending_nmi));
-	save_item(NAME(m_vol_ctrl));
 	save_item(NAME(m_snd_ctrl0));
 	save_item(NAME(m_snd_ctrl1));
 
@@ -445,7 +428,7 @@ void msisaac_state::machine_start()
 
 void msisaac_state::machine_reset()
 {
-	MACHINE_RESET_CALL_MEMBER(ta7630);
+	//MACHINE_RESET_CALL_MEMBER(ta7630);
 
 	/* video */
 	m_bg2_textbank = 0;
@@ -463,7 +446,7 @@ void msisaac_state::machine_reset()
 #endif
 }
 
-static MACHINE_CONFIG_START( msisaac )
+MACHINE_CONFIG_START(msisaac_state::msisaac)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 4000000)
@@ -499,11 +482,14 @@ static MACHINE_CONFIG_START( msisaac )
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
+	MCFG_TA7630_ADD("ta7630")
 
 	MCFG_SOUND_ADD("ay1", AY8910, 2000000)
+	// port A/B likely to be TA7630 filters
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
 	MCFG_SOUND_ADD("ay2", AY8910, 2000000)
+	// port A/B likely to be TA7630 filters
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
 	MCFG_SOUND_ADD("msm", MSM5232, 2000000)

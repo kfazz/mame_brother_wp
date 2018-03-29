@@ -142,122 +142,123 @@ READ8_MEMBER(bbc_state::bbc_fe_r)
 	return 0xfe;
 }
 
-static ADDRESS_MAP_START( bbca_mem, AS_PROGRAM, 8, bbc_state )
-	ADDRESS_MAP_UNMAP_HIGH                                                                                      /*  Hardware marked with a # is not present in a Model A        */
-
-	AM_RANGE(0x0000, 0x3fff) AM_READ_BANK("bank1") AM_WRITE(bbc_memorya1_w)                                     /*    0000-3fff                 Regular Ram                     */
-	AM_RANGE(0x4000, 0x7fff) AM_READ_BANK("bank3") AM_WRITE(bbc_memoryb3_w)                                     /*    4000-7fff                 Repeat of the Regular Ram       */
-	AM_RANGE(0x8000, 0xbfff) AM_READ_BANK("bank4") AM_WRITE(bbc_memoryb4_w)                                     /*    8000-bfff                 Paged ROM                       */
-	AM_RANGE(0xc000, 0xfbff) AM_READ_BANK("bank7")                                                              /*    c000-fbff                 OS ROM                          */
-	AM_RANGE(0xfc00, 0xfdff) AM_NOP                                                                             /*    fc00-fdff                 FRED & JIM Pages                */
-																																																							/*    fe00-feff                 SHEILA Address Page             */
-	AM_RANGE(0xfe00, 0xfe00) AM_MIRROR(0x06) AM_DEVREADWRITE("hd6845", hd6845_device, status_r, address_w)      /*    fe00-fe07  6845 CRTC      Video controller                */
-	AM_RANGE(0xfe01, 0xfe01) AM_MIRROR(0x06) AM_DEVREADWRITE("hd6845", hd6845_device, register_r, register_w)
-	AM_RANGE(0xfe08, 0xfe08) AM_MIRROR(0x06) AM_DEVREADWRITE("acia6850", acia6850_device, status_r, control_w)  /*    fe08-fe0F  6850 ACIA      Serial controller               */
-	AM_RANGE(0xfe09, 0xfe09) AM_MIRROR(0x06) AM_DEVREADWRITE("acia6850", acia6850_device, data_r, data_w)
-	AM_RANGE(0xfe10, 0xfe17) AM_READWRITE(bbc_fe_r, bbc_SerialULA_w)                                            /*    fe10-fe17  Serial ULA     Serial system chip              */
-	AM_RANGE(0xfe18, 0xfe1f) AM_NOP                                                                             /*    fe18-fe1f  INTOFF/STATID  # ECONET Interrupt Off / ID No. */
-	AM_RANGE(0xfe20, 0xfe2f) AM_READWRITE(bbc_fe_r, bbc_videoULA_w)                                             /* R: fe20-fe2f  INTON          # ECONET Interrupt On           */
-																																																							/* W: fe20-fe2f  Video ULA      Video system chip               */
-	AM_RANGE(0xfe30, 0xfe3f) AM_READWRITE(bbc_fe_r, bbc_page_selecta_w)                                         /* R: fe30-fe3f  NC             Not Connected                   */
-																																																							/* W: fe30-fe3f  74LS161        Paged ROM selector              */
-	AM_RANGE(0xfe40, 0xfe5f) AM_DEVREADWRITE("via6522_0", via6522_device, read, write)                          /*    fe40-fe5f  6522 VIA       SYSTEM VIA                      */
-	AM_RANGE(0xfe60, 0xfe7f) AM_NOP                                                                             /*    fe60-fe7f  6522 VIA       # USER VIA                      */
-	AM_RANGE(0xfe80, 0xfe9f) AM_NOP                                                                             /*    fe80-fe9f  8271/1770 FDC  # Floppy disc controller        */
-	AM_RANGE(0xfea0, 0xfebf) AM_READ(bbc_fe_r)                                                                  /*    fea0-febf  68B54 ADLC     # ECONET controller             */
-	AM_RANGE(0xfec0, 0xfedf) AM_NOP                                                                             /*    fec0-fedf  uPD7002        # Analogue to digital converter */
-	AM_RANGE(0xfee0, 0xfeff) AM_READ(bbc_fe_r)                                                                  /*    fee0-feff  Tube ULA       # Tube system interface         */
-	AM_RANGE(0xff00, 0xffff) AM_ROM AM_REGION("os", 0x3f00)                                                     /*    ff00-ffff                 OS Rom (continued)              */
-ADDRESS_MAP_END
+void bbc_state::bbca_mem(address_map &map)
+{
+	map.unmap_value_high();                                                                                           /*  Hardware marked with a # is not present in a Model A        */
+	map(0x0000, 0x3fff).bankrw("bank1");                                                                              /*    0000-3fff                 Regular RAM                     */
+	map(0x4000, 0x7fff).bankrw("bank3");                                                                              /*    4000-7fff                 Regular RAM mirrored            */
+	map(0x8000, 0xbfff).bankr("bank4").w(this, FUNC(bbc_state::bbc_memoryb4_w));                                      /*    8000-bfff                 Paged ROM                       */
+	map(0xc000, 0xfbff).bankr("bank7");                                                                               /*    c000-fbff                 OS ROM                          */
+	map(0xfc00, 0xfdff).noprw();                                                                                      /*    fc00-fdff                 FRED & JIM Pages                */
+																																																										/*    fe00-feff                 SHEILA Address Page             */
+	map(0xfe00, 0xfe00).mirror(0x06).rw(m_hd6845, FUNC(hd6845_device::status_r), FUNC(hd6845_device::address_w));     /*    fe00-fe07  6845 CRTC      Video controller                */
+	map(0xfe01, 0xfe01).mirror(0x06).rw(m_hd6845, FUNC(hd6845_device::register_r), FUNC(hd6845_device::register_w));
+	map(0xfe08, 0xfe09).mirror(0x06).rw(m_acia, FUNC(acia6850_device::read), FUNC(acia6850_device::write));           /*    fe08-fe0f  6850 ACIA      Serial controller               */
+	map(0xfe10, 0xfe17).rw(this, FUNC(bbc_state::bbc_fe_r), FUNC(bbc_state::bbc_SerialULA_w));                        /*    fe10-fe17  Serial ULA     Serial system chip              */
+	map(0xfe18, 0xfe1f).noprw();                                                                                      /*    fe18-fe1f  INTOFF/STATID  # ECONET Interrupt Off / ID No. */
+	map(0xfe20, 0xfe2f).rw(this, FUNC(bbc_state::bbc_fe_r), FUNC(bbc_state::bbc_videoULA_w));                         /* R: fe20-fe2f  INTON          # ECONET Interrupt On           */
+																																																										/* W: fe20-fe2f  Video ULA      Video system chip               */
+	map(0xfe30, 0xfe3f).rw(this, FUNC(bbc_state::bbc_fe_r), FUNC(bbc_state::page_selecta_w));                         /* W: fe30-fe3f  74LS161        Paged ROM selector              */
+	map(0xfe40, 0xfe5f).rw(m_via6522_0, FUNC(via6522_device::read), FUNC(via6522_device::write));                     /*    fe40-fe5f  6522 VIA       SYSTEM VIA                      */
+	map(0xfe60, 0xfe7f).noprw();                                                                                      /*    fe60-fe7f  6522 VIA       # USER VIA                      */
+	map(0xfe80, 0xfe9f).noprw();                                                                                      /*    fe80-fe9f  8271/1770 FDC  # Floppy disc controller        */
+	map(0xfea0, 0xfebf).r(this, FUNC(bbc_state::bbc_fe_r));                                                           /*    fea0-febf  68B54 ADLC     # ECONET controller             */
+	map(0xfec0, 0xfedf).noprw();                                                                                      /*    fec0-fedf  uPD7002        # Analogue to digital converter */
+	map(0xfee0, 0xfeff).r(this, FUNC(bbc_state::bbc_fe_r));                                                           /*    fee0-feff  Tube ULA       # Tube system interface         */
+	map(0xff00, 0xffff).rom().region("os", 0x3f00);                                                                   /*    ff00-ffff                 OS Rom (continued)              */
+}
 
 
-static ADDRESS_MAP_START( bbc_base, AS_PROGRAM, 8, bbc_state )
-	ADDRESS_MAP_UNMAP_HIGH
-
-	AM_RANGE(0xc000, 0xfbff) AM_READ_BANK("bank7")                                                              /*    c000-fbff                 OS ROM                          */
-	AM_RANGE(0xfc00, 0xfdff) AM_NOP                                                                             /*    fc00-fdff                 FRED & JIM Pages                */
-																																																							/*    fe00-feff                 SHEILA Address Page             */
-	AM_RANGE(0xfe00, 0xfe00) AM_MIRROR(0x06) AM_DEVREADWRITE("hd6845", hd6845_device, status_r, address_w)      /*    fe00-fe07  6845 CRTC      Video controller                */
-	AM_RANGE(0xfe01, 0xfe01) AM_MIRROR(0x06) AM_DEVREADWRITE("hd6845", hd6845_device, register_r, register_w)
-	AM_RANGE(0xfe08, 0xfe08) AM_MIRROR(0x06) AM_DEVREADWRITE("acia6850", acia6850_device, status_r, control_w)  /*    fe08-fe0F  6850 ACIA      Serial controller               */
-	AM_RANGE(0xfe09, 0xfe09) AM_MIRROR(0x06) AM_DEVREADWRITE("acia6850", acia6850_device, data_r, data_w)
-	AM_RANGE(0xfe10, 0xfe17) AM_READWRITE(bbc_fe_r, bbc_SerialULA_w)                                            /*    fe10-fe17  Serial ULA     Serial system chip              */
-	AM_RANGE(0xfe18, 0xfe1f) AM_READ_PORT("STATID")                                                             /*    fe18-fe1f  INTOFF/STATID  ECONET Interrupt Off / ID No.   */
-	AM_RANGE(0xfe20, 0xfe2f) AM_READWRITE(bbc_fe_r, bbc_videoULA_w)                                             /* R: fe20-fe2f  INTON          ECONET Interrupt On             */
-																																																							/* W: fe20-fe2f  Video ULA      Video system chip               */
-	AM_RANGE(0xfe40, 0xfe5f) AM_DEVREADWRITE("via6522_0", via6522_device, read, write)                          /*    fe40-fe5f  6522 VIA       SYSTEM VIA                      */
-	AM_RANGE(0xfe60, 0xfe7f) AM_DEVREADWRITE("via6522_1", via6522_device, read, write)                          /*    fe60-fe7f  6522 VIA       USER VIA                        */
-																																																							/*    fe80-fe9f  FDC            Floppy disc controller          */
-	AM_RANGE(0xfea0, 0xfebf) AM_DEVREADWRITE("mc6854", mc6854_device, read, write)                              /*    fea0-febf  68B54 ADLC     ECONET controller               */
-	AM_RANGE(0xfec0, 0xfedf) AM_DEVREADWRITE("upd7002", upd7002_device, read, write)                            /*    fec0-fedf  uPD7002        Analogue to digital converter   */
-	AM_RANGE(0xfee0, 0xfeff) AM_DEVREADWRITE("tube", bbc_tube_slot_device, host_r, host_w)                      /*    fee0-feff  Tube ULA       Tube system interface           */
-	AM_RANGE(0xff00, 0xffff) AM_ROM AM_REGION("os", 0x3f00)                                                     /*    ff00-ffff                 OS ROM (continued)              */
-ADDRESS_MAP_END
-
-
-static ADDRESS_MAP_START( bbcb_mem, AS_PROGRAM, 8, bbc_state )
-	AM_RANGE(0x0000, 0x3fff) AM_READ_BANK("bank1") AM_WRITE(bbc_memorya1_w)                                     /*    0000-3fff                 Regular Ram                     */
-	AM_RANGE(0x4000, 0x7fff) AM_READ_BANK("bank3") AM_WRITE(bbc_memoryb3_w)                                     /*    4000-7fff                 Regular Ram                     */
-	AM_RANGE(0x8000, 0xbfff) AM_READ_BANK("bank4") AM_WRITE(bbc_memoryb4_w)                                     /*    8000-bfff                 Paged ROM                       */
-	AM_RANGE(0xfe30, 0xfe3f) AM_READWRITE(bbc_fe_r, bbc_page_selectb_w)                                         /* R: fe30-fe3f  NC             Not Connected                   */
-																																																							/* W: fe30-fe3f  84LS161        Paged ROM selector              */
-	AM_RANGE(0xfe80, 0xfe83) AM_DEVICE("i8271", i8271_device, map)                                              /*    fe80-fe83  8271 FDC       Floppy disc controller          */
-	AM_RANGE(0xfe84, 0xfe9f) AM_DEVREADWRITE("i8271", i8271_device, data_r, data_w)                             /*    fe84-fe9f  8271 FDC       Floppy disc controller          */
-	AM_IMPORT_FROM(bbc_base)
-ADDRESS_MAP_END
+void bbc_state::bbc_base(address_map &map)
+{
+	map.unmap_value_high();
+	map(0xc000, 0xfbff).bankr("bank7");                                                                               /*    c000-fbff                 OS ROM                          */
+	map(0xfc00, 0xfdff).noprw();                                                                                      /*    fc00-fdff                 FRED & JIM Pages                */
+	map(0xfe00, 0xfeff).r(this, FUNC(bbc_state::bbc_fe_r));                                                           /*    fe00-feff                 SHEILA Address Page             */
+	map(0xfe00, 0xfe00).mirror(0x06).rw(m_hd6845, FUNC(hd6845_device::status_r), FUNC(hd6845_device::address_w));     /*    fe00-fe07  6845 CRTC      Video controller                */
+	map(0xfe01, 0xfe01).mirror(0x06).rw(m_hd6845, FUNC(hd6845_device::register_r), FUNC(hd6845_device::register_w));
+	map(0xfe08, 0xfe09).mirror(0x06).rw(m_acia, FUNC(acia6850_device::read), FUNC(acia6850_device::write));           /*    fe08-fe0f  6850 ACIA      Serial controller               */
+	map(0xfe10, 0xfe17).rw(this, FUNC(bbc_state::bbc_fe_r), FUNC(bbc_state::bbc_SerialULA_w));                        /*    fe10-fe17  Serial ULA     Serial system chip              */
+	map(0xfe18, 0xfe1f).portr("STATID");                                                                              /*    fe18-fe1f  INTOFF/STATID  ECONET Interrupt Off / ID No.   */
+	map(0xfe20, 0xfe2f).rw(this, FUNC(bbc_state::bbc_fe_r), FUNC(bbc_state::bbc_videoULA_w));                         /* R: fe20-fe2f  INTON          ECONET Interrupt On             */
+																																																										/* W: fe20-fe2f  Video ULA      Video system chip               */
+	map(0xfe40, 0xfe5f).rw(m_via6522_0, FUNC(via6522_device::read), FUNC(via6522_device::write));                     /*    fe40-fe5f  6522 VIA       SYSTEM VIA                      */
+	map(0xfe60, 0xfe7f).rw(m_via6522_1, FUNC(via6522_device::read), FUNC(via6522_device::write));                     /*    fe60-fe7f  6522 VIA       USER VIA                        */
+																																																										/*    fe80-fe9f  FDC            Floppy disc controller          */
+	map(0xfea0, 0xfebf).r(this, FUNC(bbc_state::bbc_fe_r));                                                           /*    fea0-febf  68B54 ADLC     ECONET controller               */
+	map(0xfec0, 0xfedf).rw(m_upd7002, FUNC(upd7002_device::read), FUNC(upd7002_device::write));                       /*    fec0-fedf  uPD7002        Analogue to digital converter   */
+	map(0xfee0, 0xfeff).rw(m_tube, FUNC(bbc_tube_slot_device::host_r), FUNC(bbc_tube_slot_device::host_w));           /*    fee0-feff  Tube ULA       Tube system interface           */
+	map(0xff00, 0xffff).rom().region("os", 0x3f00);                                                                   /*    ff00-ffff                 OS ROM (continued)              */
+}
 
 
-static ADDRESS_MAP_START( bbcb_nofdc_mem, AS_PROGRAM, 8, bbc_state )
-	AM_RANGE(0x0000, 0x3fff) AM_READ_BANK("bank1") AM_WRITE(bbc_memorya1_w)                                     /*    0000-3fff                 Regular Ram                     */
-	AM_RANGE(0x4000, 0x7fff) AM_READ_BANK("bank3") AM_WRITE(bbc_memoryb3_w)                                     /*    4000-7fff                 Regular Ram                     */
-	AM_RANGE(0x8000, 0xbfff) AM_READ_BANK("bank4") AM_WRITE(bbc_memoryb4_w)                                     /*    8000-bfff                 Paged ROM                       */
-	AM_RANGE(0xfe30, 0xfe3f) AM_READWRITE(bbc_fe_r, bbc_page_selectb_w)                                         /* R: fe30-fe3f  NC             Not Connected                   */
-																																																							/* W: fe30-fe3f  84LS161        Paged ROM selector              */
-	AM_RANGE(0xfe80, 0xfe83) AM_NOP                                                                             /*    fe80-fe9f                 Floppy disc controller          */
-	AM_IMPORT_FROM(bbc_base)
-ADDRESS_MAP_END
+void bbc_state::bbcb_mem(address_map &map)
+{
+	bbc_base(map);
+	map(0x0000, 0x3fff).bankrw("bank1");                                                                              /*    0000-3fff                 Regular RAM                     */
+	map(0x4000, 0x7fff).bankrw("bank3");                                                                              /*    4000-7fff                 Regular RAM                     */
+	map(0x8000, 0xbfff).bankr("bank4").w(this, FUNC(bbc_state::bbc_memoryb4_w));                                      /*    8000-bfff                 Paged ROM/RAM                   */
+	map(0xfe30, 0xfe3f).w(this, FUNC(bbc_state::page_selectb_w));                                                     /* W: fe30-fe3f  84LS161        Paged ROM selector              */
+	map(0xfe80, 0xfe83).m(m_i8271, FUNC(i8271_device::map));                                                          /*    fe80-fe83  8271 FDC       Floppy disc controller          */
+	map(0xfe84, 0xfe9f).rw(m_i8271, FUNC(i8271_device::data_r), FUNC(i8271_device::data_w));                          /*    fe84-fe9f  8271 FDC       Floppy disc controller          */
+}
 
 
-static ADDRESS_MAP_START( bbcbp_mem, AS_PROGRAM, 8, bbc_state )
-	AM_RANGE(0x0000, 0x2fff) AM_READ_BANK("bank1") AM_WRITE(bbc_memorybp1_w)                    /*    0000-2fff                 Regular Ram                     */
-	AM_RANGE(0x3000, 0x7fff) AM_READ_BANK("bank2") AM_WRITE(bbc_memorybp2_w)                    /*    3000-7fff                 Video/Shadow Ram                */
-	AM_RANGE(0x8000, 0xafff) AM_READ_BANK("bank4") AM_WRITE(bbc_memorybp4_w)                    /*    8000-afff                 Paged ROM or 12K of SWRAM       */
-	AM_RANGE(0xb000, 0xbfff) AM_READ_BANK("bank6")                                              /*    b000-bfff                 Rest of paged ROM area          */
-	AM_RANGE(0xfe30, 0xfe3f) AM_READWRITE(bbc_fe_r, bbc_page_selectbp_w)                        /* R: fe30-fe3f  NC             Not Connected                   */
-																																															/* W: fe30-fe3f  84LS161        Paged ROM selector              */
-	AM_RANGE(0xfe80, 0xfe83) AM_WRITE(bbc_wd1770_status_w)                                      /*    fe80-fe83  1770 FDC       Drive control register          */
-	AM_RANGE(0xfe84, 0xfe9f) AM_DEVREADWRITE("wd1770", wd1770_device, read, write)              /*    fe84-fe9f  1770 FDC       Floppy disc controller          */
-	AM_RANGE(0xfee0, 0xfeff) AM_DEVREADWRITE("tube", bbc_tube_slot_device, host_r, host_w)      /*    fee0-feff  Tube ULA       Tube system interface           */
-	AM_IMPORT_FROM(bbc_base)
-ADDRESS_MAP_END
+void bbc_state::bbcb_nofdc_mem(address_map &map)
+{
+	bbc_base(map);
+	map(0x0000, 0x3fff).bankrw("bank1");                                                                              /*    0000-3fff                 Regular RAM                     */
+	map(0x4000, 0x7fff).bankrw("bank3");                                                                              /*    4000-7fff                 Regular RAM                     */
+	map(0x8000, 0xbfff).bankr("bank4").w(this, FUNC(bbc_state::bbc_memoryb4_w));                                      /*    8000-bfff                 Paged ROM/RAM                   */
+	map(0xfe30, 0xfe3f).w(this, FUNC(bbc_state::page_selectb_w));                                                     /* W: fe30-fe3f  84LS161        Paged ROM selector              */
+}
 
 
-static ADDRESS_MAP_START( bbcbp128_mem, AS_PROGRAM, 8, bbc_state )
-	AM_RANGE(0x0000, 0x2fff) AM_READ_BANK("bank1") AM_WRITE(bbc_memorybp1_w)                    /*    0000-2fff                 Regular Ram                     */
-	AM_RANGE(0x3000, 0x7fff) AM_READ_BANK("bank2") AM_WRITE(bbc_memorybp2_w)                    /*    3000-7fff                 Video/Shadow Ram                */
-	AM_RANGE(0x8000, 0xafff) AM_READ_BANK("bank4") AM_WRITE(bbc_memorybp4_128_w)                /*    8000-afff                 Paged ROM or 12K of SWRAM       */
-	AM_RANGE(0xb000, 0xbfff) AM_READ_BANK("bank6") AM_WRITE(bbc_memorybp6_128_w)                /*    b000-bfff                 Rest of paged ROM area          */
-	AM_RANGE(0xfe30, 0xfe3f) AM_READWRITE(bbc_fe_r, bbc_page_selectbp_w)                        /* R: fe30-fe3f  NC             Not Connected                   */
-																																															/* W: fe30-fe3f  84LS161        Paged ROM selector              */
-	AM_RANGE(0xfe80, 0xfe83) AM_WRITE(bbc_wd1770_status_w)                                      /*    fe80-fe83  1770 FDC       Drive control register          */
-	AM_RANGE(0xfe84, 0xfe9f) AM_DEVREADWRITE("wd1770", wd1770_device, read, write)              /*    fe84-fe9f  1770 FDC       Floppy disc controller          */
-	AM_RANGE(0xfee0, 0xfeff) AM_DEVREADWRITE("tube", bbc_tube_slot_device, host_r, host_w)      /*    fee0-feff  Tube ULA       Tube system interface           */
-	AM_IMPORT_FROM(bbc_base)
-ADDRESS_MAP_END
+void bbc_state::bbcbp_mem(address_map &map)
+{
+	bbc_base(map);
+	map(0x0000, 0x2fff).bankrw("bank1");                                                                              /*    0000-2fff                 Regular RAM                     */
+	map(0x3000, 0x7fff).bankrw("bank2");                                                                              /*    3000-7fff                 Video/Shadow RAM                */
+	map(0x8000, 0xafff).bankr("bank4").w(this, FUNC(bbc_state::bbc_memorybp4_w));                                     /*    8000-afff                 Paged ROM or 12K of SWRAM       */
+	map(0xb000, 0xbfff).bankr("bank6").w(this, FUNC(bbc_state::bbc_memorybp6_w));                                     /*    b000-bfff                 Rest of paged ROM area          */
+	map(0xfe30, 0xfe3f).w(this, FUNC(bbc_state::page_selectbp_w));                                                    /* W: fe30-fe3f  84LS161        Paged ROM selector              */
+	map(0xfe80, 0xfe83).w(this, FUNC(bbc_state::bbc_wd1770_status_w));                                                /*    fe80-fe83  1770 FDC       Drive control register          */
+	map(0xfe84, 0xfe9f).rw(m_wd1770, FUNC(wd1770_device::read), FUNC(wd1770_device::write));                          /*    fe84-fe9f  1770 FDC       Floppy disc controller          */
+	map(0xfee0, 0xfeff).rw(m_tube, FUNC(bbc_tube_slot_device::host_r), FUNC(bbc_tube_slot_device::host_w));           /*    fee0-feff  Tube ULA       Tube system interface           */
+}
 
 
-static ADDRESS_MAP_START( reutapm_mem, AS_PROGRAM, 8, bbc_state )
-	AM_RANGE(0x0000, 0x2fff) AM_READ_BANK("bank1") AM_WRITE(bbc_memorybp1_w)                    /*    0000-2fff                 Regular Ram                     */
-	AM_RANGE(0x3000, 0x7fff) AM_READ_BANK("bank2") AM_WRITE(bbc_memorybp2_w)                    /*    3000-7fff                 Video/Shadow Ram                */
-	AM_RANGE(0x8000, 0xafff) AM_READ_BANK("bank4") AM_WRITE(bbc_memorybp4_w)                    /*    8000-afff                 Paged ROM or 12K of SWRAM       */
-	AM_RANGE(0xb000, 0xbfff) AM_READ_BANK("bank6")                                              /*    b000-bfff                 Rest of paged ROM area          */
-	AM_RANGE(0xfe30, 0xfe3f) AM_READWRITE(bbc_fe_r, bbc_page_selectbp_w)                        /* R: fe30-fe3f  NC             Not Connected                   */
-																																															/* W: fe30-fe3f  84LS161        Paged ROM selector              */
-	AM_RANGE(0xfe80, 0xfe83) AM_NOP                                                             /*    fe80-fe83  1770 FDC       Drive control register          */
-	AM_RANGE(0xfe84, 0xfe9f) AM_NOP                                                             /*    fe84-fe9f  1770 FDC       Floppy disc controller          */
-	AM_RANGE(0xfee0, 0xfeff) AM_READ(bbc_fe_r)                                                  /*    fee0-feff  Tube ULA       Tube system interface           */
-	AM_IMPORT_FROM(bbc_base)
-ADDRESS_MAP_END
+void bbc_state::bbcbp128_mem(address_map &map)
+{
+	bbc_base(map);
+	map(0x0000, 0x2fff).bankrw("bank1");                                                                              /*    0000-2fff                 Regular RAM                     */
+	map(0x3000, 0x7fff).bankrw("bank2");                                                                              /*    3000-7fff                 Video/Shadow RAM                */
+	map(0x8000, 0xafff).bankr("bank4").w(this, FUNC(bbc_state::bbc_memorybp4_w));                                     /*    8000-afff                 Paged ROM or 12K of SWRAM       */
+	map(0xb000, 0xbfff).bankr("bank6").w(this, FUNC(bbc_state::bbc_memorybp6_w));                                     /*    b000-bfff                 Rest of paged ROM area          */
+	map(0xfe30, 0xfe3f).w(this, FUNC(bbc_state::page_selectbp128_w));                                                 /* W: fe30-fe3f  84LS161        Paged ROM selector              */
+	map(0xfe80, 0xfe83).w(this, FUNC(bbc_state::bbc_wd1770_status_w));                                                /*    fe80-fe83  1770 FDC       Drive control register          */
+	map(0xfe84, 0xfe9f).rw(m_wd1770, FUNC(wd1770_device::read), FUNC(wd1770_device::write));                          /*    fe84-fe9f  1770 FDC       Floppy disc controller          */
+	map(0xfee0, 0xfeff).rw(m_tube, FUNC(bbc_tube_slot_device::host_r), FUNC(bbc_tube_slot_device::host_w));           /*    fee0-feff  Tube ULA       Tube system interface           */
+}
+
+
+void bbc_state::reutapm_mem(address_map &map)
+{
+	bbc_base(map);
+	map(0x0000, 0x2fff).bankrw("bank1");                                                                              /*    0000-2fff                 Regular RAM                     */
+	map(0x3000, 0x7fff).bankrw("bank2");                                                                              /*    3000-7fff                 Video/Shadow RAM                */
+	map(0x8000, 0xafff).bankr("bank4").w(this, FUNC(bbc_state::bbc_memorybp4_w));                                     /*    8000-afff                 Paged ROM or 12K of SWRAM       */
+	map(0xb000, 0xbfff).bankr("bank6").w(this, FUNC(bbc_state::bbc_memorybp6_w));                                     /*    b000-bfff                 Rest of paged ROM area          */
+	map(0xfe30, 0xfe3f).w(this, FUNC(bbc_state::page_selectbp_w));                                                    /* W: fe30-fe3f  84LS161        Paged ROM selector              */
+	map(0xfee0, 0xfeff).rw(m_tube, FUNC(bbc_tube_slot_device::host_r), FUNC(bbc_tube_slot_device::host_w));           /*    fee0-feff  Tube ULA       Tube system interface           */
+}
+
+
+void bbc_state::bbcbp_fetch(address_map &map)
+{
+	map(0x0000, 0xffff).r(this, FUNC(bbc_state::bbcbp_fetch_r));
+}
+
 
 /******************************************************************************
 &FC00-&FCFF FRED
@@ -283,16 +284,21 @@ ADDRESS_MAP_END
 ******************************************************************************/
 
 
-static ADDRESS_MAP_START(bbcm_mem, AS_PROGRAM, 8, bbc_state )
-	AM_RANGE(0x0000, 0x2fff) AM_READ_BANK("bank1") AM_WRITE(bbc_memorybm1_w)                    /*    0000-2fff                 Regular Ram                     */
-	AM_RANGE(0x3000, 0x7fff) AM_READ_BANK("bank2") AM_WRITE(bbc_memorybm2_w)                    /*    3000-7fff                 Video/Shadow Ram                */
-	AM_RANGE(0x8000, 0x8fff) AM_READ_BANK("bank4") AM_WRITE(bbc_memorybm4_w)                    /*    8000-8fff                 Paged ROM/RAM or 4K of RAM ANDY */
-	AM_RANGE(0x9000, 0xbfff) AM_READ_BANK("bank5") AM_WRITE(bbc_memorybm5_w)                    /*    9000-bfff                 Rest of paged ROM/RAM area      */
-	AM_RANGE(0xc000, 0xdfff) AM_READ_BANK("bank7") AM_WRITE(bbc_memorybm7_w)                    /*    c000-dfff                 OS ROM or 8K of RAM       HAZEL */
-	AM_RANGE(0xe000, 0xfbff) AM_ROM AM_REGION("os", 0x2000)                                     /*    e000-fbff                 OS ROM                          */
-	AM_RANGE(0xfc00, 0xfeff) AM_READ_BANK("bank8") AM_WRITE(bbcm_w)                             /*    processed directly because it can be ROM or hardware      */
-	AM_RANGE(0xff00, 0xffff) AM_ROM AM_REGION("os", 0x3f00)                                     /*    ff00-ffff                 OS ROM (continued)              */
-ADDRESS_MAP_END
+void bbc_state::bbcm_mem(address_map &map)
+{
+	map(0x0000, 0x2fff).bankrw("bank1");                                           /*    0000-2fff                 Regular RAM                     */
+	map(0x3000, 0x7fff).bankrw("bank2");                                           /*    3000-7fff                 Video/Shadow RAM                */
+	map(0x8000, 0x8fff).bankr("bank4").w(this, FUNC(bbc_state::bbc_memorybm4_w));  /*    8000-8fff                 Paged ROM/RAM or 4K of RAM ANDY */
+	map(0x9000, 0xbfff).bankr("bank5").w(this, FUNC(bbc_state::bbc_memorybm5_w));  /*    9000-bfff                 Rest of paged ROM/RAM area      */
+	map(0xc000, 0xdfff).bankr("bank7").w(this, FUNC(bbc_state::bbc_memorybm7_w));  /*    c000-dfff                 OS ROM or 8K of RAM       HAZEL */
+	map(0xe000, 0xffff).rom().region("os", 0x2000);                                /*    e000-ffff                 OS ROM                          */
+	map(0xfc00, 0xfeff).bankr("bank8").w(this, FUNC(bbc_state::bbcm_w));           /*    processed directly because it can be ROM or hardware      */
+}
+
+void bbc_state::bbcm_fetch(address_map &map)
+{
+	map(0x0000, 0xffff).r(this, FUNC(bbc_state::bbcm_fetch_r));
+}
 
 
 INPUT_CHANGED_MEMBER(bbc_state::trigger_reset)
@@ -400,7 +406,7 @@ static INPUT_PORTS_START(bbc_keyboard)
 	PORT_START("COL8")
 	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_UNUSED)
 	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("^ ~")                PORT_CODE(KEYCODE_EQUALS)       PORT_CHAR('^') PORT_CHAR('~')
-	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("_ \xC2\xA3")         PORT_CODE(KEYCODE_TILDE)        PORT_CHAR('_') PORT_CHAR('\xA3')
+	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("_ \xC2\xA3")         PORT_CODE(KEYCODE_TILDE)        PORT_CHAR('_') PORT_CHAR(0xA3)
 	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("[ {")                PORT_CODE(KEYCODE_OPENBRACE)    PORT_CHAR('[') PORT_CHAR('{')
 	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME(": *")                PORT_CODE(KEYCODE_QUOTE)        PORT_CHAR(':') PORT_CHAR('*')
 	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("] }")                PORT_CODE(KEYCODE_CLOSEBRACE)   PORT_CHAR(']') PORT_CHAR('}')
@@ -422,8 +428,13 @@ static INPUT_PORTS_START(bbc_keyboard)
 
 	/* Keyboard columns 10 -> 12 are reserved for BBC Master */
 	PORT_START("COL10")
+	PORT_BIT(0xff, IP_ACTIVE_LOW, IPT_UNUSED)
+
 	PORT_START("COL11")
+	PORT_BIT(0xff, IP_ACTIVE_LOW, IPT_UNUSED)
+
 	PORT_START("COL12")
+	PORT_BIT(0xff, IP_ACTIVE_LOW, IPT_UNUSED)
 INPUT_PORTS_END
 
 
@@ -526,7 +537,7 @@ static INPUT_PORTS_START(bbc_dipswitch)
 
 	PORT_MODIFY("COL6")
 	PORT_DIPNAME(0x01, 0x01, "Boot") PORT_DIPLOCATION("KBD:5")
-	PORT_DIPSETTING(   0x00, "SHIFT" )
+	PORT_DIPSETTING(   0x00, "BREAK" )
 	PORT_DIPSETTING(   0x01, "SHIFT-BREAK" )
 
 	PORT_MODIFY("COL7")
@@ -664,14 +675,7 @@ INPUT_PORTS_END
 
 INPUT_CHANGED_MEMBER(bbc_state::monitor_changed)
 {
-	m_monitortype = m_bbcconfig.read_safe(0) &0x03;
-}
-
-
-INPUT_CHANGED_MEMBER(bbc_state::speech_changed)
-{
-	// Switchable during runtime as some games (Hyper Sports, Space Fighter) are not compatible with Speech
-	m_Speech = m_bbcconfig.read_safe(0) & 0x04;
+	m_monitortype = m_bbcconfig.read_safe(0) & 0x03;
 }
 
 
@@ -692,26 +696,11 @@ static INPUT_PORTS_START(bbcb_config)
 	PORT_CONFSETTING(    0x01, "B&W")
 	PORT_CONFSETTING(    0x02, "Green")
 	PORT_CONFSETTING(    0x03, "Amber")
-	PORT_CONFNAME( 0x04, 0x04, "Speech Fitted" ) PORT_CHANGED_MEMBER(DEVICE_SELF, bbc_state, speech_changed, 0)
-	PORT_CONFSETTING(    0x00, DEF_STR( No ) )
-	PORT_CONFSETTING(    0x04, DEF_STR( Yes ) )
-	PORT_CONFNAME( 0x18, 0x00, "Sideways RAM Board")
+	PORT_CONFNAME( 0x0c, 0x00, "Sideways RAM Board")
 	PORT_CONFSETTING(    0x00, DEF_STR( None ) )
-	PORT_CONFSETTING(    0x08, "Solidisk 128K (fe62)" )
-	PORT_CONFSETTING(    0x10, "Acorn 64K (fe30)" )
-	PORT_CONFSETTING(    0x18, "Acorn 128K (fe30)" )
-INPUT_PORTS_END
-
-static INPUT_PORTS_START(bbcbp_config)
-	PORT_START("BBCCONFIG")
-	PORT_CONFNAME( 0x03, 0x00, "Monitor") PORT_CHANGED_MEMBER(DEVICE_SELF, bbc_state, monitor_changed, 0)
-	PORT_CONFSETTING(    0x00, "Colour")
-	PORT_CONFSETTING(    0x01, "B&W")
-	PORT_CONFSETTING(    0x02, "Green")
-	PORT_CONFSETTING(    0x03, "Amber")
-	PORT_CONFNAME( 0x04, 0x04, "Speech Fitted") PORT_CHANGED_MEMBER(DEVICE_SELF, bbc_state, speech_changed, 0)
-	PORT_CONFSETTING(    0x00, DEF_STR(No))
-	PORT_CONFSETTING(    0x04, DEF_STR(Yes))
+	//PORT_CONFSETTING(    0x04, "Solidisk 128K (fe62)" )
+	PORT_CONFSETTING(    0x08, "Acorn 64K (fe30)" )
+	PORT_CONFSETTING(    0x0c, "Acorn 128K (fe30)" )
 INPUT_PORTS_END
 
 static INPUT_PORTS_START(bbca)
@@ -728,7 +717,7 @@ static INPUT_PORTS_START(bbcb)
 INPUT_PORTS_END
 
 static INPUT_PORTS_START(bbcbp)
-	PORT_INCLUDE(bbcbp_config)
+	PORT_INCLUDE(bbc_config)
 	PORT_INCLUDE(bbc_keyboard)
 	PORT_INCLUDE(bbc_dipswitch)
 	PORT_INCLUDE(bbcbp_links)
@@ -774,26 +763,13 @@ INTERRUPT_GEN_MEMBER(bbc_state::bbcb_vsync)
 FLOPPY_FORMATS_MEMBER( bbc_state::floppy_formats_bbc )
 	FLOPPY_ACORN_SSD_FORMAT,
 	FLOPPY_ACORN_DSD_FORMAT,
+	FLOPPY_ACORN_ADFS_OLD_FORMAT,
+	FLOPPY_ACORN_DOS_FORMAT,
 	FLOPPY_OPUS_DDOS_FORMAT,
 	FLOPPY_OPUS_DDCPM_FORMAT,
-	FLOPPY_TORCH_CPN_FORMAT,
-	FLOPPY_FSD_FORMAT
-FLOPPY_FORMATS_END0
-
-FLOPPY_FORMATS_MEMBER( bbc_state::floppy_formats_bbcm )
-	FLOPPY_ACORN_SSD_FORMAT,
-	FLOPPY_ACORN_DSD_FORMAT,
-	FLOPPY_ACORN_ADFS_OLD_FORMAT,
-	FLOPPY_OPUS_DDCPM_FORMAT,
-	FLOPPY_TORCH_CPN_FORMAT,
-	FLOPPY_ACORN_DOS_FORMAT,
 	FLOPPY_FSD_FORMAT,
 	FLOPPY_PC_FORMAT
-FLOPPY_FORMATS_END0
-
-FLOPPY_FORMATS_MEMBER( bbc_state::floppy_formats_bbcmc )
-	FLOPPY_ACORN_ADFS_OLD_FORMAT
-FLOPPY_FORMATS_END0
+FLOPPY_FORMATS_END
 
 static SLOT_INTERFACE_START( bbc_floppies_525 )
 	SLOT_INTERFACE("525sssd", FLOPPY_525_SSSD)
@@ -806,6 +782,15 @@ SLOT_INTERFACE_END
 static SLOT_INTERFACE_START( bbc_floppies_35 )
 	SLOT_INTERFACE("35dd",   FLOPPY_35_DD)
 SLOT_INTERFACE_END
+
+
+static const char *const bbc_sample_names[] =
+{
+	"*bbc",
+	"motoroff",
+	"motoron",
+	nullptr
+};
 
 
 WRITE_LINE_MEMBER(bbc_state::adlc_irq_w)
@@ -823,7 +808,7 @@ WRITE_LINE_MEMBER(bbc_state::econet_clk_w)
 }
 
 // 4 x EPROM sockets (16K) in BBC-A, these should grow to 16 for BBC-B and later...
-static MACHINE_CONFIG_START( bbc_eprom_sockets )
+MACHINE_CONFIG_START(bbc_state::bbc_eprom_sockets)
 	MCFG_GENERIC_SOCKET_ADD("exp_rom1", generic_linear_slot, "bbc_cart")
 	MCFG_GENERIC_EXTENSIONS("bin,rom")
 	MCFG_GENERIC_LOAD(bbc_state, exp1_load)
@@ -849,9 +834,9 @@ MACHINE_CONFIG_END
 ****************************************************************************/
 
 
-static MACHINE_CONFIG_START( bbca )
+MACHINE_CONFIG_START(bbc_state::bbca)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6502, XTAL_16MHz/8)         /* 2.00 MHz */
+	MCFG_CPU_ADD("maincpu", M6502, 16_MHz_XTAL/8)         /* 2.00 MHz */
 	MCFG_CPU_PROGRAM_MAP(bbca_mem)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", bbc_state, bbcb_vsync)      /* screen refresh interrupts */
 	MCFG_CPU_PERIODIC_INT_DRIVER(bbc_state, bbcb_keyscan, 1000)        /* scan keyboard */
@@ -881,11 +866,11 @@ static MACHINE_CONFIG_START( bbca )
 	MCFG_PALETTE_ADD("palette", 16)
 	MCFG_PALETTE_INIT_OWNER(bbc_state,bbc)
 
-	MCFG_DEVICE_ADD("saa5050", SAA5050, XTAL_12MHz/2)
+	MCFG_DEVICE_ADD("saa5050", SAA5050, 12_MHz_XTAL/2)
 	MCFG_SAA5050_SCREEN_SIZE(40, 25, 40)
 
 	/* crtc */
-	MCFG_MC6845_ADD("hd6845", HD6845, "screen", XTAL_16MHz / 8)
+	MCFG_MC6845_ADD("hd6845", HD6845, "screen", 16_MHz_XTAL / 8)
 	MCFG_MC6845_SHOW_BORDER_AREA(false)
 	MCFG_MC6845_CHAR_WIDTH(12)
 	MCFG_MC6845_UPDATE_ROW_CB(bbc_state, crtc_update_row)
@@ -899,13 +884,19 @@ static MACHINE_CONFIG_START( bbca )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("sn76489", SN76489, XTAL_16MHz/4) /* 4 MHz */
+	MCFG_SOUND_ADD("sn76489", SN76489, 16_MHz_XTAL/4) /* 4 MHz */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+
+	/* cassette relay */
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SAMPLES_CHANNELS(1)
+	MCFG_SAMPLES_NAMES(bbc_sample_names)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
 	/* cassette */
 	MCFG_CASSETTE_ADD( "cassette" )
 	MCFG_CASSETTE_FORMATS(bbc_cassette_formats)
-	MCFG_CASSETTE_DEFAULT_STATE(CASSETTE_PLAY)
+	MCFG_CASSETTE_DEFAULT_STATE(CASSETTE_PLAY | CASSETTE_MOTOR_DISABLED)
 	MCFG_CASSETTE_INTERFACE("bbc_cass")
 
 	/* software lists */
@@ -922,11 +913,11 @@ static MACHINE_CONFIG_START( bbca )
 	MCFG_RS232_DCD_HANDLER(WRITELINE(bbc_state, write_dcd_serial))
 	MCFG_RS232_CTS_HANDLER(WRITELINE(bbc_state, write_cts_serial))
 
-	MCFG_DEVICE_ADD("acia_clock", CLOCK, XTAL_16MHz / 13)
+	MCFG_DEVICE_ADD("acia_clock", CLOCK, 16_MHz_XTAL / 13)
 	MCFG_CLOCK_SIGNAL_HANDLER(WRITELINE(bbc_state, write_acia_clock))
 
 	/* system via */
-	MCFG_DEVICE_ADD("via6522_0", VIA6522, XTAL_16MHz / 16)
+	MCFG_DEVICE_ADD("via6522_0", VIA6522, 16_MHz_XTAL / 16)
 	MCFG_VIA6522_READPA_HANDLER(READ8(bbc_state, bbcb_via_system_read_porta))
 	MCFG_VIA6522_READPB_HANDLER(READ8(bbc_state, bbcb_via_system_read_portb))
 	MCFG_VIA6522_WRITEPA_HANDLER(WRITE8(bbc_state, bbcb_via_system_write_porta))
@@ -934,13 +925,14 @@ static MACHINE_CONFIG_START( bbca )
 	MCFG_VIA6522_IRQ_HANDLER(DEVWRITELINE("irqs", input_merger_device, in_w<1>))
 
 	/* EPROM sockets */
-	MCFG_FRAGMENT_ADD(bbc_eprom_sockets)
+	bbc_eprom_sockets(config);
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( bbcb, bbca )
+MACHINE_CONFIG_START(bbc_state::bbcb)
+	bbca(config);
 	/* basic machine hardware */
-	MCFG_CPU_MODIFY( "maincpu" )
+	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(bbcb_nofdc_mem)
 
 	MCFG_MACHINE_START_OVERRIDE(bbc_state, bbcb)
@@ -958,10 +950,10 @@ static MACHINE_CONFIG_DERIVED( bbcb, bbca )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
 	/* user via */
-	MCFG_DEVICE_ADD("via6522_1", VIA6522, XTAL_16MHz / 16)
-	MCFG_VIA6522_READPB_HANDLER(READ8(bbc_state, bbcb_via_user_read_portb))
+	MCFG_DEVICE_ADD("via6522_1", VIA6522, 16_MHz_XTAL / 16)
 	MCFG_VIA6522_WRITEPA_HANDLER(DEVWRITE8("cent_data_out", output_latch_device, write))
-	MCFG_VIA6522_WRITEPB_HANDLER(WRITE8(bbc_state, bbcb_via_user_write_portb))
+	MCFG_VIA6522_READPB_HANDLER(DEVREAD8("userport", bbc_userport_slot_device, pb_r))
+	MCFG_VIA6522_WRITEPB_HANDLER(DEVWRITE8("userport", bbc_userport_slot_device, pb_w))
 	MCFG_VIA6522_CA2_HANDLER(DEVWRITELINE("centronics", centronics_device, write_strobe))
 	MCFG_VIA6522_IRQ_HANDLER(DEVWRITELINE("irqs", input_merger_device, in_w<2>))
 
@@ -990,7 +982,7 @@ static MACHINE_CONFIG_DERIVED( bbcb, bbca )
 	MCFG_ECONET_SLOT_ADD("econet254", 254, econet_devices, nullptr)
 
 	/* analogue port */
-	MCFG_BBC_ANALOGUE_SLOT_ADD("analogue", bbc_analogue_devices, "acornjoy")
+	MCFG_BBC_ANALOGUE_SLOT_ADD("analogue", bbc_analogue_devices, nullptr)
 
 	/* 1mhz bus port */
 	MCFG_BBC_1MHZBUS_SLOT_ADD("1mhzbus", bbc_1mhzbus_devices, nullptr)
@@ -1003,6 +995,8 @@ static MACHINE_CONFIG_DERIVED( bbcb, bbca )
 
 	/* user port */
 	MCFG_BBC_USERPORT_SLOT_ADD("userport", bbc_userport_devices, nullptr)
+	MCFG_BBC_USERPORT_CB1_HANDLER(DEVWRITELINE("via6522_1", via6522_device, write_cb1))
+	MCFG_BBC_USERPORT_CB2_HANDLER(DEVWRITELINE("via6522_1", via6522_device, write_cb2))
 
 	/* software lists */
 	MCFG_SOFTWARE_LIST_ADD("cass_ls_b",      "bbcb_cass")
@@ -1011,7 +1005,8 @@ static MACHINE_CONFIG_DERIVED( bbcb, bbca )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( bbcb_de, bbcb )
+MACHINE_CONFIG_START(bbc_state::bbcb_de)
+	bbcb(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(bbcb_mem)
@@ -1032,7 +1027,8 @@ static MACHINE_CONFIG_DERIVED( bbcb_de, bbcb )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( bbcb_us, bbcb )
+MACHINE_CONFIG_START(bbc_state::bbcb_us)
+	bbcb(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(bbcb_mem)
@@ -1049,6 +1045,7 @@ static MACHINE_CONFIG_DERIVED( bbcb_us, bbcb )
 	MCFG_I8271_IRQ_CALLBACK(WRITELINE(bbc_state, fdc_intrq_w))
 	MCFG_I8271_HDL_CALLBACK(WRITELINE(bbc_state, motor_w))
 	MCFG_I8271_OPT_CALLBACK(WRITELINE(bbc_state, side_w))
+
 	MCFG_FLOPPY_DRIVE_ADD("i8271:0", bbc_floppies_525, "525qd", bbc_state::floppy_formats_bbc)
 	MCFG_FLOPPY_DRIVE_SOUND(true)
 	MCFG_FLOPPY_DRIVE_ADD("i8271:1", bbc_floppies_525, "525qd", bbc_state::floppy_formats_bbc)
@@ -1059,31 +1056,35 @@ static MACHINE_CONFIG_DERIVED( bbcb_us, bbcb )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( bbcbp, bbcb )
+MACHINE_CONFIG_START(bbc_state::bbcbp)
+	bbcb(config);
 	/* basic machine hardware */
-	MCFG_CPU_MODIFY( "maincpu" )  /* M6512 */
+	MCFG_CPU_MODIFY("maincpu")  /* M6512 */
 	MCFG_CPU_PROGRAM_MAP(bbcbp_mem)
+	MCFG_CPU_OPCODES_MAP(bbcbp_fetch)
 
 	MCFG_MACHINE_START_OVERRIDE(bbc_state, bbcbp)
 	MCFG_MACHINE_RESET_OVERRIDE(bbc_state, bbcbp)
 
 	/* fdc */
 	MCFG_DEVICE_REMOVE("fdc")
-	MCFG_WD1770_ADD("wd1770", XTAL_16MHz / 2)
+	MCFG_WD1770_ADD("wd1770", 16_MHz_XTAL / 2)
 	MCFG_WD_FDC_INTRQ_CALLBACK(WRITELINE(bbc_state, fdc_intrq_w))
 	MCFG_WD_FDC_DRQ_CALLBACK(WRITELINE(bbc_state, fdc_drq_w))
 
-	MCFG_FLOPPY_DRIVE_ADD("wd1770:0", bbc_floppies_525, "525qd", bbc_state::floppy_formats_bbcm)
+	MCFG_FLOPPY_DRIVE_ADD("wd1770:0", bbc_floppies_525, "525qd", bbc_state::floppy_formats_bbc)
 	MCFG_FLOPPY_DRIVE_SOUND(true)
-	MCFG_FLOPPY_DRIVE_ADD("wd1770:1", bbc_floppies_525, "525qd", bbc_state::floppy_formats_bbcm)
+	MCFG_FLOPPY_DRIVE_ADD("wd1770:1", bbc_floppies_525, "525qd", bbc_state::floppy_formats_bbc)
 	MCFG_FLOPPY_DRIVE_SOUND(true)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( bbcbp128, bbcbp )
+MACHINE_CONFIG_START(bbc_state::bbcbp128)
+	bbcbp(config);
 	/* basic machine hardware */
-	MCFG_CPU_MODIFY( "maincpu" )  /* M6512 */
+	MCFG_CPU_MODIFY("maincpu")  /* M6512 */
 	MCFG_CPU_PROGRAM_MAP(bbcbp128_mem)
+	MCFG_CPU_OPCODES_MAP(bbcbp_fetch)
 
 	MCFG_MACHINE_START_OVERRIDE(bbc_state, bbcbp)
 	MCFG_MACHINE_RESET_OVERRIDE(bbc_state, bbcbp)
@@ -1097,7 +1098,8 @@ MACHINE_CONFIG_END
 ****************************************************************************/
 
 
-static MACHINE_CONFIG_DERIVED( torchf, bbcb )
+MACHINE_CONFIG_START(torch_state::torchf)
+	bbcb(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(bbcb_mem)
@@ -1110,19 +1112,21 @@ static MACHINE_CONFIG_DERIVED( torchf, bbcb )
 	MCFG_I8271_IRQ_CALLBACK(WRITELINE(bbc_state, fdc_intrq_w))
 	MCFG_I8271_HDL_CALLBACK(WRITELINE(bbc_state, motor_w))
 	MCFG_I8271_OPT_CALLBACK(WRITELINE(bbc_state, side_w))
+
 	MCFG_FLOPPY_DRIVE_ADD_FIXED("i8271:0", bbc_floppies_525, "525qd", bbc_state::floppy_formats_bbc)
 	MCFG_FLOPPY_DRIVE_SOUND(true)
 	MCFG_FLOPPY_DRIVE_ADD_FIXED("i8271:1", bbc_floppies_525, "525qd", bbc_state::floppy_formats_bbc)
 	MCFG_FLOPPY_DRIVE_SOUND(true)
 
 	/* Add Torch Z80 Communicator co-processor */
-	//MCFG_DEVICE_MODIFY("tube")
-	//MCFG_SLOT_DEFAULT_OPTION("zep100")
-	//MCFG_SLOT_FIXED(true)
+	MCFG_DEVICE_MODIFY("tube")
+	MCFG_SLOT_DEFAULT_OPTION("zep100")
+	MCFG_SLOT_FIXED(true)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( torchh10, torchf )
+MACHINE_CONFIG_START(torch_state::torchh10)
+	torchf(config);
 	/* fdc */
 	MCFG_DEVICE_REMOVE("i8271:1")
 
@@ -1131,7 +1135,8 @@ static MACHINE_CONFIG_DERIVED( torchh10, torchf )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( torchh21, torchf )
+MACHINE_CONFIG_START(torch_state::torchh21)
+	torchf(config);
 	/* fdc */
 	MCFG_DEVICE_REMOVE("i8271:1")
 
@@ -1147,11 +1152,12 @@ MACHINE_CONFIG_END
 ****************************************************************************/
 
 
-static MACHINE_CONFIG_DERIVED( abc110, bbcbp )
+MACHINE_CONFIG_START(bbc_state::abc110)
+	bbcbp(config);
 	/* fdc */
 	MCFG_DEVICE_REMOVE("wd1770:1")
 
-	/* Add Z80 co-processor */
+	/* Acorn Z80 co-processor */
 	MCFG_DEVICE_MODIFY("tube")
 	MCFG_SLOT_DEFAULT_OPTION("z80")
 	MCFG_SLOT_FIXED(true)
@@ -1179,7 +1185,8 @@ static MACHINE_CONFIG_DERIVED( abc110, bbcbp )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( acw443, bbcbp )
+MACHINE_CONFIG_START(bbc_state::acw443)
+	bbcbp(config);
 	/* fdc */
 	MCFG_DEVICE_REMOVE("wd1770:1")
 
@@ -1203,14 +1210,15 @@ static MACHINE_CONFIG_DERIVED( acw443, bbcbp )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( abc310, bbcbp )
+MACHINE_CONFIG_START(bbc_state::abc310)
+	bbcbp(config);
 	/* fdc */
 	MCFG_DEVICE_REMOVE("wd1770:1")
 
-	/* Add 80286 co-processor */
-	//MCFG_DEVICE_MODIFY("tube")
-	//MCFG_SLOT_DEFAULT_OPTION("80286")
-	//MCFG_SLOT_FIXED(true)
+	/* Acorn 80286 co-processor */
+	MCFG_DEVICE_MODIFY("tube")
+	MCFG_SLOT_DEFAULT_OPTION("80286")
+	MCFG_SLOT_FIXED(true)
 
 	/* Add ADAPTEC ACB-4000 Winchester Disc Controller */
 
@@ -1230,14 +1238,17 @@ MACHINE_CONFIG_END
 ****************************************************************************/
 
 
-static MACHINE_CONFIG_DERIVED( reutapm, bbcbp )
+MACHINE_CONFIG_START(bbc_state::reutapm)
+	bbcbp(config);
 	/* basic machine hardware */
-	MCFG_CPU_MODIFY( "maincpu" )  /* M6512 */
+	MCFG_CPU_MODIFY("maincpu")  /* M6512 */
 	MCFG_CPU_PROGRAM_MAP(reutapm_mem)
+	MCFG_CPU_OPCODES_MAP(bbcbp_fetch)
 
 	/* sound hardware */
 	MCFG_DEVICE_REMOVE("mono")
 	MCFG_DEVICE_REMOVE("sn76489")
+	MCFG_DEVICE_REMOVE("samples")
 	MCFG_DEVICE_REMOVE("vsm")
 	MCFG_DEVICE_REMOVE("tms5220")
 
@@ -1255,8 +1266,6 @@ static MACHINE_CONFIG_DERIVED( reutapm, bbcbp )
 
 	/* expansion ports */
 	MCFG_DEVICE_REMOVE("analogue")
-	MCFG_DEVICE_REMOVE("1mhzbus")
-	MCFG_DEVICE_REMOVE("userport")
 MACHINE_CONFIG_END
 
 
@@ -1267,7 +1276,8 @@ MACHINE_CONFIG_END
 ****************************************************************************/
 
 
-static MACHINE_CONFIG_DERIVED( econx25, bbcbp )
+MACHINE_CONFIG_START(bbc_state::econx25)
+	bbcbp(config);
 	/* sound hardware */
 	MCFG_DEVICE_REMOVE("vsm")
 	MCFG_DEVICE_REMOVE("tms5220")
@@ -1294,10 +1304,11 @@ MACHINE_CONFIG_END
 ****************************************************************************/
 
 
-static MACHINE_CONFIG_START( bbcm )
+MACHINE_CONFIG_START(bbc_state::bbcm)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M65SC02, XTAL_16MHz/8)        /* 2.00 MHz */
+	MCFG_CPU_ADD("maincpu", M65SC02, 16_MHz_XTAL/8)        /* 2.00 MHz */
 	MCFG_CPU_PROGRAM_MAP(bbcm_mem)
+	MCFG_CPU_OPCODES_MAP(bbcm_fetch)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", bbc_state, bbcb_vsync)      /* screen refresh interrupts */
 	MCFG_CPU_PERIODIC_INT_DRIVER(bbc_state, bbcb_keyscan, 1000)        /* scan keyboard */
 	MCFG_QUANTUM_TIME(attotime::from_hz(60))
@@ -1326,11 +1337,11 @@ static MACHINE_CONFIG_START( bbcm )
 	MCFG_PALETTE_ADD("palette", 16)
 	MCFG_PALETTE_INIT_OWNER(bbc_state, bbc)
 
-	MCFG_DEVICE_ADD("saa5050", SAA5050, XTAL_12MHz / 2)
+	MCFG_DEVICE_ADD("saa5050", SAA5050, 12_MHz_XTAL / 2)
 	MCFG_SAA5050_SCREEN_SIZE(40, 25, 40)
 
 	/* crtc */
-	MCFG_MC6845_ADD("hd6845", HD6845, "screen", XTAL_16MHz / 8)
+	MCFG_MC6845_ADD("hd6845", HD6845, "screen", 16_MHz_XTAL / 8)
 	MCFG_MC6845_SHOW_BORDER_AREA(false)
 	MCFG_MC6845_CHAR_WIDTH(12)
 	MCFG_MC6845_UPDATE_ROW_CB(bbc_state, crtc_update_row)
@@ -1342,11 +1353,17 @@ static MACHINE_CONFIG_START( bbcm )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("sn76489", SN76489, XTAL_16MHz/4) /* 4 MHz */
+	MCFG_SOUND_ADD("sn76489", SN76489, 16_MHz_XTAL/4) /* 4 MHz */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+
+	/* cassette relay */
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SAMPLES_CHANNELS(1)
+	MCFG_SAMPLES_NAMES(bbc_sample_names)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
 	/* rtc and cmos */
-	MCFG_MC146818_ADD( "rtc", XTAL_32_768kHz )
+	MCFG_MC146818_ADD( "rtc", 32.768_kHz_XTAL )
 
 	/* printer */
 	MCFG_CENTRONICS_ADD("centronics", centronics_devices, "printer")
@@ -1356,14 +1373,14 @@ static MACHINE_CONFIG_START( bbcm )
 	/* cassette */
 	MCFG_CASSETTE_ADD( "cassette" )
 	MCFG_CASSETTE_FORMATS(bbc_cassette_formats)
-	MCFG_CASSETTE_DEFAULT_STATE(CASSETTE_PLAY)
+	MCFG_CASSETTE_DEFAULT_STATE(CASSETTE_PLAY | CASSETTE_MOTOR_DISABLED)
 	MCFG_CASSETTE_INTERFACE("bbc_cass")
 
 	// 2 x cartridge sockets in BBC-Master
-	MCFG_GENERIC_SOCKET_ADD("exp_rom1", generic_plain_slot, "bbcm_cart")
+	MCFG_GENERIC_CARTSLOT_ADD("exp_rom1", generic_plain_slot, "bbcm_cart")
 	MCFG_GENERIC_LOAD(bbc_state, bbcm_exp1_load)
 
-	MCFG_GENERIC_SOCKET_ADD("exp_rom2", generic_plain_slot, "bbcm_cart")
+	MCFG_GENERIC_CARTSLOT_ADD("exp_rom2", generic_plain_slot, "bbcm_cart")
 	MCFG_GENERIC_LOAD(bbc_state, bbcm_exp2_load)
 
 	/* software lists */
@@ -1386,7 +1403,7 @@ static MACHINE_CONFIG_START( bbcm )
 	MCFG_RS232_DCD_HANDLER(WRITELINE(bbc_state, write_dcd_serial))
 	MCFG_RS232_CTS_HANDLER(WRITELINE(bbc_state, write_cts_serial))
 
-	MCFG_DEVICE_ADD("acia_clock", CLOCK, XTAL_16MHz / 13)
+	MCFG_DEVICE_ADD("acia_clock", CLOCK, 16_MHz_XTAL / 13)
 	MCFG_CLOCK_SIGNAL_HANDLER(WRITELINE(bbc_state, write_acia_clock))
 
 	/* adc */
@@ -1395,7 +1412,7 @@ static MACHINE_CONFIG_START( bbcm )
 	MCFG_UPD7002_EOC_CB(bbc_state, BBC_uPD7002_EOC)
 
 	/* system via */
-	MCFG_DEVICE_ADD("via6522_0", VIA6522, XTAL_16MHz / 16)
+	MCFG_DEVICE_ADD("via6522_0", VIA6522, 16_MHz_XTAL / 16)
 	MCFG_VIA6522_READPA_HANDLER(READ8(bbc_state, bbcb_via_system_read_porta))
 	MCFG_VIA6522_READPB_HANDLER(READ8(bbc_state, bbcb_via_system_read_portb))
 	MCFG_VIA6522_WRITEPA_HANDLER(WRITE8(bbc_state, bbcb_via_system_write_porta))
@@ -1403,21 +1420,21 @@ static MACHINE_CONFIG_START( bbcm )
 	MCFG_VIA6522_IRQ_HANDLER(DEVWRITELINE("irqs", input_merger_device, in_w<1>))
 
 	/* user via */
-	MCFG_DEVICE_ADD("via6522_1", VIA6522, XTAL_16MHz / 16)
-	MCFG_VIA6522_READPB_HANDLER(READ8(bbc_state, bbcb_via_user_read_portb))
+	MCFG_DEVICE_ADD("via6522_1", VIA6522, 16_MHz_XTAL / 16)
 	MCFG_VIA6522_WRITEPA_HANDLER(DEVWRITE8("cent_data_out", output_latch_device, write))
-	MCFG_VIA6522_WRITEPB_HANDLER(WRITE8(bbc_state, bbcb_via_user_write_portb))
+	MCFG_VIA6522_READPB_HANDLER(DEVREAD8("userport", bbc_userport_slot_device, pb_r))
+	MCFG_VIA6522_WRITEPB_HANDLER(DEVWRITE8("userport", bbc_userport_slot_device, pb_w))
 	MCFG_VIA6522_CA2_HANDLER(DEVWRITELINE("centronics", centronics_device, write_strobe))
 	MCFG_VIA6522_IRQ_HANDLER(DEVWRITELINE("irqs", input_merger_device, in_w<2>))
 
 	/* fdc */
-	MCFG_WD1770_ADD("wd1770", XTAL_16MHz / 2)
+	MCFG_WD1770_ADD("wd1770", 16_MHz_XTAL / 2)
 	MCFG_WD_FDC_INTRQ_CALLBACK(WRITELINE(bbc_state, fdc_intrq_w))
 	MCFG_WD_FDC_DRQ_CALLBACK(WRITELINE(bbc_state, fdc_drq_w))
 
-	MCFG_FLOPPY_DRIVE_ADD("wd1770:0", bbc_floppies_525, "525qd", bbc_state::floppy_formats_bbcm)
+	MCFG_FLOPPY_DRIVE_ADD("wd1770:0", bbc_floppies_525, "525qd", bbc_state::floppy_formats_bbc)
 	MCFG_FLOPPY_DRIVE_SOUND(true)
-	MCFG_FLOPPY_DRIVE_ADD("wd1770:1", bbc_floppies_525, "525qd", bbc_state::floppy_formats_bbcm)
+	MCFG_FLOPPY_DRIVE_ADD("wd1770:1", bbc_floppies_525, "525qd", bbc_state::floppy_formats_bbc)
 	MCFG_FLOPPY_DRIVE_SOUND(true)
 
 	/* econet */
@@ -1430,7 +1447,7 @@ static MACHINE_CONFIG_START( bbcm )
 	MCFG_ECONET_SLOT_ADD("econet254", 254, econet_devices, nullptr)
 
 	/* analogue port */
-	MCFG_BBC_ANALOGUE_SLOT_ADD("analogue", bbc_analogue_devices, "acornjoy")
+	MCFG_BBC_ANALOGUE_SLOT_ADD("analogue", bbc_analogue_devices, nullptr)
 
 	/* 1mhz bus port */
 	MCFG_BBC_1MHZBUS_SLOT_ADD("1mhzbus", bbc_1mhzbus_devices, nullptr)
@@ -1445,19 +1462,23 @@ static MACHINE_CONFIG_START( bbcm )
 
 	/* user port */
 	MCFG_BBC_USERPORT_SLOT_ADD("userport", bbc_userport_devices, nullptr)
+	MCFG_BBC_USERPORT_CB1_HANDLER(DEVWRITELINE("via6522_1", via6522_device, write_cb1))
+	MCFG_BBC_USERPORT_CB2_HANDLER(DEVWRITELINE("via6522_1", via6522_device, write_cb2))
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( bbcmt, bbcm )
-	/* Add 65C102 co-processor */
+MACHINE_CONFIG_START(bbc_state::bbcmt)
+	bbcm(config);
+	/* Acorn 65C102 co-processor */
 	MCFG_DEVICE_MODIFY("intube")
 	MCFG_SLOT_DEFAULT_OPTION("65c102")
 	MCFG_SLOT_FIXED(true)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( bbcmaiv, bbcm )
-	/* Add 65C102 co-processor */
+MACHINE_CONFIG_START(bbc_state::bbcmaiv)
+	bbcm(config);
+	/* Acorn 65C102 co-processor */
 	MCFG_DEVICE_MODIFY("intube")
 	MCFG_SLOT_DEFAULT_OPTION("65c102")
 	MCFG_SLOT_FIXED(true)
@@ -1469,9 +1490,11 @@ static MACHINE_CONFIG_DERIVED( bbcmaiv, bbcm )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( bbcmet, bbcm )
+MACHINE_CONFIG_START(bbc_state::bbcmet)
+	bbcm(config);
 	/* printer */
 	MCFG_DEVICE_REMOVE("centronics")
+	MCFG_DEVICE_REMOVE("cent_data_out")
 
 	/* cassette */
 	MCFG_DEVICE_REMOVE("cassette")
@@ -1498,26 +1521,46 @@ static MACHINE_CONFIG_DERIVED( bbcmet, bbcm )
 
 	/* expansion ports */
 	MCFG_DEVICE_REMOVE("analogue")
+	MCFG_DEVICE_REMOVE("extube")
+	MCFG_DEVICE_REMOVE("1mhzbus")
+	MCFG_DEVICE_REMOVE("userport")
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( bbcm512, bbcm )
-	/* Add Intel 80186 co-processor */
+MACHINE_CONFIG_START(bbc_state::bbcm512)
+	bbcm(config);
+	/* Acorn Intel 80186 co-processor */
 	MCFG_DEVICE_MODIFY("intube")
 	MCFG_SLOT_DEFAULT_OPTION("80186")
 	MCFG_SLOT_FIXED(true)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( bbcmarm, bbcm )
-	/* Add ARM co-processor */
-
-	/* software lists */
-	MCFG_SOFTWARE_LIST_ADD("flop_ls_arm", "bbc_flop_arm")
+MACHINE_CONFIG_START(bbc_state::bbcmarm)
+	bbcm(config);
+	/* Acorn ARM co-processor */
+	MCFG_DEVICE_MODIFY("extube")
+	MCFG_SLOT_DEFAULT_OPTION("arm")
+	MCFG_SLOT_FIXED(true)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( discmate, bbcm )
+MACHINE_CONFIG_START(bbc_state::discmon)
+	bbcm(config);
+	/* Add coin slot */
+
+	/* software lists */
+	MCFG_SOFTWARE_LIST_REMOVE("cass_ls_m")
+	MCFG_SOFTWARE_LIST_REMOVE("cass_ls_a")
+	MCFG_SOFTWARE_LIST_REMOVE("cass_ls_b")
+	MCFG_SOFTWARE_LIST_REMOVE("flop_ls_m")
+	MCFG_SOFTWARE_LIST_REMOVE("flop_ls_b")
+	MCFG_SOFTWARE_LIST_REMOVE("flop_ls_b_orig")
+MACHINE_CONFIG_END
+
+
+MACHINE_CONFIG_START(bbc_state::discmate)
+	bbcm(config);
 	/* Add Sony CDK-3000PII Auto Disc Loader */
 
 	/* Add interface boards connected to cassette and RS423 */
@@ -1532,7 +1575,28 @@ static MACHINE_CONFIG_DERIVED( discmate, bbcm )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( cfa3000, bbcm )
+MACHINE_CONFIG_START(bbc_state::cfa3000)
+	bbcm(config);
+	MCFG_MACHINE_START_OVERRIDE(bbc_state, cfa3000)
+
+	/* fdc */
+	MCFG_DEVICE_MODIFY("wd1770:0")
+	MCFG_DEVICE_SLOT_INTERFACE(bbc_floppies_525, nullptr, false)
+	MCFG_DEVICE_MODIFY("wd1770:1")
+	MCFG_DEVICE_SLOT_INTERFACE(bbc_floppies_525, nullptr, false)
+
+	/* keyboard */
+	MCFG_DEVICE_MODIFY("userport")
+	MCFG_SLOT_DEFAULT_OPTION("cfa3000kbd")
+
+	/* option board */
+	MCFG_DEVICE_MODIFY("1mhzbus")
+	MCFG_SLOT_DEFAULT_OPTION("cfa3000opt")
+
+	/* analogue dials/sensors */
+	MCFG_DEVICE_MODIFY("analogue")
+	MCFG_SLOT_DEFAULT_OPTION("cfa3000a")
+
 	/* software lists */
 	MCFG_SOFTWARE_LIST_REMOVE("cass_ls_m")
 	MCFG_SOFTWARE_LIST_REMOVE("cass_ls_a")
@@ -1550,20 +1614,21 @@ MACHINE_CONFIG_END
 ****************************************************************************/
 
 
-static MACHINE_CONFIG_DERIVED( bbcmc, bbcm )
+MACHINE_CONFIG_START(bbc_state::bbcmc)
+	bbcm(config);
 	/* cassette */
 	MCFG_DEVICE_REMOVE("cassette")
 
 	/* fdc */
 	MCFG_DEVICE_REMOVE("wd1770")
 
-	MCFG_WD1772_ADD("wd1772", XTAL_16MHz / 2)
+	MCFG_WD1772_ADD("wd1772", 16_MHz_XTAL / 2)
 	MCFG_WD_FDC_INTRQ_CALLBACK(WRITELINE(bbc_state, fdc_intrq_w))
 	MCFG_WD_FDC_DRQ_CALLBACK(WRITELINE(bbc_state, fdc_drq_w))
 
-	MCFG_FLOPPY_DRIVE_ADD_FIXED("wd1772:0", bbc_floppies_35, "35dd", bbc_state::floppy_formats_bbcmc)
+	MCFG_FLOPPY_DRIVE_ADD_FIXED("wd1772:0", bbc_floppies_35, "35dd", bbc_state::floppy_formats_bbc)
 	MCFG_FLOPPY_DRIVE_SOUND(true)
-	MCFG_FLOPPY_DRIVE_ADD("wd1772:1", bbc_floppies_35, nullptr, bbc_state::floppy_formats_bbcmc)
+	MCFG_FLOPPY_DRIVE_ADD("wd1772:1", bbc_floppies_35, nullptr, bbc_state::floppy_formats_bbc)
 	MCFG_FLOPPY_DRIVE_SOUND(true)
 
 	/* eeprom pcd8572 */
@@ -1572,7 +1637,13 @@ static MACHINE_CONFIG_DERIVED( bbcmc, bbcm )
 	MCFG_MACHINE_START_OVERRIDE(bbc_state, bbcmc)
 	MCFG_MACHINE_RESET_OVERRIDE(bbc_state, bbcmc)
 
-	// cartridge sockets
+	/* user via */
+	MCFG_DEVICE_MODIFY("via6522_1")
+	// TODO: Joyport connected to PB0-PB4 only. PB5-PB7 are expansion port.
+	MCFG_VIA6522_READPB_HANDLER(DEVREAD8("joyport", bbc_joyport_slot_device, pb_r))
+	MCFG_VIA6522_WRITEPB_HANDLER(DEVWRITE8("joyport", bbc_joyport_slot_device, pb_w))
+
+	/* cartridge sockets */
 	MCFG_DEVICE_REMOVE("exp_rom1")
 	MCFG_DEVICE_REMOVE("exp_rom2")
 
@@ -1588,14 +1659,18 @@ static MACHINE_CONFIG_DERIVED( bbcmc, bbcm )
 	MCFG_SOFTWARE_LIST_COMPATIBLE_ADD("flop_ls_pro128s", "pro128s_flop")
 
 	/* expansion ports */
+	MCFG_BBC_JOYPORT_ADD("joyport", bbc_joyport_devices, "joystick")
+	MCFG_BBC_JOYPORT_CB1_HANDLER(DEVWRITELINE("via6522_1", via6522_device, write_cb1))
+	MCFG_BBC_JOYPORT_CB2_HANDLER(DEVWRITELINE("via6522_1", via6522_device, write_cb2))
+
 	MCFG_DEVICE_REMOVE("analogue")
-	MCFG_COMPACT_JOYPORT_ADD("joyport", bbc_joyport_devices, "joystick")
 	MCFG_DEVICE_REMOVE("intube")
 	MCFG_DEVICE_REMOVE("extube")
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED(pro128s, bbcmc)
+MACHINE_CONFIG_START(bbc_state::pro128s)
+	bbcmc(config);
 	/* software lists */
 	MCFG_SOFTWARE_LIST_REMOVE("flop_ls_mc")
 	MCFG_SOFTWARE_LIST_REMOVE("flop_ls_pro128s")
@@ -1612,13 +1687,15 @@ MACHINE_CONFIG_END
 
 /* Both LTM machines used a 9" Hantarex MT3000 green monitor */
 
-static MACHINE_CONFIG_DERIVED(ltmpbp, bbcbp)
+MACHINE_CONFIG_START(bbc_state::ltmpbp)
+	bbcbp(config);
 	/* basic machine hardware */
 	MCFG_MACHINE_RESET_OVERRIDE(bbc_state, ltmpbp)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED(ltmpm, bbcm)
+MACHINE_CONFIG_START(bbc_state::ltmpm)
+	bbcm(config);
 	/* basic machine hardware */
 	MCFG_MACHINE_RESET_OVERRIDE(bbc_state, ltmpm)
 MACHINE_CONFIG_END
@@ -2021,7 +2098,7 @@ ROM_START(bbcm)
 	ROM_SYSTEM_BIOS( 1, "mos350", "Enhanced MOS 3.50" )
 	ROMX_LOAD("mos350.ic24", 0x20000, 0x20000, CRC(141027b9) SHA1(85211b5bc7c7a269952d2b063b7ec0e1f0196803), ROM_BIOS(2))
 	ROM_COPY("option", 0x20000, 0x40000, 0x4000) /* Move loaded roms into place */
-	ROM_FILL(0x20000, 0x4000, 0xFFFF)
+	ROM_FILL(0x20000, 0x4000, 0xff)
 	/* 00000 rom 0   SK3 Rear Cartridge bottom 16K */
 	/* 04000 rom 1   SK3 Rear Cartridge top 16K */
 	/* 08000 rom 2   SK4 Front Cartridge bottom 16K */
@@ -2062,7 +2139,7 @@ ROM_START(bbcmaiv)
 	ROM_SYSTEM_BIOS( 0, "mos320", "MOS 3.20" )
 	ROMX_LOAD("mos320.ic24", 0x20000, 0x20000, CRC(0f747ebe) SHA1(eacacbec3892dc4809ad5800e6c8299ff9eb528f), ROM_BIOS(1))
 	ROM_COPY("option", 0x20000, 0x40000, 0x4000) /* Move loaded roms into place */
-	ROM_FILL(0x20000, 0x4000, 0xFFFF)
+	ROM_FILL(0x20000, 0x4000, 0xff)
 	/* 00000 rom 0   SK3 Rear Cartridge bottom 16K */
 	/* 04000 rom 1   SK3 Rear Cartridge top 16K */
 	/* 08000 rom 2   SK4 Front Cartridge bottom 16K */
@@ -2099,7 +2176,7 @@ ROM_START(bbcmet)
 	ROMX_LOAD("mos400.ic24", 0x30000, 0x10000, CRC(81729034) SHA1(d4bc2c7f5e66b5298786138f395908e70c772971), ROM_BIOS(1))
 	ROM_COPY("option", 0x34000, 0x24000, 0xC000) /* Mirror */
 	ROM_COPY("option", 0x30000, 0x40000, 0x4000) /* Move loaded roms into place */
-	ROM_FILL(0x30000, 0x4000, 0xFFFF)
+	ROM_FILL(0x30000, 0x4000, 0xff)
 	/* 00000 rom 0   SK3 Rear Cartridge bottom 16K */
 	/* 04000 rom 1   SK3 Rear Cartridge top 16K */
 	/* 08000 rom 2   SK4 Front Cartridge bottom 16K */
@@ -2134,7 +2211,7 @@ ROM_START(bbcmarm)
 	ROM_SYSTEM_BIOS( 0, "mos320", "Original MOS 3.20" )
 	ROMX_LOAD("mos320.ic24", 0x20000, 0x20000, CRC(0f747ebe) SHA1(eacacbec3892dc4809ad5800e6c8299ff9eb528f), ROM_BIOS(1))
 	ROM_COPY("option", 0x20000, 0x40000, 0x4000) /* Move loaded roms into place */
-	ROM_FILL(0x20000, 0x4000, 0xFFFF)
+	ROM_FILL(0x20000, 0x4000, 0xff)
 	/* 00000 rom 0   SK3 Rear Cartridge bottom 16K */
 	/* 04000 rom 1   SK3 Rear Cartridge top 16K */
 	/* 08000 rom 2   SK4 Front Cartridge bottom 16K */
@@ -2172,7 +2249,7 @@ ROM_START(bbcmc)
 	ROM_SYSTEM_BIOS( 1, "mos500", "Original MOS 5.00" )
 	ROMX_LOAD("mos500.ic49", 0x30000, 0x10000, CRC(f6170023) SHA1(140d002d2d9cd34b47197a2ba823505af2a84633), ROM_BIOS(2))
 	ROM_COPY("option", 0x30000, 0x40000, 0x4000) /* Move loaded roms into place */
-	ROM_FILL(0x30000, 0x4000, 0xFFFF)
+	ROM_FILL(0x30000, 0x4000, 0xff)
 	/* 00000 rom 0   EXTERNAL */
 	/* 04000 rom 1   EXTERNAL */
 	/* 08000 rom 2   IC23 SPARE SOCKET */
@@ -2203,7 +2280,7 @@ ROM_START(bbcmc_ar)
 	ROM_SYSTEM_BIOS( 0, "mos511i", "International MOS 5.11" )
 	ROMX_LOAD("mos511.ic49", 0x30000, 0x10000, BAD_DUMP CRC(8708803c) SHA1(d2170c8b9b536f3ad84a4a603a7fe712500cc751), ROM_BIOS(1)) /* Merged individual ROM bank dumps */
 	ROM_COPY("option", 0x30000, 0x40000, 0x4000) /* Move loaded roms into place */
-	ROM_FILL(0x30000, 0x4000, 0xFFFF)
+	ROM_FILL(0x30000, 0x4000, 0xff)
 	/* 00000 rom 0   EXTERNAL */
 	/* 04000 rom 1   EXTERNAL */
 	/* 08000 rom 2   IC23 International */
@@ -2236,7 +2313,7 @@ ROM_START(pro128s)
 	ROM_SYSTEM_BIOS(0, "mos510o", "Olivetti MOS 5.10")
 	ROMX_LOAD("mos510o.ic49", 0x30000, 0x10000, CRC(c16858d3) SHA1(ad231ed21a55e493b553703285530d1cacd3de7a), ROM_BIOS(1))
 	ROM_COPY("option", 0x30000, 0x40000, 0x4000) /* Move loaded roms into place */
-	ROM_FILL(0x30000, 0x4000, 0xFFFF)
+	ROM_FILL(0x30000, 0x4000, 0xff)
 	/* 00000 rom 0   EXTERNAL */
 	/* 04000 rom 1   EXTERNAL */
 	/* 08000 rom 2   IC23 SPARE SOCKET */
@@ -2259,6 +2336,42 @@ ROM_START(pro128s)
 ROM_END
 
 
+ROM_START(discmon)
+	ROM_REGION(0x10000, "maincpu", ROMREGION_ERASEFF) /* ROM MEMORY */
+
+	ROM_REGION(0x44000, "option", 0) /* ROM */
+	ROM_DEFAULT_BIOS("mos320")
+	ROM_SYSTEM_BIOS(0, "mos320", "Original MOS 3.20")
+	ROMX_LOAD("mos320.ic24", 0x20000, 0x20000, CRC(0f747ebe) SHA1(eacacbec3892dc4809ad5800e6c8299ff9eb528f), ROM_BIOS(1))
+	ROM_COPY("option", 0x20000, 0x40000, 0x4000) /* Move loaded roms into place */
+	ROM_FILL(0x20000, 0x4000, 0xff)
+	/* 00000 rom 0   SK3 Rear Cartridge bottom 16K */
+	/* 04000 rom 1   SK3 Rear Cartridge top 16K */
+	/* 08000 rom 2   SK4 Front Cartridge bottom 16K */
+	/* 0c000 rom 3   SK4 Front Cartridge top 16K */
+	/* 10000 rom 4   IC41 SWRAM or bottom 16K */
+	/* 14000 rom 5   IC41 SWRAM or top 16K */
+	/* 18000 rom 6   IC37 SWRAM or bottom 16K */
+	/* 1c000 rom 7   IC37 SWRAM or top 16K */
+	/* 20000 rom 8   IC27 DiscMonitor */
+	/* 24000 rom 9   IC24 DFS + SRAM */
+	/* 28000 rom 10  IC24 Viewsheet */
+	/* 2c000 rom 11  IC24 Edit */
+	/* 30000 rom 12  IC24 BASIC */
+	/* 34000 rom 13  IC24 ADFS */
+	/* 38000 rom 14  IC24 View + MOS code */
+	/* 3c000 rom 15  IC24 Terminal + Tube host + CFS */
+	ROM_LOAD("discmonitor406.rom", 0x20000, 0x4000, CRC(12e30e9b) SHA1(0e5356531978e08e75913e793cb0afc0e75e61ad))
+
+	ROM_REGION(0x4000, "os", 0)
+	ROM_COPY("option", 0x40000, 0, 0x4000)
+
+	ROM_REGION(0x40, "rtc", 0) /* mc146818 */
+	/* Factory defaulted CMOS RAM, sets default language ROM, etc. */
+	ROMX_LOAD("mos320.cmos", 0x00, 0x40, CRC(c7f9e85a) SHA1(f24cc9db0525910689219f7204bf8b864033ee94), ROM_BIOS(1))
+ROM_END
+
+
 ROM_START(discmate)
 	ROM_REGION(0x10000, "maincpu", ROMREGION_ERASEFF) /* ROM MEMORY */
 
@@ -2267,7 +2380,7 @@ ROM_START(discmate)
 	ROM_SYSTEM_BIOS(0, "mos320", "Original MOS 3.20")
 	ROMX_LOAD("mos320.ic24", 0x20000, 0x20000, CRC(0f747ebe) SHA1(eacacbec3892dc4809ad5800e6c8299ff9eb528f), ROM_BIOS(1))
 	ROM_COPY("option", 0x20000, 0x40000, 0x4000) /* Move loaded roms into place */
-	ROM_FILL(0x20000, 0x4000, 0xFFFF)
+	ROM_FILL(0x20000, 0x4000, 0xff)
 	/* 00000 rom 0   SK3 Rear Cartridge bottom 16K */
 	/* 04000 rom 1   SK3 Rear Cartridge top 16K */
 	/* 08000 rom 2   SK4 Front Cartridge bottom 16K */
@@ -2290,7 +2403,7 @@ ROM_START(discmate)
 	ROM_COPY("option", 0x40000, 0, 0x4000)
 
 	ROM_REGION(0x40, "rtc", 0) /* mc146818 */
-	 /* Factory defaulted CMOS RAM, sets default language ROM, etc. */
+	/* Factory defaulted CMOS RAM, sets default language ROM, etc. */
 	ROMX_LOAD("mos320.cmos", 0x00, 0x40, CRC(c7f9e85a) SHA1(f24cc9db0525910689219f7204bf8b864033ee94), ROM_BIOS(1))
 ROM_END
 
@@ -2299,12 +2412,12 @@ ROM_START(cfa3000)
 	ROM_REGION(0x10000, "maincpu", ROMREGION_ERASEFF) /* ROM MEMORY */
 
 	ROM_REGION(0x44000, "option", 0) /* ROM */
-	ROM_LOAD("CFA3000_3_4_Iss10.3.ic41",             0x10000, 0x08000, CRC(ecb385ab) SHA1(eafa9b34cb1cf63790f74332bb7d85ee356b6973))
-	ROM_LOAD("CFA3000_SM_Iss10.3.ic37",              0x18000, 0x08000, CRC(c07aee5f) SHA1(1994e3755dc15d1ea7e105bc19cd57893b719779))
-	ROM_LOAD("Acorn_MOS_(Tinsley_64K)_Iss10.3.ic24", 0x30000, 0x10000, CRC(4413c3ee) SHA1(76d0462b4dabe2461010fce2341570ff3d606d54))
-	//ROM_COPY("option", 0x20000, 0x30000, 0x10000) /* Mirror MOS */
+	ROM_LOAD("cfa3000_3_4_iss10.3.ic41",             0x10000, 0x08000, CRC(ecb385ab) SHA1(eafa9b34cb1cf63790f74332bb7d85ee356b6973))
+	ROM_LOAD("cfa3000_sm_iss10.3.ic37",              0x18000, 0x08000, CRC(c07aee5f) SHA1(1994e3755dc15d1ea7e105bc19cd57893b719779))
+	ROM_LOAD("acorn_mos,tinsley_64k,iss10.3.ic24", 0x20000, 0x10000, CRC(4413c3ee) SHA1(76d0462b4dabe2461010fce2341570ff3d606d54))
+	ROM_COPY("option", 0x20000, 0x30000, 0x10000) /* Mirror MOS */
 	ROM_COPY("option", 0x30000, 0x40000, 0x04000) /* Move loaded roms into place */
-	ROM_FILL(0x30000, 0x4000, 0xFFFF)
+	ROM_FILL(0x30000, 0x4000, 0xff)
 	/* 00000 rom 0   SK3 Rear Cartridge bottom 16K */
 	/* 04000 rom 1   SK3 Rear Cartridge top 16K */
 	/* 08000 rom 2   SK4 Front Cartridge bottom 16K */
@@ -2313,13 +2426,13 @@ ROM_START(cfa3000)
 	/* 14000 rom 5   IC41 SWRAM or top 16K */
 	/* 18000 rom 6   IC37 SWRAM or bottom 16K */
 	/* 1c000 rom 7   IC37 SWRAM or top 16K */
-	/* 20000 rom 8   IC27 ANFS */
-	/* 24000 rom 9   IC24 DFS + SRAM */
-	/* 28000 rom 10  IC24 Viewsheet */
-	/* 2c000 rom 11  IC24 Edit */
-	/* 30000 rom 12  IC24 BASIC */
-	/* 34000 rom 13  IC24 ADFS */
-	/* 38000 rom 14  IC24 View + MOS code */
+	/* 20000 rom 8   IC27 */
+	/* 24000 rom 9   IC24 */
+	/* 28000 rom 10  IC24 */
+	/* 2c000 rom 11  IC24 */
+	/* 30000 rom 12  IC24 */
+	/* 34000 rom 13  IC24 DFS */
+	/* 38000 rom 14  IC24 BASIC */
 	/* 3c000 rom 15  IC24 Terminal + Tube host + CFS */
 
 	ROM_REGION(0x4000, "os", 0)
@@ -2335,33 +2448,33 @@ ROM_END
 #define rom_ltmpm rom_bbcm
 
 
-/*     YEAR  NAME      PARENT   COMPAT MACHINE   INPUT   CLASS           INIT     COMPANY            FULLNAME                         FLAGS */
-COMP ( 1981, bbcb,     0,       bbca,  bbcb,     bbcb,   bbc_state,      bbc,     "Acorn",           "BBC Micro Model B",             MACHINE_IMPERFECT_GRAPHICS)
-COMP ( 1981, bbca,     bbcb,    0,     bbca,     bbca,   bbc_state,      bbc,     "Acorn",           "BBC Micro Model A",             MACHINE_IMPERFECT_GRAPHICS)
-COMP ( 1982, torchf,   bbcb,    0,     torchf,   torch,  torch240_state, bbc,     "Torch Computers", "Torch CF240",                   MACHINE_NOT_WORKING)
-COMP ( 1982, torchh10, bbcb,    0,     torchh10, torch,  torch240_state, bbc,     "Torch Computers", "Torch CH240/10",                MACHINE_NOT_WORKING)
-COMP ( 1982, torchh21, bbcb,    0,     torchh21, torch,  torch240_state, bbc,     "Torch Computers", "Torch CH240/21",                MACHINE_NOT_WORKING)
-COMP ( 1982, bbcb_de,  bbcb,    0,     bbcb_de,  bbcb,   bbc_state,      bbc,     "Acorn",           "BBC Micro Model B (German)",    MACHINE_IMPERFECT_GRAPHICS)
-COMP ( 1983, bbcb_us,  bbcb,    0,     bbcb_us,  bbcb,   bbc_state,      bbc,     "Acorn",           "BBC Micro Model B (US)",        MACHINE_IMPERFECT_GRAPHICS)
-COMP ( 1985, bbcbp,    0,       bbcb,  bbcbp,    bbcbp,  bbc_state,      bbc,     "Acorn",           "BBC Micro Model B+ 64K",        MACHINE_IMPERFECT_GRAPHICS)
-COMP ( 1985, bbcbp128, bbcbp,   0,     bbcbp128, bbcbp,  bbc_state,      bbc,     "Acorn",           "BBC Micro Model B+ 128K",       MACHINE_IMPERFECT_GRAPHICS)
-COMP ( 1985, abc110,   bbcbp,   0,     abc110,   abc,    bbc_state,      bbc,     "Acorn",           "ABC 110",                       MACHINE_NOT_WORKING)
-COMP ( 1985, acw443,   bbcbp,   0,     acw443,   abc,    bbc_state,      bbc,     "Acorn",           "ABC 210/Cambridge Workstation", MACHINE_NOT_WORKING)
-COMP ( 1985, abc310,   bbcbp,   0,     abc310,   abc,    bbc_state,      bbc,     "Acorn",           "ABC 310",                       MACHINE_NOT_WORKING)
-COMP ( 1985, ltmpbp,   bbcbp,   0,     ltmpbp,   ltmpbp, bbc_state,      bbc,     "Lawrie T&M Ltd.", "LTM Portable (B+)",             MACHINE_IMPERFECT_GRAPHICS)
-COMP ( 1985, reutapm,  bbcbp,   0,     reutapm,  bbcb,   bbc_state,      bbc,     "Acorn",           "Reuters APM",                   MACHINE_NO_SOUND_HW | MACHINE_NOT_WORKING)
-COMP ( 1986, econx25,  bbcbp,   0,     econx25,  bbcbp,  bbc_state,      bbc,     "Acorn",           "Econet X25 Gateway",            MACHINE_NOT_WORKING)
-COMP ( 1986, bbcm,     0,       bbcb,  bbcm,     bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master 128",                MACHINE_IMPERFECT_GRAPHICS)
-COMP ( 1986, bbcmt,    bbcm,    0,     bbcmt,    bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master Turbo",              MACHINE_IMPERFECT_GRAPHICS)
-COMP ( 1986, bbcmaiv,  bbcm,    0,     bbcmaiv,  bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master AIV",                MACHINE_NOT_WORKING)
-COMP ( 1986, bbcmet,   bbcm,    0,     bbcmet,   bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master ET",                 MACHINE_IMPERFECT_GRAPHICS)
-COMP ( 1986, bbcm512,  bbcm,    0,     bbcm512,  bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master 512",                MACHINE_NOT_WORKING)
-COMP ( 1986, bbcmarm,  bbcm,    0,     bbcmarm,  bbcm,   bbc_state,      bbc,     "Acorn",           "ARM Evaluation System",         MACHINE_NOT_WORKING)
-COMP ( 1986, ltmpm,    bbcm,    0,     ltmpm,    ltmpm,  bbc_state,      bbc,     "Lawrie T&M Ltd.", "LTM Portable (Master)",         MACHINE_IMPERFECT_GRAPHICS)
-COMP ( 1986, bbcmc,    0,       bbcm,  bbcmc,    bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master Compact",            MACHINE_IMPERFECT_GRAPHICS)
-COMP ( 1986, bbcmc_ar, bbcmc,   0,     bbcmc,    bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master Compact (Arabic)",   MACHINE_IMPERFECT_GRAPHICS)
-COMP ( 1987, pro128s,  bbcmc,   0,     pro128s,  bbcm,   bbc_state,      bbc,     "Olivetti",        "Prodest PC 128S",               MACHINE_IMPERFECT_GRAPHICS)
-//COMP ( 1988, discmon,  bbcm,    0,     discmon,  bbcm,   bbc_state,      bbc,     "Arbiter Leisure", "Arbiter Discmonitor A-01",      MACHINE_NOT_WORKING)
-COMP ( 1988, discmate, bbcm,    0,     discmate, bbcm,   bbc_state,      bbc,     "Arbiter Leisure", "Arbiter Discmate A-02",         MACHINE_NOT_WORKING)
-//COMP ( 1988, discmast, bbcm,    0,     discmast, bbcm,   bbc_state,      bbc,     "Arbiter Leisure", "Arbiter Discmaster A-03",       MACHINE_NOT_WORKING)
-COMP ( 1988, cfa3000,  bbcm,    0,     cfa3000,  bbcm,   bbc_state,      bbc,     "Tinsley Medical Instruments",  "Henson CFA 3000",  MACHINE_NOT_WORKING)
+/*     YEAR  NAME      PARENT   COMPAT MACHINE   INPUT   CLASS           INIT     COMPANY            FULLNAME                              FLAGS */
+COMP ( 1981, bbcb,     0,       bbca,  bbcb,     bbcb,   bbc_state,      bbc,     "Acorn",           "BBC Micro Model B",                  MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1981, bbca,     bbcb,    0,     bbca,     bbca,   bbc_state,      bbc,     "Acorn",           "BBC Micro Model A",                  MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1982, torchf,   bbcb,    0,     torchf,   torch,  torch_state,    bbc,     "Torch Computers", "Torch CF240",                        MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1982, torchh10, bbcb,    0,     torchh10, torch,  torch_state,    bbc,     "Torch Computers", "Torch CH240/10",                     MACHINE_NOT_WORKING)
+COMP ( 1982, torchh21, bbcb,    0,     torchh21, torch,  torch_state,    bbc,     "Torch Computers", "Torch CH240/21",                     MACHINE_NOT_WORKING)
+COMP ( 1982, bbcb_de,  bbcb,    0,     bbcb_de,  bbcb,   bbc_state,      bbc,     "Acorn",           "BBC Micro Model B (German)",         MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1983, bbcb_us,  bbcb,    0,     bbcb_us,  bbcb,   bbc_state,      bbc,     "Acorn",           "BBC Micro Model B (US)",             MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1985, bbcbp,    0,       bbcb,  bbcbp,    bbcbp,  bbc_state,      bbc,     "Acorn",           "BBC Micro Model B+ 64K",             MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1985, bbcbp128, bbcbp,   0,     bbcbp128, bbcbp,  bbc_state,      bbc,     "Acorn",           "BBC Micro Model B+ 128K",            MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1985, abc110,   bbcbp,   0,     abc110,   abc,    bbc_state,      bbc,     "Acorn",           "ABC 110",                            MACHINE_NOT_WORKING)
+COMP ( 1985, acw443,   bbcbp,   0,     acw443,   abc,    bbc_state,      bbc,     "Acorn",           "ABC 210/Cambridge Workstation",      MACHINE_NOT_WORKING)
+COMP ( 1985, abc310,   bbcbp,   0,     abc310,   abc,    bbc_state,      bbc,     "Acorn",           "ABC 310",                            MACHINE_NOT_WORKING)
+COMP ( 1985, ltmpbp,   bbcbp,   0,     ltmpbp,   ltmpbp, bbc_state,      bbc,     "Lawrie T&M Ltd.", "LTM Portable (B+)",                  MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1985, reutapm,  bbcbp,   0,     reutapm,  bbcb,   bbc_state,      bbc,     "Acorn",           "Reuters APM",                        MACHINE_NO_SOUND_HW | MACHINE_NOT_WORKING)
+COMP ( 1986, econx25,  bbcbp,   0,     econx25,  bbcbp,  bbc_state,      bbc,     "Acorn",           "Econet X25 Gateway",                 MACHINE_NOT_WORKING)
+COMP ( 1986, bbcm,     0,       bbcb,  bbcm,     bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master 128",                     MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1986, bbcmt,    bbcm,    0,     bbcmt,    bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master Turbo",                   MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1986, bbcmaiv,  bbcm,    0,     bbcmaiv,  bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master AIV",                     MACHINE_NOT_WORKING)
+COMP ( 1986, bbcmet,   bbcm,    0,     bbcmet,   bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master ET",                      MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1986, bbcm512,  bbcm,    0,     bbcm512,  bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master 512",                     MACHINE_NOT_WORKING)
+COMP ( 1986, bbcmarm,  bbcm,    0,     bbcmarm,  bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master (ARM Evaluation)",        MACHINE_NOT_WORKING)
+COMP ( 1986, ltmpm,    bbcm,    0,     ltmpm,    ltmpm,  bbc_state,      bbc,     "Lawrie T&M Ltd.", "LTM Portable (Master)",              MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1986, bbcmc,    0,       bbcm,  bbcmc,    bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master Compact",                 MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1986, bbcmc_ar, bbcmc,   0,     bbcmc,    bbcm,   bbc_state,      bbc,     "Acorn",           "BBC Master Compact (Arabic)",        MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1987, pro128s,  bbcmc,   0,     pro128s,  bbcm,   bbc_state,      bbc,     "Olivetti",        "Prodest PC 128S",                    MACHINE_IMPERFECT_GRAPHICS)
+COMP ( 1988, discmon,  bbcm,    0,     discmon,  bbcm,   bbc_state,      bbc,     "Arbiter Leisure", "Arbiter Discmonitor A-01",           MACHINE_NOT_WORKING)
+COMP ( 1988, discmate, bbcm,    0,     discmate, bbcm,   bbc_state,      bbc,     "Arbiter Leisure", "Arbiter Discmate A-02",              MACHINE_NOT_WORKING)
+//COMP ( 1988, discmast, bbcm,    0,     discmast, bbcm,   bbc_state,      bbc,     "Arbiter Leisure", "Arbiter Discmaster A-03",            MACHINE_NOT_WORKING)
+COMP ( 1989, cfa3000,  bbcm,    0,     cfa3000,  bbcm,   bbc_state,      bbc,     "Tinsley Medical Instruments",  "Henson CFA 3000",       MACHINE_NOT_WORKING)

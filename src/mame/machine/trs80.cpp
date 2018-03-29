@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Robbbert and unknown others
+// copyright-holders:Robbbert,FSanches and unknown others
 /***************************************************************************
 
   machine.c
@@ -126,23 +126,14 @@ READ8_MEMBER( trs80_state::trs80m4_ea_r )
     d2..d0 Not used */
 
 	uint8_t data=7;
-	m_ay31015->set_input_pin(AY31015_SWE, 0);
-	data |= m_ay31015->get_output_pin(AY31015_TBMT) ? 0x40 : 0;
-	data |= m_ay31015->get_output_pin(AY31015_DAV ) ? 0x80 : 0;
-	data |= m_ay31015->get_output_pin(AY31015_OR  ) ? 0x20 : 0;
-	data |= m_ay31015->get_output_pin(AY31015_FE  ) ? 0x10 : 0;
-	data |= m_ay31015->get_output_pin(AY31015_PE  ) ? 0x08 : 0;
-	m_ay31015->set_input_pin(AY31015_SWE, 1);
+	m_uart->write_swe(0);
+	data |= m_uart->tbmt_r() ? 0x40 : 0;
+	data |= m_uart->dav_r( ) ? 0x80 : 0;
+	data |= m_uart->or_r(  ) ? 0x20 : 0;
+	data |= m_uart->fe_r(  ) ? 0x10 : 0;
+	data |= m_uart->pe_r(  ) ? 0x08 : 0;
+	m_uart->write_swe(1);
 
-	return data;
-}
-
-READ8_MEMBER( trs80_state::trs80m4_eb_r )
-{
-/* UART received data */
-	uint8_t data = m_ay31015->get_received_data();
-	m_ay31015->set_input_pin(AY31015_RDAV, 0);
-	m_ay31015->set_input_pin(AY31015_RDAV, 1);
 	return data;
 }
 
@@ -166,13 +157,13 @@ READ8_MEMBER( trs80_state::sys80_f9_r )
     d0 Data Available */
 
 	uint8_t data = 70;
-	m_ay31015->set_input_pin(AY31015_SWE, 0);
-	data |= m_ay31015->get_output_pin(AY31015_TBMT) ? 0 : 0x80;
-	data |= m_ay31015->get_output_pin(AY31015_DAV ) ? 0x01 : 0;
-	data |= m_ay31015->get_output_pin(AY31015_OR  ) ? 0x02 : 0;
-	data |= m_ay31015->get_output_pin(AY31015_FE  ) ? 0x04 : 0;
-	data |= m_ay31015->get_output_pin(AY31015_PE  ) ? 0x08 : 0;
-	m_ay31015->set_input_pin(AY31015_SWE, 1);
+	m_uart->write_swe(0);
+	data |= m_uart->tbmt_r() ? 0 : 0x80;
+	data |= m_uart->dav_r( ) ? 0x01 : 0;
+	data |= m_uart->or_r(  ) ? 0x02 : 0;
+	data |= m_uart->fe_r(  ) ? 0x04 : 0;
+	data |= m_uart->pe_r(  ) ? 0x08 : 0;
+	m_uart->write_swe(1);
 
 	return data;
 }
@@ -202,6 +193,23 @@ READ8_MEMBER( trs80_state::trs80m4_ff_r )
 	m_irq &= 0xfc;  /* clear cassette interrupts */
 
 	return m_port_ec | m_cassette_data;
+}
+
+READ8_MEMBER( trs80_state::cp500_a11_flipflop_toggle )
+{
+	/* The A11 flipflop is used for enabling access to
+	       the system monitor code at the EPROM address range 3800-3fff */
+	uint8_t *rom = memregion("maincpu")->base();
+	uint8_t *bootrom = memregion("bootrom")->base();
+	int block;
+
+	m_a11_flipflop ^= 1; //toggle the flip-flop at every read at io addresses 0xf4-f7
+
+	for (block=0; block<8; block++){
+		memcpy(&rom[block * 0x800], &bootrom[(block | m_a11_flipflop) * 0x800], 0x800);
+	}
+
+	return 0x00; //really?!
 }
 
 
@@ -426,8 +434,8 @@ Note: this may be a COM5016 dual baud rate generator, or may be an equivalent ci
     */
 
 	static const int baud_clock[]={ 800, 1200, 1760, 2152, 2400, 4800, 9600, 19200, 28800, 32000, 38400, 57600, 76800, 115200, 153600, 307200 };
-	m_ay31015->set_receiver_clock(baud_clock[data & 0x0f]);
-	m_ay31015->set_transmitter_clock(baud_clock[data >> 4]);
+	m_uart->set_receiver_clock(baud_clock[data & 0x0f]);
+	m_uart->set_transmitter_clock(baud_clock[data >> 4]);
 }
 
 WRITE8_MEMBER( trs80_state::trs80m4_ea_w )
@@ -447,13 +455,13 @@ WRITE8_MEMBER( trs80_state::trs80m4_ea_w )
     d0 Data-Terminal-Ready (DTR), pin 20 */
 
 	{
-		m_ay31015->set_input_pin(AY31015_CS, 0);
-		m_ay31015->set_input_pin(AY31015_NB1, BIT(data, 6));
-		m_ay31015->set_input_pin(AY31015_NB2, BIT(data, 5));
-		m_ay31015->set_input_pin(AY31015_TSB, BIT(data, 4));
-		m_ay31015->set_input_pin(AY31015_EPS, BIT(data, 7));
-		m_ay31015->set_input_pin(AY31015_NP,  BIT(data, 3));
-		m_ay31015->set_input_pin(AY31015_CS, 1);
+		m_uart->write_cs(0);
+		m_uart->write_nb1(BIT(data, 6));
+		m_uart->write_nb2(BIT(data, 5));
+		m_uart->write_tsb(BIT(data, 4));
+		m_uart->write_eps(BIT(data, 7));
+		m_uart->write_np(BIT(data, 3));
+		m_uart->write_cs(1);
 	}
 	else
 	{
@@ -467,11 +475,6 @@ WRITE8_MEMBER( trs80_state::trs80m4_ea_w )
     d0 Request-to-Send (RTS), pin 4 */
 
 	}
-}
-
-WRITE8_MEMBER( trs80_state::trs80m4_eb_w )
-{
-	m_ay31015->set_transmit_data(data);
 }
 
 WRITE8_MEMBER( trs80_state::trs80m4_ec_w )
@@ -596,7 +599,7 @@ WRITE8_MEMBER( trs80_state::trs80_ff_w )
 	{
 		init = 1;
 		static int16_t speaker_levels[4] = { 0, -32768, 0, 32767 };
-		m_speaker->static_set_levels(*m_speaker, 4, speaker_levels);
+		m_speaker->set_levels(4, speaker_levels);
 
 	}
 	/* Speaker for System-80 MK II - only sounds if relay is off */
@@ -839,6 +842,12 @@ MACHINE_RESET_MEMBER(trs80_state,lnw80)
 	m_cassette_data = 0;
 	m_reg_load = 1;
 	lnw80_fe_w(space, 0, 0);
+}
+
+MACHINE_RESET_MEMBER(trs80_state,cp500)
+{
+	m_a11_flipflop = 0;
+	MACHINE_RESET_CALL_MEMBER( trs80m4 );
 }
 
 

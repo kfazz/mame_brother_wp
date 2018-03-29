@@ -75,10 +75,13 @@ public:
 	uint32_t screen_update_drw80pkr(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	required_device<cpu_device> m_maincpu;
 	required_device<gfxdecode_device> m_gfxdecode;
+	void drw80pkr(machine_config &config);
+	void drw80pkr_io_map(address_map &map);
+	void drw80pkr_map(address_map &map);
 };
 
 
-#define CPU_CLOCK           XTAL_8MHz
+#define CPU_CLOCK           XTAL(8'000'000)
 #define DATA_NVRAM_SIZE     0x100
 
 
@@ -398,13 +401,15 @@ DRIVER_INIT_MEMBER(drw80pkr_state,drw80pkr)
 * Memory map information *
 *************************/
 
-static ADDRESS_MAP_START( drw80pkr_map, AS_PROGRAM, 8, drw80pkr_state )
-	AM_RANGE(0x0000, 0x0fff) AM_ROMBANK("bank1")
-ADDRESS_MAP_END
+void drw80pkr_state::drw80pkr_map(address_map &map)
+{
+	map(0x0000, 0x0fff).bankr("bank1");
+}
 
-static ADDRESS_MAP_START( drw80pkr_io_map, AS_IO, 8, drw80pkr_state )
-	AM_RANGE(0x00, 0xff) AM_READWRITE(drw80pkr_io_r, drw80pkr_io_w)
-ADDRESS_MAP_END
+void drw80pkr_state::drw80pkr_io_map(address_map &map)
+{
+	map(0x00, 0xff).rw(this, FUNC(drw80pkr_state::drw80pkr_io_r), FUNC(drw80pkr_state::drw80pkr_io_w));
+}
 
 /*************************
 *      Input ports       *
@@ -438,7 +443,7 @@ INPUT_PORTS_END
 *     Machine Driver     *
 *************************/
 
-static MACHINE_CONFIG_START( drw80pkr )
+MACHINE_CONFIG_START(drw80pkr_state::drw80pkr)
 	// basic machine hardware
 	MCFG_CPU_ADD("maincpu", I8039, CPU_CLOCK)
 	MCFG_CPU_PROGRAM_MAP(drw80pkr_map)

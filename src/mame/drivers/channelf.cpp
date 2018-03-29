@@ -119,17 +119,19 @@ WRITE8_MEMBER( channelf_state::port_5_w )
 	m_row_reg = (data | 0xc0) ^ 0xff;
 }
 
-static ADDRESS_MAP_START( channelf_map, AS_PROGRAM, 8, channelf_state )
-	AM_RANGE(0x0000, 0x07ff) AM_ROM
-	AM_RANGE(0x0800, 0xffff) AM_DEVREAD("cartslot", channelf_cart_slot_device, read_rom)
-ADDRESS_MAP_END
+void channelf_state::channelf_map(address_map &map)
+{
+	map(0x0000, 0x07ff).rom();
+	map(0x0800, 0xffff).r(m_cart, FUNC(channelf_cart_slot_device::read_rom));
+}
 
-static ADDRESS_MAP_START( channelf_io, AS_IO, 8, channelf_state )
-	AM_RANGE(0x00, 0x00) AM_READWRITE(port_0_r, port_0_w) /* Front panel switches */
-	AM_RANGE(0x01, 0x01) AM_READWRITE(port_1_r, port_1_w) /* Right controller     */
-	AM_RANGE(0x04, 0x04) AM_READWRITE(port_4_r, port_4_w) /* Left controller      */
-	AM_RANGE(0x05, 0x05) AM_READWRITE(port_5_r, port_5_w)
-ADDRESS_MAP_END
+void channelf_state::channelf_io(address_map &map)
+{
+	map(0x00, 0x00).rw(this, FUNC(channelf_state::port_0_r), FUNC(channelf_state::port_0_w)); /* Front panel switches */
+	map(0x01, 0x01).rw(this, FUNC(channelf_state::port_1_r), FUNC(channelf_state::port_1_w)); /* Right controller     */
+	map(0x04, 0x04).rw(this, FUNC(channelf_state::port_4_r), FUNC(channelf_state::port_4_w)); /* Left controller      */
+	map(0x05, 0x05).rw(this, FUNC(channelf_state::port_5_r), FUNC(channelf_state::port_5_w));
+}
 
 
 
@@ -199,7 +201,7 @@ static SLOT_INTERFACE_START(cf_cart)
 SLOT_INTERFACE_END
 
 
-static MACHINE_CONFIG_START( channelf_cart )
+MACHINE_CONFIG_START(channelf_state::channelf_cart)
 	/* cartridge */
 	MCFG_CHANNELF_CARTRIDGE_ADD("cartslot", cf_cart, nullptr)
 
@@ -207,7 +209,7 @@ static MACHINE_CONFIG_START( channelf_cart )
 	MCFG_SOFTWARE_LIST_ADD("cart_list","channelf")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( channelf )
+MACHINE_CONFIG_START(channelf_state::channelf)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", F8, 3579545/2)        /* Colorburst/2 */
 	MCFG_CPU_PROGRAM_MAP(channelf_map)
@@ -231,10 +233,10 @@ static MACHINE_CONFIG_START( channelf )
 	MCFG_SOUND_ADD("custom", CHANNELF_SOUND, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
-	MCFG_FRAGMENT_ADD( channelf_cart )
+	channelf_cart(config);
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( sabavdpl )
+MACHINE_CONFIG_START(channelf_state::sabavdpl)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", F8, MASTER_CLOCK_PAL)        /* PAL speed */
 	MCFG_CPU_PROGRAM_MAP(channelf_map)
@@ -258,11 +260,11 @@ static MACHINE_CONFIG_START( sabavdpl )
 	MCFG_SOUND_ADD("custom", CHANNELF_SOUND, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
-	MCFG_FRAGMENT_ADD( channelf_cart )
+	channelf_cart(config);
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( channlf2 )
+MACHINE_CONFIG_START(channelf_state::channlf2)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", F8, 3579545/2)        /* Colorburst / 2 */
 	MCFG_CPU_PROGRAM_MAP(channelf_map)
@@ -286,11 +288,11 @@ static MACHINE_CONFIG_START( channlf2 )
 	MCFG_SOUND_ADD("custom", CHANNELF_SOUND, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
-	MCFG_FRAGMENT_ADD( channelf_cart )
+	channelf_cart(config);
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( sabavpl2 )
+MACHINE_CONFIG_START(channelf_state::sabavpl2)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", F8, MASTER_CLOCK_PAL)        /* PAL speed */
 	MCFG_CPU_PROGRAM_MAP(channelf_map)
@@ -314,7 +316,7 @@ static MACHINE_CONFIG_START( sabavpl2 )
 	MCFG_SOUND_ADD("custom", CHANNELF_SOUND, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MCFG_FRAGMENT_ADD( channelf_cart )
+	channelf_cart(config);
 MACHINE_CONFIG_END
 
 ROM_START( channelf )

@@ -137,28 +137,30 @@ const tiny_rom_entry *pdc_device::device_rom_region() const
 //  ADDRESS_MAP( pdc_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( pdc_mem, AS_PROGRAM, 8, pdc_device )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM AM_REGION("rom", 0)
-	AM_RANGE(0x8000, 0x9FFF) AM_RAM AM_SHARE("pdc_ram") // HM6264ALP-12 SRAM 8KB
-	AM_RANGE(0xC000, 0xC7FF) AM_RAM // HM6116P-2 SRAM 2KB
-ADDRESS_MAP_END
+void pdc_device::pdc_mem(address_map &map)
+{
+	map(0x0000, 0x3fff).rom().region("rom", 0);
+	map(0x8000, 0x9FFF).ram().share("pdc_ram"); // HM6264ALP-12 SRAM 8KB
+	map(0xC000, 0xC7FF).ram(); // HM6116P-2 SRAM 2KB
+}
 
 //-------------------------------------------------
 //  ADDRESS_MAP( pdc_io )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( pdc_io, AS_IO, 8, pdc_device )
-	AM_RANGE(0x00, 0x07) AM_READWRITE(p0_7_r,p0_7_w) AM_MIRROR(0xFF00)
-	AM_RANGE(0x21, 0x2F) AM_READWRITE(fdd_68k_r,fdd_68k_w) AM_MIRROR(0xFF00)
-	AM_RANGE(0x38, 0x38) AM_READ(p38_r) AM_MIRROR(0xFF00) // Possibly UPD765 interrupt
-	AM_RANGE(0x39, 0x39) AM_READ(p39_r) AM_MIRROR(0xFF00) // HDD related
-	AM_RANGE(0x3c, 0x3c) AM_READ_PORT("SW2") AM_MIRROR(0xFF00) /* FDC Dipswitch */
-	AM_RANGE(0x3d, 0x3d) AM_READ_PORT("SW1") AM_MIRROR(0xFF00) /* HDC Dipswitch */
-	AM_RANGE(0x40, 0x41) AM_DEVREADWRITE(HDC_TAG, hdc9224_device,read,write) AM_MIRROR(0xFF00)
-	AM_RANGE(0x42, 0x43) AM_DEVICE(FDC_TAG, upd765a_device, map) AM_MIRROR(0xFF00)
-	AM_RANGE(0x50, 0x5f) AM_WRITE(p50_5f_w) AM_MIRROR(0xFF00)
-	AM_RANGE(0x60, 0x6f) AM_DEVREADWRITE(FDCDMA_TAG,am9517a_device,read,write) AM_MIRROR(0xFF00)
-ADDRESS_MAP_END
+void pdc_device::pdc_io(address_map &map)
+{
+	map(0x00, 0x07).rw(this, FUNC(pdc_device::p0_7_r), FUNC(pdc_device::p0_7_w)).mirror(0xFF00);
+	map(0x21, 0x2F).rw(this, FUNC(pdc_device::fdd_68k_r), FUNC(pdc_device::fdd_68k_w)).mirror(0xFF00);
+	map(0x38, 0x38).r(this, FUNC(pdc_device::p38_r)).mirror(0xFF00); // Possibly UPD765 interrupt
+	map(0x39, 0x39).r(this, FUNC(pdc_device::p39_r)).mirror(0xFF00); // HDD related
+	map(0x3c, 0x3c).portr("SW2").mirror(0xFF00); /* FDC Dipswitch */
+	map(0x3d, 0x3d).portr("SW1").mirror(0xFF00); /* HDC Dipswitch */
+	map(0x40, 0x41).rw(HDC_TAG, FUNC(hdc9224_device::read), FUNC(hdc9224_device::write)).mirror(0xFF00);
+	map(0x42, 0x43).m(FDC_TAG, FUNC(upd765a_device::map)).mirror(0xFF00);
+	map(0x50, 0x5f).w(this, FUNC(pdc_device::p50_5f_w)).mirror(0xFF00);
+	map(0x60, 0x6f).rw(FDCDMA_TAG, FUNC(am9517a_device::read), FUNC(am9517a_device::write)).mirror(0xFF00);
+}
 
 //-------------------------------------------------
 //  INPUT_PORTS_START( pdc )
@@ -251,9 +253,9 @@ FLOPPY_FORMATS_END
 //  device_add_mconfig - add device configuration
 //-------------------------------------------------
 
-MACHINE_CONFIG_MEMBER( pdc_device::device_add_mconfig )
+MACHINE_CONFIG_START(pdc_device::device_add_mconfig)
 	/* CPU - Zilog Z0840006PSC */
-	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_10MHz / 2)
+	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL(10'000'000) / 2)
 	MCFG_CPU_PROGRAM_MAP(pdc_mem)
 	MCFG_CPU_IO_MAP(pdc_io)
 	//MCFG_QUANTUM_PERFECT_CPU(M6502_TAG)
@@ -269,7 +271,7 @@ MACHINE_CONFIG_MEMBER( pdc_device::device_add_mconfig )
 	/* DMA Controller - Intel P8237A-5 */
 	/* Channel 0: uPD765a Floppy Disk Controller */
 	/* Channel 1: M68K main system memory */
-	MCFG_DEVICE_ADD(FDCDMA_TAG, AM9517A, XTAL_10MHz / 2)
+	MCFG_DEVICE_ADD(FDCDMA_TAG, AM9517A, XTAL(10'000'000) / 2)
 	MCFG_I8237_OUT_HREQ_CB(WRITELINE(pdc_device, i8237_hreq_w))
 	MCFG_I8237_OUT_EOP_CB(WRITELINE(pdc_device, i8237_eop_w))
 	MCFG_I8237_IN_MEMR_CB(READ8(pdc_device, i8237_dma_mem_r))
@@ -516,7 +518,7 @@ WRITE8_MEMBER(pdc_device::fdd_68k_w)
 			}
 			break;
 		default:
-			if(TRACE_PDC_FDC) logerror("(!)PDC: Port %02X WRITE: %02X, PC: %X\n", address, data, space.device().safe_pc());
+			if(TRACE_PDC_FDC) logerror("(!)PDC: Port %02X WRITE: %02X %s\n", address, data, machine().describe_context());
 			break;
 	}
 }
@@ -531,7 +533,7 @@ WRITE8_MEMBER(pdc_device::p38_w)
 READ8_MEMBER(pdc_device::p38_r)
 {
 	reg_p38 ^= 0x20; /* Invert bit 5 (32) */
-	if(TRACE_PDC_CMD) logerror("PDC: Port 0x38 READ: %02X, PC: %X\n", reg_p38, space.device().safe_pc());
+	if(TRACE_PDC_CMD) logerror("PDC: Port 0x38 READ: %02X %s\n", reg_p38, machine().describe_context());
 	return reg_p38;
 }
 
@@ -539,7 +541,7 @@ READ8_MEMBER(pdc_device::p39_r)
 {
 	uint8_t data = 1;
 	if(b_fdc_irq) data |= 8; // Set bit 3
-	if(TRACE_PDC_CMD) logerror("PDC: Port 0x39 READ: %02X, PC: %X\n", data, space.device().safe_pc());
+	if(TRACE_PDC_CMD) logerror("PDC: Port 0x39 READ: %02X %s\n", data, machine().describe_context());
 	return data;
 }
 
@@ -552,15 +554,15 @@ WRITE8_MEMBER(pdc_device::p50_5f_w)
 			switch(data)
 			{
 				case 0x00:
-					if(TRACE_PDC_FDC) logerror("PDC: FDD (all) Motor off. PC: %X\n", space.device().safe_pc());
+					if(TRACE_PDC_FDC) logerror("PDC: FDD (all) Motor off. %s\n", machine().describe_context());
 					m_fdc->subdevice<floppy_connector>("0")->get_device()->mon_w(1);
 					break;
 				case 0x80:
-					if(TRACE_PDC_FDC) logerror("PDC: FDD (all) Motor on. PC: %X\n", space.device().safe_pc());
+					if(TRACE_PDC_FDC) logerror("PDC: FDD (all) Motor on. %s\n", machine().describe_context());
 					m_fdc->subdevice<floppy_connector>("0")->get_device()->mon_w(0);
 					break;
 				default:
-					if(TRACE_PDC_FDC) logerror("PDC: Port 0x52 WRITE: %x\n PC: %X\n", data, space.device().safe_pc());
+					if(TRACE_PDC_FDC) logerror("PDC: Port 0x52 WRITE: %x %s\n", data, machine().describe_context());
 			}
 			break;
 		case 0x53: /* Probably set_rate here */
@@ -570,7 +572,7 @@ WRITE8_MEMBER(pdc_device::p50_5f_w)
 			switch(data)
 			{
 				case 0x00:
-					if(TRACE_PDC_FDC) logerror("PDC: FDD 1 Motor off. PC: %X\n", space.device().safe_pc());
+					if(TRACE_PDC_FDC) logerror("PDC: FDD 1 Motor off. %s\n", machine().describe_context());
 					m_fdc->subdevice<floppy_connector>("0")->get_device()->mon_w(1);
 					break;
 				case 0x80:

@@ -102,7 +102,7 @@ dumped by sayu
 #include "speaker.h"
 
 
-#define MAIN_CLOCK XTAL_18_432MHz
+#define MAIN_CLOCK XTAL(18'432'000)
 
 class jantotsu_state : public driver_device
 {
@@ -143,6 +143,9 @@ public:
 	required_device<cpu_device> m_maincpu;
 	required_device<msm5205_device> m_adpcm;
 	required_device<palette_device> m_palette;
+	void jantotsu(machine_config &config);
+	void jantotsu_io(address_map &map);
+	void jantotsu_map(address_map &map);
 };
 
 
@@ -331,20 +334,22 @@ WRITE_LINE_MEMBER(jantotsu_state::jan_adpcm_int)
  *
  *************************************/
 
-static ADDRESS_MAP_START( jantotsu_map, AS_PROGRAM, 8, jantotsu_state )
-	AM_RANGE(0x0000, 0xbfff) AM_ROM
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM
-	AM_RANGE(0xe000, 0xffff) AM_READWRITE(jantotsu_bitmap_r, jantotsu_bitmap_w)
-ADDRESS_MAP_END
+void jantotsu_state::jantotsu_map(address_map &map)
+{
+	map(0x0000, 0xbfff).rom();
+	map(0xc000, 0xc7ff).ram();
+	map(0xe000, 0xffff).rw(this, FUNC(jantotsu_state::jantotsu_bitmap_r), FUNC(jantotsu_state::jantotsu_bitmap_w));
+}
 
-static ADDRESS_MAP_START( jantotsu_io, AS_IO, 8, jantotsu_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_READ_PORT("DSW1") AM_DEVWRITE("sn1", sn76489a_device, write)
-	AM_RANGE(0x01, 0x01) AM_READ(jantotsu_dsw2_r) AM_DEVWRITE("sn2", sn76489a_device, write)
-	AM_RANGE(0x02, 0x03) AM_WRITE(jan_adpcm_w)
-	AM_RANGE(0x04, 0x04) AM_READWRITE(jantotsu_mux_r, jantotsu_mux_w)
-	AM_RANGE(0x07, 0x07) AM_WRITE(bankaddr_w)
-ADDRESS_MAP_END
+void jantotsu_state::jantotsu_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).portr("DSW1").w("sn1", FUNC(sn76489a_device::write));
+	map(0x01, 0x01).r(this, FUNC(jantotsu_state::jantotsu_dsw2_r)).w("sn2", FUNC(sn76489a_device::write));
+	map(0x02, 0x03).w(this, FUNC(jantotsu_state::jan_adpcm_w));
+	map(0x04, 0x04).rw(this, FUNC(jantotsu_state::jantotsu_mux_r), FUNC(jantotsu_state::jantotsu_mux_w));
+	map(0x07, 0x07).w(this, FUNC(jantotsu_state::bankaddr_w));
+}
 
 
 /*************************************
@@ -494,7 +499,7 @@ void jantotsu_state::machine_reset()
 	m_adpcm_trigger = 0;
 }
 
-static MACHINE_CONFIG_START( jantotsu )
+MACHINE_CONFIG_START(jantotsu_state::jantotsu)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80,MAIN_CLOCK/4)
@@ -523,7 +528,7 @@ static MACHINE_CONFIG_START( jantotsu )
 	MCFG_SOUND_ADD("sn2", SN76489A, MAIN_CLOCK/4)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MCFG_SOUND_ADD("adpcm", MSM5205, XTAL_384kHz)
+	MCFG_SOUND_ADD("adpcm", MSM5205, XTAL(384'000))
 	MCFG_MSM5205_VCLK_CB(WRITELINE(jantotsu_state, jan_adpcm_int))  /* interrupt function */
 	MCFG_MSM5205_PRESCALER_SELECTOR(S64_4B)  /* 6 KHz */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)

@@ -195,7 +195,7 @@ PCB Number: 22109611 (22109631)
   |  0773         1502              |
   |  PAL          GR1-3.3M          |
   |               8148       VOL    |
-  |  6809         8148              |
+  |  68A09EP      8148              |
   |                                 |
   |  GR1-4.1K                       |
   |                               --|
@@ -217,7 +217,7 @@ PCB Number: 22109611 (22109631)
   |                      5604       |
   |  GR2-1.1B                       |
   |            PAL       1603  DSWA |
-  |  6809                           |
+  |  68A09EP                        |
   |                       18.432MHz |
   |---------------------------------|
 
@@ -515,7 +515,7 @@ Notes:
   99,99999,9999,9999,999999
   it seems to be a counter decremented while the game is running.
 
-- Mappy: similarly, if you enter service mode and press press
+- Mappy: similarly, if you enter service mode and press
   P1 button + service coin the following is shown:
   99.99.999.9999.9999.9999
   99.99.999.9999.9999.0000
@@ -565,7 +565,7 @@ TODO:
  *
  *************************************/
 
-#define MASTER_CLOCK        (XTAL_18_432MHz)
+#define MASTER_CLOCK        (XTAL(18'432'000))
 
 #define PIXEL_CLOCK         (MASTER_CLOCK/3)
 
@@ -645,67 +645,74 @@ INTERRUPT_GEN_MEMBER(mappy_state::sub2_vblank_irq)
 		m_subcpu2->set_input_line(0, ASSERT_LINE);
 }
 
-static ADDRESS_MAP_START( superpac_cpu1_map, AS_PROGRAM, 8, mappy_state )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM_WRITE(superpac_videoram_w) AM_SHARE("videoram") /* video RAM */
-	AM_RANGE(0x0800, 0x1fff) AM_RAM AM_SHARE("spriteram")       /* work RAM with embedded sprite RAM */
-	AM_RANGE(0x2000, 0x2000) AM_READWRITE(superpac_flipscreen_r, superpac_flipscreen_w)
-	AM_RANGE(0x4000, 0x43ff) AM_DEVREADWRITE("namco", namco_15xx_device, sharedram_r, sharedram_w)  /* shared RAM with the sound CPU */
-	AM_RANGE(0x4800, 0x480f) AM_DEVREADWRITE("namcoio_1", namcoio_device, read, write)      /* custom I/O chips interface */
-	AM_RANGE(0x4810, 0x481f) AM_DEVREADWRITE("namcoio_2", namcoio_device, read, write)      /* custom I/O chips interface */
-	AM_RANGE(0x5000, 0x500f) AM_DEVWRITE("mainlatch", ls259_device, write_a0)               /* various control bits */
-	AM_RANGE(0x8000, 0x8000) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0xa000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void mappy_state::superpac_cpu1_map(address_map &map)
+{
+	map(0x0000, 0x07ff).ram().w(this, FUNC(mappy_state::superpac_videoram_w)).share("videoram"); /* video RAM */
+	map(0x0800, 0x1fff).ram().share("spriteram");       /* work RAM with embedded sprite RAM */
+	map(0x2000, 0x2000).rw(this, FUNC(mappy_state::superpac_flipscreen_r), FUNC(mappy_state::superpac_flipscreen_w));
+	map(0x4000, 0x43ff).rw(m_namco_15xx, FUNC(namco_15xx_device::sharedram_r), FUNC(namco_15xx_device::sharedram_w));  /* shared RAM with the sound CPU */
+	map(0x4800, 0x480f).rw("namcoio_1", FUNC(namcoio_device::read), FUNC(namcoio_device::write));      /* custom I/O chips interface */
+	map(0x4810, 0x481f).rw("namcoio_2", FUNC(namcoio_device::read), FUNC(namcoio_device::write));      /* custom I/O chips interface */
+	map(0x5000, 0x500f).w("mainlatch", FUNC(ls259_device::write_a0));               /* various control bits */
+	map(0x8000, 0x8000).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0xa000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START( phozon_cpu1_map, AS_PROGRAM, 8, mappy_state )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM_WRITE(superpac_videoram_w) AM_SHARE("videoram") /* video RAM */
-	AM_RANGE(0x0800, 0x1fff) AM_RAM AM_SHARE("spriteram") /* shared RAM with CPU #2/sprite RAM*/
-	AM_RANGE(0x4000, 0x43ff) AM_DEVREADWRITE("namco", namco_15xx_device, sharedram_r, sharedram_w)  /* shared RAM with the sound CPU */
-	AM_RANGE(0x4800, 0x480f) AM_DEVREADWRITE("namcoio_1", namcoio_device, read, write)      /* custom I/O chips interface */
-	AM_RANGE(0x4810, 0x481f) AM_DEVREADWRITE("namcoio_2", namcoio_device, read, write)      /* custom I/O chips interface */
-	AM_RANGE(0x5000, 0x500f) AM_DEVWRITE("mainlatch", ls259_device, write_a0)               /* various control bits */
-	AM_RANGE(0x7000, 0x7000) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x8000, 0xffff) AM_ROM                                 /* ROM */
-ADDRESS_MAP_END
+void mappy_state::phozon_cpu1_map(address_map &map)
+{
+	map(0x0000, 0x07ff).ram().w(this, FUNC(mappy_state::superpac_videoram_w)).share("videoram"); /* video RAM */
+	map(0x0800, 0x1fff).ram().share("spriteram"); /* shared RAM with CPU #2/sprite RAM*/
+	map(0x4000, 0x43ff).rw(m_namco_15xx, FUNC(namco_15xx_device::sharedram_r), FUNC(namco_15xx_device::sharedram_w));  /* shared RAM with the sound CPU */
+	map(0x4800, 0x480f).rw("namcoio_1", FUNC(namcoio_device::read), FUNC(namcoio_device::write));      /* custom I/O chips interface */
+	map(0x4810, 0x481f).rw("namcoio_2", FUNC(namcoio_device::read), FUNC(namcoio_device::write));      /* custom I/O chips interface */
+	map(0x5000, 0x500f).w("mainlatch", FUNC(ls259_device::write_a0));               /* various control bits */
+	map(0x7000, 0x7000).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x8000, 0xffff).rom();                                 /* ROM */
+}
 
-static ADDRESS_MAP_START( mappy_cpu1_map, AS_PROGRAM, 8, mappy_state )
-	AM_RANGE(0x0000, 0x0fff) AM_RAM_WRITE(mappy_videoram_w) AM_SHARE("videoram")        /* video RAM */
-	AM_RANGE(0x1000, 0x27ff) AM_RAM AM_SHARE("spriteram")       /* work RAM with embedded sprite RAM */
-	AM_RANGE(0x3800, 0x3fff) AM_WRITE(mappy_scroll_w)               /* scroll */
-	AM_RANGE(0x4000, 0x43ff) AM_DEVREADWRITE("namco", namco_15xx_device, sharedram_r, sharedram_w)  /* shared RAM with the sound CPU */
-	AM_RANGE(0x4800, 0x480f) AM_DEVREADWRITE("namcoio_1", namcoio_device, read, write)      /* custom I/O chips interface */
-	AM_RANGE(0x4810, 0x481f) AM_DEVREADWRITE("namcoio_2", namcoio_device, read, write)      /* custom I/O chips interface */
-	AM_RANGE(0x5000, 0x500f) AM_DEVWRITE("mainlatch", ls259_device, write_a0)               /* various control bits */
-	AM_RANGE(0x8000, 0x8000) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x8000, 0xffff) AM_ROM                                 /* ROM code (only a000-ffff in Mappy) */
-ADDRESS_MAP_END
+void mappy_state::mappy_cpu1_map(address_map &map)
+{
+	map(0x0000, 0x0fff).ram().w(this, FUNC(mappy_state::mappy_videoram_w)).share("videoram");        /* video RAM */
+	map(0x1000, 0x27ff).ram().share("spriteram");       /* work RAM with embedded sprite RAM */
+	map(0x3800, 0x3fff).w(this, FUNC(mappy_state::mappy_scroll_w));               /* scroll */
+	map(0x4000, 0x43ff).rw(m_namco_15xx, FUNC(namco_15xx_device::sharedram_r), FUNC(namco_15xx_device::sharedram_w));  /* shared RAM with the sound CPU */
+	map(0x4800, 0x480f).rw("namcoio_1", FUNC(namcoio_device::read), FUNC(namcoio_device::write));      /* custom I/O chips interface */
+	map(0x4810, 0x481f).rw("namcoio_2", FUNC(namcoio_device::read), FUNC(namcoio_device::write));      /* custom I/O chips interface */
+	map(0x5000, 0x500f).w("mainlatch", FUNC(ls259_device::write_a0));               /* various control bits */
+	map(0x8000, 0x8000).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x8000, 0xffff).rom();                                 /* ROM code (only a000-ffff in Mappy) */
+}
 
-static ADDRESS_MAP_START( superpac_cpu2_map, AS_PROGRAM, 8, mappy_state )
-	AM_RANGE(0x0000, 0x03ff) AM_DEVREADWRITE("namco", namco_15xx_device, sharedram_r, sharedram_w)  /* shared RAM with the main CPU (also sound registers) */
-	AM_RANGE(0x2000, 0x200f) AM_DEVWRITE("mainlatch", ls259_device, write_a0)   /* various control bits */
-	AM_RANGE(0xe000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void mappy_state::superpac_cpu2_map(address_map &map)
+{
+	map(0x0000, 0x03ff).rw(m_namco_15xx, FUNC(namco_15xx_device::sharedram_r), FUNC(namco_15xx_device::sharedram_w));  /* shared RAM with the main CPU (also sound registers) */
+	map(0x2000, 0x200f).w("mainlatch", FUNC(ls259_device::write_a0));   /* various control bits */
+	map(0xe000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START( phozon_cpu2_map, AS_PROGRAM, 8, mappy_state )
-	AM_RANGE(0x0000, 0x03ff) AM_DEVREADWRITE("namco", namco_15xx_device, sharedram_r, sharedram_w)  /* shared RAM with the main CPU + sound registers */
-	AM_RANGE(0xe000, 0xffff) AM_ROM                                         /* ROM */
-ADDRESS_MAP_END
+void mappy_state::phozon_cpu2_map(address_map &map)
+{
+	map(0x0000, 0x03ff).rw(m_namco_15xx, FUNC(namco_15xx_device::sharedram_r), FUNC(namco_15xx_device::sharedram_w));  /* shared RAM with the main CPU + sound registers */
+	map(0xe000, 0xffff).rom();                                         /* ROM */
+}
 
-static ADDRESS_MAP_START( mappy_cpu2_map, AS_PROGRAM, 8, mappy_state )
-	AM_RANGE(0x0000, 0x03ff) AM_DEVREADWRITE("namco", namco_15xx_device, sharedram_r, sharedram_w)  /* shared RAM with the main CPU (also sound registers) */
-	AM_RANGE(0x2000, 0x200f) AM_DEVWRITE("mainlatch", ls259_device, write_a0)   /* various control bits */
-	AM_RANGE(0xe000, 0xffff) AM_ROM                                         /* ROM code */
-ADDRESS_MAP_END
+void mappy_state::mappy_cpu2_map(address_map &map)
+{
+	map(0x0000, 0x03ff).rw(m_namco_15xx, FUNC(namco_15xx_device::sharedram_r), FUNC(namco_15xx_device::sharedram_w));  /* shared RAM with the main CPU (also sound registers) */
+	map(0x2000, 0x200f).w("mainlatch", FUNC(ls259_device::write_a0));   /* various control bits */
+	map(0xe000, 0xffff).rom();                                         /* ROM code */
+}
 
 
 /* extra CPU only present in Phozon */
-static ADDRESS_MAP_START( phozon_cpu3_map, AS_PROGRAM, 8, mappy_state )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM_WRITE(superpac_videoram_w) AM_SHARE("videoram") /* video RAM */
-	AM_RANGE(0x0800, 0x1fff) AM_RAM AM_SHARE("spriteram")           /* shared RAM with CPU #2/sprite RAM*/
-	AM_RANGE(0x4000, 0x43ff) AM_DEVREADWRITE("namco", namco_15xx_device, sharedram_r, sharedram_w)  /* shared RAM with CPU #2 */
-	AM_RANGE(0xa000, 0xa7ff) AM_RAM                         /* RAM */
-	AM_RANGE(0xe000, 0xffff) AM_ROM                         /* ROM */
-ADDRESS_MAP_END
+void mappy_state::phozon_cpu3_map(address_map &map)
+{
+	map(0x0000, 0x07ff).ram().w(this, FUNC(mappy_state::superpac_videoram_w)).share("videoram"); /* video RAM */
+	map(0x0800, 0x1fff).ram().share("spriteram");           /* shared RAM with CPU #2/sprite RAM*/
+	map(0x4000, 0x43ff).rw(m_namco_15xx, FUNC(namco_15xx_device::sharedram_r), FUNC(namco_15xx_device::sharedram_w));  /* shared RAM with CPU #2 */
+	map(0xa000, 0xa7ff).ram();                         /* RAM */
+	map(0xe000, 0xffff).rom();                         /* ROM */
+}
 
 
 
@@ -1312,14 +1319,14 @@ void mappy_state::machine_start()
 }
 
 
-static MACHINE_CONFIG_START( superpac_common )
+MACHINE_CONFIG_START(mappy_state::superpac_common)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809, PIXEL_CLOCK/4)   /* 1.536 MHz */
+	MCFG_CPU_ADD("maincpu", MC6809E, PIXEL_CLOCK/4)   /* 1.536 MHz */
 	MCFG_CPU_PROGRAM_MAP(superpac_cpu1_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", mappy_state,  main_vblank_irq)    // also update the custom I/O chips
 
-	MCFG_CPU_ADD("sub", M6809, PIXEL_CLOCK/4)   /* 1.536 MHz */
+	MCFG_CPU_ADD("sub", MC6809E, PIXEL_CLOCK/4)   /* 1.536 MHz */
 	MCFG_CPU_PROGRAM_MAP(superpac_cpu2_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", mappy_state,  sub_vblank_irq)
 
@@ -1362,9 +1369,9 @@ static MACHINE_CONFIG_START( superpac_common )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( superpac )
+MACHINE_CONFIG_START(mappy_state::superpac)
 
-	MCFG_FRAGMENT_ADD(superpac_common)
+	superpac_common(config);
 
 	MCFG_DEVICE_ADD("namcoio_1", NAMCO_56XX, 0)
 	MCFG_NAMCO56XX_IN_0_CB(IOPORT("COINS"))
@@ -1380,9 +1387,9 @@ static MACHINE_CONFIG_START( superpac )
 	MCFG_NAMCO56XX_OUT_0_CB(DEVWRITELINE("dipmux", ls157_device, select_w)) MCFG_DEVCB_BIT(0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( pacnpal )
+MACHINE_CONFIG_START(mappy_state::pacnpal)
 
-	MCFG_FRAGMENT_ADD(superpac_common)
+	superpac_common(config);
 
 	MCFG_DEVICE_ADD("namcoio_1", NAMCO_56XX, 0)
 	MCFG_NAMCO56XX_IN_0_CB(IOPORT("COINS"))
@@ -1400,9 +1407,9 @@ static MACHINE_CONFIG_START( pacnpal )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( grobda )
+MACHINE_CONFIG_START(mappy_state::grobda)
 
-	MCFG_FRAGMENT_ADD(superpac_common)
+	superpac_common(config);
 
 	MCFG_DEVICE_ADD("namcoio_1", NAMCO_58XX, 0)
 	MCFG_NAMCO58XX_IN_0_CB(IOPORT("COINS"))
@@ -1424,18 +1431,18 @@ static MACHINE_CONFIG_START( grobda )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( phozon )
+MACHINE_CONFIG_START(mappy_state::phozon)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809,  PIXEL_CLOCK/4)  /* MAIN CPU */
+	MCFG_CPU_ADD("maincpu", MC6809E, PIXEL_CLOCK/4)  /* MAIN CPU */
 	MCFG_CPU_PROGRAM_MAP(phozon_cpu1_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", mappy_state,  main_vblank_irq)  // also update the custom I/O chips
 
-	MCFG_CPU_ADD("sub", M6809,  PIXEL_CLOCK/4)  /* SOUND CPU */
+	MCFG_CPU_ADD("sub", MC6809E, PIXEL_CLOCK/4)  /* SOUND CPU */
 	MCFG_CPU_PROGRAM_MAP(phozon_cpu2_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", mappy_state,  sub_vblank_irq)
 
-	MCFG_CPU_ADD("sub2", M6809, PIXEL_CLOCK/4)  /* SUB CPU */
+	MCFG_CPU_ADD("sub2", MC6809E, PIXEL_CLOCK/4)  /* SUB CPU */
 	MCFG_CPU_PROGRAM_MAP(phozon_cpu3_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", mappy_state,  sub2_vblank_irq)
 
@@ -1492,14 +1499,14 @@ static MACHINE_CONFIG_START( phozon )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( mappy_common )
+MACHINE_CONFIG_START(mappy_state::mappy_common)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809, PIXEL_CLOCK/4)   /* 1.536 MHz */
+	MCFG_CPU_ADD("maincpu", MC6809E, PIXEL_CLOCK/4)   /* 1.536 MHz */
 	MCFG_CPU_PROGRAM_MAP(mappy_cpu1_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", mappy_state,  main_vblank_irq)   // also update the custom I/O chips
 
-	MCFG_CPU_ADD("sub", M6809, PIXEL_CLOCK/4)   /* 1.536 MHz */
+	MCFG_CPU_ADD("sub", MC6809E, PIXEL_CLOCK/4)   /* 1.536 MHz */
 	MCFG_CPU_PROGRAM_MAP(mappy_cpu2_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", mappy_state,  sub_vblank_irq)
 
@@ -1542,9 +1549,9 @@ static MACHINE_CONFIG_START( mappy_common )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( mappy )
+MACHINE_CONFIG_START(mappy_state::mappy)
 
-	MCFG_FRAGMENT_ADD(mappy_common)
+	mappy_common(config);
 
 	MCFG_DEVICE_ADD("namcoio_1", NAMCO_58XX, 0)
 	MCFG_NAMCO58XX_IN_0_CB(IOPORT("COINS"))
@@ -1560,9 +1567,9 @@ static MACHINE_CONFIG_START( mappy )
 	MCFG_NAMCO58XX_OUT_0_CB(DEVWRITELINE("dipmux", ls157_device, select_w)) MCFG_DEVCB_BIT(0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( digdug2 )
+MACHINE_CONFIG_START(mappy_state::digdug2)
 
-	MCFG_FRAGMENT_ADD(mappy_common)
+	mappy_common(config);
 
 	MCFG_WATCHDOG_MODIFY("watchdog")
 	MCFG_WATCHDOG_VBLANK_INIT("screen", 0)
@@ -1581,7 +1588,8 @@ static MACHINE_CONFIG_START( digdug2 )
 	MCFG_NAMCO56XX_OUT_0_CB(DEVWRITELINE("dipmux", ls157_device, select_w)) MCFG_DEVCB_BIT(0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( todruaga, digdug2 )
+MACHINE_CONFIG_START(mappy_state::todruaga)
+	digdug2(config);
 
 	/* video hardware */
 	MCFG_GFXDECODE_MODIFY("gfxdecode", todruaga)
@@ -1589,9 +1597,9 @@ static MACHINE_CONFIG_DERIVED( todruaga, digdug2 )
 	MCFG_PALETTE_ENTRIES(64*4+64*16)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( motos )
+MACHINE_CONFIG_START(mappy_state::motos)
 
-	MCFG_FRAGMENT_ADD(mappy_common)
+	mappy_common(config);
 
 	MCFG_DEVICE_ADD("namcoio_1", NAMCO_56XX, 0)
 	MCFG_NAMCO56XX_IN_0_CB(IOPORT("COINS"))

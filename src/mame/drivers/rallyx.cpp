@@ -201,7 +201,7 @@ TODO:
 #include "screen.h"
 #include "speaker.h"
 
-#define MASTER_CLOCK    XTAL_18_432MHz
+#define MASTER_CLOCK    XTAL(18'432'000)
 
 
 /*************************************
@@ -283,43 +283,46 @@ WRITE_LINE_MEMBER(rallyx_state::coin_counter_2_w)
  *
  *************************************/
 
-static ADDRESS_MAP_START( rallyx_map, AS_PROGRAM, 8, rallyx_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x8000, 0x8fff) AM_RAM_WRITE(rallyx_videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x9800, 0x9fff) AM_RAM
-	AM_RANGE(0xa000, 0xa000) AM_READ_PORT("P1")
-	AM_RANGE(0xa080, 0xa080) AM_READ_PORT("P2")
-	AM_RANGE(0xa100, 0xa100) AM_READ_PORT("DSW")
-	AM_RANGE(0xa000, 0xa00f) AM_WRITEONLY AM_SHARE("radarattr")
-	AM_RANGE(0xa080, 0xa080) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0xa100, 0xa11f) AM_DEVWRITE("namco", namco_device, pacman_sound_w)
-	AM_RANGE(0xa130, 0xa130) AM_WRITE(rallyx_scrollx_w)
-	AM_RANGE(0xa140, 0xa140) AM_WRITE(rallyx_scrolly_w)
-	AM_RANGE(0xa170, 0xa170) AM_WRITENOP            /* ? */
-	AM_RANGE(0xa180, 0xa187) AM_DEVWRITE("mainlatch", ls259_device, write_d0)
-ADDRESS_MAP_END
+void rallyx_state::rallyx_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x8000, 0x8fff).ram().w(this, FUNC(rallyx_state::rallyx_videoram_w)).share("videoram");
+	map(0x9800, 0x9fff).ram();
+	map(0xa000, 0xa000).portr("P1");
+	map(0xa080, 0xa080).portr("P2");
+	map(0xa100, 0xa100).portr("DSW");
+	map(0xa000, 0xa00f).writeonly().share("radarattr");
+	map(0xa080, 0xa080).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0xa100, 0xa11f).w(m_namco_sound, FUNC(namco_device::pacman_sound_w));
+	map(0xa130, 0xa130).w(this, FUNC(rallyx_state::rallyx_scrollx_w));
+	map(0xa140, 0xa140).w(this, FUNC(rallyx_state::rallyx_scrolly_w));
+	map(0xa170, 0xa170).nopw();            /* ? */
+	map(0xa180, 0xa187).w("mainlatch", FUNC(ls259_device::write_d0));
+}
 
-static ADDRESS_MAP_START( io_map, AS_IO, 8, rallyx_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0, 0) AM_WRITE(rallyx_interrupt_vector_w)
-ADDRESS_MAP_END
+void rallyx_state::io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0, 0).w(this, FUNC(rallyx_state::rallyx_interrupt_vector_w));
+}
 
 
-static ADDRESS_MAP_START( jungler_map, AS_PROGRAM, 8, rallyx_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x8fff) AM_RAM_WRITE(rallyx_videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x9800, 0x9fff) AM_RAM
-	AM_RANGE(0xa000, 0xa000) AM_READ_PORT("P1")
-	AM_RANGE(0xa080, 0xa080) AM_READ_PORT("P2")
-	AM_RANGE(0xa100, 0xa100) AM_READ_PORT("DSW1")
-	AM_RANGE(0xa180, 0xa180) AM_READ_PORT("DSW2")
-	AM_RANGE(0xa000, 0xa00f) AM_MIRROR(0x00f0) AM_WRITEONLY AM_SHARE("radarattr")   // jungler writes to a03x
-	AM_RANGE(0xa080, 0xa080) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0xa100, 0xa100) AM_DEVWRITE("soundlatch", generic_latch_8_device, write)
-	AM_RANGE(0xa130, 0xa130) AM_WRITE(rallyx_scrollx_w) /* only jungler and tactcian */
-	AM_RANGE(0xa140, 0xa140) AM_WRITE(rallyx_scrolly_w) /* only jungler and tactcian */
-	AM_RANGE(0xa180, 0xa187) AM_DEVWRITE("mainlatch", ls259_device, write_d0)
-ADDRESS_MAP_END
+void rallyx_state::jungler_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x8fff).ram().w(this, FUNC(rallyx_state::rallyx_videoram_w)).share("videoram");
+	map(0x9800, 0x9fff).ram();
+	map(0xa000, 0xa000).portr("P1");
+	map(0xa080, 0xa080).portr("P2");
+	map(0xa100, 0xa100).portr("DSW1");
+	map(0xa180, 0xa180).portr("DSW2");
+	map(0xa000, 0xa00f).mirror(0x00f0).writeonly().share("radarattr");   // jungler writes to a03x
+	map(0xa080, 0xa080).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0xa100, 0xa100).w(m_timeplt_audio, FUNC(timeplt_audio_device::sound_data_w));
+	map(0xa130, 0xa130).w(this, FUNC(rallyx_state::rallyx_scrollx_w)); /* only jungler and tactcian */
+	map(0xa140, 0xa140).w(this, FUNC(rallyx_state::rallyx_scrolly_w)); /* only jungler and tactcian */
+	map(0xa180, 0xa187).w("mainlatch", FUNC(ls259_device::write_d0));
+}
 
 
 /*************************************
@@ -815,7 +818,7 @@ INTERRUPT_GEN_MEMBER(rallyx_state::jungler_vblank_irq)
 		device.execute().set_input_line(INPUT_LINE_NMI, PULSE_LINE);
 }
 
-static MACHINE_CONFIG_START( rallyx )
+MACHINE_CONFIG_START(rallyx_state::rallyx)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK/6)    /* 3.072 MHz */
@@ -868,7 +871,7 @@ static MACHINE_CONFIG_START( rallyx )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( jungler )
+MACHINE_CONFIG_START(rallyx_state::jungler)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK/6)    /* 3.072 MHz */
@@ -906,14 +909,14 @@ static MACHINE_CONFIG_START( jungler )
 	MCFG_PALETTE_INIT_OWNER(rallyx_state,jungler)
 	MCFG_VIDEO_START_OVERRIDE(rallyx_state,jungler)
 
-	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
-
 	/* sound hardware */
-	MCFG_FRAGMENT_ADD(locomotn_sound)
+	MCFG_SOUND_ADD("timeplt_audio", TIMEPLT_AUDIO, 0)
+	downcast<timeplt_audio_device *>(device)->locomotn_sound(config);
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( tactcian, jungler )
+MACHINE_CONFIG_START(rallyx_state::tactcian)
+	jungler(config);
 
 	/* basic machine hardware */
 
@@ -924,7 +927,8 @@ static MACHINE_CONFIG_DERIVED( tactcian, jungler )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( locomotn, jungler )
+MACHINE_CONFIG_START(rallyx_state::locomotn)
+	jungler(config);
 
 	/* basic machine hardware */
 
@@ -936,7 +940,8 @@ static MACHINE_CONFIG_DERIVED( locomotn, jungler )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( commsega, jungler )
+MACHINE_CONFIG_START(rallyx_state::commsega)
+	jungler(config);
 
 	/* basic machine hardware */
 
@@ -1062,18 +1067,18 @@ ROM_END
 
 ROM_START( dngrtrck ) // PROMs weren't dumped for this PCB, supposed to match
 	ROM_REGION( 0x10000, "maincpu", 0 )
-	ROM_LOAD( "1B-2716.BIN",      0x0000, 0x0800, CRC(b6180a12) SHA1(f442fe81f7fac6e915944640c763d7016a6577f6) )
-	ROM_LOAD( "1C-2716.BIN",      0x0800, 0x0800, CRC(7cbeb656) SHA1(ff6e669f7d3e91c1cc835106cccefcd81aa28bb8) )
-	ROM_LOAD( "1D-2716.BIN",      0x1000, 0x0800, CRC(594207b1) SHA1(addea746e2378c44c06d6d18d466138946a339cf) )
-	ROM_LOAD( "1E-2716.BIN",      0x1800, 0x0800, CRC(ae447251) SHA1(7c86193c9418929662b35143c66a5dff44663dd7) )
-	ROM_LOAD( "1H-2716.BIN",      0x2000, 0x0800, CRC(e0d4b534) SHA1(fb64b21c418a2633d592f4476aed909ea6678fb2) )
-	ROM_LOAD( "1J-2716.BIN",      0x2800, 0x0800, CRC(e9740f16) SHA1(02a134ccd3d6557d46492747b04da02e933aa6b4) )
-	ROM_LOAD( "1K-2716.BIN",      0x3000, 0x0800, CRC(843109f2) SHA1(7241d1025f249d23a0d15b5e31fdb2f5297ffbf4) )
-	ROM_LOAD( "1L-2716.BIN",      0x3800, 0x0800, CRC(17759749) SHA1(8169eebcb02615b99f786f6c5294eb31a8d1911b) )
+	ROM_LOAD( "1b-2716.bin",      0x0000, 0x0800, CRC(b6180a12) SHA1(f442fe81f7fac6e915944640c763d7016a6577f6) )
+	ROM_LOAD( "1c-2716.bin",      0x0800, 0x0800, CRC(7cbeb656) SHA1(ff6e669f7d3e91c1cc835106cccefcd81aa28bb8) )
+	ROM_LOAD( "1d-2716.bin",      0x1000, 0x0800, CRC(594207b1) SHA1(addea746e2378c44c06d6d18d466138946a339cf) )
+	ROM_LOAD( "1e-2716.bin",      0x1800, 0x0800, CRC(ae447251) SHA1(7c86193c9418929662b35143c66a5dff44663dd7) )
+	ROM_LOAD( "1h-2716.bin",      0x2000, 0x0800, CRC(e0d4b534) SHA1(fb64b21c418a2633d592f4476aed909ea6678fb2) )
+	ROM_LOAD( "1j-2716.bin",      0x2800, 0x0800, CRC(e9740f16) SHA1(02a134ccd3d6557d46492747b04da02e933aa6b4) )
+	ROM_LOAD( "1k-2716.bin",      0x3000, 0x0800, CRC(843109f2) SHA1(7241d1025f249d23a0d15b5e31fdb2f5297ffbf4) )
+	ROM_LOAD( "1l-2716.bin",      0x3800, 0x0800, CRC(17759749) SHA1(8169eebcb02615b99f786f6c5294eb31a8d1911b) )
 
 	ROM_REGION( 0x1000, "gfx1", 0 )
-	ROM_LOAD( "8E-2716.BIN",      0x0000, 0x0800, CRC(50a224e2) SHA1(33da1bdc33f085d19ae2c482747c509cf9441674) )
-	ROM_LOAD( "8D-2716.BIN",      0x0800, 0x0800, CRC(68dff552) SHA1(5dad38db45afbd79b5627a75b295fc920ad68856) )
+	ROM_LOAD( "8e-2716.bin",      0x0000, 0x0800, CRC(50a224e2) SHA1(33da1bdc33f085d19ae2c482747c509cf9441674) )
+	ROM_LOAD( "8d-2716.bin",      0x0800, 0x0800, CRC(68dff552) SHA1(5dad38db45afbd79b5627a75b295fc920ad68856) )
 
 	ROM_REGION( 0x0100, "gfx2", 0 )
 	ROM_LOAD( "rx1-6.8m",     0x0000, 0x0100, CRC(3c16f62c) SHA1(7a3800be410e306cf85753b9953ffc5575afbcd6) )  /* Prom type: IM5623    - dots */
@@ -1149,7 +1154,7 @@ ROM_START( jungler )
 	ROM_LOAD( "jungr3",       0x2000, 0x1000, CRC(3dcc03da) SHA1(2c328a46511c4c9eec6515b9316a586de6503152) )
 	ROM_LOAD( "jungr4",       0x3000, 0x1000, CRC(f92e9940) SHA1(d72a4d0a0ab7c9a1dcbb7925eb8530052640a234) )
 
-	ROM_REGION( 0x10000, "tpsound", 0 )
+	ROM_REGION( 0x10000, "timeplt_audio:tpsound", 0 )
 	ROM_LOAD( "1b",           0x0000, 0x1000, CRC(f86999c3) SHA1(4660bd7826219b1bad7d9178918823196d4fd8d6) )
 
 	ROM_REGION( 0x1000, "gfx1", 0 )
@@ -1173,7 +1178,7 @@ ROM_START( junglers )
 	ROM_LOAD( "4d",           0x2000, 0x1000, CRC(557c7925) SHA1(84d8eb2fdb7ee9098805be9f457a37f51e4bc3b8) )
 	ROM_LOAD( "4c",           0x3000, 0x1000, CRC(51aac9a5) SHA1(2c8a24b4ce8cec96c6e09332f3f63bd7d25ae4c6) )
 
-	ROM_REGION( 0x10000, "tpsound", 0 )
+	ROM_REGION( 0x10000, "timeplt_audio:tpsound", 0 )
 	ROM_LOAD( "1b",           0x0000, 0x1000, CRC(f86999c3) SHA1(4660bd7826219b1bad7d9178918823196d4fd8d6) )
 
 	ROM_REGION( 0x1000, "gfx1", 0 )
@@ -1197,7 +1202,7 @@ ROM_START( jackler ) /* Board ID SL-HA-2061-21-B */
 	ROM_LOAD( "jungr3",       0x2000, 0x1000, CRC(3dcc03da) SHA1(2c328a46511c4c9eec6515b9316a586de6503152) ) // jackler_j2.r2
 	ROM_LOAD( "jungr4",       0x3000, 0x1000, CRC(f92e9940) SHA1(d72a4d0a0ab7c9a1dcbb7925eb8530052640a234) ) // jackler_j3.r3
 
-	ROM_REGION( 0x10000, "tpsound", 0 )
+	ROM_REGION( 0x10000, "timeplt_audio:tpsound", 0 )
 	ROM_LOAD( "1b",           0x0000, 0x1000, CRC(f86999c3) SHA1(4660bd7826219b1bad7d9178918823196d4fd8d6) ) // jackler_j7_sound.1b
 
 	ROM_REGION( 0x1800, "gfx1", 0 )
@@ -1221,7 +1226,7 @@ ROM_START( savanna )
 	ROM_LOAD( "sav3.bin",     0x2000, 0x1000, CRC(557c7925) SHA1(84d8eb2fdb7ee9098805be9f457a37f51e4bc3b8) )
 	ROM_LOAD( "sav4.bin",     0x3000, 0x1000, CRC(b38b6cbd) SHA1(76ab41097bceb3d73c95ab8a89df702e554ba403) )
 
-	ROM_REGION( 0x10000, "tpsound", 0 )
+	ROM_REGION( 0x10000, "timeplt_audio:tpsound", 0 )
 	ROM_LOAD( "1b",           0x0000, 0x1000, CRC(f86999c3) SHA1(4660bd7826219b1bad7d9178918823196d4fd8d6) )
 
 	ROM_REGION( 0x1000, "gfx1", 0 )
@@ -1247,7 +1252,7 @@ ROM_START( tactcian )
 	ROM_LOAD( "tacticia.005", 0x4000, 0x1000, CRC(76456106) SHA1(580428f3c8cf442ee5c0f56db973644229aa8093) )
 	ROM_LOAD( "tacticia.006", 0x5000, 0x1000, CRC(b33ca9ea) SHA1(0299c1cb9a3c6368bbbacb60c6f5c6854035a7bf) )
 
-	ROM_REGION( 0x10000, "tpsound", 0 )
+	ROM_REGION( 0x10000, "timeplt_audio:tpsound", 0 )
 	ROM_LOAD( "tacticia.s2",  0x0000, 0x1000, CRC(97d145a7) SHA1(7aee9004287590a25e153d45b95dfaac89fbe996) )
 	ROM_LOAD( "tacticia.s1",  0x1000, 0x1000, CRC(067f781b) SHA1(640bc7813c239e497644e53a080d81366fcd04df) )
 
@@ -1274,7 +1279,7 @@ ROM_START( tactcian2 )
 	ROM_LOAD( "tan5",         0x4000, 0x1000, CRC(1dae4c61) SHA1(70283b8412b0725f1c2acc281625c582a4fae39d) )
 	ROM_LOAD( "tan6",         0x5000, 0x1000, CRC(2b36a18d) SHA1(bea8f36ec98975438ab267509bd9d1d1eb605945) )
 
-	ROM_REGION( 0x10000, "tpsound", 0 )
+	ROM_REGION( 0x10000, "timeplt_audio:tpsound", 0 )
 	/* sound ROMs were missing - using the ones from the other set */
 	ROM_LOAD( "tacticia.s2",  0x0000, 0x1000, CRC(97d145a7) SHA1(7aee9004287590a25e153d45b95dfaac89fbe996) )
 	ROM_LOAD( "tacticia.s1",  0x1000, 0x1000, CRC(067f781b) SHA1(640bc7813c239e497644e53a080d81366fcd04df) )
@@ -1301,7 +1306,7 @@ ROM_START( locomotn )
 	ROM_LOAD( "4.cpu",        0x3000, 0x1000, CRC(caf6431c) SHA1(f013d8846fad9f64367b69febeb7512029a639c0) )
 	ROM_LOAD( "5.cpu",        0x4000, 0x1000, CRC(64cf8dd6) SHA1(8fa1b5c4a7f136cb74833425a565fa558eeee083) )
 
-	ROM_REGION( 0x10000, "tpsound", 0 )
+	ROM_REGION( 0x10000, "timeplt_audio:tpsound", 0 )
 	ROM_LOAD( "1b_s1.bin",    0x0000, 0x1000, CRC(a1105714) SHA1(6e2e264748ab90bc5e8e8167f17ff91677ef6ae7) )
 
 	ROM_REGION( 0x2000, "gfx1", 0 )
@@ -1326,7 +1331,7 @@ ROM_START( gutangtn )
 	ROM_LOAD( "3h_4.bin",     0x3000, 0x1000, CRC(aa258ddf) SHA1(0f01ac0d72d8bb5a55c91a6fba3e55ed1c038b86) )
 	ROM_LOAD( "3j_5.bin",     0x4000, 0x1000, CRC(52aec87e) SHA1(6516724c4e570972f070f6dab5b066ea92f56be0) )
 
-	ROM_REGION( 0x10000, "tpsound", 0 )
+	ROM_REGION( 0x10000, "timeplt_audio:tpsound", 0 )
 	ROM_LOAD( "1b_s1.bin",    0x0000, 0x1000, CRC(a1105714) SHA1(6e2e264748ab90bc5e8e8167f17ff91677ef6ae7) )
 
 	ROM_REGION( 0x2000, "gfx1", 0 )
@@ -1350,7 +1355,7 @@ ROM_START( cottong )
 	ROM_LOAD( "c3",           0x2000, 0x1000, CRC(01f909fe) SHA1(c80295e9f91ce25bfd28e72823b20ee6f6524a5c) )
 	ROM_LOAD( "c4",           0x3000, 0x1000, CRC(a89eb3e3) SHA1(058928ade909faba06f177750f914cf1dabaefc3) )
 
-	ROM_REGION( 0x10000, "tpsound", 0 )
+	ROM_REGION( 0x10000, "timeplt_audio:tpsound", 0 )
 	ROM_LOAD( "c7",           0x0000, 0x1000, CRC(3d83f6d3) SHA1(e10ed6b6ce7280697c1bc9dbe6c6e6018e1d8be4) )
 	ROM_LOAD( "c8",           0x1000, 0x1000, CRC(323e1937) SHA1(75499d6c8a9032fac090a13cd4f36bd350f52dab) )
 
@@ -1380,7 +1385,7 @@ ROM_START( locoboot )
 	   and the program roms appear to be a hack of that
 	*/
 
-	ROM_REGION( 0x10000, "tpsound", 0 )
+	ROM_REGION( 0x10000, "timeplt_audio:tpsound", 0 )
 	ROM_LOAD( "c7",           0x0000, 0x1000, CRC(3d83f6d3) SHA1(e10ed6b6ce7280697c1bc9dbe6c6e6018e1d8be4) )
 	ROM_LOAD( "c8",           0x1000, 0x1000, CRC(323e1937) SHA1(75499d6c8a9032fac090a13cd4f36bd350f52dab) )
 
@@ -1406,7 +1411,7 @@ ROM_START( commsega )
 	ROM_LOAD( "csega4",       0x3000, 0x1000, CRC(e0ac69b4) SHA1(3a52b2a6204b7310cfe321c582352b437de16660) )
 	ROM_LOAD( "csega5",       0x4000, 0x1000, CRC(bc56ebd0) SHA1(a178cd5ba381b107e720e18f3549247477037998) )
 
-	ROM_REGION( 0x10000, "tpsound", 0 )
+	ROM_REGION( 0x10000, "timeplt_audio:tpsound", 0 )
 	ROM_LOAD( "csega8",       0x0000, 0x1000, CRC(588b4210) SHA1(43bac1bdac721567e4b5d56e9e4488165872bd6a) )
 
 	ROM_REGION( 0x2000, "gfx1", 0 )

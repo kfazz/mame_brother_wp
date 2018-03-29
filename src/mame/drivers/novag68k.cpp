@@ -50,6 +50,8 @@ public:
 	DECLARE_WRITE8_MEMBER(diablo68k_leds_w);
 	DECLARE_READ8_MEMBER(diablo68k_input1_r);
 	DECLARE_READ8_MEMBER(diablo68k_input2_r);
+	void diablo68k_map(address_map &map);
+	void diablo68k(machine_config &config);
 };
 
 
@@ -110,17 +112,19 @@ READ8_MEMBER(novag68k_state::diablo68k_input2_r)
 
 // Diablo 68000
 
-static ADDRESS_MAP_START( diablo68k_map, AS_PROGRAM, 16, novag68k_state )
-	AM_RANGE(0x000000, 0x00ffff) AM_ROM
-	AM_RANGE(0x200000, 0x20ffff) AM_ROM AM_REGION("maincpu", 0x10000)
-	AM_RANGE(0x280000, 0x28ffff) AM_RAM
-	AM_RANGE(0x300000, 0x300007) AM_DEVREADWRITE8("acia", mos6551_device, read, write, 0xff00)
-	AM_RANGE(0x380000, 0x380001) AM_WRITE8(diablo68k_leds_w, 0xff00) AM_READNOP
-	AM_RANGE(0x3a0000, 0x3a0001) AM_WRITE8(diablo68k_lcd_data_w, 0xff00)
-	AM_RANGE(0x3c0000, 0x3c0001) AM_READWRITE8(diablo68k_input2_r, diablo68k_control_w, 0xff00)
-	AM_RANGE(0x3e0000, 0x3e0001) AM_READ8(diablo68k_input1_r, 0xff00)
-	AM_RANGE(0xff8000, 0xffbfff) AM_RAM AM_SHARE("nvram")
-ADDRESS_MAP_END
+void novag68k_state::diablo68k_map(address_map &map)
+{
+	map(0x000000, 0x00ffff).rom();
+	map(0x200000, 0x20ffff).rom().region("maincpu", 0x10000);
+	map(0x280000, 0x28ffff).ram();
+	map(0x300000, 0x300007).rw("acia", FUNC(mos6551_device::read), FUNC(mos6551_device::write)).umask16(0xff00);
+	map(0x380000, 0x380001).nopr();
+	map(0x380000, 0x380000).w(this, FUNC(novag68k_state::diablo68k_leds_w));
+	map(0x3a0000, 0x3a0000).w(this, FUNC(novag68k_state::diablo68k_lcd_data_w));
+	map(0x3c0000, 0x3c0000).rw(this, FUNC(novag68k_state::diablo68k_input2_r), FUNC(novag68k_state::diablo68k_control_w));
+	map(0x3e0000, 0x3e0000).r(this, FUNC(novag68k_state::diablo68k_input1_r));
+	map(0xff8000, 0xffbfff).ram().share("nvram");
+}
 
 
 
@@ -178,15 +182,15 @@ INPUT_PORTS_END
     Machine Drivers
 ******************************************************************************/
 
-static MACHINE_CONFIG_START( diablo68k )
+MACHINE_CONFIG_START(novag68k_state::diablo68k)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M68000, XTAL_16MHz)
+	MCFG_CPU_ADD("maincpu", M68000, 16_MHz_XTAL)
 	MCFG_CPU_PERIODIC_INT_DRIVER(novag68k_state, irq2_line_hold, 256) // guessed
 	MCFG_CPU_PROGRAM_MAP(diablo68k_map)
 
 	MCFG_DEVICE_ADD("acia", MOS6551, 0)
-	MCFG_MOS6551_XTAL(XTAL_1_8432MHz)
+	MCFG_MOS6551_XTAL(1.8432_MHz_XTAL)
 
 	MCFG_NVRAM_ADD_0FILL("nvram")
 

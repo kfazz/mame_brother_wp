@@ -26,6 +26,7 @@
 ***************************************************************************/
 
 #include "emu.h"
+#include "coco_orch90.h"
 #include "cococart.h"
 
 #include "sound/dac.h"
@@ -39,7 +40,7 @@
 
 ROM_START(coco_orch90)
 	ROM_REGION(0x2000, "eprom", ROMREGION_ERASE00)
-	ROM_LOAD("orchestra 90 (1984)(26 - 3143)(tandy).rom", 0x0000, 0x2000, CRC(15fb39af) SHA1(6a20fee9c70b36a6435ac8378f31d5b626017df0))
+	ROM_LOAD("orchestra 90,1984,26 - 3143,tandy.rom", 0x0000, 0x2000, CRC(15fb39af) SHA1(6a20fee9c70b36a6435ac8378f31d5b626017df0))
 ROM_END
 
 
@@ -106,7 +107,7 @@ namespace
 //  MACHINE AND ROM DECLARATIONS
 //**************************************************************************
 
-MACHINE_CONFIG_MEMBER(coco_orch90_device::device_add_mconfig)
+MACHINE_CONFIG_START(coco_orch90_device::device_add_mconfig)
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 	MCFG_SOUND_ADD("ldac", DAC_8BIT_R2R, 0) MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.5) // ls374.ic5 + r7 (8x20k) + r9 (8x10k)
 	MCFG_SOUND_ADD("rdac", DAC_8BIT_R2R, 0) MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.5) // ls374.ic4 + r6 (8x20k) + r8 (8x10k)

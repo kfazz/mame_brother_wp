@@ -44,6 +44,7 @@ ToDo:
 #include "machine/genpin.h"
 
 #include "cpu/m6800/m6801.h"
+#include "machine/timer.h"
 #include "sound/ay8910.h"
 #include "speaker.h"
 
@@ -72,6 +73,11 @@ public:
 	DECLARE_WRITE8_MEMBER(count_reset_w);
 	DECLARE_INPUT_CHANGED_MEMBER(ficha);
 	TIMER_DEVICE_CALLBACK_MEMBER(timer_r);
+	void ltd4(machine_config &config);
+	void ltd3(machine_config &config);
+	void ltd3_map(address_map &map);
+	void ltd4_io(address_map &map);
+	void ltd4_map(address_map &map);
 private:
 	bool m_timer_r;
 	bool m_clear;
@@ -86,32 +92,35 @@ private:
 };
 
 
-static ADDRESS_MAP_START( ltd3_map, AS_PROGRAM, 8, ltd_state )
-	AM_RANGE(0x0000, 0x007f) AM_RAM AM_SHARE("nvram") // internal to the cpu
-	AM_RANGE(0x0080, 0x0087) AM_MIRROR(0x78) AM_READ(io_r)
-	AM_RANGE(0x0800, 0x2fff) AM_WRITE(io_w)
-	AM_RANGE(0xc000, 0xcfff) AM_ROM AM_MIRROR(0x3000) AM_REGION("roms", 0)
-ADDRESS_MAP_END
+void ltd_state::ltd3_map(address_map &map)
+{
+	map(0x0000, 0x007f).ram().share("nvram"); // internal to the cpu
+	map(0x0080, 0x0087).mirror(0x78).r(this, FUNC(ltd_state::io_r));
+	map(0x0800, 0x2fff).w(this, FUNC(ltd_state::io_w));
+	map(0xc000, 0xcfff).rom().mirror(0x3000).region("roms", 0);
+}
 
-static ADDRESS_MAP_START( ltd4_map, AS_PROGRAM, 8, ltd_state )
-	AM_RANGE(0x0000, 0x001f) AM_RAM // internal to the cpu
-	AM_RANGE(0x0080, 0x00ff) AM_RAM
-	AM_RANGE(0x0100, 0x01ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x0800, 0x0800) AM_WRITE(count_reset_w)
-	AM_RANGE(0x0c00, 0x0c00) AM_DEVWRITE("aysnd_1", ay8910_device, reset_w)
-	AM_RANGE(0x1000, 0x1000) AM_DEVWRITE("aysnd_0", ay8910_device, address_w)
-	AM_RANGE(0x1400, 0x1400) AM_DEVWRITE("aysnd_0", ay8910_device, reset_w)
-	AM_RANGE(0x1800, 0x1800) AM_DEVWRITE("aysnd_1", ay8910_device, address_w)
+void ltd_state::ltd4_map(address_map &map)
+{
+	map(0x0000, 0x001f).ram(); // internal to the cpu
+	map(0x0080, 0x00ff).ram();
+	map(0x0100, 0x01ff).ram().share("nvram");
+	map(0x0800, 0x0800).w(this, FUNC(ltd_state::count_reset_w));
+	map(0x0c00, 0x0c00).w("aysnd_1", FUNC(ay8910_device::reset_w));
+	map(0x1000, 0x1000).w("aysnd_0", FUNC(ay8910_device::address_w));
+	map(0x1400, 0x1400).w("aysnd_0", FUNC(ay8910_device::reset_w));
+	map(0x1800, 0x1800).w("aysnd_1", FUNC(ay8910_device::address_w));
 	//AM_RANGE(0x2800, 0x2800) AM_WRITE(auxlamps_w)
-	AM_RANGE(0x3000, 0x3000) AM_DEVWRITE("aysnd_0", ay8910_device, data_w)
-	AM_RANGE(0x3800, 0x3800) AM_DEVWRITE("aysnd_1", ay8910_device, data_w)
-	AM_RANGE(0xc000, 0xdfff) AM_ROM AM_MIRROR(0x2000) AM_REGION("roms", 0)
-ADDRESS_MAP_END
+	map(0x3000, 0x3000).w("aysnd_0", FUNC(ay8910_device::data_w));
+	map(0x3800, 0x3800).w("aysnd_1", FUNC(ay8910_device::data_w));
+	map(0xc000, 0xdfff).rom().mirror(0x2000).region("roms", 0);
+}
 
-static ADDRESS_MAP_START( ltd4_io, AS_IO, 8, ltd_state )
-	AM_RANGE(0x0100, 0x0100) AM_READWRITE(port1_r,port1_w)
-	AM_RANGE(0x0101, 0x0101) AM_READWRITE(port2_r,port2_w)
-ADDRESS_MAP_END
+void ltd_state::ltd4_io(address_map &map)
+{
+	map(0x0100, 0x0100).rw(this, FUNC(ltd_state::port1_r), FUNC(ltd_state::port1_w));
+	map(0x0101, 0x0101).rw(this, FUNC(ltd_state::port2_r), FUNC(ltd_state::port2_w));
+}
 
 // bits 6,7 not connected to data bus
 // 1=does something in Atlantis; 2=does something in Black Hole; note that sometimes pressing G or H will reboot the machine.
@@ -305,7 +314,7 @@ WRITE8_MEMBER( ltd_state::port1_w )
 	if (m_port2 & 0x10)
 	{
 		uint8_t row = m_digit & 15;
-		uint8_t segment = BITSWAP8(data, 7, 0, 1, 2, 3, 4, 5, 6);
+		uint8_t segment = bitswap<8>(data, 7, 0, 1, 2, 3, 4, 5, 6);
 
 		switch (m_counter)
 		{
@@ -515,9 +524,9 @@ TIMER_DEVICE_CALLBACK_MEMBER( ltd_state::timer_r )
 	}
 }
 
-static MACHINE_CONFIG_START( ltd3 )
+MACHINE_CONFIG_START(ltd_state::ltd3)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6802, XTAL_3_579545MHz)
+	MCFG_CPU_ADD("maincpu", M6802, XTAL(3'579'545))
 	MCFG_CPU_PROGRAM_MAP(ltd3_map)
 
 	MCFG_NVRAM_ADD_0FILL("nvram")
@@ -526,14 +535,14 @@ static MACHINE_CONFIG_START( ltd3 )
 	MCFG_DEFAULT_LAYOUT(layout_ltd)
 
 	/* Sound */
-	MCFG_FRAGMENT_ADD( genpin_audio )
+	genpin_audio(config);
 
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("timer_r", ltd_state, timer_r, attotime::from_hz(500))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( ltd4 )
+MACHINE_CONFIG_START(ltd_state::ltd4)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6803, XTAL_3_579545MHz) // guess, no details available
+	MCFG_CPU_ADD("maincpu", M6803, XTAL(3'579'545)) // guess, no details available
 	MCFG_CPU_PROGRAM_MAP(ltd4_map)
 	MCFG_CPU_IO_MAP(ltd4_io)
 
@@ -543,12 +552,12 @@ static MACHINE_CONFIG_START( ltd4 )
 	MCFG_DEFAULT_LAYOUT(layout_ltd)
 
 	/* Sound */
-	MCFG_FRAGMENT_ADD( genpin_audio )
+	genpin_audio(config);
 
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("aysnd_0", AY8910, XTAL_3_579545MHz/2) /* guess */
+	MCFG_SOUND_ADD("aysnd_0", AY8910, XTAL(3'579'545)/2) /* guess */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.3)
-	MCFG_SOUND_ADD("aysnd_1", AY8910, XTAL_3_579545MHz/2) /* guess */
+	MCFG_SOUND_ADD("aysnd_1", AY8910, XTAL(3'579'545)/2) /* guess */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.3)
 MACHINE_CONFIG_END
 

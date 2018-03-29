@@ -5,6 +5,7 @@
  *
  */
 
+#include "machine/timer.h"
 #include "video/segaic24.h"
 #include "sound/dac.h"
 #include "screen.h"
@@ -102,7 +103,6 @@ public:
 	DECLARE_WRITE8_MEMBER( frc_w );
 	DECLARE_READ16_MEMBER(  mlatch_r );
 	DECLARE_WRITE16_MEMBER( mlatch_w );
-	DECLARE_READ8_MEMBER(   dials_r );
 	DECLARE_READ16_MEMBER(  iod_r );
 	DECLARE_WRITE16_MEMBER( iod_w );
 
@@ -154,4 +154,19 @@ public:
 	optional_ioport m_paddle;
 	optional_ioport_array<4> m_dials;
 	optional_ioport_array<8> m_mj_inputs;
+	void mahmajn(machine_config &config);
+	void system24_floppy_fd_upd(machine_config &config);
+	void system24_floppy(machine_config &config);
+	void system24_floppy_fd1094(machine_config &config);
+	void dcclub(machine_config &config);
+	void system24_floppy_dcclub(machine_config &config);
+	void system24_floppy_hotrod(machine_config &config);
+	void system24(machine_config &config);
+	void decrypted_opcodes_map(address_map &map);
+	void hotrod_cpu1_map(address_map &map);
+	void hotrod_cpu2_map(address_map &map);
+	void roughrac_cpu1_map(address_map &map);
+	void roughrac_cpu2_map(address_map &map);
+	void system24_cpu1_map(address_map &map);
+	void system24_cpu2_map(address_map &map);
 };

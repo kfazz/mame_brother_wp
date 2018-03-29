@@ -99,6 +99,9 @@ public:
 	uint32_t screen_update_m14(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	INTERRUPT_GEN_MEMBER(m14_irq);
 
+	void m14(machine_config &config);
+	void m14_io_map(address_map &map);
+	void m14_map(address_map &map);
 private:
 	/* video-related */
 	tilemap_t  *m_m14_tilemap;
@@ -297,21 +300,23 @@ WRITE8_MEMBER(m14_state::sound_w)
  *
  *************************************/
 
-static ADDRESS_MAP_START( m14_map, AS_PROGRAM, 8, m14_state )
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x2000, 0x23ff) AM_RAM
-	AM_RANGE(0xe000, 0xe3ff) AM_RAM_WRITE(m14_vram_w) AM_SHARE("video_ram")
-	AM_RANGE(0xe400, 0xe7ff) AM_RAM_WRITE(m14_cram_w) AM_SHARE("color_ram")
-ADDRESS_MAP_END
+void m14_state::m14_map(address_map &map)
+{
+	map(0x0000, 0x1fff).rom();
+	map(0x2000, 0x23ff).ram();
+	map(0xe000, 0xe3ff).ram().w(this, FUNC(m14_state::m14_vram_w)).share("video_ram");
+	map(0xe400, 0xe7ff).ram().w(this, FUNC(m14_state::m14_cram_w)).share("color_ram");
+}
 
-static ADDRESS_MAP_START( m14_io_map, AS_IO, 8, m14_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0xf8, 0xf8) AM_READ_PORT("AN_PADDLE") AM_WRITE(ball_x_w)
-	AM_RANGE(0xf9, 0xf9) AM_READ_PORT("IN0") AM_WRITE(ball_y_w)
-	AM_RANGE(0xfa, 0xfa) AM_READ(m14_rng_r) AM_WRITE(paddle_x_w)
-	AM_RANGE(0xfb, 0xfb) AM_READ_PORT("DSW") AM_WRITE(output_w)
-	AM_RANGE(0xfc, 0xfc) AM_WRITE(sound_w)
-ADDRESS_MAP_END
+void m14_state::m14_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0xf8, 0xf8).portr("AN_PADDLE").w(this, FUNC(m14_state::ball_x_w));
+	map(0xf9, 0xf9).portr("IN0").w(this, FUNC(m14_state::ball_y_w));
+	map(0xfa, 0xfa).r(this, FUNC(m14_state::m14_rng_r)).w(this, FUNC(m14_state::paddle_x_w));
+	map(0xfb, 0xfb).portr("DSW").w(this, FUNC(m14_state::output_w));
+	map(0xfc, 0xfc).w(this, FUNC(m14_state::sound_w));
+}
 
 /*************************************
  *
@@ -424,7 +429,7 @@ void m14_state::machine_reset()
 }
 
 
-static MACHINE_CONFIG_START( m14 )
+MACHINE_CONFIG_START(m14_state::m14)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu",I8085A,6000000) //guess: 6 Mhz internally divided by 2

@@ -76,13 +76,14 @@ Dip locations and factory settings verified with China Gate US manual.
 #include "cpu/m6809/m6809.h"
 #include "cpu/mcs48/mcs48.h"
 #include "cpu/z80/z80.h"
+#include "machine/timer.h"
 #include "sound/2203intf.h"
 #include "sound/okim6295.h"
 #include "sound/ym2151.h"
 #include "speaker.h"
 
 
-#define MAIN_CLOCK      XTAL_12MHz
+#define MAIN_CLOCK      XTAL(12'000'000)
 #define PIXEL_CLOCK     MAIN_CLOCK / 2
 
 class chinagat_state : public ddragon_state
@@ -110,6 +111,15 @@ public:
 	DECLARE_READ_LINE_MEMBER(saiyugoub1_m5205_irq_r);
 	DECLARE_WRITE_LINE_MEMBER(saiyugoub1_m5205_irq_w);
 	optional_device<msm5205_device> m_adpcm;
+	void saiyugoub2(machine_config &config);
+	void saiyugoub1(machine_config &config);
+	void chinagat(machine_config &config);
+	void i8748_map(address_map &map);
+	void main_map(address_map &map);
+	void saiyugoub1_sound_map(address_map &map);
+	void sound_map(address_map &map);
+	void sub_map(address_map &map);
+	void ym2203c_sound_map(address_map &map);
 };
 
 
@@ -324,75 +334,81 @@ WRITE_LINE_MEMBER(chinagat_state::saiyugoub1_m5205_irq_w)
 	m_adpcm_sound_irq = 1;
 }
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 8, chinagat_state )
-	AM_RANGE(0x0000, 0x1fff) AM_RAM AM_SHARE("share1")
-	AM_RANGE(0x2000, 0x27ff) AM_RAM_WRITE(ddragon_fgvideoram_w) AM_SHARE("fgvideoram")
-	AM_RANGE(0x2800, 0x2fff) AM_RAM_WRITE(ddragon_bgvideoram_w) AM_SHARE("bgvideoram")
-	AM_RANGE(0x3000, 0x317f) AM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0x3400, 0x357f) AM_DEVWRITE("palette", palette_device, write_ext) AM_SHARE("palette_ext")
-	AM_RANGE(0x3800, 0x397f) AM_WRITE_BANK("bank3") AM_SHARE("spriteram")
-	AM_RANGE(0x3e00, 0x3e04) AM_WRITE(interrupt_w)
-	AM_RANGE(0x3e06, 0x3e06) AM_WRITEONLY AM_SHARE("scrolly_lo")
-	AM_RANGE(0x3e07, 0x3e07) AM_WRITEONLY AM_SHARE("scrollx_lo")
-	AM_RANGE(0x3f00, 0x3f00) AM_WRITE(video_ctrl_w)
-	AM_RANGE(0x3f01, 0x3f01) AM_WRITE(bankswitch_w)
-	AM_RANGE(0x3f00, 0x3f00) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0x3f01, 0x3f01) AM_READ_PORT("DSW1")
-	AM_RANGE(0x3f02, 0x3f02) AM_READ_PORT("DSW2")
-	AM_RANGE(0x3f03, 0x3f03) AM_READ_PORT("P1")
-	AM_RANGE(0x3f04, 0x3f04) AM_READ_PORT("P2")
-	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("bank1")
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void chinagat_state::main_map(address_map &map)
+{
+	map(0x0000, 0x1fff).ram().share("share1");
+	map(0x2000, 0x27ff).ram().w(this, FUNC(chinagat_state::ddragon_fgvideoram_w)).share("fgvideoram");
+	map(0x2800, 0x2fff).ram().w(this, FUNC(chinagat_state::ddragon_bgvideoram_w)).share("bgvideoram");
+	map(0x3000, 0x317f).w(m_palette, FUNC(palette_device::write8)).share("palette");
+	map(0x3400, 0x357f).w(m_palette, FUNC(palette_device::write8_ext)).share("palette_ext");
+	map(0x3800, 0x397f).bankw("bank3").share("spriteram");
+	map(0x3e00, 0x3e04).w(this, FUNC(chinagat_state::interrupt_w));
+	map(0x3e06, 0x3e06).writeonly().share("scrolly_lo");
+	map(0x3e07, 0x3e07).writeonly().share("scrollx_lo");
+	map(0x3f00, 0x3f00).w(this, FUNC(chinagat_state::video_ctrl_w));
+	map(0x3f01, 0x3f01).w(this, FUNC(chinagat_state::bankswitch_w));
+	map(0x3f00, 0x3f00).portr("SYSTEM");
+	map(0x3f01, 0x3f01).portr("DSW1");
+	map(0x3f02, 0x3f02).portr("DSW2");
+	map(0x3f03, 0x3f03).portr("P1");
+	map(0x3f04, 0x3f04).portr("P2");
+	map(0x4000, 0x7fff).bankr("bank1");
+	map(0x8000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START( sub_map, AS_PROGRAM, 8, chinagat_state )
-	AM_RANGE(0x0000, 0x1fff) AM_RAM AM_SHARE("share1")
-	AM_RANGE(0x2000, 0x2000) AM_WRITE(sub_bankswitch_w)
-	AM_RANGE(0x2800, 0x2800) AM_WRITE(sub_irq_ack_w) /* Called on CPU start and after return from jump table */
+void chinagat_state::sub_map(address_map &map)
+{
+	map(0x0000, 0x1fff).ram().share("share1");
+	map(0x2000, 0x2000).w(this, FUNC(chinagat_state::sub_bankswitch_w));
+	map(0x2800, 0x2800).w(this, FUNC(chinagat_state::sub_irq_ack_w)); /* Called on CPU start and after return from jump table */
 //  AM_RANGE(0x2a2b, 0x2a2b) AM_READNOP /* What lives here? */
 //  AM_RANGE(0x2a30, 0x2a30) AM_READNOP /* What lives here? */
-	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("bank4")
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+	map(0x4000, 0x7fff).bankr("bank4");
+	map(0x8000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START( sound_map, AS_PROGRAM, 8, chinagat_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM
-	AM_RANGE(0x8800, 0x8801) AM_DEVREADWRITE("ymsnd", ym2151_device, read, write)
-	AM_RANGE(0x9800, 0x9800) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0xA000, 0xA000) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+void chinagat_state::sound_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x87ff).ram();
+	map(0x8800, 0x8801).rw("ymsnd", FUNC(ym2151_device::read), FUNC(ym2151_device::write));
+	map(0x9800, 0x9800).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0xA000, 0xA000).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
-static ADDRESS_MAP_START( ym2203c_sound_map, AS_PROGRAM, 8, chinagat_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM
+void chinagat_state::ym2203c_sound_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x87ff).ram();
 // 8804 and/or 8805 make a gong sound when the coin goes in
 // but only on the title screen....
 
-	AM_RANGE(0x8800, 0x8801) AM_DEVREADWRITE("ym1", ym2203_device, read, write)
+	map(0x8800, 0x8801).rw("ym1", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
 //  AM_RANGE(0x8802, 0x8802) AM_DEVREADWRITE("oki", okim6295_device, read, write)
 //  AM_RANGE(0x8803, 0x8803) AM_DEVWRITE("oki", okim6295_device, write)
-	AM_RANGE(0x8804, 0x8805) AM_DEVREADWRITE("ym2", ym2203_device, read, write)
+	map(0x8804, 0x8805).rw("ym2", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
 //  AM_RANGE(0x8804, 0x8804) AM_WRITEONLY
 //  AM_RANGE(0x8805, 0x8805) AM_WRITEONLY
 
 //  AM_RANGE(0x8800, 0x8801) AM_DEVREADWRITE("ymsnd", ym2151_device, read, write)
 //  AM_RANGE(0x9800, 0x9800) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0xA000, 0xA000) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+	map(0xA000, 0xA000).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
-static ADDRESS_MAP_START( saiyugoub1_sound_map, AS_PROGRAM, 8, chinagat_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM
-	AM_RANGE(0x8800, 0x8801) AM_DEVREADWRITE("ymsnd", ym2151_device, read, write)
-	AM_RANGE(0x9800, 0x9800) AM_WRITE(saiyugoub1_mcu_command_w)
-	AM_RANGE(0xA000, 0xA000) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+void chinagat_state::saiyugoub1_sound_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x87ff).ram();
+	map(0x8800, 0x8801).rw("ymsnd", FUNC(ym2151_device::read), FUNC(ym2151_device::write));
+	map(0x9800, 0x9800).w(this, FUNC(chinagat_state::saiyugoub1_mcu_command_w));
+	map(0xA000, 0xA000).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
-static ADDRESS_MAP_START( i8748_map, AS_PROGRAM, 8, chinagat_state )
-	AM_RANGE(0x0000, 0x03ff) AM_ROM
-	AM_RANGE(0x0400, 0x07ff) AM_ROM     /* i8749 version */
-ADDRESS_MAP_END
+void chinagat_state::i8748_map(address_map &map)
+{
+	map(0x0000, 0x03ff).rom();
+	map(0x0400, 0x07ff).rom();     /* i8749 version */
+}
 
 
 
@@ -541,7 +557,7 @@ MACHINE_RESET_MEMBER(chinagat_state,chinagat)
 }
 
 
-static MACHINE_CONFIG_START( chinagat )
+MACHINE_CONFIG_START(chinagat_state::chinagat)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", HD6309, MAIN_CLOCK / 2)     /* 1.5 MHz (12MHz oscillator / 4 internally) */
@@ -551,7 +567,7 @@ static MACHINE_CONFIG_START( chinagat )
 	MCFG_CPU_ADD("sub", HD6309, MAIN_CLOCK / 2)     /* 1.5 MHz (12MHz oscillator / 4 internally) */
 	MCFG_CPU_PROGRAM_MAP(sub_map)
 
-	MCFG_CPU_ADD("soundcpu", Z80, XTAL_3_579545MHz)     /* 3.579545 MHz */
+	MCFG_CPU_ADD("soundcpu", Z80, XTAL(3'579'545))     /* 3.579545 MHz */
 	MCFG_CPU_PROGRAM_MAP(sound_map)
 
 	MCFG_QUANTUM_TIME(attotime::from_hz(6000)) /* heavy interleaving to sync up sprite<->main cpu's */
@@ -586,17 +602,17 @@ static MACHINE_CONFIG_START( chinagat )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( saiyugoub1 )
+MACHINE_CONFIG_START(chinagat_state::saiyugoub1)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809, MAIN_CLOCK / 8)      /* 68B09EP 1.5 MHz (12MHz oscillator) */
+	MCFG_CPU_ADD("maincpu", MC6809E, MAIN_CLOCK / 8)      /* 68B09EP 1.5 MHz (12MHz oscillator) */
 	MCFG_CPU_PROGRAM_MAP(main_map)
 	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", chinagat_state, chinagat_scanline, "screen", 0, 1)
 
-	MCFG_CPU_ADD("sub", M6809, MAIN_CLOCK / 8)      /* 68B09EP 1.5 MHz (12MHz oscillator) */
+	MCFG_CPU_ADD("sub", MC6809E, MAIN_CLOCK / 8)      /* 68B09EP 1.5 MHz (12MHz oscillator) */
 	MCFG_CPU_PROGRAM_MAP(sub_map)
 
-	MCFG_CPU_ADD("soundcpu", Z80, XTAL_3_579545MHz)     /* 3.579545 MHz oscillator */
+	MCFG_CPU_ADD("soundcpu", Z80, XTAL(3'579'545))     /* 3.579545 MHz oscillator */
 	MCFG_CPU_PROGRAM_MAP(saiyugoub1_sound_map)
 
 	MCFG_CPU_ADD("mcu", I8748, 9263750)     /* 9.263750 MHz oscillator, divided by 3*5 internally */
@@ -642,17 +658,17 @@ static MACHINE_CONFIG_START( saiyugoub1 )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( saiyugoub2 )
+MACHINE_CONFIG_START(chinagat_state::saiyugoub2)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809, MAIN_CLOCK / 8)      /* 1.5 MHz (12MHz oscillator) */
+	MCFG_CPU_ADD("maincpu", MC6809E, MAIN_CLOCK / 8)      /* 1.5 MHz (12MHz oscillator) */
 	MCFG_CPU_PROGRAM_MAP(main_map)
 	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", chinagat_state, chinagat_scanline, "screen", 0, 1)
 
-	MCFG_CPU_ADD("sub", M6809, MAIN_CLOCK / 8)      /* 1.5 MHz (12MHz oscillator) */
+	MCFG_CPU_ADD("sub", MC6809E, MAIN_CLOCK / 8)      /* 1.5 MHz (12MHz oscillator) */
 	MCFG_CPU_PROGRAM_MAP(sub_map)
 
-	MCFG_CPU_ADD("soundcpu", Z80, XTAL_3_579545MHz)     /* 3.579545 MHz oscillator */
+	MCFG_CPU_ADD("soundcpu", Z80, XTAL(3'579'545))     /* 3.579545 MHz oscillator */
 	MCFG_CPU_PROGRAM_MAP(ym2203c_sound_map)
 
 	MCFG_QUANTUM_TIME(attotime::from_hz(6000)) /* heavy interleaving to sync up sprite<->main cpu's */

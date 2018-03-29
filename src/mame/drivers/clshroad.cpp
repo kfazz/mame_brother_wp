@@ -36,7 +36,7 @@ TODO:
 #include "speaker.h"
 
 /* unknown divider, assume /5 */
-#define MAIN_CLOCK XTAL_18_432MHz/5
+#define MAIN_CLOCK XTAL(18'432'000)/5
 
 void clshroad_state::machine_reset()
 {
@@ -70,25 +70,27 @@ WRITE_LINE_MEMBER(clshroad_state::sound_irq_mask_w)
 }
 
 
-static ADDRESS_MAP_START( clshroad_map, AS_PROGRAM, 8, clshroad_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x95ff) AM_RAM
-	AM_RANGE(0x9600, 0x97ff) AM_RAM AM_SHARE("share1")
-	AM_RANGE(0x9800, 0x9dff) AM_RAM
-	AM_RANGE(0x9e00, 0x9fff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0xa000, 0xa007) AM_DEVWRITE("mainlatch", ls259_device, write_d0)
-	AM_RANGE(0xa100, 0xa107) AM_READ(input_r)
-	AM_RANGE(0xa800, 0xafff) AM_RAM_WRITE(vram_1_w) AM_SHARE("vram_1") // Layer 1
-	AM_RANGE(0xb000, 0xb003) AM_WRITEONLY AM_SHARE("vregs") // Scroll
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM_WRITE(vram_0_w) AM_SHARE("vram_0") // Layer 0
-ADDRESS_MAP_END
+void clshroad_state::clshroad_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x95ff).ram();
+	map(0x9600, 0x97ff).ram().share("share1");
+	map(0x9800, 0x9dff).ram();
+	map(0x9e00, 0x9fff).ram().share("spriteram");
+	map(0xa000, 0xa007).w("mainlatch", FUNC(ls259_device::write_d0));
+	map(0xa100, 0xa107).r(this, FUNC(clshroad_state::input_r));
+	map(0xa800, 0xafff).ram().w(this, FUNC(clshroad_state::vram_1_w)).share("vram_1"); // Layer 1
+	map(0xb000, 0xb003).writeonly().share("vregs"); // Scroll
+	map(0xc000, 0xc7ff).ram().w(this, FUNC(clshroad_state::vram_0_w)).share("vram_0"); // Layer 0
+}
 
-static ADDRESS_MAP_START( clshroad_sound_map, AS_PROGRAM, 8, clshroad_state )
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x4000, 0x7fff) AM_DEVWRITE("custom", wiping_sound_device, sound_w)
-	AM_RANGE(0x9600, 0x97ff) AM_RAM AM_SHARE("share1")
-	AM_RANGE(0xa000, 0xa007) AM_DEVWRITE("mainlatch", ls259_device, write_d0)
-ADDRESS_MAP_END
+void clshroad_state::clshroad_sound_map(address_map &map)
+{
+	map(0x0000, 0x1fff).rom();
+	map(0x4000, 0x7fff).w("custom", FUNC(wiping_sound_device::sound_w));
+	map(0x9600, 0x97ff).ram().share("share1");
+	map(0xa000, 0xa007).w("mainlatch", FUNC(ls259_device::write_d0));
+}
 
 
 
@@ -270,7 +272,7 @@ INTERRUPT_GEN_MEMBER(clshroad_state::sound_timer_irq)
 		device.execute().set_input_line(0, HOLD_LINE);
 }
 
-static MACHINE_CONFIG_START( firebatl )
+MACHINE_CONFIG_START(clshroad_state::firebatl)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MAIN_CLOCK)   /* ? */
@@ -306,11 +308,11 @@ static MACHINE_CONFIG_START( firebatl )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_SOUND_ADD("custom", WIPING, 0)
+	MCFG_SOUND_ADD("custom", WIPING_CUSTOM, 96000)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( clshroad )
+MACHINE_CONFIG_START(clshroad_state::clshroad)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MAIN_CLOCK)  /* ? real speed unknown. 3MHz is too low and causes problems */
@@ -346,7 +348,7 @@ static MACHINE_CONFIG_START( clshroad )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_SOUND_ADD("custom", WIPING, 0)
+	MCFG_SOUND_ADD("custom", WIPING_CUSTOM, 96000)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 
@@ -560,15 +562,9 @@ ROM_END
 
 DRIVER_INIT_MEMBER(clshroad_state,firebatl)
 {
-/*
-Pugsy> firebatl:0:05C6:C3:100:Fix the Game:It's a hack but seems to make it work!
-Pugsy> firebatl:0:05C7:8D:600:Fix the Game (2/3)
-Pugsy> firebatl:0:05C8:23:600:Fix the Game (3/3)
-
-without this the death sequence never ends so the game is unplayable after you
-die once, it would be nice to avoid the hack however
-
-*/
+	// applying HACK to fix the game
+	// without this the death sequence never ends so the game is unplayable after you
+	// die once, it would be nice to avoid the hack however
 	uint8_t *ROM = memregion("maincpu")->base();
 
 	ROM[0x05C6] = 0xc3;

@@ -31,26 +31,18 @@ DIP Locations verified for:
 
 READ8_MEMBER(bking_state::bking_sndnmi_disable_r)
 {
-	m_sound_nmi_enable = 0;
+	m_soundnmi->in_w<1>(0);
 	return 0;
 }
 
 WRITE8_MEMBER(bking_state::bking_sndnmi_enable_w)
 {
-	m_sound_nmi_enable = 1;
+	m_soundnmi->in_w<1>(1);
 }
 
 WRITE8_MEMBER(bking_state::bking_soundlatch_w)
 {
-	int i, code = 0;
-
-	for (i = 0;i < 8;i++)
-		if (data & (1 << i))
-			code |= 0x80 >> i;
-
-	m_soundlatch->write(space, offset, code);
-	if (m_sound_nmi_enable)
-		m_audiocpu->set_input_line(INPUT_LINE_NMI, PULSE_LINE);
+	m_soundlatch->write(space, offset, bitswap<8>(data, 0, 1, 2, 3, 4, 5, 6, 7));
 }
 
 WRITE8_MEMBER(bking_state::bking3_addr_l_w)
@@ -89,67 +81,71 @@ READ8_MEMBER(bking_state::bking3_mcu_status_r)
 		((CLEAR_LINE != m_bmcu->mcu_semaphore_r()) ? 0x02 : 0x00);
 }
 
-static ADDRESS_MAP_START( bking_map, AS_PROGRAM, 8, bking_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x83ff) AM_RAM
-	AM_RANGE(0x9000, 0x97ff) AM_RAM_WRITE(bking_playfield_w) AM_SHARE("playfield_ram")
-ADDRESS_MAP_END
+void bking_state::bking_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x83ff).ram();
+	map(0x9000, 0x97ff).ram().w(this, FUNC(bking_state::bking_playfield_w)).share("playfield_ram");
+}
 
-static ADDRESS_MAP_START( bking_io_map, AS_IO, 8, bking_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_READ_PORT("IN0") AM_WRITE(bking_xld1_w)
-	AM_RANGE(0x01, 0x01) AM_READ_PORT("IN1") AM_WRITE(bking_yld1_w)
-	AM_RANGE(0x02, 0x02) AM_READ_PORT("DSWA") AM_WRITE(bking_xld2_w)
-	AM_RANGE(0x03, 0x03) AM_READ_PORT("DSWB") AM_WRITE(bking_yld2_w)
-	AM_RANGE(0x04, 0x04) AM_READ_PORT("DSWC") AM_WRITE(bking_xld3_w)
-	AM_RANGE(0x05, 0x05) AM_READWRITE(bking_input_port_5_r, bking_yld3_w)
-	AM_RANGE(0x06, 0x06) AM_READWRITE(bking_input_port_6_r, bking_msk_w)
-	AM_RANGE(0x07, 0x07) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x08, 0x08) AM_WRITE(bking_cont1_w)
-	AM_RANGE(0x09, 0x09) AM_WRITE(bking_cont2_w)
-	AM_RANGE(0x0a, 0x0a) AM_WRITE(bking_cont3_w)
-	AM_RANGE(0x0b, 0x0b) AM_WRITE(bking_soundlatch_w)
+void bking_state::bking_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).portr("IN0").w(this, FUNC(bking_state::bking_xld1_w));
+	map(0x01, 0x01).portr("IN1").w(this, FUNC(bking_state::bking_yld1_w));
+	map(0x02, 0x02).portr("DSWA").w(this, FUNC(bking_state::bking_xld2_w));
+	map(0x03, 0x03).portr("DSWB").w(this, FUNC(bking_state::bking_yld2_w));
+	map(0x04, 0x04).portr("DSWC").w(this, FUNC(bking_state::bking_xld3_w));
+	map(0x05, 0x05).rw(this, FUNC(bking_state::bking_input_port_5_r), FUNC(bking_state::bking_yld3_w));
+	map(0x06, 0x06).rw(this, FUNC(bking_state::bking_input_port_6_r), FUNC(bking_state::bking_msk_w));
+	map(0x07, 0x07).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x08, 0x08).w(this, FUNC(bking_state::bking_cont1_w));
+	map(0x09, 0x09).w(this, FUNC(bking_state::bking_cont2_w));
+	map(0x0a, 0x0a).w(this, FUNC(bking_state::bking_cont3_w));
+	map(0x0b, 0x0b).w(this, FUNC(bking_state::bking_soundlatch_w));
 //  AM_RANGE(0x0c, 0x0c) AM_WRITE(bking_eport2_w)   this is not shown to be connected anywhere
-	AM_RANGE(0x0d, 0x0d) AM_WRITE(bking_hitclr_w)
-	AM_RANGE(0x07, 0x1f) AM_READ(bking_pos_r)
-ADDRESS_MAP_END
+	map(0x0d, 0x0d).w(this, FUNC(bking_state::bking_hitclr_w));
+	map(0x07, 0x1f).r(this, FUNC(bking_state::bking_pos_r));
+}
 
-static ADDRESS_MAP_START( bking3_io_map, AS_IO, 8, bking_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_READ_PORT("IN0") AM_WRITE(bking_xld1_w)
-	AM_RANGE(0x01, 0x01) AM_READ_PORT("IN1") AM_WRITE(bking_yld1_w)
-	AM_RANGE(0x02, 0x02) AM_READ_PORT("DSWA") AM_WRITE(bking_xld2_w)
-	AM_RANGE(0x03, 0x03) AM_READ_PORT("DSWB") AM_WRITE(bking_yld2_w)
-	AM_RANGE(0x04, 0x04) AM_READ_PORT("DSWC") AM_WRITE(bking_xld3_w)
-	AM_RANGE(0x05, 0x05) AM_READWRITE(bking_input_port_5_r, bking_yld3_w)
-	AM_RANGE(0x06, 0x06) AM_READWRITE(bking_input_port_6_r, bking_msk_w)
-	AM_RANGE(0x07, 0x07) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x08, 0x08) AM_WRITE(bking_cont1_w)
-	AM_RANGE(0x09, 0x09) AM_WRITE(bking_cont2_w)
-	AM_RANGE(0x0a, 0x0a) AM_WRITE(bking_cont3_w)
-	AM_RANGE(0x0b, 0x0b) AM_WRITE(bking_soundlatch_w)
+void bking_state::bking3_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).portr("IN0").w(this, FUNC(bking_state::bking_xld1_w));
+	map(0x01, 0x01).portr("IN1").w(this, FUNC(bking_state::bking_yld1_w));
+	map(0x02, 0x02).portr("DSWA").w(this, FUNC(bking_state::bking_xld2_w));
+	map(0x03, 0x03).portr("DSWB").w(this, FUNC(bking_state::bking_yld2_w));
+	map(0x04, 0x04).portr("DSWC").w(this, FUNC(bking_state::bking_xld3_w));
+	map(0x05, 0x05).rw(this, FUNC(bking_state::bking_input_port_5_r), FUNC(bking_state::bking_yld3_w));
+	map(0x06, 0x06).rw(this, FUNC(bking_state::bking_input_port_6_r), FUNC(bking_state::bking_msk_w));
+	map(0x07, 0x07).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x08, 0x08).w(this, FUNC(bking_state::bking_cont1_w));
+	map(0x09, 0x09).w(this, FUNC(bking_state::bking_cont2_w));
+	map(0x0a, 0x0a).w(this, FUNC(bking_state::bking_cont3_w));
+	map(0x0b, 0x0b).w(this, FUNC(bking_state::bking_soundlatch_w));
 //  AM_RANGE(0x0c, 0x0c) AM_WRITE(bking_eport2_w)   this is not shown to be connected anywhere
-	AM_RANGE(0x0d, 0x0d) AM_WRITE(bking_hitclr_w)
-	AM_RANGE(0x07, 0x1f) AM_READ(bking_pos_r)
-	AM_RANGE(0x2f, 0x2f) AM_DEVREADWRITE("bmcu", taito68705_mcu_device, data_r, data_w)
-	AM_RANGE(0x4f, 0x4f) AM_READWRITE(bking3_mcu_status_r, unk_w)
-	AM_RANGE(0x60, 0x60) AM_READ(bking3_extrarom_r)
-	AM_RANGE(0x6f, 0x6f) AM_READWRITE(bking3_ext_check_r, bking3_addr_h_w)
-	AM_RANGE(0x8f, 0x8f) AM_WRITE(bking3_addr_l_w)
-ADDRESS_MAP_END
+	map(0x0d, 0x0d).w(this, FUNC(bking_state::bking_hitclr_w));
+	map(0x07, 0x1f).r(this, FUNC(bking_state::bking_pos_r));
+	map(0x2f, 0x2f).rw(m_bmcu, FUNC(taito68705_mcu_device::data_r), FUNC(taito68705_mcu_device::data_w));
+	map(0x4f, 0x4f).rw(this, FUNC(bking_state::bking3_mcu_status_r), FUNC(bking_state::unk_w));
+	map(0x60, 0x60).r(this, FUNC(bking_state::bking3_extrarom_r));
+	map(0x6f, 0x6f).rw(this, FUNC(bking_state::bking3_ext_check_r), FUNC(bking_state::bking3_addr_h_w));
+	map(0x8f, 0x8f).w(this, FUNC(bking_state::bking3_addr_l_w));
+}
 
-static ADDRESS_MAP_START( bking_audio_map, AS_PROGRAM, 8, bking_state )
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x2000, 0x2fff) AM_ROM //only bking3
-	AM_RANGE(0x4000, 0x43ff) AM_RAM
-	AM_RANGE(0x4400, 0x4401) AM_DEVWRITE("ay1", ay8910_device, address_data_w)
-	AM_RANGE(0x4401, 0x4401) AM_DEVREAD("ay1", ay8910_device, data_r)
-	AM_RANGE(0x4402, 0x4403) AM_DEVWRITE("ay2", ay8910_device, address_data_w)
-	AM_RANGE(0x4403, 0x4403) AM_DEVREAD("ay2", ay8910_device, data_r)
-	AM_RANGE(0x4800, 0x4800) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-	AM_RANGE(0x4802, 0x4802) AM_READWRITE(bking_sndnmi_disable_r, bking_sndnmi_enable_w)
-	AM_RANGE(0xe000, 0xefff) AM_ROM   /* Space for diagnostic ROM */
-ADDRESS_MAP_END
+void bking_state::bking_audio_map(address_map &map)
+{
+	map(0x0000, 0x1fff).rom();
+	map(0x2000, 0x2fff).rom(); //only bking3
+	map(0x4000, 0x43ff).ram();
+	map(0x4400, 0x4401).w("ay1", FUNC(ay8910_device::address_data_w));
+	map(0x4401, 0x4401).r("ay1", FUNC(ay8910_device::data_r));
+	map(0x4402, 0x4403).w("ay2", FUNC(ay8910_device::address_data_w));
+	map(0x4403, 0x4403).r("ay2", FUNC(ay8910_device::data_r));
+	map(0x4800, 0x4800).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+	map(0x4802, 0x4802).rw(this, FUNC(bking_state::bking_sndnmi_disable_r), FUNC(bking_state::bking_sndnmi_enable_w));
+	map(0xe000, 0xefff).rom();   /* Space for diagnostic ROM */
+}
 
 
 static INPUT_PORTS_START( bking )
@@ -347,9 +343,6 @@ void bking_state::machine_start()
 	save_item(NAME(m_palette_bank));
 	save_item(NAME(m_controller));
 	save_item(NAME(m_hit));
-
-	/* sound */
-	save_item(NAME(m_sound_nmi_enable));
 }
 
 MACHINE_START_MEMBER(bking_state,bking3)
@@ -384,7 +377,7 @@ void bking_state::machine_reset()
 	m_hit = 0;
 
 	/* sound */
-	m_sound_nmi_enable = 1;
+	m_soundnmi->in_w<1>(0);
 }
 
 MACHINE_RESET_MEMBER(bking_state,bking3)
@@ -396,15 +389,15 @@ MACHINE_RESET_MEMBER(bking_state,bking3)
 	m_addr_l = 0;
 }
 
-static MACHINE_CONFIG_START( bking )
+MACHINE_CONFIG_START(bking_state::bking)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("main_cpu", Z80, XTAL_12MHz/4) /* 3 MHz */
+	MCFG_CPU_ADD("main_cpu", Z80, XTAL(12'000'000)/4) /* 3 MHz */
 	MCFG_CPU_PROGRAM_MAP(bking_map)
 	MCFG_CPU_IO_MAP(bking_io_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", bking_state,  irq0_line_hold)
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_6MHz/2)  /* 3 MHz */
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(6'000'000)/2)  /* 3 MHz */
 	MCFG_CPU_PROGRAM_MAP(bking_audio_map)
 	/* interrupts (from Jungle King hardware, might be wrong): */
 	/* - no interrupts synced with vblank */
@@ -432,11 +425,15 @@ static MACHINE_CONFIG_START( bking )
 	MCFG_SPEAKER_STANDARD_MONO("speaker")
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
+	MCFG_GENERIC_LATCH_DATA_PENDING_CB(DEVWRITELINE("soundnmi", input_merger_device, in_w<0>))
 
-	MCFG_SOUND_ADD("ay1", AY8910, XTAL_6MHz/4)
+	MCFG_INPUT_MERGER_ALL_HIGH("soundnmi")
+	MCFG_INPUT_MERGER_OUTPUT_HANDLER(INPUTLINE("audiocpu", INPUT_LINE_NMI))
+
+	MCFG_SOUND_ADD("ay1", AY8910, XTAL(6'000'000)/4)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.25)
 
-	MCFG_SOUND_ADD("ay2", AY8910, XTAL_6MHz/4)
+	MCFG_SOUND_ADD("ay2", AY8910, XTAL(6'000'000)/4)
 	MCFG_AY8910_PORT_A_WRITE_CB(DEVWRITE8("dac", dac_byte_interface, write))
 	MCFG_AY8910_PORT_B_WRITE_CB(WRITE8(bking_state, port_b_w))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.25)
@@ -446,13 +443,14 @@ static MACHINE_CONFIG_START( bking )
 	MCFG_SOUND_ROUTE_EX(0, "dac", 1.0, DAC_VREF_POS_INPUT) MCFG_SOUND_ROUTE_EX(0, "dac", -1.0, DAC_VREF_NEG_INPUT)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( bking3, bking )
+MACHINE_CONFIG_START(bking_state::bking3)
+	bking(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("main_cpu")
 	MCFG_CPU_IO_MAP(bking3_io_map)
 
-	MCFG_DEVICE_ADD("bmcu", TAITO68705_MCU, XTAL_3MHz)      /* xtal is 3MHz, divided by 4 internally */
+	MCFG_DEVICE_ADD("bmcu", TAITO68705_MCU, XTAL(3'000'000))      /* xtal is 3MHz, divided by 4 internally */
 
 	MCFG_MACHINE_START_OVERRIDE(bking_state,bking3)
 	MCFG_MACHINE_RESET_OVERRIDE(bking_state,bking3)

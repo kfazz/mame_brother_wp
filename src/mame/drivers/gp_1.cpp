@@ -25,6 +25,7 @@ ToDo:
 #include "cpu/z80/z80.h"
 #include "cpu/z80/z80daisy.h"
 #include "machine/i8255.h"
+#include "machine/timer.h"
 #include "machine/z80ctc.h"
 #include "sound/sn76477.h"
 #include "speaker.h"
@@ -56,6 +57,10 @@ public:
 	DECLARE_WRITE8_MEMBER(portc_w);
 	DECLARE_READ8_MEMBER(portb_r);
 	TIMER_DEVICE_CALLBACK_MEMBER(zero_timer);
+	void gp_1(machine_config &config);
+	void gp_1s(machine_config &config);
+	void gp_1_io(address_map &map);
+	void gp_1_map(address_map &map);
 private:
 	uint8_t m_u14;
 	uint8_t m_digit;
@@ -76,16 +81,18 @@ private:
 };
 
 
-static ADDRESS_MAP_START( gp_1_map, AS_PROGRAM, 8, gp_1_state )
-	AM_RANGE(0x0000, 0x0fff) AM_ROM AM_REGION("roms", 0)
-	AM_RANGE(0x8c00, 0x8cff) AM_RAM AM_SHARE("nvram")
-ADDRESS_MAP_END
+void gp_1_state::gp_1_map(address_map &map)
+{
+	map(0x0000, 0x0fff).rom().region("roms", 0);
+	map(0x8c00, 0x8cff).ram().share("nvram");
+}
 
-static ADDRESS_MAP_START( gp_1_io, AS_IO, 8, gp_1_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x0f)
-	AM_RANGE(0x04, 0x07) AM_DEVREADWRITE("ppi", i8255_device, read, write)
-	AM_RANGE(0x08, 0x0b) AM_DEVREADWRITE("ctc", z80ctc_device, read, write)
-ADDRESS_MAP_END
+void gp_1_state::gp_1_io(address_map &map)
+{
+	map.global_mask(0x0f);
+	map(0x04, 0x07).rw("ppi", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x08, 0x0b).rw(m_ctc, FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+}
 
 static INPUT_PORTS_START( gp_1 )
 	PORT_START("DSW0")
@@ -420,7 +427,7 @@ static const z80_daisy_config daisy_chain[] =
 	{ nullptr }
 };
 
-static MACHINE_CONFIG_START( gp_1 )
+MACHINE_CONFIG_START(gp_1_state::gp_1)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 2457600)
 	MCFG_CPU_PROGRAM_MAP(gp_1_map)
@@ -433,7 +440,7 @@ static MACHINE_CONFIG_START( gp_1 )
 	MCFG_DEFAULT_LAYOUT(layout_gp_1)
 
 	/* Sound */
-	MCFG_FRAGMENT_ADD( genpin_audio )
+	genpin_audio(config);
 
 	/* Devices */
 	MCFG_DEVICE_ADD("ppi", I8255A, 0 )
@@ -446,7 +453,8 @@ static MACHINE_CONFIG_START( gp_1 )
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("gp1", gp_1_state, zero_timer, attotime::from_hz(120)) // mains freq*2
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( gp_1s, gp_1 )
+MACHINE_CONFIG_START(gp_1_state::gp_1s)
+	gp_1(config);
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_ADD("snsnd", SN76477, 0)
 	MCFG_SN76477_NOISE_PARAMS(0, 0, 0)                // noise + filter: N/C

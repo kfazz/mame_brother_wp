@@ -9,7 +9,7 @@
 #include "emu.h"
 #include "debugger.h"
 #include "includes/dc.h"
-#include "cpu/sh4/sh4.h"
+#include "cpu/sh/sh4.h"
 #include "cpu/arm7/arm7core.h"
 #include "machine/mie.h"
 #include "machine/naomig1.h"
@@ -375,7 +375,7 @@ READ64_MEMBER(dc_state::dc_sysctrl_r )
 	#if DEBUG_SYSCTRL
 	if ((reg != 0x40) && (reg != 0x41) && (reg != 0x42) && (reg != 0x23) && (reg > 2))  // filter out IRQ status reads
 	{
-		osd_printf_verbose("%s",string_format("SYSCTRL: [%08x] read %x @ %x (reg %x: %s), mask %x (PC=%x)\n", 0x5f6800+reg*4, dc_sysctrl_regs[reg], offset, reg, sysctrl_names[reg], mem_mask, space.device().safe_pc()).c_str());
+		osd_printf_verbose("%s",string_format("SYSCTRL: [%08x] read %x @ %x (reg %x: %s), mask %x (PC=%x)\n", 0x5f6800+reg*4, dc_sysctrl_regs[reg], offset, reg, sysctrl_names[reg], mem_mask, m_maincpu->pc()).c_str());
 	}
 	#endif
 
@@ -655,7 +655,7 @@ void dc_state::machine_start()
 	// save states
 	save_pointer(NAME(dc_sysctrl_regs), 0x200/4);
 	save_pointer(NAME(g2bus_regs), 0x100/4);
-	save_pointer(NAME(dc_sound_ram.target()),dc_sound_ram.bytes());
+	save_pointer(NAME(dc_sound_ram.target()),dc_sound_ram.bytes()/4);
 	SAVE_G2DMA(0)
 	SAVE_G2DMA(1)
 	SAVE_G2DMA(2)

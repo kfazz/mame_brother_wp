@@ -332,32 +332,34 @@ WRITE8_MEMBER(ie15_device::flag_w)
 	}
 }
 
-static ADDRESS_MAP_START( ie15_mem, AS_PROGRAM, 8, ie15_device )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x0fff) AM_ROM
-ADDRESS_MAP_END
+void ie15_device::ie15_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x0fff).rom();
+}
 
-static ADDRESS_MAP_START( ie15_io, AS_IO, 8, ie15_device )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(000, 000) AM_READWRITE(mem_r, mem_w)   // 00h W: memory request, R: memory data [6.1.2.2]
-	AM_RANGE(001, 001) AM_READ(serial_rx_ready_r) AM_WRITENOP   // 01h W: memory latch [6.1.2.2]
-	AM_RANGE(002, 002) AM_WRITE(mem_addr_hi_w)      // 02h W: memory address high [6.1.2.2]
-	AM_RANGE(003, 003) AM_WRITE(mem_addr_lo_w)      // 03h W: memory address low [6.1.2.2]
-	AM_RANGE(004, 004) AM_WRITE(mem_addr_inc_w)     // 04h W: memory address counter + [6.1.2.2]
-	AM_RANGE(005, 005) AM_WRITE(mem_addr_dec_w)     // 05h W: memory address counter - [6.1.2.2]
-	AM_RANGE(006, 006) AM_READWRITE(serial_r, serial_w)     // 06h W: serial port data [6.1.5.4]
+void ie15_device::ie15_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(000, 000).rw(this, FUNC(ie15_device::mem_r), FUNC(ie15_device::mem_w));   // 00h W: memory request, R: memory data [6.1.2.2]
+	map(001, 001).r(this, FUNC(ie15_device::serial_rx_ready_r)).nopw();   // 01h W: memory latch [6.1.2.2]
+	map(002, 002).w(this, FUNC(ie15_device::mem_addr_hi_w));      // 02h W: memory address high [6.1.2.2]
+	map(003, 003).w(this, FUNC(ie15_device::mem_addr_lo_w));      // 03h W: memory address low [6.1.2.2]
+	map(004, 004).w(this, FUNC(ie15_device::mem_addr_inc_w));     // 04h W: memory address counter + [6.1.2.2]
+	map(005, 005).w(this, FUNC(ie15_device::mem_addr_dec_w));     // 05h W: memory address counter - [6.1.2.2]
+	map(006, 006).rw(this, FUNC(ie15_device::serial_r), FUNC(ie15_device::serial_w));     // 06h W: serial port data [6.1.5.4]
 // port 7 is handled in cpu core
-	AM_RANGE(010, 010) AM_READWRITE(serial_tx_ready_r, beep_w)  // 08h W: speaker control [6.1.5.4]
-	AM_RANGE(011, 011) AM_READ(kb_r)            // 09h R: keyboard data [6.1.5.2]
-	AM_RANGE(012, 012) AM_READ(kb_s_red_r)          // 0Ah I: keyboard mode "RED" [6.1.5.2]
-	AM_RANGE(013, 013) AM_READ(kb_ready_r)          // 0Bh R: keyboard data ready [6.1.5.2]
-	AM_RANGE(014, 014) AM_READWRITE(kb_s_sdv_r, serial_speed_w) // 0Ch W: serial port speed [6.1.3.1], R: keyboard mode "SDV" [6.1.5.2]
-	AM_RANGE(015, 015) AM_READWRITE(kb_s_dk_r, kb_ready_w)  // 0Dh I: keyboard mode "DK" [6.1.5.2]
-	AM_RANGE(016, 016) AM_READ(kb_s_dupl_r)         // 0Eh I: keyboard mode "DUPL" [6.1.5.2]
-	AM_RANGE(017, 017) AM_READ(kb_s_lin_r)          // 0Fh I: keyboard mode "LIN" [6.1.5.2]
+	map(010, 010).rw(this, FUNC(ie15_device::serial_tx_ready_r), FUNC(ie15_device::beep_w));  // 08h W: speaker control [6.1.5.4]
+	map(011, 011).r(this, FUNC(ie15_device::kb_r));            // 09h R: keyboard data [6.1.5.2]
+	map(012, 012).r(this, FUNC(ie15_device::kb_s_red_r));          // 0Ah I: keyboard mode "RED" [6.1.5.2]
+	map(013, 013).r(this, FUNC(ie15_device::kb_ready_r));          // 0Bh R: keyboard data ready [6.1.5.2]
+	map(014, 014).rw(this, FUNC(ie15_device::kb_s_sdv_r), FUNC(ie15_device::serial_speed_w)); // 0Ch W: serial port speed [6.1.3.1], R: keyboard mode "SDV" [6.1.5.2]
+	map(015, 015).rw(this, FUNC(ie15_device::kb_s_dk_r), FUNC(ie15_device::kb_ready_w));  // 0Dh I: keyboard mode "DK" [6.1.5.2]
+	map(016, 016).r(this, FUNC(ie15_device::kb_s_dupl_r));         // 0Eh I: keyboard mode "DUPL" [6.1.5.2]
+	map(017, 017).r(this, FUNC(ie15_device::kb_s_lin_r));          // 0Fh I: keyboard mode "LIN" [6.1.5.2]
 // simulation of flag registers
-	AM_RANGE(020, 027) AM_READWRITE(flag_r, flag_w)
-ADDRESS_MAP_END
+	map(020, 027).rw(this, FUNC(ie15_device::flag_r), FUNC(ie15_device::flag_w));
+}
 
 /* Input ports */
 INPUT_PORTS_START( ie15 )
@@ -564,9 +566,9 @@ static GFXDECODE_START( ie15 )
 	GFXDECODE_ENTRY("chargen", 0x0000, ie15_charlayout, 0, 1)
 GFXDECODE_END
 
-static MACHINE_CONFIG_START( ie15core )
+MACHINE_CONFIG_START(ie15_device::ie15core)
 	/* Basic machine hardware */
-	MCFG_CPU_ADD("maincpu", IE15_CPU, XTAL_30_8MHz/10)
+	MCFG_CPU_ADD("maincpu", IE15_CPU, XTAL(30'800'000)/10)
 	MCFG_CPU_PROGRAM_MAP(ie15_mem)
 	MCFG_CPU_IO_MAP(ie15_io)
 
@@ -599,12 +601,12 @@ ROM_START( ie15 )
 	ROM_LOAD("chargen-15ie.bin", 0x0000, 0x0800, CRC(ed16bf6b) SHA1(6af9fb75f5375943d5c0ce9ed408e0fb4621b17e))
 ROM_END
 
-MACHINE_CONFIG_MEMBER( ie15_device::device_add_mconfig )
-	MCFG_FRAGMENT_ADD(ie15core)
+MACHINE_CONFIG_START(ie15_device::device_add_mconfig)
+	ie15core(config);
 
 	MCFG_SCREEN_ADD_MONOCHROME("screen", RASTER, rgb_t::green())
 	MCFG_SCREEN_UPDATE_DRIVER(ie15_device, screen_update)
-	MCFG_SCREEN_RAW_PARAMS(XTAL_30_8MHz/2, IE15_TOTAL_HORZ, IE15_HORZ_START,
+	MCFG_SCREEN_RAW_PARAMS(XTAL(30'800'000)/2, IE15_TOTAL_HORZ, IE15_HORZ_START,
 		IE15_HORZ_START+IE15_DISP_HORZ, IE15_TOTAL_VERT, IE15_VERT_START,
 		IE15_VERT_START+IE15_DISP_VERT);
 

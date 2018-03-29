@@ -78,7 +78,7 @@
 #include "machine/nvram.h"
 #include "screen.h"
 
-#define MASTER_CLOCK    XTAL_8MHz   /* guess */
+#define MASTER_CLOCK    XTAL(8'000'000)   /* guess */
 
 
 class jokrwild_state : public driver_device
@@ -106,6 +106,8 @@ public:
 	uint32_t screen_update_jokrwild(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	required_device<cpu_device> m_maincpu;
 	required_device<gfxdecode_device> m_gfxdecode;
+	void jokrwild(machine_config &config);
+	void jokrwild_map(address_map &map);
 };
 
 
@@ -162,10 +164,10 @@ PALETTE_INIT_MEMBER(jokrwild_state, jokrwild)
 
 READ8_MEMBER(jokrwild_state::rng_r)
 {
-	if(space.device().safe_pc() == 0xab32)
+	if(m_maincpu->pc() == 0xab32)
 		return (offset == 0) ? 0x9e : 0x27;
 
-	if(space.device().safe_pc() == 0xab3a)
+	if(m_maincpu->pc() == 0xab3a)
 		return (offset == 2) ? 0x49 : 0x92;
 
 	return machine().rand() & 0xff;
@@ -176,21 +178,22 @@ READ8_MEMBER(jokrwild_state::rng_r)
 * Memory Map Information *
 *************************/
 
-static ADDRESS_MAP_START( jokrwild_map, AS_PROGRAM, 8, jokrwild_state )
-	AM_RANGE(0x0000, 0x03ff) AM_RAM_WRITE(jokrwild_videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x0400, 0x07ff) AM_RAM //FIXME: backup RAM
-	AM_RANGE(0x2000, 0x23ff) AM_RAM_WRITE(jokrwild_colorram_w) AM_SHARE("colorram")
-	AM_RANGE(0x2400, 0x27ff) AM_RAM //stack RAM
-	AM_RANGE(0x4004, 0x4007) AM_DEVREADWRITE("pia0", pia6821_device, read, write)
-	AM_RANGE(0x4008, 0x400b) AM_DEVREADWRITE("pia1", pia6821_device, read, write) //optical sensor is here
+void jokrwild_state::jokrwild_map(address_map &map)
+{
+	map(0x0000, 0x03ff).ram().w(this, FUNC(jokrwild_state::jokrwild_videoram_w)).share("videoram");
+	map(0x0400, 0x07ff).ram(); //FIXME: backup RAM
+	map(0x2000, 0x23ff).ram().w(this, FUNC(jokrwild_state::jokrwild_colorram_w)).share("colorram");
+	map(0x2400, 0x27ff).ram(); //stack RAM
+	map(0x4004, 0x4007).rw("pia0", FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x4008, 0x400b).rw("pia1", FUNC(pia6821_device::read), FUNC(pia6821_device::write)); //optical sensor is here
 //  AM_RANGE(0x4010, 0x4010) AM_READNOP /* R ???? */
-	AM_RANGE(0x6000, 0x6000) AM_DEVWRITE("crtc", mc6845_device, address_w)
-	AM_RANGE(0x6001, 0x6001) AM_DEVREADWRITE("crtc", mc6845_device, register_r, register_w)
-	AM_RANGE(0x6100, 0x6100) AM_READ_PORT("SW1")
-	AM_RANGE(0x6200, 0x6203) AM_READ(rng_r)//another PIA?
-	AM_RANGE(0x6300, 0x6300) AM_READ_PORT("SW2")
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+	map(0x6000, 0x6000).w("crtc", FUNC(mc6845_device::address_w));
+	map(0x6001, 0x6001).rw("crtc", FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
+	map(0x6100, 0x6100).portr("SW1");
+	map(0x6200, 0x6203).r(this, FUNC(jokrwild_state::rng_r));//another PIA?
+	map(0x6300, 0x6300).portr("SW2");
+	map(0x8000, 0xffff).rom();
+}
 
 /* I/O byte R/W
 
@@ -402,7 +405,7 @@ WRITE8_MEMBER(jokrwild_state::testb_w)
 *    Machine Drivers     *
 *************************/
 
-static MACHINE_CONFIG_START( jokrwild )
+MACHINE_CONFIG_START(jokrwild_state::jokrwild)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M6809, MASTER_CLOCK/2)  /* guess */

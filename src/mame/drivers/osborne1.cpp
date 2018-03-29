@@ -92,37 +92,39 @@ TODO:
 #include "includes/osborne1.h"
 
 #include "bus/rs232/rs232.h"
-#include "screen.h"
 #include "speaker.h"
 
 #include "softlist.h"
 
 
-#define MAIN_CLOCK  15974400
+static constexpr XTAL MAIN_CLOCK = 15.9744_MHz_XTAL;
 
 
-static ADDRESS_MAP_START( osborne1_mem, AS_PROGRAM, 8, osborne1_state )
-	AM_RANGE( 0x0000, 0x0FFF ) AM_READ_BANK("bank_0xxx") AM_WRITE(bank_0xxx_w)
-	AM_RANGE( 0x1000, 0x1FFF ) AM_READ_BANK("bank_1xxx") AM_WRITE(bank_1xxx_w)
-	AM_RANGE( 0x2000, 0x3FFF ) AM_READWRITE(bank_2xxx_3xxx_r, bank_2xxx_3xxx_w)
-	AM_RANGE( 0x4000, 0xEFFF ) AM_RAM
-	AM_RANGE( 0xF000, 0xFFFF ) AM_READ_BANK("bank_fxxx") AM_WRITE(videoram_w)
-ADDRESS_MAP_END
+void osborne1_state::osborne1_mem(address_map &map)
+{
+	map(0x0000, 0x0FFF).bankr("bank_0xxx").w(this, FUNC(osborne1_state::bank_0xxx_w));
+	map(0x1000, 0x1FFF).bankr("bank_1xxx").w(this, FUNC(osborne1_state::bank_1xxx_w));
+	map(0x2000, 0x3FFF).rw(this, FUNC(osborne1_state::bank_2xxx_3xxx_r), FUNC(osborne1_state::bank_2xxx_3xxx_w));
+	map(0x4000, 0xEFFF).ram();
+	map(0xF000, 0xFFFF).bankr("bank_fxxx").w(this, FUNC(osborne1_state::videoram_w));
+}
 
 
-static ADDRESS_MAP_START( osborne1_op, AS_OPCODES, 8, osborne1_state )
-	AM_RANGE( 0x0000, 0xFFFF ) AM_READ(opcode_r)
-ADDRESS_MAP_END
+void osborne1_state::osborne1_op(address_map &map)
+{
+	map(0x0000, 0xFFFF).r(this, FUNC(osborne1_state::opcode_r));
+}
 
 
-static ADDRESS_MAP_START( osborne1_io, AS_IO, 8, osborne1_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
+void osborne1_state::osborne1_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
 
-	AM_RANGE( 0x00, 0x03 ) AM_MIRROR( 0xfc ) AM_WRITE(bankswitch_w)
-ADDRESS_MAP_END
+	map(0x00, 0x03).mirror(0xfc).w(this, FUNC(osborne1_state::bankswitch_w));
+}
 
-static ADDRESS_MAP_START( osborne1nv_io, AS_IO, 8, osborne1_state )
+ADDRESS_MAP_START(osborne1_state::osborne1nv_io)
 	ADDRESS_MAP_UNMAP_HIGH
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 
@@ -279,10 +281,10 @@ static GFXDECODE_START( osborne1 )
 GFXDECODE_END
 
 
-static MACHINE_CONFIG_START( osborne1 )
+MACHINE_CONFIG_START(osborne1_state::osborne1)
 	MCFG_CPU_ADD("maincpu", Z80, MAIN_CLOCK/4)
 	MCFG_CPU_PROGRAM_MAP(osborne1_mem)
-	MCFG_CPU_DECRYPTED_OPCODES_MAP(osborne1_op)
+	MCFG_CPU_OPCODES_MAP(osborne1_op)
 	MCFG_CPU_IO_MAP(osborne1_io)
 	MCFG_Z80_SET_IRQACK_CALLBACK(WRITELINE(osborne1_state, irqack_w))
 
@@ -338,7 +340,8 @@ static MACHINE_CONFIG_START( osborne1 )
 	MCFG_SOFTWARE_LIST_ADD("flop_list","osborne1")
 MACHINE_CONFIG_END
 
-MACHINE_CONFIG_DERIVED( osborne1nv, osborne1 )
+MACHINE_CONFIG_START(osborne1nv_state::osborne1nv)
+	osborne1(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_IO_MAP(osborne1nv_io)
 
@@ -346,7 +349,7 @@ MACHINE_CONFIG_DERIVED( osborne1nv, osborne1 )
 	MCFG_SCREEN_NO_PALETTE
 	MCFG_SCREEN_UPDATE_DEVICE("crtc", mc6845_device, screen_update)
 
-	MCFG_MC6845_ADD("crtc", SY6545_1, "screen", XTAL_12_288MHz/8)
+	MCFG_MC6845_ADD("crtc", SY6545_1, "screen", XTAL(12'288'000)/8)
 	MCFG_MC6845_SHOW_BORDER_AREA(false)
 	MCFG_MC6845_CHAR_WIDTH(8)
 	MCFG_MC6845_UPDATE_ROW_CB(osborne1nv_state, crtc_update_row)
@@ -358,23 +361,28 @@ ROM_START( osborne1 )
 	ROM_REGION( 0x1000, "maincpu", 0 )
 	ROM_DEFAULT_BIOS("ver144")
 	ROM_SYSTEM_BIOS( 0, "vera", "BIOS version A" )
-	ROMX_LOAD( "osba.bin",               0x0000, 0x1000, NO_DUMP,                                                      ROM_BIOS(1) )
 	ROM_SYSTEM_BIOS( 1, "ver12", "BIOS version 1.2" )
-	ROMX_LOAD( "osb12.bin",              0x0000, 0x1000, NO_DUMP,                                                      ROM_BIOS(2) )
 	ROM_SYSTEM_BIOS( 2, "ver121", "BIOS version 1.2.1" )
-	ROMX_LOAD( "osb121.bin",             0x0000, 0x1000, NO_DUMP,                                                      ROM_BIOS(3) )
 	ROM_SYSTEM_BIOS( 3, "ver13", "BIOS version 1.3" )
-	ROMX_LOAD( "osb13.bin",              0x0000, 0x1000, NO_DUMP,                                                      ROM_BIOS(4) )
 	ROM_SYSTEM_BIOS( 4, "ver14", "BIOS version 1.4" )
-	ROMX_LOAD( "rev1.40.ud11",           0x0000, 0x1000, CRC(3d966335) SHA1(0c60b97a3154a75868efc6370d26995eadc7d927), ROM_BIOS(5) )
 	ROM_SYSTEM_BIOS( 5, "ver143",   "BIOS version 1.43" )
-	ROMX_LOAD( "rev1.43.ud11",           0x0000, 0x1000, CRC(91a48e3c) SHA1(c37b83f278d21e6e92d80f9c057b11f7f22d88d4), ROM_BIOS(6) )
 	ROM_SYSTEM_BIOS( 6, "ver144", "BIOS version 1.44" )
+	ROMX_LOAD( "osba.bin",               0x0000, 0x1000, NO_DUMP,                                                      ROM_BIOS(1) )
+	ROMX_LOAD( "osb12.bin",              0x0000, 0x1000, NO_DUMP,                                                      ROM_BIOS(2) )
+	ROMX_LOAD( "osb121.bin",             0x0000, 0x1000, NO_DUMP,                                                      ROM_BIOS(3) )
+	ROMX_LOAD( "osb13.bin",              0x0000, 0x1000, NO_DUMP,                                                      ROM_BIOS(4) )
+	ROMX_LOAD( "rev1.40.ud11",           0x0000, 0x1000, CRC(3d966335) SHA1(0c60b97a3154a75868efc6370d26995eadc7d927), ROM_BIOS(5) )
+	ROMX_LOAD( "rev1.43.ud11",           0x0000, 0x1000, CRC(91a48e3c) SHA1(c37b83f278d21e6e92d80f9c057b11f7f22d88d4), ROM_BIOS(6) )
 	ROMX_LOAD( "3a10082-00rev-e.ud11",   0x0000, 0x1000, CRC(c0596b14) SHA1(ee6a9cc9be3ddc5949d3379351c1d58a175ce9ac), ROM_BIOS(7) )
 
 	ROM_REGION( 0x800, "chargen", 0 )
-	ROM_LOAD( "7a3007-00.ud15", 0x0000, 0x800, CRC(6c1eab0d) SHA1(b04459d377a70abc9155a5486003cb795342c801) )
-	//ROM_LOAD( "char.ua15", 0x0000, 0x800, CRC(5297C109) SHA1(e1a59d87edd66e6c226102cb0688e9cb74dbb594) ) // this is CHRROM from v1.4 BIOS MB. I don't know how to hook up diff CHR to ROM_BIOS(6)
+	ROMX_LOAD( "char.ua15",      0x0000, 0x800, CRC(5297C109) SHA1(e1a59d87edd66e6c226102cb0688e9cb74dbb594), ROM_BIOS(1) ) // this is CHRROM from v1.4 BIOS MB
+	ROMX_LOAD( "char.ua15",      0x0000, 0x800, CRC(5297C109) SHA1(e1a59d87edd66e6c226102cb0688e9cb74dbb594), ROM_BIOS(2) )
+	ROMX_LOAD( "char.ua15",      0x0000, 0x800, CRC(5297C109) SHA1(e1a59d87edd66e6c226102cb0688e9cb74dbb594), ROM_BIOS(3) )
+	ROMX_LOAD( "char.ua15",      0x0000, 0x800, CRC(5297C109) SHA1(e1a59d87edd66e6c226102cb0688e9cb74dbb594), ROM_BIOS(4) )
+	ROMX_LOAD( "char.ua15",      0x0000, 0x800, CRC(5297C109) SHA1(e1a59d87edd66e6c226102cb0688e9cb74dbb594), ROM_BIOS(5) )
+	ROMX_LOAD( "7a3007-00.ud15", 0x0000, 0x800, CRC(6c1eab0d) SHA1(b04459d377a70abc9155a5486003cb795342c801), ROM_BIOS(6) )
+	ROMX_LOAD( "7a3007-00.ud15", 0x0000, 0x800, CRC(6c1eab0d) SHA1(b04459d377a70abc9155a5486003cb795342c801), ROM_BIOS(7) )
 ROM_END
 
 ROM_START( osborne1nv )

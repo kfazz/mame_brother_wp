@@ -21,6 +21,9 @@ public:
 			m_maincpu(*this, "maincpu")
 	{ }
 
+	void bgt(machine_config &config);
+	void bgt_io(address_map &map);
+	void bgt_map(address_map &map);
 protected:
 
 	// devices
@@ -28,15 +31,17 @@ protected:
 };
 
 
-static ADDRESS_MAP_START( bgt_map, AS_PROGRAM, 16, bgt_state )
-	AM_RANGE(0x00000, 0x7ffff) AM_ROM
-	AM_RANGE(0xf8000, 0xfffff) AM_ROM
-ADDRESS_MAP_END
+void bgt_state::bgt_map(address_map &map)
+{
+	map(0x00000, 0x7ffff).rom();
+	map(0xf8000, 0xfffff).rom();
+}
 
 
 
-static ADDRESS_MAP_START( bgt_io, AS_IO, 16, bgt_state )
-ADDRESS_MAP_END
+void bgt_state::bgt_io(address_map &map)
+{
+}
 
 
 
@@ -44,7 +49,7 @@ static INPUT_PORTS_START( bgt )
 INPUT_PORTS_END
 
 
-static MACHINE_CONFIG_START( bgt )
+MACHINE_CONFIG_START(bgt_state::bgt)
 	MCFG_CPU_ADD("maincpu", V30, 12000000 ) // ? unknown CPU.. definitely x86 based tho
 	MCFG_CPU_PROGRAM_MAP(bgt_map)
 	MCFG_CPU_IO_MAP(bgt_io)

@@ -171,12 +171,15 @@ INPUT_CHANGED_MEMBER(segag80v_state::service_switch)
 
 void segag80v_state::machine_start()
 {
+	m_scrambled_write_pc = 0xffff;
+
 	/* register for save states */
 	save_item(NAME(m_mult_data));
 	save_item(NAME(m_mult_result));
 	save_item(NAME(m_spinner_select));
 	save_item(NAME(m_spinner_sign));
 	save_item(NAME(m_spinner_count));
+	save_item(NAME(m_scrambled_write_pc));
 }
 
 
@@ -187,15 +190,28 @@ void segag80v_state::machine_start()
  *
  *************************************/
 
+READ8_MEMBER(segag80v_state::g80v_opcode_r)
+{
+	// opcodes themselves are not scrambled
+	uint8_t op = m_maincpu->space(AS_PROGRAM).read_byte(offset);
+
+	// writes via opcode $32 (LD $(XXYY),A) get scrambled
+	if (!machine().side_effects_disabled())
+		m_scrambled_write_pc = (op == 0x32) ? offset : 0xffff;
+
+	return op;
+}
+
 offs_t segag80v_state::decrypt_offset(address_space &space, offs_t offset)
 {
-	/* ignore anything but accesses via opcode $32 (LD $(XXYY),A) */
-	offs_t pc = space.device().safe_pcbase();
-	if ((uint16_t)pc == 0xffff || space.read_byte(pc) != 0x32)
+	if (m_scrambled_write_pc == 0xffff)
 		return offset;
 
-	/* fetch the low byte of the address and munge it */
-	return (offset & 0xff00) | (*m_decrypt)(pc, space.read_byte(pc + 1));
+	offs_t pc = m_scrambled_write_pc;
+	m_scrambled_write_pc = 0xffff;
+
+	/* munge the low byte of the address */
+	return (offset & 0xff00) | (*m_decrypt)(pc, offset & 0xff);
 }
 
 WRITE8_MEMBER(segag80v_state::mainram_w)
@@ -361,7 +377,7 @@ WRITE8_MEMBER(segag80v_state::unknown_w)
 	/* writing an 0x04 here enables interrupts */
 	/* some games write 0x00/0x01 here as well */
 	if (data != 0x00 && data != 0x01 && data != 0x04)
-		osd_printf_debug("%04X:unknown_w = %02X\n", space.device().safe_pc(), data);
+		osd_printf_debug("%04X:unknown_w = %02X\n", m_maincpu->pc(), data);
 }
 
 
@@ -373,26 +389,33 @@ WRITE8_MEMBER(segag80v_state::unknown_w)
  *************************************/
 
 /* complete memory map derived from schematics */
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 8, segag80v_state )
-	AM_RANGE(0x0000, 0x07ff) AM_ROM     /* CPU board ROM */
-	AM_RANGE(0x0800, 0xbfff) AM_ROM     /* PROM board ROM area */
-	AM_RANGE(0xc800, 0xcfff) AM_RAM_WRITE(mainram_w) AM_SHARE("mainram")
-	AM_RANGE(0xe000, 0xefff) AM_RAM_WRITE(vectorram_w) AM_SHARE("vectorram")
-ADDRESS_MAP_END
+void segag80v_state::main_map(address_map &map)
+{
+	map(0x0000, 0x07ff).rom();     /* CPU board ROM */
+	map(0x0800, 0xbfff).rom();     /* PROM board ROM area */
+	map(0xc800, 0xcfff).ram().w(this, FUNC(segag80v_state::mainram_w)).share("mainram");
+	map(0xe000, 0xefff).ram().w(this, FUNC(segag80v_state::vectorram_w)).share("vectorram");
+}
+
+void segag80v_state::opcodes_map(address_map &map)
+{
+	map(0x0000, 0xffff).r(this, FUNC(segag80v_state::g80v_opcode_r));
+}
 
 
 /* complete memory map derived from schematics */
-static ADDRESS_MAP_START( main_portmap, AS_IO, 8, segag80v_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0xbc, 0xbc) /* AM_READ ??? */
-	AM_RANGE(0xbd, 0xbe) AM_WRITE(multiply_w)
-	AM_RANGE(0xbe, 0xbe) AM_READ(multiply_r)
-	AM_RANGE(0xbf, 0xbf) AM_WRITE(unknown_w)
+void segag80v_state::main_portmap(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0xbc, 0xbc); /* AM_READ ??? */
+	map(0xbd, 0xbe).w(this, FUNC(segag80v_state::multiply_w));
+	map(0xbe, 0xbe).r(this, FUNC(segag80v_state::multiply_r));
+	map(0xbf, 0xbf).w(this, FUNC(segag80v_state::unknown_w));
 
-	AM_RANGE(0xf9, 0xf9) AM_MIRROR(0x04) AM_WRITE(coin_count_w)
-	AM_RANGE(0xf8, 0xfb) AM_READ(mangled_ports_r)
-	AM_RANGE(0xfc, 0xfc) AM_READ_PORT("FC")
-ADDRESS_MAP_END
+	map(0xf9, 0xf9).mirror(0x04).w(this, FUNC(segag80v_state::coin_count_w));
+	map(0xf8, 0xfb).r(this, FUNC(segag80v_state::mangled_ports_r));
+	map(0xfc, 0xfc).portr("FC");
+}
 
 
 
@@ -870,11 +893,12 @@ static const char *const zektor_sample_names[] =
  *
  *************************************/
 
-static MACHINE_CONFIG_START( g80v_base )
+MACHINE_CONFIG_START(segag80v_state::g80v_base)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, VIDEO_CLOCK/4)
 	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_OPCODES_MAP(opcodes_map)
 	MCFG_CPU_IO_MAP(main_portmap)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", segag80v_state,  irq0_line_hold)
 
@@ -894,7 +918,8 @@ static MACHINE_CONFIG_START( g80v_base )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( elim2, g80v_base )
+MACHINE_CONFIG_START(segag80v_state::elim2)
+	g80v_base(config);
 
 	/* custom sound board */
 	MCFG_SOUND_ADD("samples", SAMPLES, 0)
@@ -904,7 +929,8 @@ static MACHINE_CONFIG_DERIVED( elim2, g80v_base )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( spacfury, g80v_base )
+MACHINE_CONFIG_START(segag80v_state::spacfury)
+	g80v_base(config);
 
 	/* custom sound board */
 	MCFG_SOUND_ADD("samples", SAMPLES, 0)
@@ -913,11 +939,12 @@ static MACHINE_CONFIG_DERIVED( spacfury, g80v_base )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.1)
 
 	/* speech board */
-	MCFG_FRAGMENT_ADD(sega_speech_board)
+	sega_speech_board(config);
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( zektor, g80v_base )
+MACHINE_CONFIG_START(segag80v_state::zektor)
+	g80v_base(config);
 
 	/* custom sound board */
 	MCFG_SOUND_ADD("samples", SAMPLES, 0)
@@ -929,21 +956,23 @@ static MACHINE_CONFIG_DERIVED( zektor, g80v_base )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.33)
 
 	/* speech board */
-	MCFG_FRAGMENT_ADD(sega_speech_board)
+	sega_speech_board(config);
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( tacscan, g80v_base )
+MACHINE_CONFIG_START(segag80v_state::tacscan)
+	g80v_base(config);
 
 	/* universal sound board */
 	MCFG_SEGAUSB_ADD("usbsnd")
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( startrek, g80v_base )
+MACHINE_CONFIG_START(segag80v_state::startrek)
+	g80v_base(config);
 
 	/* speech board */
-	MCFG_FRAGMENT_ADD(sega_speech_board)
+	sega_speech_board(config);
 
 	/* universal sound board */
 	MCFG_SEGAUSB_ADD("usbsnd")

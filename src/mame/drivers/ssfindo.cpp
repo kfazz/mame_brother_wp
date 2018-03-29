@@ -288,14 +288,20 @@ public:
 	TIMER_CALLBACK_MEMBER(PS7500_Timer0_callback);
 	TIMER_CALLBACK_MEMBER(PS7500_Timer1_callback);
 
-	typedef void (ssfindo_state::*speedup_func)(address_space &space);
+	typedef void (ssfindo_state::*speedup_func)();
 	speedup_func m_speedup;
 
 	void PS7500_startTimer0();
 	void PS7500_startTimer1();
 	void PS7500_reset();
-	void ssfindo_speedups(address_space& space);
-	void ppcar_speedups(address_space& space);
+	void ssfindo_speedups();
+	void ppcar_speedups();
+	void ssfindo(machine_config &config);
+	void ppcar(machine_config &config);
+	void tetfight(machine_config &config);
+	void ppcar_map(address_map &map);
+	void ssfindo_map(address_map &map);
+	void tetfight_map(address_map &map);
 };
 
 
@@ -339,7 +345,7 @@ TIMER_CALLBACK_MEMBER(ssfindo_state::PS7500_Timer0_callback)
 	m_PS7500_IO[IRQSTA]|=0x20;
 	if(m_PS7500_IO[IRQMSKA]&0x20)
 	{
-		generic_pulse_irq_line(*m_maincpu, ARM7_IRQ_LINE, 1);
+		m_maincpu->pulse_input_line(ARM7_IRQ_LINE, m_maincpu->minimum_quantum_time());
 	}
 }
 
@@ -358,7 +364,7 @@ TIMER_CALLBACK_MEMBER(ssfindo_state::PS7500_Timer1_callback)
 	m_PS7500_IO[IRQSTA]|=0x40;
 	if(m_PS7500_IO[IRQMSKA]&0x40)
 	{
-		generic_pulse_irq_line(*m_maincpu, ARM7_IRQ_LINE, 1);
+		m_maincpu->pulse_input_line(ARM7_IRQ_LINE, m_maincpu->minimum_quantum_time());
 	}
 }
 
@@ -376,7 +382,7 @@ INTERRUPT_GEN_MEMBER(ssfindo_state::interrupt)
 	m_PS7500_IO[IRQSTA]|=0x08;
 		if(m_PS7500_IO[IRQMSKA]&0x08)
 		{
-			generic_pulse_irq_line(device.execute(), ARM7_IRQ_LINE, 1);
+			device.execute().pulse_input_line(ARM7_IRQ_LINE, device.execute().minimum_quantum_time());
 		}
 }
 
@@ -390,20 +396,20 @@ void ssfindo_state::PS7500_reset()
 }
 
 
-void ssfindo_state::ssfindo_speedups(address_space& space)
+void ssfindo_state::ssfindo_speedups()
 {
-	if (space.device().safe_pc()==0x2d6c8) // ssfindo
-		space.device().execute().spin_until_time(attotime::from_usec(20));
-	else if (space.device().safe_pc()==0x2d6bc) // ssfindo
-		space.device().execute().spin_until_time(attotime::from_usec(20));
+	if (m_maincpu->pc()==0x2d6c8) // ssfindo
+		m_maincpu->spin_until_time(attotime::from_usec(20));
+	else if (m_maincpu->pc()==0x2d6bc) // ssfindo
+		m_maincpu->spin_until_time(attotime::from_usec(20));
 }
 
-void ssfindo_state::ppcar_speedups(address_space& space)
+void ssfindo_state::ppcar_speedups()
 {
-	if (space.device().safe_pc()==0x000bc8) // ppcar
-		space.device().execute().spin_until_time(attotime::from_usec(20));
-	else if (space.device().safe_pc()==0x000bbc) // ppcar
-		space.device().execute().spin_until_time(attotime::from_usec(20));
+	if (m_maincpu->pc()==0x000bc8) // ppcar
+		m_maincpu->spin_until_time(attotime::from_usec(20));
+	else if (m_maincpu->pc()==0x000bbc) // ppcar
+		m_maincpu->spin_until_time(attotime::from_usec(20));
 }
 
 
@@ -416,7 +422,7 @@ READ32_MEMBER(ssfindo_state::PS7500_IO_r)
 
 		case IOLINES: //TODO: eeprom  24c01
 #if 0
-		osd_printf_debug("IOLINESR %i @%x\n", offset, space.device().safe_pc());
+		osd_printf_debug("IOLINESR %i @%x\n", offset, m_maincpu->pc());
 #endif
 
 		if(m_flashType == 1)
@@ -431,7 +437,7 @@ READ32_MEMBER(ssfindo_state::PS7500_IO_r)
 			return (m_PS7500_IO[IRQSTA] & m_PS7500_IO[IRQMSKA]) | 0x80;
 
 		case IOCR: //TODO: nINT1, OD[n] p.81
-			if (m_speedup) (this->*m_speedup)(space);
+			if (m_speedup) (this->*m_speedup)();
 
 			if( m_iocr_hack)
 			{
@@ -472,13 +478,13 @@ WRITE32_MEMBER(ssfindo_state::PS7500_IO_w)
 				if(data&0xc0)
 					m_adrLatch=0;
 
-			if(space.device().safe_pc() == 0xbac0 && m_flashType == 1)
+			if(m_maincpu->pc() == 0xbac0 && m_flashType == 1)
 			{
 				m_flashN=data&1;
 			}
 
 #if 0
-				logerror("IOLINESW %i = %x  @%x\n",offset,data,space.device().safe_pc());
+				logerror("IOLINESW %i = %x  @%x\n",offset,data,m_maincpu->pc());
 #endif
 			break;
 
@@ -505,7 +511,7 @@ WRITE32_MEMBER(ssfindo_state::PS7500_IO_w)
 			break;
 
 		case IOCR:
-			//popmessage("IOLINESW %i = %x  @%x\n",offset,data,space.device().safe_pc());
+			//popmessage("IOLINESW %i = %x  @%x\n",offset,data,m_maincpu->pc());
 			COMBINE_DATA(&m_PS7500_IO[offset]);
 			// TODO: correct hook-up
 			m_i2cmem->write_scl((data & 0x01) ? 1 : 0);
@@ -560,7 +566,7 @@ WRITE32_MEMBER(ssfindo_state::io_w)
 	COMBINE_DATA(&temp);
 
 #if 0
-	logerror("[io_w] = %x @%x [latch=%x]\n",data,space.device().safe_pc(),m_adrLatch);
+	logerror("[io_w] = %x @%x [latch=%x]\n",data,m_maincpu->pc(),m_adrLatch);
 #endif
 
 	if(m_adrLatch==1)
@@ -595,38 +601,40 @@ READ32_MEMBER(ssfindo_state::randomized_r)
 	return machine().rand();
 }
 
-static ADDRESS_MAP_START( ssfindo_map, AS_PROGRAM, 32, ssfindo_state )
-	AM_RANGE(0x00000000, 0x000fffff) AM_ROM
-	AM_RANGE(0x03200000, 0x032001ff) AM_READWRITE(PS7500_IO_r,PS7500_IO_w)
-	AM_RANGE(0x03012e60, 0x03012e67) AM_NOP
-	AM_RANGE(0x03012fe0, 0x03012fe3) AM_WRITE(debug_w)
-	AM_RANGE(0x03012ff0, 0x03012ff3) AM_NOP
-	AM_RANGE(0x03012ff4, 0x03012ff7) AM_WRITENOP AM_READ(ff4_r) //status flag ?
-	AM_RANGE(0x03012ff8, 0x03012fff) AM_NOP
-	AM_RANGE(0x03240000, 0x03240003) AM_READ_PORT("IN0") AM_WRITENOP
-	AM_RANGE(0x03241000, 0x03241003) AM_READ_PORT("IN1") AM_WRITENOP
-	AM_RANGE(0x03242000, 0x03242003) AM_READ(io_r) AM_WRITE(io_w)
-	AM_RANGE(0x03243000, 0x03243003) AM_READ_PORT("DSW") AM_WRITENOP
-	AM_RANGE(0x0324f000, 0x0324f003) AM_READ(SIMPLEIO_r)
-	AM_RANGE(0x03245000, 0x03245003) AM_WRITENOP /* sound ? */
-	AM_RANGE(0x03400000, 0x03400003) AM_WRITE(FIFO_w)
-	AM_RANGE(0x10000000, 0x11ffffff) AM_RAM AM_SHARE("vram")
-ADDRESS_MAP_END
+void ssfindo_state::ssfindo_map(address_map &map)
+{
+	map(0x00000000, 0x000fffff).rom();
+	map(0x03200000, 0x032001ff).rw(this, FUNC(ssfindo_state::PS7500_IO_r), FUNC(ssfindo_state::PS7500_IO_w));
+	map(0x03012e60, 0x03012e67).noprw();
+	map(0x03012fe0, 0x03012fe3).w(this, FUNC(ssfindo_state::debug_w));
+	map(0x03012ff0, 0x03012ff3).noprw();
+	map(0x03012ff4, 0x03012ff7).nopw().r(this, FUNC(ssfindo_state::ff4_r)); //status flag ?
+	map(0x03012ff8, 0x03012fff).noprw();
+	map(0x03240000, 0x03240003).portr("IN0").nopw();
+	map(0x03241000, 0x03241003).portr("IN1").nopw();
+	map(0x03242000, 0x03242003).r(this, FUNC(ssfindo_state::io_r)).w(this, FUNC(ssfindo_state::io_w));
+	map(0x03243000, 0x03243003).portr("DSW").nopw();
+	map(0x0324f000, 0x0324f003).r(this, FUNC(ssfindo_state::SIMPLEIO_r));
+	map(0x03245000, 0x03245003).nopw(); /* sound ? */
+	map(0x03400000, 0x03400003).w(this, FUNC(ssfindo_state::FIFO_w));
+	map(0x10000000, 0x11ffffff).ram().share("vram");
+}
 
-static ADDRESS_MAP_START( ppcar_map, AS_PROGRAM, 32, ssfindo_state )
-	AM_RANGE(0x00000000, 0x000fffff) AM_ROM
-	AM_RANGE(0x03200000, 0x032001ff) AM_READWRITE(PS7500_IO_r,PS7500_IO_w)
-	AM_RANGE(0x03012b00, 0x03012bff) AM_READ(randomized_r) AM_WRITENOP
-	AM_RANGE(0x03012e60, 0x03012e67) AM_WRITENOP
-	AM_RANGE(0x03012ff8, 0x03012ffb) AM_READ_PORT("IN0") AM_WRITENOP
-	AM_RANGE(0x032c0000, 0x032c0003) AM_READ_PORT("IN1") AM_WRITENOP
-	AM_RANGE(0x03340000, 0x03340007) AM_WRITENOP
-	AM_RANGE(0x03341000, 0x0334101f) AM_WRITENOP
-	AM_RANGE(0x033c0000, 0x033c0003) AM_READ(io_r) AM_WRITE(io_w)
-	AM_RANGE(0x03400000, 0x03400003) AM_WRITE(FIFO_w)
-	AM_RANGE(0x08000000, 0x08ffffff) AM_RAM
-	AM_RANGE(0x10000000, 0x10ffffff) AM_RAM AM_SHARE("vram")
-ADDRESS_MAP_END
+void ssfindo_state::ppcar_map(address_map &map)
+{
+	map(0x00000000, 0x000fffff).rom();
+	map(0x03200000, 0x032001ff).rw(this, FUNC(ssfindo_state::PS7500_IO_r), FUNC(ssfindo_state::PS7500_IO_w));
+	map(0x03012b00, 0x03012bff).r(this, FUNC(ssfindo_state::randomized_r)).nopw();
+	map(0x03012e60, 0x03012e67).nopw();
+	map(0x03012ff8, 0x03012ffb).portr("IN0").nopw();
+	map(0x032c0000, 0x032c0003).portr("IN1").nopw();
+	map(0x03340000, 0x03340007).nopw();
+	map(0x03341000, 0x0334101f).nopw();
+	map(0x033c0000, 0x033c0003).r(this, FUNC(ssfindo_state::io_r)).w(this, FUNC(ssfindo_state::io_w));
+	map(0x03400000, 0x03400003).w(this, FUNC(ssfindo_state::FIFO_w));
+	map(0x08000000, 0x08ffffff).ram();
+	map(0x10000000, 0x10ffffff).ram().share("vram");
+}
 
 READ32_MEMBER(ssfindo_state::tetfight_unk_r)
 {
@@ -639,16 +647,17 @@ WRITE32_MEMBER(ssfindo_state::tetfight_unk_w)
 	//sound latch ?
 }
 
-static ADDRESS_MAP_START( tetfight_map, AS_PROGRAM, 32, ssfindo_state )
-	AM_RANGE(0x00000000, 0x001fffff) AM_ROM
-	AM_RANGE(0x03200000, 0x032001ff) AM_READWRITE(PS7500_IO_r,PS7500_IO_w)
-	AM_RANGE(0x03400000, 0x03400003) AM_WRITE(FIFO_w)
-	AM_RANGE(0x03240000, 0x03240003) AM_READ_PORT("IN0")
-	AM_RANGE(0x03240004, 0x03240007) AM_READ_PORT("IN1")
-	AM_RANGE(0x03240008, 0x0324000b) AM_READ_PORT("DSW2")
-	AM_RANGE(0x03240020, 0x03240023) AM_READWRITE(tetfight_unk_r, tetfight_unk_w)
-	AM_RANGE(0x10000000, 0x14ffffff) AM_RAM AM_SHARE("vram")
-ADDRESS_MAP_END
+void ssfindo_state::tetfight_map(address_map &map)
+{
+	map(0x00000000, 0x001fffff).rom();
+	map(0x03200000, 0x032001ff).rw(this, FUNC(ssfindo_state::PS7500_IO_r), FUNC(ssfindo_state::PS7500_IO_w));
+	map(0x03400000, 0x03400003).w(this, FUNC(ssfindo_state::FIFO_w));
+	map(0x03240000, 0x03240003).portr("IN0");
+	map(0x03240004, 0x03240007).portr("IN1");
+	map(0x03240008, 0x0324000b).portr("DSW2");
+	map(0x03240020, 0x03240023).rw(this, FUNC(ssfindo_state::tetfight_unk_r), FUNC(ssfindo_state::tetfight_unk_w));
+	map(0x10000000, 0x14ffffff).ram().share("vram");
+}
 
 void ssfindo_state::machine_reset()
 {
@@ -782,7 +791,7 @@ static INPUT_PORTS_START( tetfight )
 INPUT_PORTS_END
 
 
-static MACHINE_CONFIG_START( ssfindo )
+MACHINE_CONFIG_START(ssfindo_state::ssfindo)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", ARM7, 54000000) // guess...
@@ -803,7 +812,8 @@ static MACHINE_CONFIG_START( ssfindo )
 	MCFG_PALETTE_ADD("palette", 256)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( ppcar, ssfindo )
+MACHINE_CONFIG_START(ssfindo_state::ppcar)
+	ssfindo(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -812,7 +822,8 @@ static MACHINE_CONFIG_DERIVED( ppcar, ssfindo )
 	MCFG_DEVICE_REMOVE("i2cmem")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( tetfight, ppcar )
+MACHINE_CONFIG_START(ssfindo_state::tetfight)
+	ppcar(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")

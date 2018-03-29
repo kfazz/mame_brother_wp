@@ -120,6 +120,9 @@ public:
 
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	void draw_circles(bitmap_ind16 &bitmap);
+	void warpspeed(machine_config &config);
+	void warpspeed_io_map(address_map &map);
+	void warpspeed_map(address_map &map);
 };
 
 WRITE8_MEMBER(warpspeed_state::hardware_w)
@@ -230,20 +233,22 @@ uint32_t warpspeed_state::screen_update(screen_device &screen, bitmap_ind16 &bit
 	return 0;
 }
 
-static ADDRESS_MAP_START( warpspeed_map, AS_PROGRAM, 8, warpspeed_state )
-	AM_RANGE(0x0000, 0x0dff) AM_ROM
-	AM_RANGE(0x1800, 0x1bff) AM_RAM_WRITE(vidram_w ) AM_SHARE("videoram")
-	AM_RANGE(0x1c00, 0x1cff) AM_RAM AM_SHARE("workram")
-ADDRESS_MAP_END
+void warpspeed_state::warpspeed_map(address_map &map)
+{
+	map(0x0000, 0x0dff).rom();
+	map(0x1800, 0x1bff).ram().w(this, FUNC(warpspeed_state::vidram_w)).share("videoram");
+	map(0x1c00, 0x1cff).ram().share("workram");
+}
 
-static ADDRESS_MAP_START ( warpspeed_io_map, AS_IO, 8, warpspeed_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_READ_PORT("IN0")
-	AM_RANGE(0x01, 0x01) AM_READ_PORT("IN1")
-	AM_RANGE(0x02, 0x02) AM_READ_PORT("DSW")
-	AM_RANGE(0x03, 0x03) AM_READ_PORT("IN2")
-	AM_RANGE(0x00, 0x27) AM_WRITE(hardware_w )
-ADDRESS_MAP_END
+void warpspeed_state::warpspeed_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).portr("IN0");
+	map(0x01, 0x01).portr("IN1");
+	map(0x02, 0x02).portr("DSW");
+	map(0x03, 0x03).portr("IN2");
+	map(0x00, 0x27).w(this, FUNC(warpspeed_state::hardware_w));
+}
 
 static INPUT_PORTS_START( warpspeed )
 	PORT_START("IN0")
@@ -315,10 +320,10 @@ PALETTE_INIT_MEMBER(warpspeed_state, warpspeed)
 	}
 }
 
-static MACHINE_CONFIG_START( warpspeed )
+MACHINE_CONFIG_START(warpspeed_state::warpspeed)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_5MHz/2)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(5'000'000)/2)
 	MCFG_CPU_PROGRAM_MAP(warpspeed_map)
 	MCFG_CPU_IO_MAP(warpspeed_io_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", warpspeed_state,  irq0_line_hold)

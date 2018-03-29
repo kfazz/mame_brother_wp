@@ -2,7 +2,7 @@
 // copyright-holders:Roberto Fresca, David Haywood
 /***************************************************************************************************
 
-  Sky Lancer / Butterfly / Mad Zoo / Super Star 97
+  Sky Lancer / Butterfly / Mad Zoo / Super Star 97 and others...
   Bordun International.
 
   Original preliminary driver by Luca Elia.
@@ -102,7 +102,7 @@
   To enter the Service Mode or Bookkeeping Menu, hold down Stop Reel 2/Up and Take along with the
   specific inputs.
 
-  * Butterfly Dream 97
+  * 蝴蝶梦 97 (Húdié Mèng 97)
 
   The program code has trivial opcode encryption which has been broken. However, the inputs tend
   to act out of control at many times. This may have to do with the large number of unknown reads
@@ -130,7 +130,7 @@
 #include <algorithm>
 
 
-#define MASTER_CLOCK        XTAL_12MHz  /* confirmed */
+#define MASTER_CLOCK        XTAL(12'000'000)  /* confirmed */
 #define HOPPER_PULSE        50 // guessed
 
 
@@ -200,6 +200,7 @@ public:
 	DECLARE_WRITE8_MEMBER(mbutrfly_prot_w);
 	READ_LINE_MEMBER(mbutrfly_prot_r);
 	DECLARE_READ8_MEMBER(bdream97_opcode_r);
+	DECLARE_DRIVER_INIT(miaction);
 	DECLARE_DRIVER_INIT(sonikfig);
 	TILE_GET_INFO_MEMBER(get_tile_info);
 	TILE_GET_INFO_MEMBER(get_reel_1_tile_info);
@@ -213,6 +214,17 @@ public:
 	required_device<gfxdecode_device> m_gfxdecode;
 	required_device<palette_device> m_palette;
 	required_device<ticket_dispenser_device> m_hopper;
+	void neraidou(machine_config &config);
+	void sstar97(machine_config &config);
+	void bdream97(machine_config &config);
+	void skylncr(machine_config &config);
+	void mbutrfly(machine_config &config);
+	void bdream97_opcode_map(address_map &map);
+	void io_map_mbutrfly(address_map &map);
+	void io_map_skylncr(address_map &map);
+	void mem_map_skylncr(address_map &map);
+	void ramdac2_map(address_map &map);
+	void ramdac_map(address_map &map);
 };
 
 
@@ -434,7 +446,7 @@ READ_LINE_MEMBER(skylncr_state::mbutrfly_prot_r)
 
 READ8_MEMBER(skylncr_state::bdream97_opcode_r)
 {
-	auto dis = machine().disable_side_effect();
+	auto dis = machine().disable_side_effects();
 	return m_maincpu->space(AS_PROGRAM).read_byte(offset) ^ 0x80;
 }
 
@@ -443,107 +455,113 @@ READ8_MEMBER(skylncr_state::bdream97_opcode_r)
 *             Memory Map              *
 **************************************/
 
-static ADDRESS_MAP_START( mem_map_skylncr, AS_PROGRAM, 8, skylncr_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("nvram")
+void skylncr_state::mem_map_skylncr(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x87ff).ram().share("nvram");
 
-	AM_RANGE(0x8800, 0x8fff) AM_RAM_WRITE(skylncr_videoram_w ) AM_SHARE("videoram")
-	AM_RANGE(0x9000, 0x97ff) AM_RAM_WRITE(skylncr_colorram_w ) AM_SHARE("colorram")
+	map(0x8800, 0x8fff).ram().w(this, FUNC(skylncr_state::skylncr_videoram_w)).share("videoram");
+	map(0x9000, 0x97ff).ram().w(this, FUNC(skylncr_state::skylncr_colorram_w)).share("colorram");
 
-	AM_RANGE(0x9800, 0x99ff) AM_RAM_WRITE(reeltiles_1_w ) AM_SHARE("reeltiles_1_ram")
-	AM_RANGE(0x9a00, 0x9bff) AM_RAM_WRITE(reeltiles_2_w ) AM_SHARE("reeltiles_2_ram")
-	AM_RANGE(0x9c00, 0x9dff) AM_RAM_WRITE(reeltiles_3_w ) AM_SHARE("reeltiles_3_ram")
-	AM_RANGE(0x9e00, 0x9fff) AM_RAM_WRITE(reeltiles_4_w ) AM_SHARE("reeltiles_4_ram")
-	AM_RANGE(0xa000, 0xa1ff) AM_RAM_WRITE(reeltileshigh_1_w ) AM_SHARE("rthigh_1_ram")
-	AM_RANGE(0xa200, 0xa3ff) AM_RAM_WRITE(reeltileshigh_2_w ) AM_SHARE("rthigh_2_ram")
-	AM_RANGE(0xa400, 0xa5ff) AM_RAM_WRITE(reeltileshigh_3_w ) AM_SHARE("rthigh_3_ram")
-	AM_RANGE(0xa600, 0xa7ff) AM_RAM_WRITE(reeltileshigh_4_w ) AM_SHARE("rthigh_4_ram")
+	map(0x9800, 0x99ff).ram().w(this, FUNC(skylncr_state::reeltiles_1_w)).share("reeltiles_1_ram");
+	map(0x9a00, 0x9bff).ram().w(this, FUNC(skylncr_state::reeltiles_2_w)).share("reeltiles_2_ram");
+	map(0x9c00, 0x9dff).ram().w(this, FUNC(skylncr_state::reeltiles_3_w)).share("reeltiles_3_ram");
+	map(0x9e00, 0x9fff).ram().w(this, FUNC(skylncr_state::reeltiles_4_w)).share("reeltiles_4_ram");
+	map(0xa000, 0xa1ff).ram().w(this, FUNC(skylncr_state::reeltileshigh_1_w)).share("rthigh_1_ram");
+	map(0xa200, 0xa3ff).ram().w(this, FUNC(skylncr_state::reeltileshigh_2_w)).share("rthigh_2_ram");
+	map(0xa400, 0xa5ff).ram().w(this, FUNC(skylncr_state::reeltileshigh_3_w)).share("rthigh_3_ram");
+	map(0xa600, 0xa7ff).ram().w(this, FUNC(skylncr_state::reeltileshigh_4_w)).share("rthigh_4_ram");
 
-	AM_RANGE(0xaa55, 0xaa55) AM_READ(ret_ff )
+	map(0xaa55, 0xaa55).r(this, FUNC(skylncr_state::ret_ff));
 
-	AM_RANGE(0xb000, 0xb03f) AM_RAM_WRITE(reelscroll1_w) AM_SHARE("reelscroll1")
-	AM_RANGE(0xb040, 0xb07f) AM_RAM_WRITE(reelscroll1_w)
-	AM_RANGE(0xb080, 0xb0bf) AM_RAM_WRITE(reelscroll1_w)
-	AM_RANGE(0xb0c0, 0xb0ff) AM_RAM_WRITE(reelscroll1_w)
-	AM_RANGE(0xb100, 0xb13f) AM_RAM_WRITE(reelscroll1_w)
-	AM_RANGE(0xb140, 0xb17f) AM_RAM_WRITE(reelscroll1_w)
-	AM_RANGE(0xb180, 0xb1bf) AM_RAM_WRITE(reelscroll1_w)
-	AM_RANGE(0xb1c0, 0xb1ff) AM_RAM_WRITE(reelscroll1_w)
+	map(0xb000, 0xb03f).ram().w(this, FUNC(skylncr_state::reelscroll1_w)).share("reelscroll1");
+	map(0xb040, 0xb07f).ram().w(this, FUNC(skylncr_state::reelscroll1_w));
+	map(0xb080, 0xb0bf).ram().w(this, FUNC(skylncr_state::reelscroll1_w));
+	map(0xb0c0, 0xb0ff).ram().w(this, FUNC(skylncr_state::reelscroll1_w));
+	map(0xb100, 0xb13f).ram().w(this, FUNC(skylncr_state::reelscroll1_w));
+	map(0xb140, 0xb17f).ram().w(this, FUNC(skylncr_state::reelscroll1_w));
+	map(0xb180, 0xb1bf).ram().w(this, FUNC(skylncr_state::reelscroll1_w));
+	map(0xb1c0, 0xb1ff).ram().w(this, FUNC(skylncr_state::reelscroll1_w));
 
-	AM_RANGE(0xb200, 0xb23f) AM_RAM_WRITE(reelscroll2_w) AM_SHARE("reelscroll2")
-	AM_RANGE(0xb240, 0xb27f) AM_RAM_WRITE(reelscroll2_w)
-	AM_RANGE(0xb280, 0xb2bf) AM_RAM_WRITE(reelscroll2_w)
-	AM_RANGE(0xb2c0, 0xb2ff) AM_RAM_WRITE(reelscroll2_w)
-	AM_RANGE(0xb300, 0xb33f) AM_RAM_WRITE(reelscroll2_w)
-	AM_RANGE(0xb340, 0xb37f) AM_RAM_WRITE(reelscroll2_w)
-	AM_RANGE(0xb380, 0xb3bf) AM_RAM_WRITE(reelscroll2_w)
-	AM_RANGE(0xb3c0, 0xb3ff) AM_RAM_WRITE(reelscroll2_w)
+	map(0xb200, 0xb23f).ram().w(this, FUNC(skylncr_state::reelscroll2_w)).share("reelscroll2");
+	map(0xb240, 0xb27f).ram().w(this, FUNC(skylncr_state::reelscroll2_w));
+	map(0xb280, 0xb2bf).ram().w(this, FUNC(skylncr_state::reelscroll2_w));
+	map(0xb2c0, 0xb2ff).ram().w(this, FUNC(skylncr_state::reelscroll2_w));
+	map(0xb300, 0xb33f).ram().w(this, FUNC(skylncr_state::reelscroll2_w));
+	map(0xb340, 0xb37f).ram().w(this, FUNC(skylncr_state::reelscroll2_w));
+	map(0xb380, 0xb3bf).ram().w(this, FUNC(skylncr_state::reelscroll2_w));
+	map(0xb3c0, 0xb3ff).ram().w(this, FUNC(skylncr_state::reelscroll2_w));
 
-	AM_RANGE(0xb400, 0xb43f) AM_RAM_WRITE(reelscroll3_w) AM_SHARE("reelscroll3")
-	AM_RANGE(0xb440, 0xb47f) AM_RAM_WRITE(reelscroll3_w)
-	AM_RANGE(0xb480, 0xb4bf) AM_RAM_WRITE(reelscroll3_w)
-	AM_RANGE(0xb4c0, 0xb4ff) AM_RAM_WRITE(reelscroll3_w)
-	AM_RANGE(0xb500, 0xb53f) AM_RAM_WRITE(reelscroll3_w)
-	AM_RANGE(0xb540, 0xb57f) AM_RAM_WRITE(reelscroll3_w)
-	AM_RANGE(0xb580, 0xb5bf) AM_RAM_WRITE(reelscroll3_w)
-	AM_RANGE(0xb5c0, 0xb5ff) AM_RAM_WRITE(reelscroll3_w)
+	map(0xb400, 0xb43f).ram().w(this, FUNC(skylncr_state::reelscroll3_w)).share("reelscroll3");
+	map(0xb440, 0xb47f).ram().w(this, FUNC(skylncr_state::reelscroll3_w));
+	map(0xb480, 0xb4bf).ram().w(this, FUNC(skylncr_state::reelscroll3_w));
+	map(0xb4c0, 0xb4ff).ram().w(this, FUNC(skylncr_state::reelscroll3_w));
+	map(0xb500, 0xb53f).ram().w(this, FUNC(skylncr_state::reelscroll3_w));
+	map(0xb540, 0xb57f).ram().w(this, FUNC(skylncr_state::reelscroll3_w));
+	map(0xb580, 0xb5bf).ram().w(this, FUNC(skylncr_state::reelscroll3_w));
+	map(0xb5c0, 0xb5ff).ram().w(this, FUNC(skylncr_state::reelscroll3_w));
 
-	AM_RANGE(0xb600, 0xb63f) AM_RAM_WRITE(reelscroll4_w) AM_SHARE("reelscroll4")
-	AM_RANGE(0xb640, 0xb67f) AM_RAM_WRITE(reelscroll4_w)
-	AM_RANGE(0xb680, 0xb6bf) AM_RAM_WRITE(reelscroll4_w)
-	AM_RANGE(0xb6c0, 0xb6ff) AM_RAM_WRITE(reelscroll4_w)
-	AM_RANGE(0xb700, 0xb73f) AM_RAM_WRITE(reelscroll4_w)
-	AM_RANGE(0xb740, 0xb77f) AM_RAM_WRITE(reelscroll4_w)
-	AM_RANGE(0xb780, 0xb7bf) AM_RAM_WRITE(reelscroll4_w)
-	AM_RANGE(0xb7c0, 0xb7ff) AM_RAM_WRITE(reelscroll4_w)
+	map(0xb600, 0xb63f).ram().w(this, FUNC(skylncr_state::reelscroll4_w)).share("reelscroll4");
+	map(0xb640, 0xb67f).ram().w(this, FUNC(skylncr_state::reelscroll4_w));
+	map(0xb680, 0xb6bf).ram().w(this, FUNC(skylncr_state::reelscroll4_w));
+	map(0xb6c0, 0xb6ff).ram().w(this, FUNC(skylncr_state::reelscroll4_w));
+	map(0xb700, 0xb73f).ram().w(this, FUNC(skylncr_state::reelscroll4_w));
+	map(0xb740, 0xb77f).ram().w(this, FUNC(skylncr_state::reelscroll4_w));
+	map(0xb780, 0xb7bf).ram().w(this, FUNC(skylncr_state::reelscroll4_w));
+	map(0xb7c0, 0xb7ff).ram().w(this, FUNC(skylncr_state::reelscroll4_w));
 
-	AM_RANGE(0xc000, 0xffff) AM_ROM
-ADDRESS_MAP_END
-
-
-static ADDRESS_MAP_START( io_map_skylncr, AS_IO, 8, skylncr_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-
-	AM_RANGE(0x00, 0x03) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)    /* Input Ports */
-	AM_RANGE(0x10, 0x13) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)    /* Input Ports */
-
-	AM_RANGE(0x20, 0x20) AM_WRITE(skylncr_coin_w)
-
-	AM_RANGE(0x30, 0x31) AM_DEVWRITE("aysnd", ay8910_device, address_data_w)
-	AM_RANGE(0x31, 0x31) AM_DEVREAD("aysnd", ay8910_device, data_r)
-
-	AM_RANGE(0x40, 0x40) AM_DEVWRITE("ramdac", ramdac_device, index_w)
-	AM_RANGE(0x41, 0x41) AM_DEVWRITE("ramdac", ramdac_device, pal_w)
-	AM_RANGE(0x42, 0x42) AM_DEVWRITE("ramdac", ramdac_device, mask_w)
-
-	AM_RANGE(0x50, 0x50) AM_DEVWRITE("ramdac2", ramdac_device, index_w)
-	AM_RANGE(0x51, 0x51) AM_DEVWRITE("ramdac2", ramdac_device, pal_w)
-	AM_RANGE(0x52, 0x52) AM_DEVWRITE("ramdac2", ramdac_device, mask_w)
-
-	AM_RANGE(0x70, 0x70) AM_WRITE(skylncr_nmi_enable_w)
-ADDRESS_MAP_END
+	map(0xc000, 0xffff).rom();
+}
 
 
-static ADDRESS_MAP_START( io_map_mbutrfly, AS_IO, 8, skylncr_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x60, 0x60) AM_WRITE(mbutrfly_prot_w)
-	AM_IMPORT_FROM(io_map_skylncr)
-ADDRESS_MAP_END
+void skylncr_state::io_map_skylncr(address_map &map)
+{
+	map.global_mask(0xff);
+
+	map(0x00, 0x03).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Ports */
+	map(0x10, 0x13).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* Input Ports */
+
+	map(0x20, 0x20).w(this, FUNC(skylncr_state::skylncr_coin_w));
+
+	map(0x30, 0x31).w("aysnd", FUNC(ay8910_device::address_data_w));
+	map(0x31, 0x31).r("aysnd", FUNC(ay8910_device::data_r));
+
+	map(0x40, 0x40).w("ramdac", FUNC(ramdac_device::index_w));
+	map(0x41, 0x41).w("ramdac", FUNC(ramdac_device::pal_w));
+	map(0x42, 0x42).w("ramdac", FUNC(ramdac_device::mask_w));
+
+	map(0x50, 0x50).w("ramdac2", FUNC(ramdac_device::index_w));
+	map(0x51, 0x51).w("ramdac2", FUNC(ramdac_device::pal_w));
+	map(0x52, 0x52).w("ramdac2", FUNC(ramdac_device::mask_w));
+
+	map(0x70, 0x70).w(this, FUNC(skylncr_state::skylncr_nmi_enable_w));
+}
 
 
-static ADDRESS_MAP_START( bdream97_opcode_map, AS_OPCODES, 8, skylncr_state )
-	AM_RANGE(0x0000, 0xffff) AM_READ(bdream97_opcode_r)
-ADDRESS_MAP_END
+void skylncr_state::io_map_mbutrfly(address_map &map)
+{
+	map.global_mask(0xff);
+	io_map_skylncr(map);
+	map(0x60, 0x60).w(this, FUNC(skylncr_state::mbutrfly_prot_w));
+}
 
 
-static ADDRESS_MAP_START( ramdac_map, 0, 8, skylncr_state )
-	AM_RANGE(0x000, 0x3ff) AM_DEVREADWRITE("ramdac", ramdac_device, ramdac_pal_r, ramdac_rgb666_w)
-ADDRESS_MAP_END
+void skylncr_state::bdream97_opcode_map(address_map &map)
+{
+	map(0x0000, 0xffff).r(this, FUNC(skylncr_state::bdream97_opcode_r));
+}
 
 
-static ADDRESS_MAP_START( ramdac2_map, 0, 8, skylncr_state )
-	AM_RANGE(0x000, 0x3ff) AM_DEVREADWRITE("ramdac2", ramdac_device, ramdac_pal_r, ramdac_rgb666_w)
-ADDRESS_MAP_END
+void skylncr_state::ramdac_map(address_map &map)
+{
+	map(0x000, 0x3ff).rw("ramdac", FUNC(ramdac_device::ramdac_pal_r), FUNC(ramdac_device::ramdac_rgb666_w));
+}
+
+
+void skylncr_state::ramdac2_map(address_map &map)
+{
+	map(0x000, 0x3ff).rw("ramdac2", FUNC(ramdac_device::ramdac_pal_r), FUNC(ramdac_device::ramdac_rgb666_w));
+}
 
 
 
@@ -1616,7 +1634,7 @@ INTERRUPT_GEN_MEMBER(skylncr_state::skylncr_vblank_interrupt)
 *           Machine Driver           *
 *************************************/
 
-static MACHINE_CONFIG_START( skylncr )
+MACHINE_CONFIG_START(skylncr_state::skylncr)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK/4)
@@ -1666,14 +1684,16 @@ static MACHINE_CONFIG_START( skylncr )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( mbutrfly, skylncr )
+MACHINE_CONFIG_START(skylncr_state::mbutrfly)
+	skylncr(config);
 
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_IO_MAP(io_map_mbutrfly)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( neraidou, skylncr )
+MACHINE_CONFIG_START(skylncr_state::neraidou)
+	skylncr(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -1681,7 +1701,8 @@ static MACHINE_CONFIG_DERIVED( neraidou, skylncr )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( sstar97, skylncr )
+MACHINE_CONFIG_START(skylncr_state::sstar97)
+	skylncr(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -1689,11 +1710,12 @@ static MACHINE_CONFIG_DERIVED( sstar97, skylncr )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( bdream97, skylncr )
+MACHINE_CONFIG_START(skylncr_state::bdream97)
+	skylncr(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
-	MCFG_CPU_DECRYPTED_OPCODES_MAP(bdream97_opcode_map)
+	MCFG_CPU_OPCODES_MAP(bdream97_opcode_map)
 
 	MCFG_GFXDECODE_MODIFY("gfxdecode", bdream97)
 MACHINE_CONFIG_END
@@ -1858,6 +1880,13 @@ ROM_START( leader )
 	ROM_LOAD16_BYTE( "leadergfx2.dmp22", 0x40001, 0x20000, CRC(04cc0118) SHA1(016ccbe7daf8c4676830aadcc906a64e2826d11a) )
 ROM_END
 
+/*
+  Neraidoula
+
+  There is a complete screen of the game Out Run
+  inside the graphics ROMs.
+  Maybe it's a leftover, or it's a sort of stealth game.
+*/
 ROM_START( neraidou )
 	ROM_REGION( 0x80000, "maincpu", 0 )
 	ROM_LOAD( "aepi.prg",  0x00000, 0x10000, CRC(7ac74830) SHA1(1e3322341711e329b40d94ac6ec25fbafb1d4d62) )
@@ -1876,7 +1905,57 @@ ROM_START( neraidou )
 ROM_END
 
 /*
-  Super Star 97
+  Missing In Action.
+  from Vegas.
+
+  People call it Ypovrixio (Submarine).
+  But is not the real title.
+*/
+ROM_START( miaction )
+	ROM_REGION( 0x80000, "maincpu", 0 )
+	ROM_LOAD( "27c512_sub_board_miaction.bin",  0x00000, 0x10000, CRC(4865a6de) SHA1(cfa23eef004f9a29d462676d9b9b94a1e84064d6) )
+
+	ROM_REGION( 0x80000, "gfx1", 0 )
+	ROM_LOAD16_BYTE( "u29.bin", 0x00000, 0x20000, CRC(14d2a342) SHA1(5745a4db5af55072e49de80fdc29a33dd78af68e) )
+	ROM_LOAD16_BYTE( "u31.bin", 0x00001, 0x20000, CRC(9079a3d2) SHA1(b4c624cf7bf45d7879118dac7d999d36717e0395) )
+	ROM_LOAD16_BYTE( "u33.bin", 0x40000, 0x20000, CRC(9cf17008) SHA1(9fe1d1522ef0ca271cbe4105f79c55462cec9078) )
+	ROM_LOAD16_BYTE( "u35.bin", 0x40001, 0x20000, CRC(e04d0ae8) SHA1(36ae96302225e7485882ec911b04e24cc2bd9e8d) )
+
+	ROM_REGION( 0x80000, "gfx2", 0 )
+	ROM_LOAD16_BYTE( "u52.bin", 0x00000, 0x20000, CRC(e02ed758) SHA1(a90a3889522f3a8b3f1a4642c191dea8ec6cad21) )
+	ROM_LOAD16_BYTE( "u54.bin", 0x00001, 0x20000, CRC(4724f35b) SHA1(a8117adf903238a1aca16c1e1468d0684a1d5b95) )
+	ROM_LOAD16_BYTE( "u56.bin", 0x40000, 0x20000, CRC(62ca6bc8) SHA1(2aa2a04c18bf25da509e18de7a32d945a084f37a) )
+	ROM_LOAD16_BYTE( "u58.bin", 0x40001, 0x20000, CRC(54e49fa5) SHA1(31e7fb65b78ddf429c794fe94ff63fe5650a9787) )
+ROM_END
+
+/*
+  Tiger (slot).
+  Unknown manufacturer.
+
+  Encrypted program.
+  Program seems close to Missing In Action.
+
+*/
+ROM_START( tigerslt )
+	ROM_REGION( 0x80000, "maincpu", 0 )
+	ROM_LOAD( "27c512_sub_board_tiger.bin",  0x00000, 0x10000, CRC(3c4181bf) SHA1(afc4fcd7ec9a48406242fe7e01a32e1a20216330) )
+
+	ROM_REGION( 0x80000, "gfx1", 0 )
+	ROM_LOAD16_BYTE( "27c301.u29", 0x00000, 0x20000, CRC(adfdc5d6) SHA1(cdbdf43c081fe5bf6c5435fcd68329930f486b9b) )
+	ROM_LOAD16_BYTE( "27c301.u31", 0x00001, 0x20000, CRC(e5054f16) SHA1(c6652fd48cf9ec0dde7ab67da24938e5a845e62f) )
+	ROM_LOAD16_BYTE( "27c301.u33", 0x40000, 0x20000, CRC(8f162664) SHA1(1777262177820f0be91e5a77e8ff4c3dae819049) )
+	ROM_LOAD16_BYTE( "27c301.u35", 0x40001, 0x20000, CRC(c46d51b6) SHA1(340a627d33433791d3b17736c04267fb3b53d12b) )
+
+	ROM_REGION( 0x80000, "gfx2", 0 )
+	ROM_LOAD16_BYTE( "27c301.u52", 0x00000, 0x20000, CRC(fba16aa8) SHA1(750a462c507363eca6e9dbcdf5fa07581165758a) )
+	ROM_LOAD16_BYTE( "27c301.u54", 0x00001, 0x20000, CRC(6631f487) SHA1(9ac5c2bc177479297b605c4c54ad91fc2e3358e6) )
+	ROM_LOAD16_BYTE( "27c301.u56", 0x40000, 0x20000, CRC(9168854f) SHA1(2b9b9b9aa23cb5521b4b25b878911e5029506e47) )
+	ROM_LOAD16_BYTE( "27c301.u58", 0x40001, 0x20000, CRC(1d4e4ae8) SHA1(0a1a0b68174bb8954e302f75200fbd642d5275da) )
+ROM_END
+
+
+/*
+  明星 97 (Ming Xing 97) / Super Star 97
   Bordun International.
 
   For amusement only (as seen in the title).
@@ -1919,7 +1998,7 @@ ROM_START( sstar97 )
 ROM_END
 
 /*
-  Butterfly Dream 97 / Hudie Meng 97
+  蝴蝶梦 97 (Húdié Mèng 97)
   Game is encrypted and needs better decoded graphics.
 */
 ROM_START( bdream97 )
@@ -2007,19 +2086,59 @@ DRIVER_INIT_MEMBER(skylncr_state, sonikfig)
 	}
 }
 
+DRIVER_INIT_MEMBER(skylncr_state, miaction)
+/*
+  Encryption:
+
+  0000-0006  ---> unencrypted
+  0007-4485  ---> xor'ed with 0x19
+  4486-7fff  ---> xor'ed with 0x44
+  8000-bfff  ---> seems unencrypted
+  c000-d25f  ---> xor'ed with 0x44
+  d260-dfff  ---> seems unencrypted
+  e000-ffff  ---> xor'ed with 0x19
+
+*/
+{
+	uint8_t *const ROM = memregion("maincpu")->base();
+	int x;
+
+	for (x = 0x0007; x < 0x4485; x++)
+	{
+		ROM[x] = ROM[x] ^ 0x19;
+	}
+
+	for (x = 0x4486; x < 0x7fff; x++)
+	{
+		ROM[x] = ROM[x] ^ 0x44;
+	}
+
+	for (x = 0xc000; x < 0xd25f; x++)
+	{
+		ROM[x] = ROM[x] ^ 0x44;
+	}
+
+	for (x = 0xe000; x < 0xffff; x++)
+	{
+		ROM[x] = ROM[x] ^ 0x19;
+	}
+}
+
 
 /****************************************************
 *                  Game Drivers                     *
 ****************************************************/
 
-//    YEAR  NAME      PARENT   MACHINE   INPUT     STATE           INIT      ROT   COMPANY                 FULLNAME                                          FLAGS
-GAME( 1995, skylncr,  0,       skylncr,  skylncr,  skylncr_state,  0,        ROT0, "Bordun International", "Sky Lancer (Bordun, version U450C)",             0 )
-GAME( 1995, butrfly,  0,       skylncr,  skylncr,  skylncr_state,  0,        ROT0, "Bordun International", "Butterfly Video Game (version U350C)",           0 )
-GAME( 1999, mbutrfly, 0,       mbutrfly, mbutrfly, skylncr_state,  0,        ROT0, "Bordun International", "Magical Butterfly (version U350C, protected)",   0 )
-GAME( 1995, madzoo,   0,       skylncr,  skylncr,  skylncr_state,  0,        ROT0, "Bordun International", "Mad Zoo (version U450C)",                        0 )
-GAME( 1995, leader,   0,       skylncr,  leader,   skylncr_state,  0,        ROT0, "bootleg",              "Leader (version Z 2E, Greece)",                  0 )
-GAME( 199?, gallag50, 0,       skylncr,  gallag50, skylncr_state,  0,        ROT0, "bootleg",              "Gallag Video Game / Petalouda (Butterfly, x50)", 0 )
-GAME( 199?, neraidou, 0,       neraidou, neraidou, skylncr_state,  0,        ROT0, "bootleg",              "Neraidoula (Fairy Butterfly)",                   0 )
-GAME( 199?, sstar97,  0,       sstar97,  sstar97,  skylncr_state,  0,        ROT0, "Bordun International", "Super Star 97 / Ming Xing 97 (version V153B)",   0 )
-GAME( 1995, bdream97, 0,       bdream97, skylncr,  skylncr_state,  0,        ROT0, "bootleg (KKK)",        "Butterfly Dream 97 / Hudie Meng 97",             MACHINE_IMPERFECT_GRAPHICS | MACHINE_NOT_WORKING )
-GAME( 2000, sonikfig, 0,       skylncr,  sonikfig, skylncr_state,  sonikfig, ROT0, "Z Games",              "Sonik Fighter (version 02, encrypted)",          MACHINE_WRONG_COLORS | MACHINE_NOT_WORKING )
+//    YEAR  NAME       PARENT    MACHINE   INPUT     STATE           INIT      ROT   COMPANY                 FULLNAME                                          FLAGS
+GAME( 1995, skylncr,   0,        skylncr,  skylncr,  skylncr_state,  0,        ROT0, "Bordun International", "Sky Lancer (Bordun, version U450C)",             0 )
+GAME( 1995, butrfly,   0,        skylncr,  skylncr,  skylncr_state,  0,        ROT0, "Bordun International", "Butterfly Video Game (version U350C)",           0 )
+GAME( 1999, mbutrfly,  0,        mbutrfly, mbutrfly, skylncr_state,  0,        ROT0, "Bordun International", "Magical Butterfly (version U350C, protected)",   0 )
+GAME( 1995, madzoo,    0,        skylncr,  skylncr,  skylncr_state,  0,        ROT0, "Bordun International", "Mad Zoo (version U450C)",                        0 )
+GAME( 1995, leader,    0,        skylncr,  leader,   skylncr_state,  0,        ROT0, "bootleg",              "Leader (version Z 2E, Greece)",                  0 )
+GAME( 199?, gallag50,  0,        skylncr,  gallag50, skylncr_state,  0,        ROT0, "bootleg",              "Gallag Video Game / Petalouda (Butterfly, x50)", 0 )
+GAME( 199?, neraidou,  0,        neraidou, neraidou, skylncr_state,  0,        ROT0, "bootleg",              "Neraidoula",                                     0 )
+GAME( 199?, miaction,  0,        skylncr,  skylncr,  skylncr_state,  miaction, ROT0, "Vegas",                "Missing In Action",                              MACHINE_NOT_WORKING )
+GAME( 199?, tigerslt,  0,        skylncr,  skylncr,  skylncr_state,  miaction, ROT0, "bootleg",              "Tiger (slot)",                                   MACHINE_NOT_WORKING )
+GAME( 199?, sstar97,   0,        sstar97,  sstar97,  skylncr_state,  0,        ROT0, "Bordun International", "Super Star 97 / Ming Xing 97 (version V153B)",   0 )
+GAME( 1995, bdream97,  0,        bdream97, skylncr,  skylncr_state,  0,        ROT0, "bootleg (KKK)",        "Hudie Meng 97",                                  MACHINE_IMPERFECT_GRAPHICS | MACHINE_NOT_WORKING )
+GAME( 2000, sonikfig,  0,        skylncr,  sonikfig, skylncr_state,  sonikfig, ROT0, "Z Games",              "Sonik Fighter (version 02, encrypted)",          MACHINE_WRONG_COLORS | MACHINE_NOT_WORKING )

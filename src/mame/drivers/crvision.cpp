@@ -1,7 +1,7 @@
 // license:BSD-3-Clause
 // copyright-holders:Wilbert Pol, Curt Coder
 /*
-    This 1980s computer was manufactured by Vtech of Hong Kong.
+    This 1980s computer was manufactured by VTech of Hong Kong.
     known as: CreatiVision, Dick Smith Wizzard, Funvision, Rameses, VZ 2000 and possibly others.
 
     There is also a CreatiVision Mk 2, possibly also known as the Laser 500. This was a hardware variant,
@@ -142,38 +142,40 @@ CN1     - main board connector (17x2 pin header)
     ADDRESS_MAP( crvision_map )
 -------------------------------------------------*/
 
-static ADDRESS_MAP_START( crvision_map, AS_PROGRAM, 8, crvision_state )
-	AM_RANGE(0x0000, 0x03ff) AM_MIRROR(0x0c00) AM_RAM
-	AM_RANGE(0x1000, 0x1003) AM_MIRROR(0x0ffc) AM_DEVREADWRITE(PIA6821_TAG, pia6821_device, read, write)
-	AM_RANGE(0x2000, 0x2000) AM_MIRROR(0x0ffe) AM_DEVREAD(TMS9929_TAG, tms9928a_device, vram_read)
-	AM_RANGE(0x2001, 0x2001) AM_MIRROR(0x0ffe) AM_DEVREAD(TMS9929_TAG, tms9928a_device, register_read)
-	AM_RANGE(0x3000, 0x3000) AM_MIRROR(0x0ffe) AM_DEVWRITE(TMS9929_TAG, tms9928a_device, vram_write)
-	AM_RANGE(0x3001, 0x3001) AM_MIRROR(0x0ffe) AM_DEVWRITE(TMS9929_TAG, tms9928a_device, register_write)
-	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK(BANK_ROM2)
-	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK(BANK_ROM1)
+void crvision_state::crvision_map(address_map &map)
+{
+	map(0x0000, 0x03ff).mirror(0x0c00).ram();
+	map(0x1000, 0x1003).mirror(0x0ffc).rw(m_pia, FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x2000, 0x2000).mirror(0x0ffe).r(TMS9929_TAG, FUNC(tms9928a_device::vram_read));
+	map(0x2001, 0x2001).mirror(0x0ffe).r(TMS9929_TAG, FUNC(tms9928a_device::register_read));
+	map(0x3000, 0x3000).mirror(0x0ffe).w(TMS9929_TAG, FUNC(tms9928a_device::vram_write));
+	map(0x3001, 0x3001).mirror(0x0ffe).w(TMS9929_TAG, FUNC(tms9928a_device::register_write));
+	map(0x4000, 0x7fff).bankr(BANK_ROM2);
+	map(0x8000, 0xbfff).bankr(BANK_ROM1);
 //  AM_RANGE(0xc000, 0xe7ff) AM_RAMBANK(3)
-	AM_RANGE(0xe800, 0xe800) AM_DEVWRITE("cent_data_out", output_latch_device, write)
-	AM_RANGE(0xe801, 0xe801) AM_DEVREAD("cent_status_in", input_buffer_device, read)
-	AM_RANGE(0xe801, 0xe801) AM_DEVWRITE("cent_ctrl_out", output_latch_device, write)
+	map(0xe800, 0xe800).w(m_cent_data_out, FUNC(output_latch_device::write));
+	map(0xe801, 0xe801).r("cent_status_in", FUNC(input_buffer_device::read));
+	map(0xe801, 0xe801).w("cent_ctrl_out", FUNC(output_latch_device::write));
 //  AM_RANGE(0xe802, 0xf7ff) AM_RAMBANK(4)
-	AM_RANGE(0xf800, 0xffff) AM_ROM AM_REGION(M6502_TAG, 0)
-ADDRESS_MAP_END
+	map(0xf800, 0xffff).rom().region(M6502_TAG, 0);
+}
 
 /*-------------------------------------------------
     ADDRESS_MAP( lasr2001_map )
 -------------------------------------------------*/
 
-static ADDRESS_MAP_START( lasr2001_map, AS_PROGRAM, 8, laser2001_state )
-	AM_RANGE(0x0000, 0x03ff) AM_MIRROR(0x0c00) AM_RAM
-	AM_RANGE(0x1000, 0x1003) AM_MIRROR(0x0ffc) AM_DEVREADWRITE(PIA6821_TAG, pia6821_device, read, write)
-	AM_RANGE(0x2000, 0x2000) AM_MIRROR(0x0ffe) AM_DEVREAD(TMS9929_TAG, tms9928a_device, vram_read)
-	AM_RANGE(0x2001, 0x2001) AM_MIRROR(0x0ffe) AM_DEVREAD(TMS9929_TAG, tms9928a_device, register_read)
-	AM_RANGE(0x3000, 0x3000) AM_MIRROR(0x0ffe) AM_DEVWRITE(TMS9929_TAG, tms9928a_device, vram_write)
-	AM_RANGE(0x3001, 0x3001) AM_MIRROR(0x0ffe) AM_DEVWRITE(TMS9929_TAG, tms9928a_device, register_write)
-	AM_RANGE(0x4000, 0x7fff) AM_RAMBANK(BANK_ROM2)
-	AM_RANGE(0x8000, 0xbfff) AM_RAMBANK(BANK_ROM1)
-	AM_RANGE(0xc000, 0xffff) AM_ROM AM_REGION(M6502_TAG, 0)
-ADDRESS_MAP_END
+void laser2001_state::lasr2001_map(address_map &map)
+{
+	map(0x0000, 0x03ff).mirror(0x0c00).ram();
+	map(0x1000, 0x1003).mirror(0x0ffc).rw(m_pia, FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x2000, 0x2000).mirror(0x0ffe).r(TMS9929_TAG, FUNC(tms9928a_device::vram_read));
+	map(0x2001, 0x2001).mirror(0x0ffe).r(TMS9929_TAG, FUNC(tms9928a_device::register_read));
+	map(0x3000, 0x3000).mirror(0x0ffe).w(TMS9929_TAG, FUNC(tms9928a_device::vram_write));
+	map(0x3001, 0x3001).mirror(0x0ffe).w(TMS9929_TAG, FUNC(tms9928a_device::register_write));
+	map(0x4000, 0x7fff).bankrw(BANK_ROM2);
+	map(0x8000, 0xbfff).bankrw(BANK_ROM1);
+	map(0xc000, 0xffff).rom().region(M6502_TAG, 0);
+}
 
 /***************************************************************************
     INPUT PORTS
@@ -734,9 +736,9 @@ SLOT_INTERFACE_END
     MACHINE_CONFIG_START( creativision )
 -------------------------------------------------*/
 
-static MACHINE_CONFIG_START( creativision )
+MACHINE_CONFIG_START(crvision_state::creativision)
 	// basic machine hardware
-	MCFG_CPU_ADD(M6502_TAG, M6502, XTAL_2MHz)
+	MCFG_CPU_ADD(M6502_TAG, M6502, XTAL(2'000'000))
 	MCFG_CPU_PROGRAM_MAP(crvision_map)
 
 	// devices
@@ -761,7 +763,7 @@ static MACHINE_CONFIG_START( creativision )
 
 	// sound hardware
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD(SN76489_TAG, SN76489A, XTAL_2MHz)
+	MCFG_SOUND_ADD(SN76489_TAG, SN76489A, XTAL(2'000'000))
 	MCFG_SN76496_READY_HANDLER(DEVWRITELINE(PIA6821_TAG, pia6821_device, cb1_w))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
@@ -781,12 +783,13 @@ static MACHINE_CONFIG_START( creativision )
 MACHINE_CONFIG_END
 
 /*-------------------------------------------------
-    MACHINE_CONFIG_DERIVED( ntsc, creativision )
+    MACHINE_CONFIG_START( ntsc )
 -------------------------------------------------*/
 
-static MACHINE_CONFIG_DERIVED( ntsc, creativision )
+MACHINE_CONFIG_START(crvision_state::ntsc)
+	creativision(config);
 	// video hardware
-	MCFG_DEVICE_ADD( TMS9929_TAG, TMS9918, XTAL_10_738635MHz / 2 )
+	MCFG_DEVICE_ADD( TMS9929_TAG, TMS9918, XTAL(10'738'635) / 2 )
 	MCFG_TMS9928A_VRAM_SIZE(0x4000)
 	MCFG_TMS9928A_OUT_INT_LINE_CB(INPUTLINE(M6502_TAG, INPUT_LINE_IRQ0))
 	MCFG_TMS9928A_SCREEN_ADD_NTSC( SCREEN_TAG )
@@ -794,12 +797,13 @@ static MACHINE_CONFIG_DERIVED( ntsc, creativision )
 MACHINE_CONFIG_END
 
 /*-------------------------------------------------
-    MACHINE_CONFIG_DERIVED( pal, creativision )
+    MACHINE_CONFIG_START( pal )
 -------------------------------------------------*/
 
-static MACHINE_CONFIG_DERIVED( pal, creativision )
+MACHINE_CONFIG_START(crvision_pal_state::pal)
+	creativision(config);
 	// video hardware
-	MCFG_DEVICE_ADD( TMS9929_TAG, TMS9929, XTAL_10_738635MHz / 2 )
+	MCFG_DEVICE_ADD( TMS9929_TAG, TMS9929, XTAL(10'738'635) / 2 )
 	MCFG_TMS9928A_VRAM_SIZE(0x4000)
 	MCFG_TMS9928A_OUT_INT_LINE_CB(INPUTLINE(M6502_TAG, INPUT_LINE_IRQ0))
 	MCFG_TMS9928A_SCREEN_ADD_PAL( SCREEN_TAG )
@@ -810,9 +814,9 @@ MACHINE_CONFIG_END
     MACHINE_CONFIG_START( lasr2001 )
 -------------------------------------------------*/
 
-static MACHINE_CONFIG_START( lasr2001 )
+MACHINE_CONFIG_START(laser2001_state::lasr2001)
 	// basic machine hardware
-	MCFG_CPU_ADD(M6502_TAG, M6502, XTAL_17_73447MHz/9)
+	MCFG_CPU_ADD(M6502_TAG, M6502, XTAL(17'734'470)/9)
 	MCFG_CPU_PROGRAM_MAP(lasr2001_map)
 
 	// devices
@@ -834,7 +838,7 @@ static MACHINE_CONFIG_START( lasr2001 )
 	MCFG_CENTRONICS_OUTPUT_LATCH_ADD("cent_data_out", CENTRONICS_TAG)
 
 	// video hardware
-	MCFG_DEVICE_ADD( TMS9929_TAG, TMS9929A, XTAL_10_738635MHz / 2 )
+	MCFG_DEVICE_ADD( TMS9929_TAG, TMS9929A, XTAL(10'738'635) / 2 )
 	MCFG_TMS9928A_VRAM_SIZE(0x4000)
 	MCFG_TMS9928A_OUT_INT_LINE_CB(INPUTLINE(M6502_TAG, INPUT_LINE_IRQ0))
 	MCFG_TMS9928A_SCREEN_ADD_PAL( SCREEN_TAG )
@@ -842,7 +846,7 @@ static MACHINE_CONFIG_START( lasr2001 )
 
 	// sound hardware
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD(SN76489_TAG, SN76489A, XTAL_17_73447MHz/9)
+	MCFG_SOUND_ADD(SN76489_TAG, SN76489A, XTAL(17'734'470)/9)
 	MCFG_SN76496_READY_HANDLER(WRITELINE(laser2001_state, write_psg_ready))
 
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
@@ -860,6 +864,7 @@ static MACHINE_CONFIG_START( lasr2001 )
 
 	// software list
 	MCFG_SOFTWARE_LIST_ADD("cart_list","crvision")
+	MCFG_SOFTWARE_LIST_ADD("cart_list2","laser2001_cart")
 MACHINE_CONFIG_END
 
 /***************************************************************************
@@ -882,13 +887,15 @@ ROM_END
 #define rom_rameses rom_fnvision
 #define rom_vz2000 rom_fnvision
 
+ROM_START( lasr2001 )
+	ROM_REGION( 0x10000, M6502_TAG, 0 )
+	ROM_LOAD( "laser2001.rom", 0x0000, 0x4000, CRC(4dc35c39) SHA1(c12e098c14ac0724869053df2b63277a3e413802) )
+ROM_END
+
 ROM_START( manager )
 	ROM_REGION( 0x10000, M6502_TAG, 0 )
 	ROM_LOAD( "01", 0x0000, 0x2000, CRC(702f4cf5) SHA1(cd14ee74e787d24b76c166de484dae24206e219b) )
 	ROM_LOAD( "23", 0x2000, 0x2000, CRC(46489d88) SHA1(467f5bcd62d0b4117c443e13373df8f3c45df7b2) )
-
-	ROM_REGION( 0x1000, "disk", 0 )
-	ROM_LOAD( "floppy interface cartridge", 0x0000, 0x1000, NO_DUMP )
 ROM_END
 
 /***************************************************************************
@@ -903,6 +910,6 @@ CONS( 1982, wizzard,    crvision,   0,      pal,      crvision, crvision_pal_sta
 CONS( 1982, rameses,    crvision,   0,      pal,      crvision, crvision_pal_state, 0,    "Hanimex",                "Rameses (Oceania)",           0 )
 CONS( 1983, vz2000,     crvision,   0,      pal,      crvision, crvision_pal_state, 0,    "Dick Smith Electronics", "VZ 2000 (Oceania)",           0 )
 CONS( 1983, crvisio2,   crvision,   0,      pal,      crvision, crvision_pal_state, 0,    "Video Technology",       "CreatiVision MK-II (Europe)", 0 )
-//COMP( 1983, lasr2001,   0,          0,      lasr2001, lasr2001, laser2001_state,    0,    "Video Technology",       "Laser 2001",                  MACHINE_NOT_WORKING )
-//COMP( 1983, vz2001,     lasr2001,   0,      lasr2001, lasr2001, laser2001_state,    0,    "Dick Smith Electronics", "VZ 2001 (Oceania)",           MACHINE_NOT_WORKING )
+COMP( 1983, lasr2001,   0,          0,      lasr2001, manager,  laser2001_state,    0,    "Video Technology",       "Laser 2001",                  0 )
+//COMP( 1983, vz2001,     lasr2001,   0,      lasr2001, lasr2001, laser2001_state,    0,    "Dick Smith Electronics", "VZ 2001 (Oceania)",           0 )
 COMP( 1983, manager,    0,          0,      lasr2001, manager, laser2001_state,     0,     "Salora",                "Manager (Finland)",           0 )

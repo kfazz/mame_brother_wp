@@ -231,71 +231,77 @@ MACHINE_START_MEMBER(terracre_state,amazon)
 	save_item(NAME(m_mAmazonProtReg));
 }
 
-static ADDRESS_MAP_START( terracre_map, AS_PROGRAM, 16, terracre_state )
-	AM_RANGE(0x000000, 0x01ffff) AM_ROM
-	AM_RANGE(0x020000, 0x0201ff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0x020200, 0x021fff) AM_RAM
-	AM_RANGE(0x022000, 0x022fff) AM_WRITE(amazon_background_w) AM_SHARE("bg_videoram")
-	AM_RANGE(0x023000, 0x023fff) AM_RAM
-	AM_RANGE(0x024000, 0x024001) AM_READ_PORT("P1")
-	AM_RANGE(0x024002, 0x024003) AM_READ_PORT("P2")
-	AM_RANGE(0x024004, 0x024005) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0x024006, 0x024007) AM_READ_PORT("DSW")
-	AM_RANGE(0x026000, 0x026001) AM_WRITE(amazon_flipscreen_w)  /* flip screen & coin counters */
-	AM_RANGE(0x026002, 0x026003) AM_WRITE(amazon_scrollx_w)
-	AM_RANGE(0x026004, 0x026005) AM_READNOP AM_WRITE(amazon_scrolly_w)
-	AM_RANGE(0x02600a, 0x02600b) AM_NOP // video related
-	AM_RANGE(0x02600c, 0x02600d) AM_WRITE(amazon_sound_w)
-	AM_RANGE(0x02600e, 0x02600f) AM_NOP // video related
-	AM_RANGE(0x028000, 0x0287ff) AM_RAM_WRITE(amazon_foreground_w) AM_SHARE("fg_videoram")
-ADDRESS_MAP_END
+void terracre_state::terracre_map(address_map &map)
+{
+	map(0x000000, 0x01ffff).rom();
+	map(0x020000, 0x0201ff).ram().share("spriteram");
+	map(0x020200, 0x021fff).ram();
+	map(0x022000, 0x022fff).w(this, FUNC(terracre_state::amazon_background_w)).share("bg_videoram");
+	map(0x023000, 0x023fff).ram();
+	map(0x024000, 0x024001).portr("P1");
+	map(0x024002, 0x024003).portr("P2");
+	map(0x024004, 0x024005).portr("SYSTEM");
+	map(0x024006, 0x024007).portr("DSW");
+	map(0x026000, 0x026001).w(this, FUNC(terracre_state::amazon_flipscreen_w));  /* flip screen & coin counters */
+	map(0x026002, 0x026003).w(this, FUNC(terracre_state::amazon_scrollx_w));
+	map(0x026004, 0x026005).nopr().w(this, FUNC(terracre_state::amazon_scrolly_w));
+	map(0x02600a, 0x02600b).noprw(); // video related
+	map(0x02600c, 0x02600d).w(this, FUNC(terracre_state::amazon_sound_w));
+	map(0x02600e, 0x02600f).noprw(); // video related
+	map(0x028000, 0x0287ff).ram().w(this, FUNC(terracre_state::amazon_foreground_w)).share("fg_videoram");
+}
 
-static ADDRESS_MAP_START( amazon_base_map, AS_PROGRAM, 16, terracre_state )
-	AM_RANGE(0x000000, 0x01ffff) AM_ROM
-	AM_RANGE(0x040000, 0x0401ff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0x040200, 0x040fff) AM_RAM
-	AM_RANGE(0x042000, 0x042fff) AM_WRITE(amazon_background_w) AM_SHARE("bg_videoram")
-	AM_RANGE(0x044000, 0x044001) AM_READ_PORT("IN0")
-	AM_RANGE(0x044002, 0x044003) AM_READ_PORT("IN1")
-	AM_RANGE(0x044004, 0x044005) AM_READ_PORT("IN2")
-	AM_RANGE(0x044006, 0x044007) AM_READ_PORT("IN3")
-	AM_RANGE(0x046000, 0x046001) AM_WRITE(amazon_flipscreen_w)  /* flip screen & coin counters */
-	AM_RANGE(0x046002, 0x046003) AM_WRITE(amazon_scrollx_w)
-	AM_RANGE(0x046004, 0x046005) AM_READNOP AM_WRITE(amazon_scrolly_w)
-	AM_RANGE(0x04600a, 0x04600b) AM_NOP // video related
-	AM_RANGE(0x04600c, 0x04600d) AM_WRITE(amazon_sound_w)
-	AM_RANGE(0x04600e, 0x04600f) AM_NOP // video related
-	AM_RANGE(0x050000, 0x050fff) AM_RAM_WRITE(amazon_foreground_w) AM_SHARE("fg_videoram")
-	AM_RANGE(0x070000, 0x070003) AM_NOP // protection (nop for bootlegs)
-ADDRESS_MAP_END
+void terracre_state::amazon_base_map(address_map &map)
+{
+	map(0x000000, 0x01ffff).rom();
+	map(0x040000, 0x0401ff).ram().share("spriteram");
+	map(0x040200, 0x040fff).ram();
+	map(0x042000, 0x042fff).w(this, FUNC(terracre_state::amazon_background_w)).share("bg_videoram");
+	map(0x044000, 0x044001).portr("IN0");
+	map(0x044002, 0x044003).portr("IN1");
+	map(0x044004, 0x044005).portr("IN2");
+	map(0x044006, 0x044007).portr("IN3");
+	map(0x046000, 0x046001).w(this, FUNC(terracre_state::amazon_flipscreen_w));  /* flip screen & coin counters */
+	map(0x046002, 0x046003).w(this, FUNC(terracre_state::amazon_scrollx_w));
+	map(0x046004, 0x046005).nopr().w(this, FUNC(terracre_state::amazon_scrolly_w));
+	map(0x04600a, 0x04600b).noprw(); // video related
+	map(0x04600c, 0x04600d).w(this, FUNC(terracre_state::amazon_sound_w));
+	map(0x04600e, 0x04600f).noprw(); // video related
+	map(0x050000, 0x050fff).ram().w(this, FUNC(terracre_state::amazon_foreground_w)).share("fg_videoram");
+	map(0x070000, 0x070003).noprw(); // protection (nop for bootlegs)
+}
 
-static ADDRESS_MAP_START( amazon_1412m2_map, AS_PROGRAM, 16, terracre_state)
-	AM_RANGE(0x070000, 0x070003) AM_READWRITE(amazon_protection_r, amazon_protection_w)
-	AM_IMPORT_FROM( amazon_base_map )
-ADDRESS_MAP_END
+void terracre_state::amazon_1412m2_map(address_map &map)
+{
+	amazon_base_map(map);
+	map(0x070000, 0x070003).rw(this, FUNC(terracre_state::amazon_protection_r), FUNC(terracre_state::amazon_protection_w));
+}
 
-static ADDRESS_MAP_START( sound_map, AS_PROGRAM, 8, terracre_state )
-	AM_RANGE(0x0000, 0xbfff) AM_ROM
-	AM_RANGE(0xc000, 0xcfff) AM_RAM
-ADDRESS_MAP_END
+void terracre_state::sound_map(address_map &map)
+{
+	map(0x0000, 0xbfff).rom();
+	map(0xc000, 0xcfff).ram();
+}
 
-static ADDRESS_MAP_START( sound_3526_io_map, AS_IO, 8, terracre_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x01) AM_DEVWRITE("ymsnd", ym3526_device, write)
-	AM_RANGE(0x02, 0x02) AM_DEVWRITE("dac1", dac_byte_interface, write)
-	AM_RANGE(0x03, 0x03) AM_DEVWRITE("dac2", dac_byte_interface, write)
-	AM_RANGE(0x04, 0x04) AM_READ(soundlatch_clear_r)
-	AM_RANGE(0x06, 0x06) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+void terracre_state::sound_3526_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x01).w("ymsnd", FUNC(ym3526_device::write));
+	map(0x02, 0x02).w("dac1", FUNC(dac_byte_interface::write));
+	map(0x03, 0x03).w("dac2", FUNC(dac_byte_interface::write));
+	map(0x04, 0x04).r(this, FUNC(terracre_state::soundlatch_clear_r));
+	map(0x06, 0x06).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
-static ADDRESS_MAP_START( sound_2203_io_map, AS_IO, 8, terracre_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x01) AM_DEVWRITE("ym1", ym2203_device, write)
-	AM_RANGE(0x02, 0x02) AM_DEVWRITE("dac1", dac_byte_interface, write)
-	AM_RANGE(0x03, 0x03) AM_DEVWRITE("dac2", dac_byte_interface, write)
-	AM_RANGE(0x04, 0x04) AM_READ(soundlatch_clear_r)
-	AM_RANGE(0x06, 0x06) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+void terracre_state::sound_2203_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x01).w("ym1", FUNC(ym2203_device::write));
+	map(0x02, 0x02).w("dac1", FUNC(dac_byte_interface::write));
+	map(0x03, 0x03).w("dac2", FUNC(dac_byte_interface::write));
+	map(0x04, 0x04).r(this, FUNC(terracre_state::soundlatch_clear_r));
+	map(0x06, 0x06).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
 static INPUT_PORTS_START( terracre )
 	PORT_START("P1")
@@ -573,15 +579,15 @@ static GFXDECODE_START( terracre )
 GFXDECODE_END
 
 
-static MACHINE_CONFIG_START( ym3526 )
-	MCFG_CPU_ADD("maincpu", M68000, XTAL_16MHz/2)   // 8mhz
+MACHINE_CONFIG_START(terracre_state::ym3526)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL(16'000'000)/2)   // 8mhz
 	MCFG_CPU_PROGRAM_MAP(terracre_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", terracre_state,  irq1_line_hold)
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_16MHz/4)     // 4.0mhz when compared to sound recordings, should be derived from XTAL_22MHz? how?
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(16'000'000)/4)     // 4.0mhz when compared to sound recordings, should be derived from XTAL(22'000'000)? how?
 	MCFG_CPU_PROGRAM_MAP(sound_map)
 	MCFG_CPU_IO_MAP(sound_3526_io_map)
-	MCFG_CPU_PERIODIC_INT_DRIVER(terracre_state, irq0_line_hold,  XTAL_16MHz/4/512) // ?
+	MCFG_CPU_PERIODIC_INT_DRIVER(terracre_state, irq0_line_hold,  XTAL(16'000'000)/4/512) // ?
 
 	MCFG_BUFFERED_SPRITERAM16_ADD("spriteram")
 
@@ -603,7 +609,7 @@ static MACHINE_CONFIG_START( ym3526 )
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
 
-	MCFG_SOUND_ADD("ymsnd", YM3526, XTAL_16MHz/4)
+	MCFG_SOUND_ADD("ymsnd", YM3526, XTAL(16'000'000)/4)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 
 	MCFG_SOUND_ADD("dac1", DAC_8BIT_R2R, 0) MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.5) // unknown DAC
@@ -613,27 +619,30 @@ static MACHINE_CONFIG_START( ym3526 )
 	MCFG_SOUND_ROUTE_EX(0, "dac2", 1.0, DAC_VREF_POS_INPUT) MCFG_SOUND_ROUTE_EX(0, "dac2", -1.0, DAC_VREF_NEG_INPUT)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( ym2203, ym3526 )
+MACHINE_CONFIG_START(terracre_state::ym2203)
+	ym3526(config);
 	MCFG_CPU_MODIFY("audiocpu")
 	MCFG_CPU_IO_MAP(sound_2203_io_map)
 
 	MCFG_DEVICE_REMOVE("ymsnd")
 
-	MCFG_SOUND_ADD("ym1", YM2203, XTAL_16MHz/4)
+	MCFG_SOUND_ADD("ym1", YM2203, XTAL(16'000'000)/4)
 	MCFG_SOUND_ROUTE(0, "speaker", 0.2)
 	MCFG_SOUND_ROUTE(1, "speaker", 0.2)
 	MCFG_SOUND_ROUTE(2, "speaker", 0.2)
 	MCFG_SOUND_ROUTE(3, "speaker", 0.4)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( amazon_base, ym3526 )
+MACHINE_CONFIG_START(terracre_state::amazon_base)
+	ym3526(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(amazon_base_map)
 
 	MCFG_MACHINE_START_OVERRIDE(terracre_state,amazon)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( amazon_1412m2, amazon_base )
+MACHINE_CONFIG_START(terracre_state::amazon_1412m2)
+	amazon_base(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(amazon_1412m2_map)
 

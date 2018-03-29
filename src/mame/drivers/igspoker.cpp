@@ -67,6 +67,7 @@ FIX: PK Tetris have an input named AMUSE which I couldn't map.  Maybe it is
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "machine/i8255.h"
+#include "machine/timer.h"
 #include "sound/ym2413.h"
 #include "sound/okim6295.h"
 #include "screen.h"
@@ -137,6 +138,17 @@ public:
 	uint32_t screen_update_igs_video(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	uint32_t screen_update_cpokerpk(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	TIMER_DEVICE_CALLBACK_MEMBER(igs_interrupt);
+	void csk234it(machine_config &config);
+	void igs_ncs(machine_config &config);
+	void csk227it(machine_config &config);
+	void igspoker(machine_config &config);
+	void pktetris(machine_config &config);
+	void cpokerpk(machine_config &config);
+	void number10(machine_config &config);
+	void cpokerpk_io_map(address_map &map);
+	void igspoker_io_map(address_map &map);
+	void igspoker_prg_map(address_map &map);
+	void number10_io_map(address_map &map);
 };
 
 
@@ -257,7 +269,7 @@ WRITE8_MEMBER(igspoker_state::igs_nmi_and_coins_w)
 
 	m_nmi_enable = data & 0x80;     // nmi enable?
 #if VERBOSE
-	logerror("PC %06X: NMI change %02x\n",space.device().safe_pc(),m_nmi_enable);
+	logerror("PC %06X: NMI change %02x\n",m_maincpu->pc(),m_nmi_enable);
 #endif
 
 	m_out[0] = data;
@@ -309,7 +321,7 @@ WRITE8_MEMBER(igspoker_state::igs_lamps_w)
 READ8_MEMBER(igspoker_state::custom_io_r)
 {
 #if VERBOSE
-	logerror("PC %06X: Protection read %02x\n",space.device().safe_pc(), m_protection_res);
+	logerror("PC %06X: Protection read %02x\n",m_maincpu->pc(), m_protection_res);
 #endif
 	return m_protection_res;
 }
@@ -317,7 +329,7 @@ READ8_MEMBER(igspoker_state::custom_io_r)
 WRITE8_MEMBER(igspoker_state::custom_io_w)
 {
 #if VERBOSE
-	logerror("PC %06X: Protection write %02x\n",space.device().safe_pc(),data);
+	logerror("PC %06X: Protection write %02x\n",m_maincpu->pc(),data);
 #endif
 
 	switch (data)
@@ -371,30 +383,32 @@ READ8_MEMBER(igspoker_state::exp_rom_r)
 	return rom[offset+0x10000];
 }
 
-static ADDRESS_MAP_START( igspoker_prg_map, AS_PROGRAM, 8, igspoker_state )
-	AM_RANGE(0x0000, 0xefff) AM_ROM
-	AM_RANGE(0xf000, 0xffff) AM_RAM AM_REGION("maincpu", 0xf000)
-ADDRESS_MAP_END
+void igspoker_state::igspoker_prg_map(address_map &map)
+{
+	map(0x0000, 0xefff).rom();
+	map(0xf000, 0xffff).ram().region("maincpu", 0xf000);
+}
 
-static ADDRESS_MAP_START( igspoker_io_map, AS_IO, 8, igspoker_state )
-	AM_RANGE(0x2000, 0x27ff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0x2800, 0x2fff) AM_RAM_DEVWRITE("palette", palette_device, write_ext) AM_SHARE("palette_ext")
-	AM_RANGE(0x4000, 0x4000) AM_READ_PORT("DSW1")           /* DSW1 */
-	AM_RANGE(0x4001, 0x4001) AM_READ_PORT("DSW2")           /* DSW2 */
-	AM_RANGE(0x4002, 0x4002) AM_READ_PORT("DSW3")           /* DSW3 */
-	AM_RANGE(0x4003, 0x4003) AM_READ_PORT("DSW4")           /* DSW4 */
-	AM_RANGE(0x4004, 0x4004) AM_READ_PORT("DSW5")           /* DSW5 */
-	AM_RANGE(0x5080, 0x5083) AM_DEVREADWRITE("ppi", i8255_device, read, write)
-	AM_RANGE(0x5090, 0x5090) AM_WRITE(custom_io_w)
-	AM_RANGE(0x5091, 0x5091) AM_READ(custom_io_r) AM_WRITE(igs_lamps_w )            /* Keyboard */
-	AM_RANGE(0x50a0, 0x50a0) AM_READ_PORT("BUTTONS2")           /* Not connected */
-	AM_RANGE(0x50b0, 0x50b1) AM_DEVWRITE("ymsnd", ym2413_device, write)
-	AM_RANGE(0x50c0, 0x50c0) AM_READ(igs_irqack_r) AM_WRITE(igs_irqack_w)
-	AM_RANGE(0x6800, 0x6fff) AM_RAM_WRITE(bg_tile_w )  AM_SHARE("bg_tile_ram")
-	AM_RANGE(0x7000, 0x77ff) AM_RAM_WRITE(fg_tile_w )  AM_SHARE("fg_tile_ram")
-	AM_RANGE(0x7800, 0x7fff) AM_RAM_WRITE(fg_color_w ) AM_SHARE("fg_color_ram")
-	AM_RANGE(0x0000, 0xffff) AM_READ(exp_rom_r )
-ADDRESS_MAP_END
+void igspoker_state::igspoker_io_map(address_map &map)
+{
+	map(0x0000, 0xffff).r(this, FUNC(igspoker_state::exp_rom_r));
+	map(0x2000, 0x27ff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+	map(0x2800, 0x2fff).ram().w(m_palette, FUNC(palette_device::write8_ext)).share("palette_ext");
+	map(0x4000, 0x4000).portr("DSW1");           /* DSW1 */
+	map(0x4001, 0x4001).portr("DSW2");           /* DSW2 */
+	map(0x4002, 0x4002).portr("DSW3");           /* DSW3 */
+	map(0x4003, 0x4003).portr("DSW4");           /* DSW4 */
+	map(0x4004, 0x4004).portr("DSW5");           /* DSW5 */
+	map(0x5080, 0x5083).rw("ppi", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x5090, 0x5090).w(this, FUNC(igspoker_state::custom_io_w));
+	map(0x5091, 0x5091).r(this, FUNC(igspoker_state::custom_io_r)).w(this, FUNC(igspoker_state::igs_lamps_w));            /* Keyboard */
+	map(0x50a0, 0x50a0).portr("BUTTONS2");           /* Not connected */
+	map(0x50b0, 0x50b1).w("ymsnd", FUNC(ym2413_device::write));
+	map(0x50c0, 0x50c0).r(this, FUNC(igspoker_state::igs_irqack_r)).w(this, FUNC(igspoker_state::igs_irqack_w));
+	map(0x6800, 0x6fff).ram().w(this, FUNC(igspoker_state::bg_tile_w)).share("bg_tile_ram");
+	map(0x7000, 0x77ff).ram().w(this, FUNC(igspoker_state::fg_tile_w)).share("fg_tile_ram");
+	map(0x7800, 0x7fff).ram().w(this, FUNC(igspoker_state::fg_color_w)).share("fg_color_ram");
+}
 
 
 /* MB: 05 Jun 99  Input ports and Dip switches are all verified! */
@@ -1128,50 +1142,52 @@ static INPUT_PORTS_START( igs_ncs )
 INPUT_PORTS_END
 
 
-static ADDRESS_MAP_START( number10_io_map, AS_IO, 8, igspoker_state )
-	AM_RANGE(0x2000, 0x27ff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0x2800, 0x2fff) AM_RAM_DEVWRITE("palette", palette_device, write_ext) AM_SHARE("palette_ext")
-	AM_RANGE(0x4000, 0x4000) AM_READ_PORT("DSW1")           /* DSW1 */
-	AM_RANGE(0x4001, 0x4001) AM_READ_PORT("DSW2")           /* DSW2 */
-	AM_RANGE(0x4002, 0x4002) AM_READ_PORT("DSW3")           /* DSW3 */
-	AM_RANGE(0x4003, 0x4003) AM_READ_PORT("DSW4")           /* DSW4 */
-	AM_RANGE(0x4004, 0x4004) AM_READ_PORT("DSW5")           /* DSW5 */
-	AM_RANGE(0x4006, 0x4006) AM_READ_PORT("DSW6")
-	AM_RANGE(0x4007, 0x4007) AM_READ_PORT("DSW7")
-	AM_RANGE(0x50f0, 0x50f0) AM_WRITE(igs_nmi_and_coins_w)
-	AM_RANGE(0x5080, 0x5080) AM_READ_PORT("SERVICE")            /* Services */
-	AM_RANGE(0x5090, 0x5090) AM_WRITE(custom_io_w)
-	AM_RANGE(0x5091, 0x5091) AM_READ(custom_io_r) AM_WRITE(igs_lamps_w )            /* Keyboard */
-	AM_RANGE(0x50a0, 0x50a0) AM_READ_PORT("BUTTONS2")
+void igspoker_state::number10_io_map(address_map &map)
+{
+	map(0x0000, 0xffff).r(this, FUNC(igspoker_state::exp_rom_r));
+	map(0x2000, 0x27ff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+	map(0x2800, 0x2fff).ram().w(m_palette, FUNC(palette_device::write8_ext)).share("palette_ext");
+	map(0x4000, 0x4000).portr("DSW1");           /* DSW1 */
+	map(0x4001, 0x4001).portr("DSW2");           /* DSW2 */
+	map(0x4002, 0x4002).portr("DSW3");           /* DSW3 */
+	map(0x4003, 0x4003).portr("DSW4");           /* DSW4 */
+	map(0x4004, 0x4004).portr("DSW5");           /* DSW5 */
+	map(0x4006, 0x4006).portr("DSW6");
+	map(0x4007, 0x4007).portr("DSW7");
+	map(0x50f0, 0x50f0).w(this, FUNC(igspoker_state::igs_nmi_and_coins_w));
+	map(0x5080, 0x5080).portr("SERVICE");            /* Services */
+	map(0x5090, 0x5090).w(this, FUNC(igspoker_state::custom_io_w));
+	map(0x5091, 0x5091).r(this, FUNC(igspoker_state::custom_io_r)).w(this, FUNC(igspoker_state::igs_lamps_w));            /* Keyboard */
+	map(0x50a0, 0x50a0).portr("BUTTONS2");
 	/* Sound synthesys has been patched out, replaced by ADPCM samples */
-	AM_RANGE(0x50b0, 0x50b0) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0x50c0, 0x50c0) AM_READ(igs_irqack_r) AM_WRITE(igs_irqack_w)
-	AM_RANGE(0x7000, 0x77ff) AM_RAM_WRITE(fg_tile_w )  AM_SHARE("fg_tile_ram")
-	AM_RANGE(0x7800, 0x7fff) AM_RAM_WRITE(fg_color_w ) AM_SHARE("fg_color_ram")
-	AM_RANGE(0x0000, 0xffff) AM_READ(exp_rom_r )
-ADDRESS_MAP_END
+	map(0x50b0, 0x50b0).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0x50c0, 0x50c0).r(this, FUNC(igspoker_state::igs_irqack_r)).w(this, FUNC(igspoker_state::igs_irqack_w));
+	map(0x7000, 0x77ff).ram().w(this, FUNC(igspoker_state::fg_tile_w)).share("fg_tile_ram");
+	map(0x7800, 0x7fff).ram().w(this, FUNC(igspoker_state::fg_color_w)).share("fg_color_ram");
+}
 
-static ADDRESS_MAP_START( cpokerpk_io_map, AS_IO, 8, igspoker_state )
-	AM_RANGE(0x2000, 0x27ff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0x2800, 0x2fff) AM_RAM_DEVWRITE("palette", palette_device, write_ext) AM_SHARE("palette_ext")
-	AM_RANGE(0x4000, 0x4000) AM_READ_PORT("DSW1")           /* DSW1 */
-	AM_RANGE(0x4001, 0x4001) AM_READ_PORT("DSW2")           /* DSW2 */
-	AM_RANGE(0x4002, 0x4002) AM_READ_PORT("DSW3")           /* DSW3 */
-	AM_RANGE(0x4003, 0x4003) AM_READ_PORT("DSW4")           /* DSW4 */
-	AM_RANGE(0x4004, 0x4004) AM_READ_PORT("DSW5")           /* DSW5 */
-	AM_RANGE(0x50f0, 0x50f0) AM_WRITE(igs_nmi_and_coins_w)
-	AM_RANGE(0x5081, 0x5081) AM_READ_PORT("SERVICE")            /* Services */
-	AM_RANGE(0x5082, 0x5082) AM_READ_PORT("COINS")          /* Coing & Kbd */
-	AM_RANGE(0x5090, 0x5090) AM_WRITE(custom_io_w)
-	AM_RANGE(0x5091, 0x5091) AM_READ(custom_io_r) AM_WRITE(igs_lamps_w )            /* Keyboard */
-	AM_RANGE(0x50a0, 0x50a0) AM_READ_PORT("BUTTONS2")
+void igspoker_state::cpokerpk_io_map(address_map &map)
+{
+	map(0x0000, 0xffff).r(this, FUNC(igspoker_state::exp_rom_r));
+	map(0x2000, 0x27ff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+	map(0x2800, 0x2fff).ram().w(m_palette, FUNC(palette_device::write8_ext)).share("palette_ext");
+	map(0x4000, 0x4000).portr("DSW1");           /* DSW1 */
+	map(0x4001, 0x4001).portr("DSW2");           /* DSW2 */
+	map(0x4002, 0x4002).portr("DSW3");           /* DSW3 */
+	map(0x4003, 0x4003).portr("DSW4");           /* DSW4 */
+	map(0x4004, 0x4004).portr("DSW5");           /* DSW5 */
+	map(0x50f0, 0x50f0).w(this, FUNC(igspoker_state::igs_nmi_and_coins_w));
+	map(0x5081, 0x5081).portr("SERVICE");            /* Services */
+	map(0x5082, 0x5082).portr("COINS");          /* Coing & Kbd */
+	map(0x5090, 0x5090).w(this, FUNC(igspoker_state::custom_io_w));
+	map(0x5091, 0x5091).r(this, FUNC(igspoker_state::custom_io_r)).w(this, FUNC(igspoker_state::igs_lamps_w));            /* Keyboard */
+	map(0x50a0, 0x50a0).portr("BUTTONS2");
 	/* Sound synthesys has been patched out, replaced by ADPCM samples */
-	AM_RANGE(0x50b0, 0x50b0) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0x50c0, 0x50c0) AM_READ(igs_irqack_r) AM_WRITE(igs_irqack_w)
-	AM_RANGE(0x7000, 0x77ff) AM_RAM_WRITE(fg_tile_w )  AM_SHARE("fg_tile_ram")
-	AM_RANGE(0x7800, 0x7fff) AM_RAM_WRITE(fg_color_w ) AM_SHARE("fg_color_ram")
-	AM_RANGE(0x0000, 0xffff) AM_READ(exp_rom_r )
-ADDRESS_MAP_END
+	map(0x50b0, 0x50b0).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0x50c0, 0x50c0).r(this, FUNC(igspoker_state::igs_irqack_r)).w(this, FUNC(igspoker_state::igs_irqack_w));
+	map(0x7000, 0x77ff).ram().w(this, FUNC(igspoker_state::fg_tile_w)).share("fg_tile_ram");
+	map(0x7800, 0x7fff).ram().w(this, FUNC(igspoker_state::fg_color_w)).share("fg_color_ram");
+}
 
 static INPUT_PORTS_START( number10 )
 	PORT_START("DSW1")
@@ -1891,7 +1907,7 @@ static GFXDECODE_START( cpokerpk )
 	GFXDECODE_ENTRY( "gfx2", 0x00000, charlayout2,  0, 1 )
 GFXDECODE_END
 
-static MACHINE_CONFIG_START( igspoker )
+MACHINE_CONFIG_START(igspoker_state::igspoker)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu",Z80, 3579545)
@@ -1924,19 +1940,23 @@ static MACHINE_CONFIG_START( igspoker )
 
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( csk227it, igspoker )
+MACHINE_CONFIG_START(igspoker_state::csk227it)
+	igspoker(config);
 
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( csk234it, igspoker )
+MACHINE_CONFIG_START(igspoker_state::csk234it)
+	igspoker(config);
 
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( igs_ncs, igspoker )
+MACHINE_CONFIG_START(igspoker_state::igs_ncs)
+	igspoker(config);
 
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( number10, igspoker )
+MACHINE_CONFIG_START(igspoker_state::number10)
+	igspoker(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_IO_MAP(number10_io_map)
 
@@ -1946,18 +1966,20 @@ static MACHINE_CONFIG_DERIVED( number10, igspoker )
 	MCFG_SCREEN_UPDATE_DRIVER(igspoker_state, screen_update_cpokerpk)
 	MCFG_VIDEO_START_OVERRIDE(igspoker_state,cpokerpk)
 
-	MCFG_OKIM6295_ADD("oki", XTAL_12MHz / 12, PIN7_HIGH)
+	MCFG_OKIM6295_ADD("oki", XTAL(12'000'000) / 12, PIN7_HIGH)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( cpokerpk, number10 )
+MACHINE_CONFIG_START(igspoker_state::cpokerpk)
+	number10(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_IO_MAP(cpokerpk_io_map)
 	MCFG_GFXDECODE_MODIFY("gfxdecode", cpokerpk)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( pktetris, igspoker )
+MACHINE_CONFIG_START(igspoker_state::pktetris)
+	igspoker(config);
 
 MACHINE_CONFIG_END
 
@@ -2604,7 +2626,7 @@ DRIVER_INIT_MEMBER(igspoker_state,number10)
 	memcpy(&tmp[0],rom,length);
 	for (A = 0; A < length; A++)
 	{
-		int addr = (A & ~0xffff) | BITSWAP16(A,15,14,13,12,11,10,9,8,7,6,5,4,3,0,1,2);
+		int addr = (A & ~0xffff) | bitswap<16>(A,15,14,13,12,11,10,9,8,7,6,5,4,3,0,1,2);
 		rom[A] = tmp[addr];
 	}
 }

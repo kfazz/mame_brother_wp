@@ -19,6 +19,7 @@ ToDo:
 #include "machine/genpin.h"
 #include "cpu/m6800/m6800.h"
 #include "machine/6821pia.h"
+#include "machine/timer.h"
 #include "st_mp100.lh"
 
 
@@ -57,6 +58,8 @@ public:
 	DECLARE_INPUT_CHANGED_MEMBER(self_test);
 	TIMER_DEVICE_CALLBACK_MEMBER(timer_x);
 	TIMER_DEVICE_CALLBACK_MEMBER(u11_timer);
+	void st_mp100(machine_config &config);
+	void st_mp100_map(address_map &map);
 private:
 	uint8_t m_u10a;
 	uint8_t m_u10b;
@@ -87,16 +90,17 @@ private:
 };
 
 
-static ADDRESS_MAP_START( st_mp100_map, AS_PROGRAM, 8, st_mp100_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x1fff)
-	AM_RANGE(0x0000, 0x007f) AM_RAM // internal to the cpu
-	AM_RANGE(0x0088, 0x008b) AM_DEVREADWRITE("pia_u10", pia6821_device, read, write)
-	AM_RANGE(0x0090, 0x0093) AM_DEVREADWRITE("pia_u11", pia6821_device, read, write)
-	AM_RANGE(0x00a0, 0x00a7) AM_WRITENOP // to sound board
-	AM_RANGE(0x00c0, 0x00c7) // to sound board
-	AM_RANGE(0x0200, 0x02ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x1000, 0x1fff) AM_ROM AM_REGION("roms", 0 )
-ADDRESS_MAP_END
+void st_mp100_state::st_mp100_map(address_map &map)
+{
+	map.global_mask(0x1fff);
+	map(0x0000, 0x007f).ram(); // internal to the cpu
+	map(0x0088, 0x008b).rw(m_pia_u10, FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x0090, 0x0093).rw(m_pia_u11, FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x00a0, 0x00a7).nopw(); // to sound board
+	map(0x00c0, 0x00c7); // to sound board
+	map(0x0200, 0x02ff).ram().share("nvram");
+	map(0x1000, 0x1fff).rom().region("roms", 0);
+}
 
 static INPUT_PORTS_START( mp100 )
 	PORT_START("TEST")
@@ -699,7 +703,7 @@ TIMER_DEVICE_CALLBACK_MEMBER( st_mp100_state::u11_timer )
 	m_pia_u11->ca1_w(m_u11_timer);
 }
 
-static MACHINE_CONFIG_START( st_mp100 )
+MACHINE_CONFIG_START(st_mp100_state::st_mp100)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M6800, 1000000) // no xtal, just 2 chips forming a random oscillator
 	MCFG_CPU_PROGRAM_MAP(st_mp100_map)
@@ -710,7 +714,7 @@ static MACHINE_CONFIG_START( st_mp100 )
 	MCFG_DEFAULT_LAYOUT(layout_st_mp100)
 
 	/* Sound */
-	MCFG_FRAGMENT_ADD( genpin_audio )
+	genpin_audio(config);
 
 	/* Devices */
 	MCFG_DEVICE_ADD("pia_u10", PIA6821, 0)
@@ -813,8 +817,14 @@ ROM_END
 /-------------------------------*/
 ROM_START(trident)
 	ROM_REGION(0x1000, "roms", 0)
-	ROM_LOAD( "cpu_u2.716", 0x0000, 0x0800, CRC(934e49dd) SHA1(cbf6ca2759166f522f651825da0c75cf7248d3da))
-	ROM_LOAD( "cpu_u6.716", 0x0800, 0x0800, CRC(540bce56) SHA1(0b21385501b83e448403e0216371487ed54026b7))
+	ROM_LOAD( "25arom_p11a.u2",  0x0000, 0x0800, CRC(6dcd6ad3) SHA1(f748acc8628c5013b630a5c7b25a1bf72e36b16d))   // 9316A-2920
+	ROM_LOAD( "25arom_p12au.u6", 0x0800, 0x0800, CRC(fb955a6f) SHA1(387080d5af318463475797fecff026d6db776a0c))   // 9316A-2921
+ROM_END
+
+ROM_START(tridento)
+	ROM_REGION(0x1000, "roms", 0)
+	ROM_LOAD( "25arom_p11.u2",  0x0000, 0x0800, CRC(934e49dd) SHA1(cbf6ca2759166f522f651825da0c75cf7248d3da))
+	ROM_LOAD( "25arom_p12u.u6", 0x0800, 0x0800, CRC(540bce56) SHA1(0b21385501b83e448403e0216371487ed54026b7))
 ROM_END
 
 /*-------------------------------------
@@ -857,7 +867,8 @@ GAME( 1978,  nugent,     0,      st_mp100,   mp100, st_mp100_state, 0,   ROT0,  
 GAME( 1979,  dracula,    0,      st_mp100,   mp100, st_mp100_state, 0,   ROT0,   "Stern", "Dracula (Pinball)", MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
 
 // different inputs
-GAME( 1979,  trident,    0,      st_mp100,   mp200, st_mp100_state, 0,   ROT0,   "Stern", "Trident",           MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
-GAME( 1979,  hothand,    0,      st_mp100,   mp200, st_mp100_state, 0,   ROT0,   "Stern", "Hot Hand",          MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
-GAME( 1979,  princess,   0,      st_mp100,   mp200, st_mp100_state, 0,   ROT0,   "Stern", "Cosmic Princess",   MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
-GAME( 1979,  magic,      0,      st_mp100,   mp200, st_mp100_state, 0,   ROT0,   "Stern", "Magic",             MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+GAME( 1979,  trident,    0,       st_mp100,   mp200, st_mp100_state, 0,   ROT0,   "Stern", "Trident",             MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+GAME( 1979,  tridento,   trident, st_mp100,   mp200, st_mp100_state, 0,   ROT0,   "Stern", "Trident (Older set)", MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+GAME( 1979,  hothand,    0,       st_mp100,   mp200, st_mp100_state, 0,   ROT0,   "Stern", "Hot Hand",            MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+GAME( 1979,  princess,   0,       st_mp100,   mp200, st_mp100_state, 0,   ROT0,   "Stern", "Cosmic Princess",     MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+GAME( 1979,  magic,      0,       st_mp100,   mp200, st_mp100_state, 0,   ROT0,   "Stern", "Magic",               MACHINE_MECHANICAL | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )

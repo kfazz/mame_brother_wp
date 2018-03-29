@@ -18,7 +18,6 @@
 
 #include "emu.h"
 #include "includes/apple3.h"
-#include "includes/apple2.h"
 #include "sound/volt_reg.h"
 #include "formats/ap2_dsk.h"
 
@@ -29,13 +28,13 @@
 
 #include "bus/rs232/rs232.h"
 
-#include "screen.h"
 #include "softlist.h"
 #include "speaker.h"
 
-static ADDRESS_MAP_START( apple3_map, AS_PROGRAM, 8, apple3_state )
-	AM_RANGE(0x0000, 0xffff) AM_READWRITE(apple3_memory_r, apple3_memory_w)
-ADDRESS_MAP_END
+void apple3_state::apple3_map(address_map &map)
+{
+	map(0x0000, 0xffff).rw(this, FUNC(apple3_state::apple3_memory_r), FUNC(apple3_state::apple3_memory_w));
+}
 
 static SLOT_INTERFACE_START(apple3_cards)
 	SLOT_INTERFACE("cffa2", A2BUS_CFFA2_6502)  /* CFFA2000 Compact Flash for Apple II (www.dreher.net), 6502 firmware */
@@ -52,7 +51,7 @@ FLOPPY_FORMATS_MEMBER( apple3_state::floppy_formats )
 	FLOPPY_A216S_FORMAT, FLOPPY_RWTS18_FORMAT, FLOPPY_EDD_FORMAT
 FLOPPY_FORMATS_END
 
-static MACHINE_CONFIG_START( apple3 )
+MACHINE_CONFIG_START(apple3_state::apple3)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M6502, 2000000)        /* 2 MHz */
 	MCFG_M6502_SYNC_CALLBACK(WRITELINE(apple3_state, apple3_sync_w))
@@ -115,7 +114,7 @@ static MACHINE_CONFIG_START( apple3 )
 
 	/* acia */
 	MCFG_DEVICE_ADD("acia", MOS6551, 0)
-	MCFG_MOS6551_XTAL(XTAL_1_8432MHz) // HACK: The schematic shows an external clock generator but using a XTAL is faster to emulate.
+	MCFG_MOS6551_XTAL(XTAL(1'843'200)) // HACK: The schematic shows an external clock generator but using a XTAL is faster to emulate.
 	MCFG_MOS6551_IRQ_HANDLER(WRITELINE(apple3_state, apple3_acia_irq_func))
 	MCFG_MOS6551_TXD_HANDLER(DEVWRITELINE("rs232", rs232_port_device, write_txd))
 	MCFG_MOS6551_RTS_HANDLER(DEVWRITELINE("rs232", rs232_port_device, write_rts))
@@ -131,7 +130,7 @@ static MACHINE_CONFIG_START( apple3 )
 	MCFG_TIMER_DRIVER_ADD("pdltimer", apple3_state, paddle_timer);
 
 	/* rtc */
-	MCFG_DEVICE_ADD("rtc", MM58167, XTAL_32_768kHz)
+	MCFG_DEVICE_ADD("rtc", MM58167, XTAL(32'768))
 
 	/* via */
 	MCFG_DEVICE_ADD("via6522_0", VIA6522, 1000000)

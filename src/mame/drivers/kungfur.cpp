@@ -96,6 +96,8 @@ public:
 	required_device<cpu_device> m_maincpu;
 	required_device<msm5205_device> m_adpcm1;
 	required_device<msm5205_device> m_adpcm2;
+	void kungfur(machine_config &config);
+	void kungfur_map(address_map &map);
 };
 
 
@@ -221,14 +223,15 @@ WRITE_LINE_MEMBER(kungfur_state::kfr_adpcm2_int)
 }
 
 
-static ADDRESS_MAP_START( kungfur_map, AS_PROGRAM, 8, kungfur_state )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM
-	AM_RANGE(0x4000, 0x4000) AM_WRITE(kungfur_adpcm1_w)
-	AM_RANGE(0x4004, 0x4004) AM_WRITE(kungfur_adpcm2_w)
-	AM_RANGE(0x4008, 0x400b) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)
-	AM_RANGE(0x400c, 0x400f) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)
-	AM_RANGE(0xc000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void kungfur_state::kungfur_map(address_map &map)
+{
+	map(0x0000, 0x07ff).ram();
+	map(0x4000, 0x4000).w(this, FUNC(kungfur_state::kungfur_adpcm1_w));
+	map(0x4004, 0x4004).w(this, FUNC(kungfur_state::kungfur_adpcm2_w));
+	map(0x4008, 0x400b).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x400c, 0x400f).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0xc000, 0xffff).rom();
+}
 
 
 /***************************************************************************
@@ -284,7 +287,7 @@ void kungfur_state::machine_reset()
 	m_control = 0;
 }
 
-static MACHINE_CONFIG_START( kungfur )
+MACHINE_CONFIG_START(kungfur_state::kungfur)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M6809, 8000000/2)   // 4MHz?
@@ -308,12 +311,12 @@ static MACHINE_CONFIG_START( kungfur )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MCFG_SOUND_ADD("adpcm1", MSM5205, XTAL_384kHz)  // clock verified with recording
+	MCFG_SOUND_ADD("adpcm1", MSM5205, XTAL(384'000))  // clock verified with recording
 	MCFG_MSM5205_VCLK_CB(WRITELINE(kungfur_state, kfr_adpcm1_int))
 	MCFG_MSM5205_PRESCALER_SELECTOR(S48_4B)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
 
-	MCFG_SOUND_ADD("adpcm2", MSM5205, XTAL_384kHz)  // "
+	MCFG_SOUND_ADD("adpcm2", MSM5205, XTAL(384'000))  // "
 	MCFG_MSM5205_VCLK_CB(WRITELINE(kungfur_state, kfr_adpcm2_int))
 	MCFG_MSM5205_PRESCALER_SELECTOR(S48_4B)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)

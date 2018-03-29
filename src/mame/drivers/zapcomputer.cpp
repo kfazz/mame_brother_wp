@@ -42,6 +42,9 @@ public:
 	DECLARE_READ8_MEMBER(keyboard_r);
 	DECLARE_WRITE8_MEMBER(display_7seg_w);
 
+	void zapcomp(machine_config &config);
+	void zapcomp_io(address_map &map);
+	void zapcomp_mem(address_map &map);
 private:
 	uint8_t decode7seg(uint8_t data);
 	virtual void machine_start() override;
@@ -63,7 +66,7 @@ uint8_t zapcomp_state::decode7seg(uint8_t data)
 
 	// Bit order for the FAIRCHILD FND-70
 	//                     7-SEGMENT LCD:  .  g  f  e  d  c  b  a
-	return BITSWAP8(patterns[data & 0x0F], 7, 3, 4, 2, 1, 0, 6, 5);
+	return bitswap<8>(patterns[data & 0x0F], 7, 3, 4, 2, 1, 0, 6, 5);
 }
 
 WRITE8_MEMBER( zapcomp_state::display_7seg_w )
@@ -109,23 +112,25 @@ READ8_MEMBER( zapcomp_state::keyboard_r )
 	return retval;
 }
 
-static ADDRESS_MAP_START( zapcomp_mem, AS_PROGRAM, 8, zapcomp_state )
-	AM_RANGE(0x0000, 0x03ff) AM_ROM AM_REGION("roms", 0) /* system monitor */
-	AM_RANGE(0x0400, 0x07ff) AM_RAM /* mandatory 1 kilobyte bank #0 */
-	AM_RANGE(0x0800, 0x0bff) AM_RAM /* extra 1 kilobyte bank #1 (optional) */
-	AM_RANGE(0x0c00, 0x0fff) AM_RAM /* extra 1 kilobyte bank #2 (optional) */
-	AM_RANGE(0x1000, 0x13ff) AM_RAM /* extra 1 kilobyte bank #3 (optional) */
-	AM_RANGE(0x1400, 0x17ff) AM_RAM /* extra 1 kilobyte bank #4 (optional) */
-	AM_RANGE(0x1800, 0x1bff) AM_RAM /* extra 1 kilobyte bank #5 (optional) */
-	AM_RANGE(0x1c00, 0x1fff) AM_RAM /* extra 1 kilobyte bank #6 (optional) */
-	AM_RANGE(0x2000, 0x23ff) AM_RAM /* extra 1 kilobyte bank #7 (optional) */
-ADDRESS_MAP_END
+void zapcomp_state::zapcomp_mem(address_map &map)
+{
+	map(0x0000, 0x03ff).rom().region("roms", 0); /* system monitor */
+	map(0x0400, 0x07ff).ram(); /* mandatory 1 kilobyte bank #0 */
+	map(0x0800, 0x0bff).ram(); /* extra 1 kilobyte bank #1 (optional) */
+	map(0x0c00, 0x0fff).ram(); /* extra 1 kilobyte bank #2 (optional) */
+	map(0x1000, 0x13ff).ram(); /* extra 1 kilobyte bank #3 (optional) */
+	map(0x1400, 0x17ff).ram(); /* extra 1 kilobyte bank #4 (optional) */
+	map(0x1800, 0x1bff).ram(); /* extra 1 kilobyte bank #5 (optional) */
+	map(0x1c00, 0x1fff).ram(); /* extra 1 kilobyte bank #6 (optional) */
+	map(0x2000, 0x23ff).ram(); /* extra 1 kilobyte bank #7 (optional) */
+}
 
-static ADDRESS_MAP_START( zapcomp_io, AS_IO, 8, zapcomp_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_READ(keyboard_r)
-	AM_RANGE(0x05, 0x07) AM_WRITE(display_7seg_w)
-ADDRESS_MAP_END
+void zapcomp_state::zapcomp_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).r(this, FUNC(zapcomp_state::keyboard_r));
+	map(0x05, 0x07).w(this, FUNC(zapcomp_state::display_7seg_w));
+}
 
 static INPUT_PORTS_START( zapcomp )
 	PORT_START("X0")
@@ -156,9 +161,9 @@ void zapcomp_state::machine_start()
 {
 }
 
-static MACHINE_CONFIG_START( zapcomp )
+MACHINE_CONFIG_START(zapcomp_state::zapcomp)
 	// basic machine hardware
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_2MHz)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(2'000'000))
 	MCFG_CPU_PROGRAM_MAP(zapcomp_mem)
 	MCFG_CPU_IO_MAP(zapcomp_io)
 

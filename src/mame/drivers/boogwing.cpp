@@ -53,12 +53,15 @@
 
     Driver by Bryan McPhail and David Haywood.
 
+    DECO 99 "ACE" Chip hooked up by cam900.
+
     Todo:
         * Sprite priorities aren't verified to be 100% accurate.
           (Addendum - all known issues seem to be correct - see Sprite Priority Notes below).
         * There may be some kind of fullscreen palette effect (controlled by bit 3 in priority
           word - used at end of each level, and on final boss).
         * A shadow effect (used in level 1) is not implemented.
+        * ACE Chip aren't fully emulated.
 
     Sprite Priority Notes:
         * On the Imperial Science Museum level at the beginning, you fly behind a wall, but your
@@ -84,7 +87,6 @@
 #include "includes/boogwing.h"
 
 #include "cpu/m68000/m68000.h"
-#include "cpu/h6280/h6280.h"
 #include "machine/deco102.h"
 #include "machine/decocrpt.h"
 #include "machine/gen_latch.h"
@@ -93,11 +95,13 @@
 #include "screen.h"
 #include "speaker.h"
 
+#define MAIN_XTAL XTAL(28'000'000)
+#define SOUND_XTAL XTAL(32'220'000)
 
 READ16_MEMBER( boogwing_state::boogwing_protection_region_0_104_r )
 {
 	int real_address = 0 + (offset *2);
-	int deco146_addr = BITSWAP32(real_address, /* NC */31,30,29,28,27,26,25,24,23,22,21,20,19,18, 13,12,11,/**/      17,16,15,14,    10,9,8, 7,6,5,4, 3,2,1,0) & 0x7fff;
+	int deco146_addr = bitswap<32>(real_address, /* NC */31,30,29,28,27,26,25,24,23,22,21,20,19,18, 13,12,11,/**/      17,16,15,14,    10,9,8, 7,6,5,4, 3,2,1,0) & 0x7fff;
 	uint8_t cs = 0;
 	uint16_t data = m_deco104->read_data( deco146_addr, mem_mask, cs );
 	return data;
@@ -106,64 +110,73 @@ READ16_MEMBER( boogwing_state::boogwing_protection_region_0_104_r )
 WRITE16_MEMBER( boogwing_state::boogwing_protection_region_0_104_w )
 {
 	int real_address = 0 + (offset *2);
-	int deco146_addr = BITSWAP32(real_address, /* NC */31,30,29,28,27,26,25,24,23,22,21,20,19,18, 13,12,11,/**/      17,16,15,14,    10,9,8, 7,6,5,4, 3,2,1,0) & 0x7fff;
+	int deco146_addr = bitswap<32>(real_address, /* NC */31,30,29,28,27,26,25,24,23,22,21,20,19,18, 13,12,11,/**/      17,16,15,14,    10,9,8, 7,6,5,4, 3,2,1,0) & 0x7fff;
 	uint8_t cs = 0;
 	m_deco104->write_data( space, deco146_addr, data, mem_mask, cs );
 }
 
+WRITE16_MEMBER( boogwing_state::priority_w )
+{
+	COMBINE_DATA(&m_priority);
+	m_deco_ace->set_palette_effect_max((m_priority & 0x8) ? 0x6ff : 0xfff);
+}
 
-static ADDRESS_MAP_START( boogwing_map, AS_PROGRAM, 16, boogwing_state )
-	AM_RANGE(0x000000, 0x0fffff) AM_ROM
-	AM_RANGE(0x200000, 0x20ffff) AM_RAM
 
-	AM_RANGE(0x220000, 0x220001) AM_DEVWRITE("deco_common", decocomn_device, priority_w)
-	AM_RANGE(0x220002, 0x22000f) AM_NOP
+void boogwing_state::boogwing_map(address_map &map)
+{
+	map(0x000000, 0x0fffff).rom();
+	map(0x200000, 0x20ffff).ram();
 
-	AM_RANGE(0x240000, 0x240001) AM_DEVWRITE("spriteram", buffered_spriteram16_device, write)
-	AM_RANGE(0x242000, 0x2427ff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0x244000, 0x244001) AM_DEVWRITE("spriteram2", buffered_spriteram16_device, write)
-	AM_RANGE(0x246000, 0x2467ff) AM_RAM AM_SHARE("spriteram2")
+	map(0x220000, 0x220001).w(this, FUNC(boogwing_state::priority_w));
+	map(0x220002, 0x22000f).noprw();
+
+	map(0x240000, 0x240001).w(m_spriteram, FUNC(buffered_spriteram16_device::write));
+	map(0x242000, 0x2427ff).ram().share("spriteram");
+	map(0x244000, 0x244001).w(m_spriteram2, FUNC(buffered_spriteram16_device::write));
+	map(0x246000, 0x2467ff).ram().share("spriteram2");
 
 //  AM_RANGE(0x24e6c0, 0x24e6c1) AM_READ_PORT("DSW")
 //  AM_RANGE(0x24e138, 0x24e139) AM_READ_PORT("SYSTEM")
 //  AM_RANGE(0x24e344, 0x24e345) AM_READ_PORT("INPUTS")
-	AM_RANGE(0x24e000, 0x24efff) AM_READWRITE(boogwing_protection_region_0_104_r,boogwing_protection_region_0_104_w) AM_SHARE("prot16ram") /* Protection device */
+	map(0x24e000, 0x24efff).rw(this, FUNC(boogwing_state::boogwing_protection_region_0_104_r), FUNC(boogwing_state::boogwing_protection_region_0_104_w)).share("prot16ram"); /* Protection device */
 
-	AM_RANGE(0x260000, 0x26000f) AM_DEVWRITE("tilegen1", deco16ic_device, pf_control_w)
-	AM_RANGE(0x264000, 0x265fff) AM_DEVREADWRITE("tilegen1", deco16ic_device, pf1_data_r, pf1_data_w)
-	AM_RANGE(0x266000, 0x267fff) AM_DEVREADWRITE("tilegen1", deco16ic_device, pf2_data_r, pf2_data_w)
-	AM_RANGE(0x268000, 0x268fff) AM_RAM AM_SHARE("pf1_rowscroll")
-	AM_RANGE(0x26a000, 0x26afff) AM_RAM AM_SHARE("pf2_rowscroll")
+	map(0x260000, 0x26000f).w(m_deco_tilegen1, FUNC(deco16ic_device::pf_control_w));
+	map(0x264000, 0x265fff).rw(m_deco_tilegen1, FUNC(deco16ic_device::pf1_data_r), FUNC(deco16ic_device::pf1_data_w));
+	map(0x266000, 0x267fff).rw(m_deco_tilegen1, FUNC(deco16ic_device::pf2_data_r), FUNC(deco16ic_device::pf2_data_w));
+	map(0x268000, 0x268fff).ram().share("pf1_rowscroll");
+	map(0x26a000, 0x26afff).ram().share("pf2_rowscroll");
 
-	AM_RANGE(0x270000, 0x27000f) AM_DEVWRITE("tilegen2", deco16ic_device, pf_control_w)
-	AM_RANGE(0x274000, 0x275fff) AM_RAM_DEVWRITE("tilegen2", deco16ic_device, pf1_data_w)
-	AM_RANGE(0x276000, 0x277fff) AM_RAM_DEVWRITE("tilegen2", deco16ic_device, pf2_data_w)
-	AM_RANGE(0x278000, 0x278fff) AM_RAM AM_SHARE("pf3_rowscroll")
-	AM_RANGE(0x27a000, 0x27afff) AM_RAM AM_SHARE("pf4_rowscroll")
+	map(0x270000, 0x27000f).w(m_deco_tilegen2, FUNC(deco16ic_device::pf_control_w));
+	map(0x274000, 0x275fff).ram().w(m_deco_tilegen2, FUNC(deco16ic_device::pf1_data_w));
+	map(0x276000, 0x277fff).ram().w(m_deco_tilegen2, FUNC(deco16ic_device::pf2_data_w));
+	map(0x278000, 0x278fff).ram().share("pf3_rowscroll");
+	map(0x27a000, 0x27afff).ram().share("pf4_rowscroll");
 
-	AM_RANGE(0x280000, 0x28000f) AM_NOP // ?
-	AM_RANGE(0x282000, 0x282001) AM_NOP // Palette setup?
-	AM_RANGE(0x282008, 0x282009) AM_DEVWRITE("deco_common", decocomn_device, palette_dma_w)
-	AM_RANGE(0x284000, 0x285fff) AM_DEVWRITE("deco_common", decocomn_device, buffered_palette_w) AM_SHARE("paletteram")
+	map(0x280000, 0x28000f).noprw(); // ?
+	map(0x282000, 0x282001).noprw(); // Palette setup?
+	map(0x282008, 0x282009).w(m_deco_ace, FUNC(deco_ace_device::palette_dma_w));
+	map(0x284000, 0x285fff).rw(m_deco_ace, FUNC(deco_ace_device::buffered_palette16_r), FUNC(deco_ace_device::buffered_palette16_w));
 
-	AM_RANGE(0x3c0000, 0x3c004f) AM_RAM // ?
-ADDRESS_MAP_END
+	map(0x3c0000, 0x3c004f).rw(m_deco_ace, FUNC(deco_ace_device::ace_r), FUNC(deco_ace_device::ace_w));
+}
 
-static ADDRESS_MAP_START( decrypted_opcodes_map, AS_OPCODES, 16, boogwing_state )
-	AM_RANGE(0x000000, 0x0fffff) AM_ROM AM_SHARE("decrypted_opcodes")
-ADDRESS_MAP_END
+void boogwing_state::decrypted_opcodes_map(address_map &map)
+{
+	map(0x000000, 0x0fffff).rom().share("decrypted_opcodes");
+}
 
-static ADDRESS_MAP_START( audio_map, AS_PROGRAM, 8, boogwing_state )
-	AM_RANGE(0x000000, 0x00ffff) AM_ROM
-	AM_RANGE(0x100000, 0x100001) AM_NOP
-	AM_RANGE(0x110000, 0x110001) AM_DEVREADWRITE("ymsnd", ym2151_device, read, write)
-	AM_RANGE(0x120000, 0x120001) AM_DEVREADWRITE("oki1", okim6295_device, read, write)
-	AM_RANGE(0x130000, 0x130001) AM_DEVREADWRITE("oki2", okim6295_device, read, write)
-	AM_RANGE(0x140000, 0x140001) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-	AM_RANGE(0x1f0000, 0x1f1fff) AM_RAMBANK("bank8")
-	AM_RANGE(0x1fec00, 0x1fec01) AM_DEVWRITE("audiocpu", h6280_device, timer_w)
-	AM_RANGE(0x1ff400, 0x1ff403) AM_DEVWRITE("audiocpu", h6280_device, irq_status_w)
-ADDRESS_MAP_END
+void boogwing_state::audio_map(address_map &map)
+{
+	map(0x000000, 0x00ffff).rom();
+	map(0x100000, 0x100001).noprw();
+	map(0x110000, 0x110001).rw("ymsnd", FUNC(ym2151_device::read), FUNC(ym2151_device::write));
+	map(0x120000, 0x120001).rw(m_oki1, FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0x130000, 0x130001).rw(m_oki2, FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0x140000, 0x140000).r(m_deco104, FUNC(deco104_device::soundlatch_r));
+	map(0x1f0000, 0x1f1fff).bankrw("bank8");
+	map(0x1fec00, 0x1fec01).w(m_audiocpu, FUNC(h6280_device::timer_w));
+	map(0x1ff400, 0x1ff403).w(m_audiocpu, FUNC(h6280_device::irq_status_w));
+}
 
 
 /**********************************************************************************/
@@ -300,6 +313,11 @@ GFXDECODE_END
 
 /**********************************************************************************/
 
+void boogwing_state::machine_reset()
+{
+	m_priority = 0;
+}
+
 WRITE8_MEMBER(boogwing_state::sound_bankswitch_w)
 {
 	m_oki2->set_rom_bank((data & 2) >> 1);
@@ -321,38 +339,35 @@ DECO16IC_BANK_CB_MEMBER(boogwing_state::bank_callback2)
 	return offset;
 }
 
-static MACHINE_CONFIG_START( boogwing )
+MACHINE_CONFIG_START(boogwing_state::boogwing)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M68000, 14000000)   /* DE102 */
+	MCFG_CPU_ADD("maincpu", M68000, MAIN_XTAL/2)   /* DE102 */
 	MCFG_CPU_PROGRAM_MAP(boogwing_map)
-	MCFG_CPU_DECRYPTED_OPCODES_MAP(decrypted_opcodes_map)
+	MCFG_CPU_OPCODES_MAP(decrypted_opcodes_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", boogwing_state,  irq6_line_hold)
 
-	MCFG_CPU_ADD("audiocpu", H6280, 32220000/4)
+	MCFG_CPU_ADD("audiocpu", H6280, SOUND_XTAL/4)
 	MCFG_CPU_PROGRAM_MAP(audio_map)
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_REFRESH_RATE(58)
-	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MCFG_SCREEN_SIZE(40*8, 32*8)
-	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_RAW_PARAMS(MAIN_XTAL / 4, 442, 0, 320, 274, 8, 248) // same as robocop2(cninja.cpp)? verify this from real pcb.
 	MCFG_SCREEN_UPDATE_DRIVER(boogwing_state, screen_update_boogwing)
 
 	MCFG_PALETTE_ADD("palette", 2048)
 	MCFG_GFXDECODE_ADD("gfxdecode", "palette", boogwing)
 
-
 	MCFG_BUFFERED_SPRITERAM16_ADD("spriteram")
 	MCFG_BUFFERED_SPRITERAM16_ADD("spriteram2")
 
-	MCFG_DECOCOMN_ADD("deco_common")
-	MCFG_DECOCOMN_PALETTE("palette")
+	MCFG_DECO_ACE_ADD("deco_ace")
+	MCFG_DECO_ACE_PALETTE("palette")
 
 	MCFG_DEVICE_ADD("tilegen1", DECO16IC, 0)
 	MCFG_DECO16IC_SPLIT(0)
-	MCFG_DECO16IC_WIDTH12(1)
+	MCFG_DECO16IC_PF1_SIZE(DECO_64x32)
+	MCFG_DECO16IC_PF2_SIZE(DECO_64x32)
 	MCFG_DECO16IC_PF1_TRANS_MASK(0x0f)
 	MCFG_DECO16IC_PF2_TRANS_MASK(0x1f)  // pf2 has 5bpp graphics
 	MCFG_DECO16IC_PF1_COL_BANK(0)
@@ -367,7 +382,8 @@ static MACHINE_CONFIG_START( boogwing )
 
 	MCFG_DEVICE_ADD("tilegen2", DECO16IC, 0)
 	MCFG_DECO16IC_SPLIT(0)
-	MCFG_DECO16IC_WIDTH12(1)
+	MCFG_DECO16IC_PF1_SIZE(DECO_64x32)
+	MCFG_DECO16IC_PF2_SIZE(DECO_64x32)
 	MCFG_DECO16IC_PF1_TRANS_MASK(0x0f)
 	MCFG_DECO16IC_PF2_TRANS_MASK(0x0f)
 	MCFG_DECO16IC_PF1_COL_BANK(0)
@@ -388,26 +404,28 @@ static MACHINE_CONFIG_START( boogwing )
 	MCFG_DECO_SPRITE_GFX_REGION(4)
 	MCFG_DECO_SPRITE_GFXDECODE("gfxdecode")
 
-	MCFG_DECO104_ADD("ioprot104")
+	MCFG_DECO104_ADD("ioprot")
+	MCFG_DECO146_IN_PORTA_CB(IOPORT("INPUTS"))
+	MCFG_DECO146_IN_PORTB_CB(IOPORT("SYSTEM"))
+	MCFG_DECO146_IN_PORTC_CB(IOPORT("DSW"))
+	MCFG_DECO146_SOUNDLATCH_IRQ_CB(INPUTLINE("audiocpu", 0))
 	MCFG_DECO146_SET_INTERFACE_SCRAMBLE_REVERSE
 	MCFG_DECO146_SET_USE_MAGIC_ADDRESS_XOR
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
-
-	MCFG_YM2151_ADD("ymsnd", 32220000/9)
+	MCFG_YM2151_ADD("ymsnd", SOUND_XTAL/9)
 	MCFG_YM2151_IRQ_HANDLER(INPUTLINE("audiocpu", 1)) /* IRQ2 */
 	MCFG_YM2151_PORT_WRITE_HANDLER(WRITE8(boogwing_state, sound_bankswitch_w))
 	MCFG_SOUND_ROUTE(0, "lspeaker", 0.80)
 	MCFG_SOUND_ROUTE(1, "rspeaker", 0.80)
 
-	MCFG_OKIM6295_ADD("oki1", 32220000/32, PIN7_HIGH)
+	MCFG_OKIM6295_ADD("oki1", SOUND_XTAL/32, PIN7_HIGH)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.40)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.40)
 
-	MCFG_OKIM6295_ADD("oki2", 32220000/16, PIN7_HIGH)
+	MCFG_OKIM6295_ADD("oki2", SOUND_XTAL/16, PIN7_HIGH)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.30)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.30)
 MACHINE_CONFIG_END
@@ -647,8 +665,8 @@ DRIVER_INIT_MEMBER(boogwing_state,boogwing)
 	memcpy(dst, src, 0x100000);
 }
 
-GAME( 1992, boogwing, 0,        boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "Boogie Wings (Euro v1.5, 92.12.07)", MACHINE_SUPPORTS_SAVE )
-GAME( 1992, boogwingu,boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "Boogie Wings (USA v1.7, 92.12.14)", MACHINE_SUPPORTS_SAVE )
-GAME( 1992, boogwinga,boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "Boogie Wings (Asia v1.5, 92.12.07)", MACHINE_SUPPORTS_SAVE )
-GAME( 1992, ragtime,  boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "The Great Ragtime Show (Japan v1.5, 92.12.07)", MACHINE_SUPPORTS_SAVE )
-GAME( 1992, ragtimea, boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "The Great Ragtime Show (Japan v1.3, 92.11.26)", MACHINE_SUPPORTS_SAVE )
+GAME( 1992, boogwing, 0,        boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "Boogie Wings (Euro v1.5, 92.12.07)",            MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1992, boogwingu,boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "Boogie Wings (USA v1.7, 92.12.14)",             MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1992, boogwinga,boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "Boogie Wings (Asia v1.5, 92.12.07)",            MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1992, ragtime,  boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "The Great Ragtime Show (Japan v1.5, 92.12.07)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1992, ragtimea, boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "The Great Ragtime Show (Japan v1.3, 92.11.26)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )

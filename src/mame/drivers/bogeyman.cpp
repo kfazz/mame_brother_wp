@@ -48,20 +48,21 @@ WRITE8_MEMBER(bogeyman_state::ay8910_control_w)
 
 /* Memory Map */
 
-static ADDRESS_MAP_START( bogeyman_map, AS_PROGRAM, 8, bogeyman_state )
-	AM_RANGE(0x0000, 0x17ff) AM_RAM
-	AM_RANGE(0x1800, 0x1bff) AM_RAM_WRITE(videoram2_w) AM_SHARE("videoram2")
-	AM_RANGE(0x1c00, 0x1fff) AM_RAM_WRITE(colorram2_w) AM_SHARE("colorram2")
-	AM_RANGE(0x2000, 0x20ff) AM_RAM_WRITE(videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x2100, 0x21ff) AM_RAM_WRITE(colorram_w) AM_SHARE("colorram")
-	AM_RANGE(0x2800, 0x2bff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0x3000, 0x300f) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0x3800, 0x3800) AM_READ_PORT("P1") AM_WRITE(ay8910_control_w)
-	AM_RANGE(0x3801, 0x3801) AM_READ_PORT("P2") AM_WRITE(ay8910_latch_w)
-	AM_RANGE(0x3802, 0x3802) AM_READ_PORT("DSW1")
-	AM_RANGE(0x3803, 0x3803) AM_READ_PORT("DSW2") AM_WRITENOP // ??? sound
-	AM_RANGE(0x4000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void bogeyman_state::bogeyman_map(address_map &map)
+{
+	map(0x0000, 0x17ff).ram();
+	map(0x1800, 0x1bff).ram().w(this, FUNC(bogeyman_state::videoram2_w)).share("videoram2");
+	map(0x1c00, 0x1fff).ram().w(this, FUNC(bogeyman_state::colorram2_w)).share("colorram2");
+	map(0x2000, 0x20ff).ram().w(this, FUNC(bogeyman_state::videoram_w)).share("videoram");
+	map(0x2100, 0x21ff).ram().w(this, FUNC(bogeyman_state::colorram_w)).share("colorram");
+	map(0x2800, 0x2bff).ram().share("spriteram");
+	map(0x3000, 0x300f).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+	map(0x3800, 0x3800).portr("P1").w(this, FUNC(bogeyman_state::ay8910_control_w));
+	map(0x3801, 0x3801).portr("P2").w(this, FUNC(bogeyman_state::ay8910_latch_w));
+	map(0x3802, 0x3802).portr("DSW1");
+	map(0x3803, 0x3803).portr("DSW2").nopw(); // ??? sound
+	map(0x4000, 0xffff).rom();
+}
 
 /* Input Ports */
 
@@ -228,7 +229,7 @@ WRITE8_MEMBER(bogeyman_state::colbank_w)
 	}
 }
 
-static MACHINE_CONFIG_START( bogeyman )
+MACHINE_CONFIG_START(bogeyman_state::bogeyman)
 
 	// basic machine hardware
 	MCFG_CPU_ADD("maincpu", M6502, 1500000) /* Verified */
@@ -238,10 +239,12 @@ static MACHINE_CONFIG_START( bogeyman )
 	// video hardware
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
-	MCFG_SCREEN_REFRESH_RATE(60)
-	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MCFG_SCREEN_SIZE(32*8, 32*8)
-	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
+//  MCFG_SCREEN_REFRESH_RATE(60)
+//  MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+//  MCFG_SCREEN_SIZE(32*8, 32*8)
+//  MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
+	// DECO video CRTC, unverified
+	MCFG_SCREEN_RAW_PARAMS(XTAL(12'000'000)/2,384,0,256,272,8,248)
 	MCFG_SCREEN_UPDATE_DRIVER(bogeyman_state, screen_update)
 	MCFG_SCREEN_PALETTE("palette")
 
@@ -253,11 +256,12 @@ static MACHINE_CONFIG_START( bogeyman )
 	// sound hardware
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_SOUND_ADD("ay1", AY8910, 1500000)  /* Verified */
+	// verified to be YM2149s from PCB pic
+	MCFG_SOUND_ADD("ay1", YM2149, 1500000)  /* Verified */
 	MCFG_AY8910_PORT_A_WRITE_CB(WRITE8(bogeyman_state, colbank_w))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
 
-	MCFG_SOUND_ADD("ay2", AY8910, 1500000)  /* Verified */
+	MCFG_SOUND_ADD("ay2", YM2149, 1500000)  /* Verified */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
 MACHINE_CONFIG_END
 

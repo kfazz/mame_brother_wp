@@ -231,9 +231,9 @@ DIP locations verified for:
 #include "cpu/z80/z80.h"
 #include "cpu/m6809/m6809.h"
 #include "cpu/m68000/m68000.h"
-#include "sound/cem3394.h"
 #include "machine/nvram.h"
 #include "machine/watchdog.h"
+#include "sound/cem3394.h"
 #include "speaker.h"
 
 #include "stocker.lh"
@@ -246,27 +246,31 @@ DIP locations verified for:
  *
  *************************************/
 
-static ADDRESS_MAP_START( cpu1_map, AS_PROGRAM, 8, balsente_state )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0x0800, 0x7fff) AM_RAM_WRITE(balsente_videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x8000, 0x8fff) AM_RAM_WRITE(balsente_paletteram_w) AM_SHARE("paletteram")
-	AM_RANGE(0x9000, 0x9007) AM_WRITE(balsente_adc_select_w)
-	AM_RANGE(0x9400, 0x9401) AM_READ(balsente_adc_data_r)
-	AM_RANGE(0x9800, 0x987f) AM_WRITE(balsente_misc_output_w)
-	AM_RANGE(0x9880, 0x989f) AM_WRITE(balsente_random_reset_w)
-	AM_RANGE(0x98a0, 0x98bf) AM_WRITE(balsente_rombank_select_w)
-	AM_RANGE(0x98c0, 0x98df) AM_WRITE(balsente_palette_select_w)
-	AM_RANGE(0x98e0, 0x98ff) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x9900, 0x9900) AM_READ_PORT("SWH")
-	AM_RANGE(0x9901, 0x9901) AM_READ_PORT("SWG")
-	AM_RANGE(0x9902, 0x9902) AM_READ_PORT("IN0")
-	AM_RANGE(0x9903, 0x9903) AM_READ_PORT("IN1") AM_WRITENOP
-	AM_RANGE(0x9a00, 0x9a03) AM_READ(balsente_random_num_r)
-	AM_RANGE(0x9a04, 0x9a05) AM_READWRITE(balsente_m6850_r, balsente_m6850_w)
-	AM_RANGE(0x9b00, 0x9cff) AM_RAM AM_SHARE("nvram")   /* system+cart NOVRAM */
-	AM_RANGE(0xa000, 0xbfff) AM_ROMBANK("bank1")
-	AM_RANGE(0xc000, 0xffff) AM_ROMBANK("bank2")
-ADDRESS_MAP_END
+void balsente_state::cpu1_map(address_map &map)
+{
+	map(0x0000, 0x07ff).ram().share("spriteram");
+	map(0x0800, 0x7fff).ram().w(this, FUNC(balsente_state::balsente_videoram_w)).share("videoram");
+	map(0x8000, 0x8fff).ram().w(this, FUNC(balsente_state::balsente_paletteram_w)).share("paletteram");
+	map(0x9000, 0x9007).w(this, FUNC(balsente_state::balsente_adc_select_w));
+	map(0x9400, 0x9401).r(this, FUNC(balsente_state::balsente_adc_data_r));
+	map(0x9800, 0x981f).mirror(0x0060).lw8("outlatch_w",
+						   [this](address_space &space, offs_t offset, u8 data, u8 mem_mask) {
+						 m_outlatch->write_d7(space, offset >> 2, data, mem_mask);
+						   });
+	map(0x9880, 0x989f).w(this, FUNC(balsente_state::balsente_random_reset_w));
+	map(0x98a0, 0x98bf).w(this, FUNC(balsente_state::balsente_rombank_select_w));
+	map(0x98c0, 0x98df).w(this, FUNC(balsente_state::balsente_palette_select_w));
+	map(0x98e0, 0x98ff).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x9900, 0x9900).portr("SWH");
+	map(0x9901, 0x9901).portr("SWG");
+	map(0x9902, 0x9902).portr("IN0");
+	map(0x9903, 0x9903).portr("IN1").nopw();
+	map(0x9a00, 0x9a03).r(this, FUNC(balsente_state::balsente_random_num_r));
+	map(0x9a04, 0x9a05).rw(this, FUNC(balsente_state::balsente_m6850_r), FUNC(balsente_state::balsente_m6850_w));
+	map(0x9b00, 0x9cff).ram().share("nvram");   /* system+cart NOVRAM */
+	map(0xa000, 0xbfff).bankr("bank1");
+	map(0xc000, 0xffff).bankr("bank2");
+}
 
 
 
@@ -276,23 +280,25 @@ ADDRESS_MAP_END
  *
  *************************************/
 
-static ADDRESS_MAP_START( cpu2_map, AS_PROGRAM, 8, balsente_state )
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x2000, 0x5fff) AM_RAM
-	AM_RANGE(0x6000, 0x7fff) AM_WRITE(balsente_m6850_sound_w)
-	AM_RANGE(0xe000, 0xffff) AM_READ(balsente_m6850_sound_r)
-ADDRESS_MAP_END
+void balsente_state::cpu2_map(address_map &map)
+{
+	map(0x0000, 0x1fff).rom();
+	map(0x2000, 0x5fff).ram();
+	map(0x6000, 0x7fff).w(this, FUNC(balsente_state::balsente_m6850_sound_w));
+	map(0xe000, 0xffff).r(this, FUNC(balsente_state::balsente_m6850_sound_r));
+}
 
 
-static ADDRESS_MAP_START( cpu2_io_map, AS_IO, 8, balsente_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x03) AM_READWRITE(balsente_counter_8253_r, balsente_counter_8253_w)
-	AM_RANGE(0x08, 0x0f) AM_READ(balsente_counter_state_r)
-	AM_RANGE(0x08, 0x09) AM_WRITE(balsente_counter_control_w)
-	AM_RANGE(0x0a, 0x0b) AM_WRITE(balsente_dac_data_w)
-	AM_RANGE(0x0c, 0x0d) AM_WRITE(balsente_register_addr_w)
-	AM_RANGE(0x0e, 0x0f) AM_WRITE(balsente_chip_select_w)
-ADDRESS_MAP_END
+void balsente_state::cpu2_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x03).rw(this, FUNC(balsente_state::balsente_counter_8253_r), FUNC(balsente_state::balsente_counter_8253_w));
+	map(0x08, 0x0f).r(this, FUNC(balsente_state::balsente_counter_state_r));
+	map(0x08, 0x09).w(this, FUNC(balsente_state::balsente_counter_control_w));
+	map(0x0a, 0x0b).w(this, FUNC(balsente_state::balsente_dac_data_w));
+	map(0x0c, 0x0d).w(this, FUNC(balsente_state::balsente_register_addr_w));
+	map(0x0e, 0x0f).w(this, FUNC(balsente_state::balsente_chip_select_w));
+}
 
 
 
@@ -303,11 +309,12 @@ ADDRESS_MAP_END
  *************************************/
 
 /* CPU 1 read addresses */
-static ADDRESS_MAP_START( shrike68k_map, AS_PROGRAM, 16, balsente_state )
-	AM_RANGE(0x000000, 0x003fff) AM_ROM
-	AM_RANGE(0x010000, 0x01001f) AM_RAM AM_SHARE("shrike_io")
-	AM_RANGE(0x018000, 0x018fff) AM_RAM AM_SHARE("shrike_shared")
-ADDRESS_MAP_END
+void balsente_state::shrike68k_map(address_map &map)
+{
+	map(0x000000, 0x003fff).rom();
+	map(0x010000, 0x01001f).ram().share("shrike_io");
+	map(0x018000, 0x018fff).ram().share("shrike_shared");
+}
 
 
 
@@ -1140,9 +1147,9 @@ static INPUT_PORTS_START( grudge )
 	PORT_DIPSETTING(    0x01, "1" )
 	PORT_DIPSETTING(    0x02, "2" )
 	PORT_DIPSETTING(    0x03, "3" )
-	PORT_DIPNAME( 0x80, 0x80, DEF_STR( Free_Play ) )    PORT_DIPLOCATION("H1:8")
+	PORT_DIPNAME( 0x80, 0x00, DEF_STR( Free_Play ) )    PORT_DIPLOCATION("H1:8")
 	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x80, DEF_STR( On ) )
+	PORT_DIPSETTING(    0x80, "On (buggy)" )
 
 	PORT_MODIFY("SWG")
 	PORT_DIPUNUSED_DIPLOC( 0x01, 0x01, "G1:1" )
@@ -1178,6 +1185,15 @@ static INPUT_PORTS_START( grudge )
 
 	PORT_MODIFY("AN3")
 	UNUSED_ANALOG
+INPUT_PORTS_END
+
+static INPUT_PORTS_START( grudgep )
+	PORT_INCLUDE( sentetst )
+
+	PORT_MODIFY("SWH")
+	PORT_DIPNAME( 0x80, 0x80, DEF_STR( Free_Play ) ) PORT_DIPLOCATION("H1:8") // default to "ON" because Coin mode is buggy on this revision of the prototype
+	PORT_DIPSETTING(    0x00, "Off (buggy)" )
+	PORT_DIPSETTING(    0x80, DEF_STR( On ) )
 INPUT_PORTS_END
 
 
@@ -1276,14 +1292,14 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( balsente )
+MACHINE_CONFIG_START(balsente_state::balsente)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809, XTAL_20MHz/16) /* xtal verified but not speed */
+	MCFG_CPU_ADD("maincpu", MC6809E, XTAL(20'000'000)/16) /* xtal verified but not speed */
 	MCFG_CPU_PROGRAM_MAP(cpu1_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", balsente_state,  balsente_update_analog_inputs)
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_8MHz/2) /* xtal verified but not speed */
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(8'000'000)/2) /* xtal verified but not speed */
 	MCFG_CPU_PROGRAM_MAP(cpu2_map)
 	MCFG_CPU_IO_MAP(cpu2_io_map)
 
@@ -1297,6 +1313,18 @@ static MACHINE_CONFIG_START( balsente )
 	MCFG_TIMER_DRIVER_ADD("8253_0_timer", balsente_state, balsente_clock_counter_0_ff)
 	MCFG_TIMER_DRIVER_ADD("8253_1_timer", balsente_state, balsente_counter_callback)
 	MCFG_TIMER_DRIVER_ADD("8253_2_timer", balsente_state, balsente_counter_callback)
+
+	MCFG_DEVICE_ADD("outlatch", LS259, 0) // U9H
+	// these outputs are generally used to control the various lamps
+	MCFG_ADDRESSABLE_LATCH_Q0_OUT_CB(WRITELINE(balsente_state, out0_w))
+	MCFG_ADDRESSABLE_LATCH_Q1_OUT_CB(WRITELINE(balsente_state, out1_w))
+	MCFG_ADDRESSABLE_LATCH_Q2_OUT_CB(WRITELINE(balsente_state, out2_w))
+	MCFG_ADDRESSABLE_LATCH_Q3_OUT_CB(WRITELINE(balsente_state, out3_w))
+	MCFG_ADDRESSABLE_LATCH_Q4_OUT_CB(WRITELINE(balsente_state, out4_w))
+	MCFG_ADDRESSABLE_LATCH_Q5_OUT_CB(WRITELINE(balsente_state, out5_w))
+	MCFG_ADDRESSABLE_LATCH_Q6_OUT_CB(WRITELINE(balsente_state, out6_w))
+	// special case is output 7, which recalls the NVRAM data
+	MCFG_ADDRESSABLE_LATCH_Q7_OUT_CB(WRITELINE(balsente_state, nvrecall_w))
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
@@ -1349,7 +1377,8 @@ static MACHINE_CONFIG_START( balsente )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( shrike, balsente )
+MACHINE_CONFIG_START(balsente_state::shrike)
+	balsente(config);
 
 	/* basic machine hardware */
 
@@ -1457,14 +1486,14 @@ ROM_END
 
 ROM_START( teamht )
 	ROM_REGION( 0x40000, "maincpu", 0 )     /* 64k for code for the first CPU, plus 128k of banked ROMs */
-	ROM_LOAD( "HATTRK.U8A", 0x10000, 0x4000, CRC(cb746de8) SHA1(b0e5003370b65f2aed4dc9ccb2a2d3eb29050245) )
-	ROM_LOAD( "HATTRK.U7A", 0x14000, 0x4000, CRC(5f2a0b24) SHA1(da1950a7e11014e47438a7c5831433390c1b1fd3) )
-	ROM_LOAD( "HATTRK.U1A", 0x2c000, 0x4000, CRC(6c6cf2be) SHA1(80e82ae4bd129000e74c4a5fd06d2109d5417e39) )
+	ROM_LOAD( "hattrk.u8a", 0x10000, 0x4000, CRC(cb746de8) SHA1(b0e5003370b65f2aed4dc9ccb2a2d3eb29050245) )
+	ROM_LOAD( "hattrk.u7a", 0x14000, 0x4000, CRC(5f2a0b24) SHA1(da1950a7e11014e47438a7c5831433390c1b1fd3) )
+	ROM_LOAD( "hattrk.u1a", 0x2c000, 0x4000, CRC(6c6cf2be) SHA1(80e82ae4bd129000e74c4a5fd06d2109d5417e39) )
 
 	SOUNDBOARD_ROMS
 
 	ROM_REGION( 0x10000, "gfx1", 0 )        /* up to 64k of sprites */
-	ROM_LOAD( "HATTRK.U6B", 0x00000, 0x4000, CRC(6e299728) SHA1(f10fc020fdf8f61d059ac57306b0353ac7dbfb24) )
+	ROM_LOAD( "hattrk.u6b", 0x00000, 0x4000, CRC(6e299728) SHA1(f10fc020fdf8f61d059ac57306b0353ac7dbfb24) )
 
 	MOTHERBOARD_PALS
 ROM_END
@@ -1787,6 +1816,39 @@ ROM_START( gimeabrk )
 	MOTHERBOARD_PALS
 ROM_END
 
+ROM_START( grudge )
+	ROM_REGION( 0x40000, "maincpu", 0 )     /* 64k for code for the first CPU, plus 128k of banked ROMs */
+	ROM_LOAD( "gm-3a.bin", 0x10000, 0x8000, CRC(eabeec2b) SHA1(92098512e3dbcda36f42e10fada01323fab4b08a) )
+	ROM_LOAD( "gm-4a.bin", 0x18000, 0x8000, CRC(72664f18) SHA1(98202d7a775792d2d1c44a26540ac35afaffa6b2) )
+	ROM_LOAD( "gm-1a.bin", 0x20000, 0x8000, CRC(ad168726) SHA1(c4d084e3752d6c4365d2460ca3146b148dcccc1d) )
+	ROM_LOAD( "gm-2a.bin", 0x28000, 0x8000, CRC(1de8dd2e) SHA1(6b538dcf35105bca1ae1bb5387a08b4d1d4f410c) )
+	ROM_LOAD( "gm-6b.bin", 0x2e000, 0x2000, CRC(513d8cdd) SHA1(563e5a2b7e71b4e1447bd41339174129a5884517) ) // mostly the same as 2a/5a except for a small table, corrupt text if we don't use this here..
+
+	ROM_LOAD( "gm-5a.bin", 0x38000, 0x8000, CRC(1de8dd2e) SHA1(6b538dcf35105bca1ae1bb5387a08b4d1d4f410c) ) // same as 2a, not being used, confirmed as identical on PCB
+
+	SOUNDBOARD_ROMS
+
+	ROM_REGION( 0x10000, "gfx1", 0 )     /* up to 64k of sprites */
+	ROM_LOAD( "gm-6a.bin", 0x00000, 0x8000, CRC(b9681f53) SHA1(bb0c516408f1769e018f0ec8707786d4d1e9ef7e) )
+
+	MOTHERBOARD_PALS
+ROM_END
+
+ROM_START( grudgep )
+	ROM_REGION( 0x40000, "maincpu", 0 )     /* 64k for code for the first CPU, plus 128k of banked ROMs */
+	ROM_LOAD( "grudge.ab0", 0x10000, 0x8000, CRC(260965ca) SHA1(79eb5dc6605974ece3d5564f10c4598204907398) )
+	ROM_LOAD( "grudge.ab4", 0x18000, 0x8000, CRC(c6cd734d) SHA1(076546569e9c8ff40f96bd2cac014bcabc53099d) )
+	ROM_LOAD( "grudge.cd0", 0x20000, 0x8000, CRC(e51db1f2) SHA1(57fc0f1df358dd6ea982dcbe9c3f79b3f072be53) )
+	ROM_LOAD( "grudge.cd4", 0x28000, 0x8000, CRC(6b60e47e) SHA1(5a399942d4ef9b7349fffd07c07092b667cf6247) )
+
+	ROM_REGION( 0x10000, "audiocpu", 0 )        /* 64k for Z80 */
+	ROM_LOAD( "sentesnd",   0x00000, 0x2000, CRC(4dd0a525) SHA1(f0c447adc5b67917851a9df978df851247e75c43) )
+
+	ROM_REGION( 0x8000, "gfx1", 0 )     /* up to 64k of sprites */
+	ROM_LOAD( "grudge.gr0", 0x00000, 0x8000, CRC(b9681f53) SHA1(bb0c516408f1769e018f0ec8707786d4d1e9ef7e) )
+
+	MOTHERBOARD_PALS
+ROM_END
 
 ROM_START( minigolf )
 	ROM_REGION( 0x40000, "maincpu", 0 )     /* 64k for code for the first CPU, plus 128k of banked ROMs */
@@ -2129,21 +2191,7 @@ ROM_START( rescraida )
 ROM_END
 
 
-ROM_START( grudge )
-	ROM_REGION( 0x40000, "maincpu", 0 )     /* 64k for code for the first CPU, plus 128k of banked ROMs */
-	ROM_LOAD( "grudge.ab0", 0x10000, 0x8000, CRC(260965ca) SHA1(79eb5dc6605974ece3d5564f10c4598204907398) )
-	ROM_LOAD( "grudge.ab4", 0x18000, 0x8000, CRC(c6cd734d) SHA1(076546569e9c8ff40f96bd2cac014bcabc53099d) )
-	ROM_LOAD( "grudge.cd0", 0x20000, 0x8000, CRC(e51db1f2) SHA1(57fc0f1df358dd6ea982dcbe9c3f79b3f072be53) )
-	ROM_LOAD( "grudge.cd4", 0x28000, 0x8000, CRC(6b60e47e) SHA1(5a399942d4ef9b7349fffd07c07092b667cf6247) )
 
-	ROM_REGION( 0x10000, "audiocpu", 0 )        /* 64k for Z80 */
-	ROM_LOAD( "sentesnd",   0x00000, 0x2000, CRC(4dd0a525) SHA1(f0c447adc5b67917851a9df978df851247e75c43) )
-
-	ROM_REGION( 0x8000, "gfx1", 0 )     /* up to 64k of sprites */
-	ROM_LOAD( "grudge.gr0", 0x00000, 0x8000, CRC(b9681f53) SHA1(bb0c516408f1769e018f0ec8707786d4d1e9ef7e) )
-
-	MOTHERBOARD_PALS
-ROM_END
 
 
 ROM_START( shrike )
@@ -2376,6 +2424,8 @@ GAME( 1985, gimeabrk, 0,        balsente, gimeabrk, balsente_state, gimeabrk, RO
 GAME( 1985, minigolf, 0,        balsente, minigolf, balsente_state, minigolf, ROT0, "Bally/Sente",  "Mini Golf (11/25/85)", MACHINE_SUPPORTS_SAVE )
 GAME( 1985, minigolf2,minigolf, balsente, minigolf2,balsente_state, minigolf2,ROT0, "Bally/Sente",  "Mini Golf (10/8/85)", MACHINE_SUPPORTS_SAVE )
 GAME( 1984, triviabb, 0,        balsente, triviag1, balsente_state, triviag2, ROT0, "Bally/Sente",  "Trivial Pursuit (Baby Boomer Edition) (3/20/85)", MACHINE_SUPPORTS_SAVE )
+GAME( 198?, grudge,   0,        balsente, grudge,   balsente_state, grudge,   ROT0, "Bally Midway", "Grudge Match (v00.90, Italy, location test?)", MACHINE_SUPPORTS_SAVE ) // newer than set below, had a complete cabinet + art
+GAME( 198?, grudgep,  grudge,   balsente, grudgep,  balsente_state, grudge,   ROT0, "Bally Midway", "Grudge Match (v00.80, prototype)", MACHINE_SUPPORTS_SAVE )
 
 /* Board: Unknown  */
 GAME( 1984, triviag1, 0,        balsente, triviag1, balsente_state, triviag1, ROT0, "Bally/Sente",  "Trivial Pursuit (Think Tank - Genus Edition) (set 1)", MACHINE_SUPPORTS_SAVE )
@@ -2404,5 +2454,4 @@ GAME( 1987, rescraid, 0,        balsente, rescraid, balsente_state, rescraid, RO
 /* Board: Unknown */
 GAME( 1986, shrike,   0,        shrike,   shrike,   balsente_state, shrike,   ROT0, "Bally/Sente",  "Shrike Avenger (prototype)", MACHINE_SUPPORTS_SAVE )
 GAME( 1987, rescraida,rescraid, balsente, rescraid, balsente_state, rescraid, ROT0, "Bally Midway", "Rescue Raider (stand-alone)", MACHINE_SUPPORTS_SAVE )
-GAME( 198?, grudge,   0,        balsente, grudge,   balsente_state, grudge,   ROT0, "Bally Midway", "Grudge Match (prototype)", MACHINE_SUPPORTS_SAVE )
 GAME( 1985, teamht,   0,        balsente, teamht,   balsente_state, teamht,   ROT0, "Bally/Sente",  "Team Hat Trick", MACHINE_SUPPORTS_SAVE )

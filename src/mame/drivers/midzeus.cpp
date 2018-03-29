@@ -39,7 +39,7 @@ The Grid         v1.2   10/18/2000
 
 #define LOG_FW        (0)
 
-#define CPU_CLOCK       XTAL_60MHz
+#define CPU_CLOCK       XTAL(60'000'000)
 
 #define BEAM_DY         3
 #define BEAM_DX         3
@@ -76,6 +76,10 @@ public:
 	DECLARE_WRITE_LINE_MEMBER(zeus_irq);
 	DECLARE_READ32_MEMBER(zeus2_timekeeper_r);
 	DECLARE_WRITE32_MEMBER(zeus2_timekeeper_w);
+	void thegrid(machine_config &config);
+	void crusnexo(machine_config &config);
+	void midzeus2(machine_config &config);
+	void zeus2_map(address_map &map);
 private:
 };
 
@@ -154,7 +158,7 @@ WRITE32_MEMBER(midzeus_state::cmos_w)
 	if (disk_asic_jr[2] && !cmos_protected)
 		COMBINE_DATA(&m_nvram[offset]);
 	else
-		logerror("%06X:timekeeper_w with disk_asic_jr[2] = %d, cmos_protected = %d\n", space.device().safe_pc(), disk_asic_jr[2], cmos_protected);
+		logerror("%06X:timekeeper_w with disk_asic_jr[2] = %d, cmos_protected = %d\n", m_maincpu->pc(), disk_asic_jr[2], cmos_protected);
 	cmos_protected = true;
 }
 
@@ -205,7 +209,7 @@ WRITE32_MEMBER(midzeus_state::zpram_w)
 	if (disk_asic_jr[2])
 		COMBINE_DATA(&m_nvram[offset]);
 	else
-		logerror("%06X:zpram_w with disk_asic_jr[2] = %d\n", space.device().safe_pc(), disk_asic_jr[2]);
+		logerror("%06X:zpram_w with disk_asic_jr[2] = %d\n", m_maincpu->pc(), disk_asic_jr[2]);
 }
 
 
@@ -247,7 +251,7 @@ READ32_MEMBER(midzeus_state::disk_asic_r)
 			break;
 		// Unknown
 		default:
-			logerror("%06X:disk_asic_r(%X) Unknown\n", space.device().safe_pc(), offset);
+			logerror("%06X:disk_asic_r(%X) Unknown\n", m_maincpu->pc(), offset);
 			break;
 	}
 	return retVal;
@@ -284,7 +288,7 @@ WRITE32_MEMBER(midzeus_state::disk_asic_w)
 			break;
 		// Unknown
 		default:
-			logerror("%06X:disk_asic_w(%X)=%08X Unknown\n", space.device().safe_pc(), offset, data);
+			logerror("%06X:disk_asic_w(%X)=%08X Unknown\n", m_maincpu->pc(), offset, data);
 			break;
 	}
 }
@@ -328,7 +332,7 @@ READ32_MEMBER(midzeus_state::disk_asic_jr_r)
 
 		/* unknown purpose */
 		default:
-			logerror("%06X:disk_asic_jr_r(%X)\n", space.device().safe_pc(), offset);
+			logerror("%06X:disk_asic_jr_r(%X)\n", m_maincpu->pc(), offset);
 			break;
 	}
 	return retVal;
@@ -345,13 +349,13 @@ WRITE32_MEMBER(midzeus_state::disk_asic_jr_w)
 		/* disk asic jr led; crusnexo toggles this between 0 and 1 every 20 frames; thegrid writes 1 */
 		case 0:
 			if (data != 0 && data != 1)
-				logerror("%06X:disk_asic_jr_w(%X) = %X (unexpected)\n", space.device().safe_pc(), offset, data);
+				logerror("%06X:disk_asic_jr_w(%X) = %X (unexpected)\n", m_maincpu->pc(), offset, data);
 			break;
 
 		/* miscellaneous hardware wait states; mk4/invasn write 1 here at initialization; crusnexo/thegrid write 3 */
 		case 1:
 			if (data != 1 && data != 3)
-				logerror("%06X:disk_asic_jr_w(%X) = %X (unexpected)\n", space.device().safe_pc(), offset, data);
+				logerror("%06X:disk_asic_jr_w(%X) = %X (unexpected)\n", m_maincpu->pc(), offset, data);
 			break;
 
 		/* CMOS/ZPRAM write enable; only low bit is used */
@@ -365,7 +369,7 @@ WRITE32_MEMBER(midzeus_state::disk_asic_jr_w)
 		/* unknown purpose; invasn writes 2 here at startup */
 		case 4:
 			if (data != 2)
-				logerror("%06X:disk_asic_jr_w(%X) = %X (unexpected)\n", space.device().safe_pc(), offset, data);
+				logerror("%06X:disk_asic_jr_w(%X) = %X (unexpected)\n", m_maincpu->pc(), offset, data);
 			break;
 
 		/* ROM bank selection on Zeus 2 */
@@ -380,18 +384,18 @@ WRITE32_MEMBER(midzeus_state::disk_asic_jr_w)
 		/* romsize; crusnexo writes 4 at startup; thegrid writes 6 */
 		case 8:
 			if (data != 4 && data != 6)
-				logerror("%06X:disk_asic_jr_w(%X) = %X (unexpected)\n", space.device().safe_pc(), offset, data);
+				logerror("%06X:disk_asic_jr_w(%X) = %X (unexpected)\n", m_maincpu->pc(), offset, data);
 			break;
 
 		/* trackball reset; thegrid writes 1 at startup */
 		case 9:
 			if (data != 1)
-				logerror("%06X:disk_asic_jr_w(%X) = %X (unexpected)\n", space.device().safe_pc(), offset, data);
+				logerror("%06X:disk_asic_jr_w(%X) = %X (unexpected)\n", m_maincpu->pc(), offset, data);
 			break;
 		/* unknown purpose */
 		default:
 			//if (oldval ^ data)
-				logerror("%06X:disk_asic_jr_w(%X) = %X\n", space.device().safe_pc(), offset, data);
+				logerror("%06X:disk_asic_jr_w(%X) = %X\n", m_maincpu->pc(), offset, data);
 			break;
 
 	}
@@ -484,7 +488,7 @@ READ32_MEMBER(midzeus_state::firewire_r)
 		retVal = 0x0;
 		break;
 	}
-	if LOG_FW logerror("%06X:firewire_r(%02X)=%08X\n", space.device().safe_pc(), offset, retVal);
+	if LOG_FW logerror("%06X:firewire_r(%02X)=%08X\n", m_maincpu->pc(), offset, retVal);
 	return retVal;
 }
 
@@ -517,7 +521,7 @@ WRITE32_MEMBER(midzeus_state::firewire_w)
 
 	if (offset < 0x40)
 		COMBINE_DATA(&m_firewire[offset / 4]);
-	if LOG_FW logerror("%06X:firewire_w(%02X) = %08X\n", space.device().safe_pc(),  offset, data);
+	if LOG_FW logerror("%06X:firewire_w(%02X) = %08X\n", m_maincpu->pc(),  offset, data);
 }
 
 
@@ -541,7 +545,7 @@ READ32_MEMBER(midzeus_state::tms32031_control_r)
 
 	/* log anything else except the memory control register */
 	if (offset != 0x64)
-		logerror("%06X:tms32031_control_r(%02X)\n", space.device().safe_pc(), offset);
+		logerror("%06X:tms32031_control_r(%02X)\n", m_maincpu->pc(), offset);
 
 	return m_tms32031_control[offset];
 }
@@ -563,7 +567,7 @@ WRITE32_MEMBER(midzeus_state::tms32031_control_w)
 			timer[which]->adjust(attotime::never);
 	}
 	else
-		logerror("%06X:tms32031_control_w(%02X) = %08X\n", space.device().safe_pc(), offset, data);
+		logerror("%06X:tms32031_control_w(%02X) = %08X\n", m_maincpu->pc(), offset, data);
 }
 
 
@@ -628,7 +632,7 @@ READ32_MEMBER(midzeus_state::analog_r)
 {
 	static const char * const tags[] = { "ANALOG0", "ANALOG1", "ANALOG2", "ANALOG3" };
 	if (offset < 8 || offset > 11)
-		logerror("%06X:analog_r(%X)\n", space.device().safe_pc(), offset);
+		logerror("%06X:analog_r(%X)\n", m_maincpu->pc(), offset);
 	return ioport(tags[offset & 3])->read();
 }
 
@@ -728,39 +732,41 @@ READ32_MEMBER(midzeus_state::invasn_gun_r)
  *
  *************************************/
 
-static ADDRESS_MAP_START( zeus_map, AS_PROGRAM, 32, midzeus_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x000000, 0x03ffff) AM_RAM AM_SHARE("ram_base")
-	AM_RANGE(0x400000, 0x41ffff) AM_RAM
-	AM_RANGE(0x808000, 0x80807f) AM_READWRITE(tms32031_control_r, tms32031_control_w) AM_SHARE("tms32031_ctl")
-	AM_RANGE(0x880000, 0x8803ff) AM_READWRITE(zeus_r, zeus_w) AM_SHARE("zeusbase")
-	AM_RANGE(0x8d0000, 0x8d0009) AM_READWRITE(disk_asic_jr_r, disk_asic_jr_w)
-	AM_RANGE(0x990000, 0x99000f) AM_DEVREADWRITE("ioasic", midway_ioasic_device, read, write)
-	AM_RANGE(0x9e0000, 0x9e0000) AM_WRITENOP        // watchdog?
-	AM_RANGE(0x9f0000, 0x9f7fff) AM_READWRITE(cmos_r, cmos_w) AM_SHARE("nvram")
-	AM_RANGE(0x9f8000, 0x9f8000) AM_WRITE(cmos_protect_w)
-	AM_RANGE(0xa00000, 0xffffff) AM_ROM AM_REGION("user1", 0)
-ADDRESS_MAP_END
+void midzeus_state::zeus_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x000000, 0x03ffff).ram().share("ram_base");
+	map(0x400000, 0x41ffff).ram();
+	map(0x808000, 0x80807f).rw(this, FUNC(midzeus_state::tms32031_control_r), FUNC(midzeus_state::tms32031_control_w)).share("tms32031_ctl");
+	map(0x880000, 0x8803ff).rw(this, FUNC(midzeus_state::zeus_r), FUNC(midzeus_state::zeus_w)).share("zeusbase");
+	map(0x8d0000, 0x8d0009).rw(this, FUNC(midzeus_state::disk_asic_jr_r), FUNC(midzeus_state::disk_asic_jr_w));
+	map(0x990000, 0x99000f).rw("ioasic", FUNC(midway_ioasic_device::read), FUNC(midway_ioasic_device::write));
+	map(0x9e0000, 0x9e0000).nopw();        // watchdog?
+	map(0x9f0000, 0x9f7fff).rw(this, FUNC(midzeus_state::cmos_r), FUNC(midzeus_state::cmos_w)).share("nvram");
+	map(0x9f8000, 0x9f8000).w(this, FUNC(midzeus_state::cmos_protect_w));
+	map(0xa00000, 0xffffff).rom().region("user1", 0);
+}
 
 
-static ADDRESS_MAP_START( zeus2_map, AS_PROGRAM, 32, midzeus2_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x000000, 0x03ffff) AM_RAM AM_SHARE("ram_base")
-	AM_RANGE(0x400000, 0x43ffff) AM_RAM
-	AM_RANGE(0x808000, 0x80807f) AM_READWRITE(tms32031_control_r, tms32031_control_w) AM_SHARE("tms32031_ctl")
-	AM_RANGE(0x880000, 0x88007f) AM_DEVREADWRITE("zeus2", zeus2_device, zeus2_r, zeus2_w)
-	AM_RANGE(0x8a0000, 0x8a00cf) AM_READWRITE(firewire_r, firewire_w) AM_SHARE("firewire")
-	AM_RANGE(0x8d0000, 0x8d0009) AM_READWRITE(disk_asic_jr_r, disk_asic_jr_w)
-	AM_RANGE(0x900000, 0x91ffff) AM_READWRITE(zpram_r, zpram_w) AM_SHARE("nvram") AM_MIRROR(0x020000)
-	AM_RANGE(0x990000, 0x99000f) AM_DEVREADWRITE("ioasic", midway_ioasic_device, read, write)
-	AM_RANGE(0x9c0000, 0x9c000f) AM_READWRITE(analog_r, analog_w)
-	AM_RANGE(0x9d0000, 0x9d000f) AM_READWRITE(disk_asic_r, disk_asic_w)
-	AM_RANGE(0x9e0000, 0x9e0000) AM_WRITENOP        // watchdog?
-	AM_RANGE(0x9f0000, 0x9f7fff) AM_READWRITE(zeus2_timekeeper_r, zeus2_timekeeper_w)
-	AM_RANGE(0x9f8000, 0x9f8000) AM_WRITE(cmos_protect_w)
-	AM_RANGE(0xa00000, 0xbfffff) AM_ROM AM_REGION("user1", 0)
-	AM_RANGE(0xc00000, 0xffffff) AM_ROMBANK("bank1") AM_REGION("user2", 0)
-ADDRESS_MAP_END
+void midzeus2_state::zeus2_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x000000, 0x03ffff).ram().share("ram_base");
+	map(0x400000, 0x43ffff).ram();
+	map(0x808000, 0x80807f).rw(this, FUNC(midzeus2_state::tms32031_control_r), FUNC(midzeus2_state::tms32031_control_w)).share("tms32031_ctl");
+	map(0x880000, 0x88007f).rw(m_zeus, FUNC(zeus2_device::zeus2_r), FUNC(zeus2_device::zeus2_w));
+	map(0x8a0000, 0x8a00cf).rw(this, FUNC(midzeus2_state::firewire_r), FUNC(midzeus2_state::firewire_w)).share("firewire");
+	map(0x8d0000, 0x8d0009).rw(this, FUNC(midzeus2_state::disk_asic_jr_r), FUNC(midzeus2_state::disk_asic_jr_w));
+	map(0x900000, 0x91ffff).rw(this, FUNC(midzeus2_state::zpram_r), FUNC(midzeus2_state::zpram_w)).share("nvram").mirror(0x020000);
+	map(0x990000, 0x99000f).rw("ioasic", FUNC(midway_ioasic_device::read), FUNC(midway_ioasic_device::write));
+	map(0x9c0000, 0x9c000f).rw(this, FUNC(midzeus2_state::analog_r), FUNC(midzeus2_state::analog_w));
+	map(0x9d0000, 0x9d000f).rw(this, FUNC(midzeus2_state::disk_asic_r), FUNC(midzeus2_state::disk_asic_w));
+	map(0x9e0000, 0x9e0000).nopw();        // watchdog?
+	map(0x9f0000, 0x9f7fff).rw(this, FUNC(midzeus2_state::zeus2_timekeeper_r), FUNC(midzeus2_state::zeus2_timekeeper_w));
+	map(0x9f8000, 0x9f8000).w(this, FUNC(midzeus2_state::cmos_protect_w));
+	map(0xa00000, 0xbfffff).rom().region("user1", 0);
+	map(0xc00000, 0xffffff).bankr("bank1").region("user2", 0);
+}
 
 /*
 
@@ -1229,7 +1235,7 @@ static INPUT_PORTS_START( thegrid )
 	PORT_BIT(0x001, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_NAME("Keypad 1") PORT_CODE(KEYCODE_1_PAD)     /* keypad 1 */
 	PORT_BIT(0x002, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_NAME("Keypad 4") PORT_CODE(KEYCODE_4_PAD)     /* keypad 4 */
 	PORT_BIT(0x004, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_NAME("Keypad 7") PORT_CODE(KEYCODE_7_PAD)     /* keypad 7 */
-	PORT_BIT(0x008, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_NAME("Keypad *") PORT_CODE(KEYCODE_MINUS_PAD) /* keypad * */
+	PORT_BIT(0x008, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_NAME("Keypad *") PORT_CODE(KEYCODE_ASTERISK)  /* keypad * */
 	PORT_BIT(0x010, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_NAME("Keypad 2") PORT_CODE(KEYCODE_2_PAD)     /* keypad 2 */
 	PORT_BIT(0x020, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_NAME("Keypad 5") PORT_CODE(KEYCODE_5_PAD)     /* keypad 5 */
 	PORT_BIT(0x040, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_NAME("Keypad 8") PORT_CODE(KEYCODE_8_PAD)     /* keypad 8 */
@@ -1255,7 +1261,7 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( midzeus )
+MACHINE_CONFIG_START(midzeus_state::midzeus)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", TMS32032, CPU_CLOCK)
@@ -1284,20 +1290,22 @@ static MACHINE_CONFIG_START( midzeus )
 	MCFG_MIDWAY_SERIAL_PIC2_YEAR_OFFS(94)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( mk4, midzeus )
+MACHINE_CONFIG_START(midzeus_state::mk4)
+	midzeus(config);
 	MCFG_DEVICE_MODIFY("ioasic")
 	MCFG_MIDWAY_IOASIC_UPPER(461/* or 474 */)
 	MCFG_MIDWAY_IOASIC_SHUFFLE_DEFAULT(1)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( invasn, midzeus )
+MACHINE_CONFIG_START(midzeus_state::invasn)
+	midzeus(config);
 	MCFG_CPU_ADD("pic", PIC16C57, 8000000)  /* ? */
 
 	MCFG_DEVICE_MODIFY("ioasic")
 	MCFG_MIDWAY_IOASIC_UPPER(468/* or 488 */)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( midzeus2 )
+MACHINE_CONFIG_START(midzeus2_state::midzeus2)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", TMS32032, CPU_CLOCK)
@@ -1327,12 +1335,14 @@ static MACHINE_CONFIG_START( midzeus2 )
 	MCFG_MIDWAY_IOASIC_UPPER(474)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( crusnexo, midzeus2 )
+MACHINE_CONFIG_START(midzeus2_state::crusnexo)
+	midzeus2(config);
 	MCFG_DEVICE_MODIFY("ioasic")
 	MCFG_MIDWAY_IOASIC_UPPER(472/* or 476,477,478,110 */)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( thegrid, midzeus2 )
+MACHINE_CONFIG_START(midzeus2_state::thegrid)
+	midzeus2(config);
 	MCFG_DEVICE_MODIFY("ioasic")
 	MCFG_MIDWAY_IOASIC_UPPER(474/* or 491 */)
 MACHINE_CONFIG_END

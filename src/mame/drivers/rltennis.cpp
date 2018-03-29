@@ -74,7 +74,7 @@ player - when there's nothing to play - first, empty 2k of ROMs are selected.
 
 #define RLT_REFRESH_RATE   60
 #define RLT_TIMER_FREQ     (RLT_REFRESH_RATE*256)
-#define RLT_XTAL           XTAL_12MHz
+#define RLT_XTAL           XTAL(12'000'000)
 
 READ16_MEMBER(rltennis_state::io_r)
 {
@@ -91,21 +91,22 @@ WRITE16_MEMBER(rltennis_state::snd2_w)
 	COMBINE_DATA(&m_data740000);
 }
 
-static ADDRESS_MAP_START( rltennis_main, AS_PROGRAM, 16, rltennis_state )
-	AM_RANGE(0x000000, 0x0fffff) AM_ROM
-	AM_RANGE(0x100000, 0x10ffff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x200000, 0x20ffff) AM_RAM
-	AM_RANGE(0x700000, 0x70000f) AM_WRITE(blitter_w)
-	AM_RANGE(0x720000, 0x720001) AM_DEVWRITE8("ramdac",ramdac_device,index_w,0x00ff)
-	AM_RANGE(0x720002, 0x720003) AM_DEVREADWRITE8("ramdac",ramdac_device,pal_r,pal_w,0x00ff)
-	AM_RANGE(0x720006, 0x720007) AM_DEVWRITE8("ramdac",ramdac_device,index_r_w,0x00ff)
-	AM_RANGE(0x740000, 0x740001) AM_WRITE(snd1_w)
-	AM_RANGE(0x760000, 0x760001) AM_WRITE(snd2_w)
-	AM_RANGE(0x780000, 0x780001) AM_WRITENOP    /* sound control, unknown, usually = 0x0044 */
-	AM_RANGE(0x7a0000, 0x7a0003) AM_READNOP     /* unknown, read only at boot time*/
-	AM_RANGE(0x7e0000, 0x7e0001) AM_READ(io_r)
-	AM_RANGE(0x7e0002, 0x7e0003) AM_READ_PORT("P2")
-ADDRESS_MAP_END
+void rltennis_state::rltennis_main(address_map &map)
+{
+	map(0x000000, 0x0fffff).rom();
+	map(0x100000, 0x10ffff).ram().share("nvram");
+	map(0x200000, 0x20ffff).ram();
+	map(0x700000, 0x70000f).w(this, FUNC(rltennis_state::blitter_w));
+	map(0x720001, 0x720001).w("ramdac", FUNC(ramdac_device::index_w));
+	map(0x720003, 0x720003).rw("ramdac", FUNC(ramdac_device::pal_r), FUNC(ramdac_device::pal_w));
+	map(0x720007, 0x720007).w("ramdac", FUNC(ramdac_device::index_r_w));
+	map(0x740000, 0x740001).w(this, FUNC(rltennis_state::snd1_w));
+	map(0x760000, 0x760001).w(this, FUNC(rltennis_state::snd2_w));
+	map(0x780000, 0x780001).nopw();    /* sound control, unknown, usually = 0x0044 */
+	map(0x7a0000, 0x7a0003).nopr();     /* unknown, read only at boot time*/
+	map(0x7e0000, 0x7e0001).r(this, FUNC(rltennis_state::io_r));
+	map(0x7e0002, 0x7e0003).portr("P2");
+}
 
 static INPUT_PORTS_START( rltennis )
 	PORT_START("P1")
@@ -179,11 +180,12 @@ void rltennis_state::machine_reset()
 	m_timer->adjust(attotime::from_hz(RLT_TIMER_FREQ));
 }
 
-static ADDRESS_MAP_START( ramdac_map, 0, 8, rltennis_state )
-	AM_RANGE(0x000, 0x3ff) AM_DEVREADWRITE("ramdac",ramdac_device,ramdac_pal_r,ramdac_rgb888_w)
-ADDRESS_MAP_END
+void rltennis_state::ramdac_map(address_map &map)
+{
+	map(0x000, 0x3ff).rw("ramdac", FUNC(ramdac_device::ramdac_pal_r), FUNC(ramdac_device::ramdac_rgb888_w));
+}
 
-static MACHINE_CONFIG_START( rltennis )
+MACHINE_CONFIG_START(rltennis_state::rltennis)
 
 	MCFG_CPU_ADD("maincpu", M68000, RLT_XTAL/2) /* 68000P8  ??? */
 	MCFG_CPU_PROGRAM_MAP(rltennis_main)

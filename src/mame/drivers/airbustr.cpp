@@ -292,32 +292,7 @@ WRITE8_MEMBER(airbustr_state::sound_bankswitch_w)
 READ8_MEMBER(airbustr_state::soundcommand_status_r)
 {
 	// bits: 2 <-> ?    1 <-> soundlatch full   0 <-> soundlatch2 empty
-	return 4 + m_soundlatch_status * 2 + (1 - m_soundlatch2_status);
-}
-
-READ8_MEMBER(airbustr_state::soundcommand_r)
-{
-	m_soundlatch_status = 0;    // soundlatch has been read
-	return m_soundlatch->read(space, 0);
-}
-
-READ8_MEMBER(airbustr_state::soundcommand2_r)
-{
-	m_soundlatch2_status = 0;   // soundlatch2 has been read
-	return m_soundlatch2->read(space, 0);
-}
-
-WRITE8_MEMBER(airbustr_state::soundcommand_w)
-{
-	m_soundlatch->write(space, 0, data);
-	m_soundlatch_status = 1;    // soundlatch has been written
-	m_audiocpu->set_input_line(INPUT_LINE_NMI, PULSE_LINE); // cause a nmi to sub cpu
-}
-
-WRITE8_MEMBER(airbustr_state::soundcommand2_w)
-{
-	m_soundlatch2->write(space, 0, data);
-	m_soundlatch2_status = 1;   // soundlatch2 has been written
+	return 4 | (m_soundlatch->pending_r() << 1) | !m_soundlatch2->pending_r();
 }
 
 
@@ -330,61 +305,67 @@ WRITE8_MEMBER(airbustr_state::coin_counter_w)
 }
 
 /* Memory Maps */
-static ADDRESS_MAP_START( master_map, AS_PROGRAM, 8, airbustr_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK("masterbank")
-	AM_RANGE(0xc000, 0xcfff) AM_DEVREADWRITE("pandora", kaneko_pandora_device, spriteram_r, spriteram_w)
-	AM_RANGE(0xd000, 0xdfff) AM_RAM
-	AM_RANGE(0xe000, 0xefff) AM_RAM AM_SHARE("devram") // shared with protection device
-	AM_RANGE(0xf000, 0xffff) AM_RAM AM_SHARE("share1")
-ADDRESS_MAP_END
+void airbustr_state::master_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0xbfff).bankr("masterbank");
+	map(0xc000, 0xcfff).rw(m_pandora, FUNC(kaneko_pandora_device::spriteram_r), FUNC(kaneko_pandora_device::spriteram_w));
+	map(0xd000, 0xdfff).ram();
+	map(0xe000, 0xefff).ram().share("devram"); // shared with protection device
+	map(0xf000, 0xffff).ram().share("share1");
+}
 
-static ADDRESS_MAP_START( master_io_map, AS_IO, 8, airbustr_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_WRITE(master_bankswitch_w)
-	AM_RANGE(0x01, 0x01) AM_WRITENOP // ???
-	AM_RANGE(0x02, 0x02) AM_WRITE(master_nmi_trigger_w)
-ADDRESS_MAP_END
+void airbustr_state::master_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).w(this, FUNC(airbustr_state::master_bankswitch_w));
+	map(0x01, 0x01).nopw(); // ???
+	map(0x02, 0x02).w(this, FUNC(airbustr_state::master_nmi_trigger_w));
+}
 
-static ADDRESS_MAP_START( slave_map, AS_PROGRAM, 8, airbustr_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK("slavebank")
-	AM_RANGE(0xc000, 0xc3ff) AM_RAM_WRITE(videoram2_w) AM_SHARE("videoram2")
-	AM_RANGE(0xc400, 0xc7ff) AM_RAM_WRITE(colorram2_w) AM_SHARE("colorram2")
-	AM_RANGE(0xc800, 0xcbff) AM_RAM_WRITE(videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0xcc00, 0xcfff) AM_RAM_WRITE(colorram_w) AM_SHARE("colorram")
-	AM_RANGE(0xd000, 0xd5ff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0xd600, 0xdfff) AM_RAM
-	AM_RANGE(0xe000, 0xefff) AM_RAM
-	AM_RANGE(0xf000, 0xffff) AM_RAM AM_SHARE("share1")
-ADDRESS_MAP_END
+void airbustr_state::slave_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0xbfff).bankr("slavebank");
+	map(0xc000, 0xc3ff).ram().w(this, FUNC(airbustr_state::videoram2_w)).share("videoram2");
+	map(0xc400, 0xc7ff).ram().w(this, FUNC(airbustr_state::colorram2_w)).share("colorram2");
+	map(0xc800, 0xcbff).ram().w(this, FUNC(airbustr_state::videoram_w)).share("videoram");
+	map(0xcc00, 0xcfff).ram().w(this, FUNC(airbustr_state::colorram_w)).share("colorram");
+	map(0xd000, 0xd5ff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+	map(0xd600, 0xdfff).ram();
+	map(0xe000, 0xefff).ram();
+	map(0xf000, 0xffff).ram().share("share1");
+}
 
-static ADDRESS_MAP_START( slave_io_map, AS_IO, 8, airbustr_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_WRITE(slave_bankswitch_w)
-	AM_RANGE(0x02, 0x02) AM_READWRITE(soundcommand2_r, soundcommand_w)
-	AM_RANGE(0x04, 0x0c) AM_WRITE(scrollregs_w)
-	AM_RANGE(0x0e, 0x0e) AM_READ(soundcommand_status_r)
-	AM_RANGE(0x20, 0x20) AM_READ_PORT("P1")
-	AM_RANGE(0x22, 0x22) AM_READ_PORT("P2")
-	AM_RANGE(0x24, 0x24) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0x28, 0x28) AM_WRITE(coin_counter_w)
-	AM_RANGE(0x38, 0x38) AM_WRITENOP // irq ack / irq mask
-ADDRESS_MAP_END
+void airbustr_state::slave_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).w(this, FUNC(airbustr_state::slave_bankswitch_w));
+	map(0x02, 0x02).r(m_soundlatch2, FUNC(generic_latch_8_device::read)).w(m_soundlatch, FUNC(generic_latch_8_device::write));
+	map(0x04, 0x0c).w(this, FUNC(airbustr_state::scrollregs_w));
+	map(0x0e, 0x0e).r(this, FUNC(airbustr_state::soundcommand_status_r));
+	map(0x20, 0x20).portr("P1");
+	map(0x22, 0x22).portr("P2");
+	map(0x24, 0x24).portr("SYSTEM");
+	map(0x28, 0x28).w(this, FUNC(airbustr_state::coin_counter_w));
+	map(0x38, 0x38).nopw(); // irq ack / irq mask
+}
 
-static ADDRESS_MAP_START( sound_map, AS_PROGRAM, 8, airbustr_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK("audiobank")
-	AM_RANGE(0xc000, 0xdfff) AM_RAM
-ADDRESS_MAP_END
+void airbustr_state::sound_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0xbfff).bankr("audiobank");
+	map(0xc000, 0xdfff).ram();
+}
 
-static ADDRESS_MAP_START( sound_io_map, AS_IO, 8, airbustr_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_WRITE(sound_bankswitch_w)
-	AM_RANGE(0x02, 0x03) AM_DEVREADWRITE("ymsnd", ym2203_device, read, write)
-	AM_RANGE(0x04, 0x04) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0x06, 0x06) AM_READWRITE(soundcommand_r, soundcommand2_w)
-ADDRESS_MAP_END
+void airbustr_state::sound_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).w(this, FUNC(airbustr_state::sound_bankswitch_w));
+	map(0x02, 0x03).rw("ymsnd", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+	map(0x04, 0x04).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0x06, 0x06).r(m_soundlatch, FUNC(generic_latch_8_device::read)).w(m_soundlatch2, FUNC(generic_latch_8_device::write));
+}
 
 /* Input Ports */
 
@@ -550,8 +531,6 @@ void airbustr_state::machine_start()
 	membank("slavebank")->configure_entries(0, 8, memregion("slave")->base(), 0x4000);
 	membank("audiobank")->configure_entries(0, 8, memregion("audiocpu")->base(), 0x4000);
 
-	save_item(NAME(m_soundlatch_status));
-	save_item(NAME(m_soundlatch2_status));
 	save_item(NAME(m_bg_scrollx));
 	save_item(NAME(m_bg_scrolly));
 	save_item(NAME(m_fg_scrollx));
@@ -561,7 +540,6 @@ void airbustr_state::machine_start()
 
 void airbustr_state::machine_reset()
 {
-	m_soundlatch_status = m_soundlatch2_status = 0;
 	m_bg_scrollx = 0;
 	m_bg_scrolly = 0;
 	m_fg_scrollx = 0;
@@ -571,20 +549,20 @@ void airbustr_state::machine_reset()
 
 /* Machine Driver */
 
-static MACHINE_CONFIG_START( airbustr )
+MACHINE_CONFIG_START(airbustr_state::airbustr)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("master", Z80, XTAL_12MHz/2)   /* verified on pcb */
+	MCFG_CPU_ADD("master", Z80, XTAL(12'000'000)/2)   /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(master_map)
 	MCFG_CPU_IO_MAP(master_io_map)
 	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", airbustr_state, airbustr_scanline, "screen", 0, 1)
 
-	MCFG_CPU_ADD("slave", Z80, XTAL_12MHz/2)    /* verified on pcb */
+	MCFG_CPU_ADD("slave", Z80, XTAL(12'000'000)/2)    /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(slave_map)
 	MCFG_CPU_IO_MAP(slave_io_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", airbustr_state,  slave_interrupt) /* nmi signal from master cpu */
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_12MHz/2) /* verified on pcb */
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(12'000'000)/2) /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(sound_map)
 	MCFG_CPU_IO_MAP(sound_io_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", airbustr_state,  irq0_line_hold)       // nmi are caused by sub cpu writing a sound command
@@ -617,9 +595,11 @@ static MACHINE_CONFIG_START( airbustr )
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
+	MCFG_GENERIC_LATCH_DATA_PENDING_CB(INPUTLINE("audiocpu", INPUT_LINE_NMI))
+
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch2")
 
-	MCFG_SOUND_ADD("ymsnd", YM2203, XTAL_12MHz/4)   /* verified on pcb */
+	MCFG_SOUND_ADD("ymsnd", YM2203, XTAL(12'000'000)/4)   /* verified on pcb */
 	MCFG_AY8910_PORT_A_READ_CB(IOPORT("DSW1"))       // DSW-1 connected to port A
 	MCFG_AY8910_PORT_B_READ_CB(IOPORT("DSW2"))       // DSW-2 connected to port B
 	MCFG_SOUND_ROUTE(0, "mono", 0.25)
@@ -627,11 +607,12 @@ static MACHINE_CONFIG_START( airbustr )
 	MCFG_SOUND_ROUTE(2, "mono", 0.25)
 	MCFG_SOUND_ROUTE(3, "mono", 0.50)
 
-	MCFG_OKIM6295_ADD("oki", XTAL_12MHz/4, PIN7_LOW)   /* verified on pcb */
+	MCFG_OKIM6295_ADD("oki", XTAL(12'000'000)/4, PIN7_LOW)   /* verified on pcb */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( airbustrb, airbustr )
+MACHINE_CONFIG_START(airbustr_state::airbustrb)
+	airbustr(config);
 	MCFG_WATCHDOG_MODIFY("watchdog")
 	MCFG_WATCHDOG_TIME_INIT(attotime::from_seconds(0)) // no protection device or watchdog
 MACHINE_CONFIG_END

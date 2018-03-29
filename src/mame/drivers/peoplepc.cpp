@@ -62,6 +62,9 @@ public:
 	void floppy_unload(floppy_image_device *dev);
 
 	uint8_t m_dma0pg;
+	void olypeopl(machine_config &config);
+	void peoplepc_io(address_map &map);
+	void peoplepc_map(address_map &map);
 protected:
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
@@ -187,31 +190,33 @@ void peoplepc_state::machine_start()
 	m_flop1->get_device()->setup_unload_cb(floppy_image_device::unload_cb(&peoplepc_state::floppy_unload, this));
 }
 
-static ADDRESS_MAP_START( peoplepc_map, AS_PROGRAM, 16, peoplepc_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000, 0x7ffff) AM_RAM
-	AM_RANGE(0xc0000, 0xdffff) AM_RAM AM_SHARE("gvram")
-	AM_RANGE(0xe0000, 0xe3fff) AM_RAM AM_SHARE("cvram")
-	AM_RANGE(0xe4000, 0xe5fff) AM_WRITE(charram_w)
-	AM_RANGE(0xfe000, 0xfffff) AM_ROM AM_REGION("maincpu", 0)
-ADDRESS_MAP_END
+void peoplepc_state::peoplepc_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000, 0x7ffff).ram();
+	map(0xc0000, 0xdffff).ram().share("gvram");
+	map(0xe0000, 0xe3fff).ram().share("cvram");
+	map(0xe4000, 0xe5fff).w(this, FUNC(peoplepc_state::charram_w));
+	map(0xfe000, 0xfffff).rom().region("maincpu", 0);
+}
 
-static ADDRESS_MAP_START(peoplepc_io, AS_IO, 16, peoplepc_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0014, 0x0017) AM_DEVREADWRITE8("pic8259_1", pic8259_device, read, write, 0x00ff)
-	AM_RANGE(0x0018, 0x001b) AM_DEVREADWRITE8("pic8259_0", pic8259_device, read, write, 0x00ff)
-	AM_RANGE(0x0020, 0x0031) AM_DEVREADWRITE8("i8257", i8257_device, read, write, 0x00ff)
-	AM_RANGE(0x0040, 0x0047) AM_DEVREADWRITE8("ppi8255", i8255_device, read, write, 0x00ff)
-	AM_RANGE(0x0048, 0x004f) AM_DEVREADWRITE8("pit8253", pit8253_device, read, write, 0x00ff)
-	AM_RANGE(0x0054, 0x0055) AM_DEVREADWRITE8("i8251_0", i8251_device, data_r, data_w, 0x00ff)
-	AM_RANGE(0x0056, 0x0057) AM_DEVREADWRITE8("i8251_0", i8251_device, status_r, control_w, 0x00ff)
-	AM_RANGE(0x005c, 0x005d) AM_DEVREADWRITE8("i8251_1", i8251_device, data_r, data_w, 0x00ff)
-	AM_RANGE(0x005e, 0x005f) AM_DEVREADWRITE8("i8251_1", i8251_device, status_r, control_w, 0x00ff)
-	AM_RANGE(0x0064, 0x0067) AM_DEVICE8("upd765", upd765a_device, map, 0x00ff)
-	AM_RANGE(0x006c, 0x006d) AM_DEVWRITE8("h46505", mc6845_device, address_w, 0x00ff)
-	AM_RANGE(0x006e, 0x006f) AM_DEVREADWRITE8("h46505", mc6845_device, register_r, register_w, 0x00ff)
-	AM_RANGE(0x0070, 0x0071) AM_WRITE8(dmapg_w, 0x00ff)
-ADDRESS_MAP_END
+void peoplepc_state::peoplepc_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0014, 0x0017).rw(m_pic_1, FUNC(pic8259_device::read), FUNC(pic8259_device::write)).umask16(0x00ff);
+	map(0x0018, 0x001b).rw("pic8259_0", FUNC(pic8259_device::read), FUNC(pic8259_device::write)).umask16(0x00ff);
+	map(0x0020, 0x0031).rw(m_dmac, FUNC(i8257_device::read), FUNC(i8257_device::write)).umask16(0x00ff);
+	map(0x0040, 0x0047).rw("ppi8255", FUNC(i8255_device::read), FUNC(i8255_device::write)).umask16(0x00ff);
+	map(0x0048, 0x004f).rw("pit8253", FUNC(pit8253_device::read), FUNC(pit8253_device::write)).umask16(0x00ff);
+	map(0x0054, 0x0054).rw(m_8251key, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x0056, 0x0056).rw(m_8251key, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x005c, 0x005c).rw(m_8251ser, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x005e, 0x005e).rw(m_8251ser, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x0064, 0x0067).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x00ff);
+	map(0x006c, 0x006c).w("h46505", FUNC(mc6845_device::address_w));
+	map(0x006e, 0x006e).rw("h46505", FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
+	map(0x0070, 0x0070).w(this, FUNC(peoplepc_state::dmapg_w));
+}
 
 static SLOT_INTERFACE_START( peoplepc_floppies )
 	SLOT_INTERFACE( "525qd", FLOPPY_525_QD )
@@ -233,39 +238,45 @@ static DEVICE_INPUT_DEFAULTS_START(keyboard)
 	DEVICE_INPUT_DEFAULTS( "RS232_STOPBITS", 0xff, RS232_STOPBITS_1 )
 DEVICE_INPUT_DEFAULTS_END
 
-static MACHINE_CONFIG_START( olypeopl )
+MACHINE_CONFIG_START(peoplepc_state::olypeopl)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", I8086, XTAL_14_7456MHz/3)
+	MCFG_CPU_ADD("maincpu", I8086, XTAL(14'745'600)/3)
 	MCFG_CPU_PROGRAM_MAP(peoplepc_map)
 	MCFG_CPU_IO_MAP(peoplepc_io)
 	MCFG_CPU_IRQ_ACKNOWLEDGE_DEVICE("pic8259_0", pic8259_device, inta_cb)
 
 	MCFG_DEVICE_ADD("pit8253", PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_14_7456MHz/6)
+	MCFG_PIT8253_CLK0(XTAL(14'745'600)/6)
 	MCFG_PIT8253_OUT0_HANDLER(WRITELINE(peoplepc_state, kbd_clock_tick_w))
-	MCFG_PIT8253_CLK1(XTAL_14_7456MHz/6)
+	MCFG_PIT8253_CLK1(XTAL(14'745'600)/6)
 	MCFG_PIT8253_OUT1_HANDLER(WRITELINE(peoplepc_state, tty_clock_tick_w))
-	MCFG_PIT8253_CLK2(XTAL_14_7456MHz/6)
+	MCFG_PIT8253_CLK2(XTAL(14'745'600)/6)
 	MCFG_PIT8253_OUT2_HANDLER(DEVWRITELINE("pic8259_0", pic8259_device, ir0_w))
 
-	MCFG_PIC8259_ADD("pic8259_0", INPUTLINE("maincpu", 0), VCC, READ8(peoplepc_state, get_slave_ack))
-	MCFG_PIC8259_ADD("pic8259_1", DEVWRITELINE("pic8259_0", pic8259_device, ir7_w), GND, NOOP)
+	MCFG_DEVICE_ADD("pic8259_0", PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(INPUTLINE("maincpu", 0))
+	MCFG_PIC8259_IN_SP_CB(VCC)
+	MCFG_PIC8259_CASCADE_ACK_CB(READ8(peoplepc_state, get_slave_ack))
+
+	MCFG_DEVICE_ADD("pic8259_1", PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(DEVWRITELINE("pic8259_0", pic8259_device, ir7_w))
+	MCFG_PIC8259_IN_SP_CB(GND)
 
 	MCFG_DEVICE_ADD("ppi8255", I8255, 0)
 
 	MCFG_SCREEN_ADD_MONOCHROME("screen", RASTER, rgb_t::green())
-	MCFG_SCREEN_RAW_PARAMS(XTAL_22MHz,640,0,640,475,0,475)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(22'000'000),640,0,640,475,0,475)
 	MCFG_SCREEN_UPDATE_DEVICE( "h46505", mc6845_device, screen_update )
 
 	MCFG_GFXDECODE_ADD("gfxdecode", "palette", empty)
 	MCFG_PALETTE_ADD_MONOCHROME("palette")
 
-	MCFG_MC6845_ADD("h46505", H46505, "screen", XTAL_22MHz/8)
+	MCFG_MC6845_ADD("h46505", H46505, "screen", XTAL(22'000'000)/8)
 	MCFG_MC6845_SHOW_BORDER_AREA(false)
 	MCFG_MC6845_CHAR_WIDTH(8)
 	MCFG_MC6845_UPDATE_ROW_CB(peoplepc_state, update_row)
 
-	MCFG_DEVICE_ADD("i8257", I8257, XTAL_14_7456MHz/3)
+	MCFG_DEVICE_ADD("i8257", I8257, XTAL(14'745'600)/3)
 	MCFG_I8257_OUT_HRQ_CB(WRITELINE(peoplepc_state, hrq_w))
 	MCFG_I8257_OUT_TC_CB(WRITELINE(peoplepc_state, tc_w))
 	MCFG_I8257_IN_MEMR_CB(READ8(peoplepc_state, memory_read_byte))

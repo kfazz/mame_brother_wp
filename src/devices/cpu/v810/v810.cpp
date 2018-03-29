@@ -29,13 +29,14 @@
 
 #include "emu.h"
 #include "v810.h"
+#include "v810dasm.h"
 #include "debugger.h"
 
 #define clkIF 3
 #define clkMEM 3
 
 
-DEFINE_DEVICE_TYPE(V810, v810_device, "v810", "V810")
+DEFINE_DEVICE_TYPE(V810, v810_device, "v810", "NEC V810")
 
 
 v810_device::v810_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
@@ -54,10 +55,9 @@ device_memory_interface::space_config_vector v810_device::memory_space_config() 
 }
 
 
-offs_t v810_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> v810_device::create_disassembler()
 {
-	extern CPU_DISASSEMBLE( v810 );
-	return CPU_DISASSEMBLE_NAME(v810)(this, stream, pc, oprom, opram, options);
+	return std::make_unique<v810_disassembler>();
 }
 
 
@@ -1256,7 +1256,7 @@ const v810_device::opcode_func v810_device::s_OpCodeTable[64] =
 void v810_device::device_start()
 {
 	m_program = &space(AS_PROGRAM);
-	m_direct = &m_program->direct();
+	m_direct = m_program->direct<0>();
 	m_io = &space(AS_IO);
 
 	m_irq_line = 0;

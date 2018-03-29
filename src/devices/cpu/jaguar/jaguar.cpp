@@ -11,6 +11,7 @@
 #include "emu.h"
 #include "debugger.h"
 #include "jaguar.h"
+#include "jagdasm.h"
 
 
 #define LOG_GPU_IO      0
@@ -135,9 +136,10 @@ const jaguar_cpu_device::op_func jaguar_cpu_device::dsp_op_table[64] =
 
 #define ROPCODE(pc)           (m_direct->read_word(pc, WORD_XOR_BE(0)))
 
-
-DEFINE_DEVICE_TYPE(JAGUARGPU, jaguargpu_cpu_device, "jaguargpu", "Jaguar GPU")
-DEFINE_DEVICE_TYPE(JAGUARDSP, jaguardsp_cpu_device, "jaguardsp", "Jaguar DSP")
+// SC414200AT
+DEFINE_DEVICE_TYPE(JAGUARGPU, jaguargpu_cpu_device, "jaguargpu", "Motorola Atari Jaguar GPU \"Tom\"")
+// SC414201FT
+DEFINE_DEVICE_TYPE(JAGUARDSP, jaguardsp_cpu_device, "jaguardsp", "Motorola Atari Jaguar DSP \"Jerry\"")
 
 
 jaguar_cpu_device::jaguar_cpu_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, bool isdsp)
@@ -337,7 +339,7 @@ void jaguar_cpu_device::device_start()
 	init_tables();
 
 	m_program = &space(AS_PROGRAM);
-	m_direct = &m_program->direct();
+	m_direct = m_program->direct<0>();
 	m_cpu_interrupt.resolve_safe();
 
 	save_item(NAME(m_r));
@@ -1436,16 +1438,12 @@ WRITE32_MEMBER( jaguardsp_cpu_device::ctrl_w )
 	}
 }
 
-
-offs_t jaguargpu_cpu_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> jaguargpu_cpu_device::create_disassembler()
 {
-	extern CPU_DISASSEMBLE( jaguargpu );
-	return CPU_DISASSEMBLE_NAME(jaguargpu)(this, stream, pc, oprom, opram, options);
+	return std::make_unique<jaguar_disassembler>(jaguar_disassembler::variant::GPU);
 }
 
-
-offs_t jaguardsp_cpu_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> jaguardsp_cpu_device::create_disassembler()
 {
-	extern CPU_DISASSEMBLE( jaguardsp );
-	return CPU_DISASSEMBLE_NAME(jaguardsp)(this, stream, pc, oprom, opram, options);
+	return std::make_unique<jaguar_disassembler>(jaguar_disassembler::variant::DSP);
 }

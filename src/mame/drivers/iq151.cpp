@@ -49,6 +49,7 @@ ToDo:
 #include "imagedev/cassette.h"
 #include "machine/i8255.h"
 #include "machine/pic8259.h"
+#include "machine/timer.h"
 #include "sound/spkrdev.h"
 
 // cartridge slot
@@ -103,6 +104,9 @@ public:
 	INTERRUPT_GEN_MEMBER(iq151_vblank_interrupt);
 	DECLARE_INPUT_CHANGED_MEMBER(iq151_break);
 	TIMER_DEVICE_CALLBACK_MEMBER(cassette_timer);
+	void iq151(machine_config &config);
+	void iq151_io(address_map &map);
+	void iq151_mem(address_map &map);
 };
 
 READ8_MEMBER(iq151_state::keyboard_row_r)
@@ -202,24 +206,26 @@ WRITE8_MEMBER(iq151_state::cartslot_io_w)
 		elem->io_write(offset, data);
 }
 
-static ADDRESS_MAP_START(iq151_mem, AS_PROGRAM, 8, iq151_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x0000, 0x07ff ) AM_RAMBANK("boot")
-	AM_RANGE( 0x0800, 0x7fff ) AM_RAM
-	AM_RANGE( 0xf000, 0xffff ) AM_ROM
+void iq151_state::iq151_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0xffff).rw(this, FUNC(iq151_state::cartslot_r), FUNC(iq151_state::cartslot_w));
 
-	AM_RANGE( 0x0000, 0xffff ) AM_READWRITE(cartslot_r, cartslot_w)
-ADDRESS_MAP_END
+	map(0x0000, 0x07ff).bankrw("boot");
+	map(0x0800, 0x7fff).ram();
+	map(0xf000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START(iq151_io, AS_IO, 8, iq151_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE( 0x80, 0x80 ) AM_WRITE(boot_bank_w)
-	AM_RANGE( 0x84, 0x87 ) AM_DEVREADWRITE("ppi8255", i8255_device, read, write)
-	AM_RANGE( 0x88, 0x89 ) AM_DEVREADWRITE("pic8259", pic8259_device, read, write)
+void iq151_state::iq151_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0x00, 0xff).rw(this, FUNC(iq151_state::cartslot_io_r), FUNC(iq151_state::cartslot_io_w));
 
-	AM_RANGE( 0x00, 0xff ) AM_READWRITE(cartslot_io_r, cartslot_io_w)
-ADDRESS_MAP_END
+	map(0x80, 0x80).w(this, FUNC(iq151_state::boot_bank_w));
+	map(0x84, 0x87).rw("ppi8255", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x88, 0x89).rw(m_pic, FUNC(pic8259_device::read), FUNC(pic8259_device::write));
+}
 
 
 INPUT_CHANGED_MEMBER(iq151_state::iq151_break)
@@ -380,9 +386,9 @@ static SLOT_INTERFACE_START(iq151_cart)
 	SLOT_INTERFACE("amos3"  , IQ151_AMOS3)              // AMOS cart 3
 SLOT_INTERFACE_END
 
-static MACHINE_CONFIG_START( iq151 )
+MACHINE_CONFIG_START(iq151_state::iq151)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",I8080, XTAL_2MHz)
+	MCFG_CPU_ADD("maincpu",I8080, XTAL(2'000'000))
 	MCFG_CPU_PROGRAM_MAP(iq151_mem)
 	MCFG_CPU_IO_MAP(iq151_io)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", iq151_state,  iq151_vblank_interrupt)
@@ -404,7 +410,8 @@ static MACHINE_CONFIG_START( iq151 )
 	MCFG_SOUND_ADD("speaker", SPEAKER_SOUND, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MCFG_PIC8259_ADD("pic8259", INPUTLINE("maincpu", 0), VCC, NOOP)
+	MCFG_DEVICE_ADD("pic8259", PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(INPUTLINE("maincpu", 0))
 
 	MCFG_DEVICE_ADD("ppi8255", I8255, 0)
 	MCFG_I8255_IN_PORTA_CB(READ8(iq151_state, keyboard_row_r))
@@ -421,6 +428,7 @@ static MACHINE_CONFIG_START( iq151 )
 	/* cartridge */
 	MCFG_DEVICE_ADD("slot1", IQ151CART_SLOT, 0)
 	MCFG_DEVICE_SLOT_INTERFACE(iq151_cart, nullptr, false)
+	MCFG_IQ151CART_SLOT_SCREEN_TAG("screen")
 	MCFG_IQ151CART_SLOT_OUT_IRQ0_CB(DEVWRITELINE("pic8259", pic8259_device, ir0_w))
 	MCFG_IQ151CART_SLOT_OUT_IRQ1_CB(DEVWRITELINE("pic8259", pic8259_device, ir1_w))
 	MCFG_IQ151CART_SLOT_OUT_IRQ2_CB(DEVWRITELINE("pic8259", pic8259_device, ir2_w))
@@ -428,6 +436,7 @@ static MACHINE_CONFIG_START( iq151 )
 	MCFG_IQ151CART_SLOT_OUT_IRQ4_CB(DEVWRITELINE("pic8259", pic8259_device, ir4_w))
 	MCFG_DEVICE_ADD("slot2", IQ151CART_SLOT, 0)
 	MCFG_DEVICE_SLOT_INTERFACE(iq151_cart, nullptr, false)
+	MCFG_IQ151CART_SLOT_SCREEN_TAG("screen")
 	MCFG_IQ151CART_SLOT_OUT_IRQ0_CB(DEVWRITELINE("pic8259", pic8259_device, ir0_w))
 	MCFG_IQ151CART_SLOT_OUT_IRQ1_CB(DEVWRITELINE("pic8259", pic8259_device, ir1_w))
 	MCFG_IQ151CART_SLOT_OUT_IRQ2_CB(DEVWRITELINE("pic8259", pic8259_device, ir2_w))
@@ -435,6 +444,7 @@ static MACHINE_CONFIG_START( iq151 )
 	MCFG_IQ151CART_SLOT_OUT_IRQ4_CB(DEVWRITELINE("pic8259", pic8259_device, ir4_w))
 	MCFG_DEVICE_ADD("slot3", IQ151CART_SLOT, 0)
 	MCFG_DEVICE_SLOT_INTERFACE(iq151_cart, nullptr, false)
+	MCFG_IQ151CART_SLOT_SCREEN_TAG("screen")
 	MCFG_IQ151CART_SLOT_OUT_IRQ0_CB(DEVWRITELINE("pic8259", pic8259_device, ir0_w))
 	MCFG_IQ151CART_SLOT_OUT_IRQ1_CB(DEVWRITELINE("pic8259", pic8259_device, ir1_w))
 	MCFG_IQ151CART_SLOT_OUT_IRQ2_CB(DEVWRITELINE("pic8259", pic8259_device, ir2_w))
@@ -442,6 +452,7 @@ static MACHINE_CONFIG_START( iq151 )
 	MCFG_IQ151CART_SLOT_OUT_IRQ4_CB(DEVWRITELINE("pic8259", pic8259_device, ir4_w))
 	MCFG_DEVICE_ADD("slot4", IQ151CART_SLOT, 0)
 	MCFG_DEVICE_SLOT_INTERFACE(iq151_cart, nullptr, false)
+	MCFG_IQ151CART_SLOT_SCREEN_TAG("screen")
 	MCFG_IQ151CART_SLOT_OUT_IRQ0_CB(DEVWRITELINE("pic8259", pic8259_device, ir0_w))
 	MCFG_IQ151CART_SLOT_OUT_IRQ1_CB(DEVWRITELINE("pic8259", pic8259_device, ir1_w))
 	MCFG_IQ151CART_SLOT_OUT_IRQ2_CB(DEVWRITELINE("pic8259", pic8259_device, ir2_w))
@@ -449,6 +460,7 @@ static MACHINE_CONFIG_START( iq151 )
 	MCFG_IQ151CART_SLOT_OUT_IRQ4_CB(DEVWRITELINE("pic8259", pic8259_device, ir4_w))
 	MCFG_DEVICE_ADD("slot5", IQ151CART_SLOT, 0)
 	MCFG_DEVICE_SLOT_INTERFACE(iq151_cart, "video32", false)
+	MCFG_IQ151CART_SLOT_SCREEN_TAG("screen")
 	MCFG_IQ151CART_SLOT_OUT_IRQ0_CB(DEVWRITELINE("pic8259", pic8259_device, ir0_w))
 	MCFG_IQ151CART_SLOT_OUT_IRQ1_CB(DEVWRITELINE("pic8259", pic8259_device, ir1_w))
 	MCFG_IQ151CART_SLOT_OUT_IRQ2_CB(DEVWRITELINE("pic8259", pic8259_device, ir2_w))

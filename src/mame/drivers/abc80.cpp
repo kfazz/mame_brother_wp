@@ -177,29 +177,31 @@ WRITE8_MEMBER( abc80_state::csg_w )
 //  ADDRESS_MAP( abc80_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( abc80_mem, AS_PROGRAM, 8, abc80_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0xffff) AM_READWRITE(read, write)
-ADDRESS_MAP_END
+void abc80_state::abc80_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0xffff).rw(this, FUNC(abc80_state::read), FUNC(abc80_state::write));
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( abc80_io )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( abc80_io, AS_IO, 8, abc80_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0x17)
-	AM_RANGE(0x00, 0x00) AM_DEVREADWRITE(ABCBUS_TAG, abcbus_slot_device, inp_r, out_w)
-	AM_RANGE(0x01, 0x01) AM_DEVREADWRITE(ABCBUS_TAG, abcbus_slot_device, stat_r, cs_w)
-	AM_RANGE(0x02, 0x02) AM_DEVWRITE(ABCBUS_TAG, abcbus_slot_device, c1_w)
-	AM_RANGE(0x03, 0x03) AM_DEVWRITE(ABCBUS_TAG, abcbus_slot_device, c2_w)
-	AM_RANGE(0x04, 0x04) AM_DEVWRITE(ABCBUS_TAG, abcbus_slot_device, c3_w)
-	AM_RANGE(0x05, 0x05) AM_DEVWRITE(ABCBUS_TAG, abcbus_slot_device, c4_w)
-	AM_RANGE(0x06, 0x06) AM_WRITE(csg_w)
-	AM_RANGE(0x07, 0x07) AM_DEVREAD(ABCBUS_TAG, abcbus_slot_device, rst_r)
-	AM_RANGE(0x10, 0x13) AM_MIRROR(0x04) AM_DEVREADWRITE(Z80PIO_TAG, z80pio_device, read_alt, write_alt)
-ADDRESS_MAP_END
+void abc80_state::abc80_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0x17);
+	map(0x00, 0x00).rw(m_bus, FUNC(abcbus_slot_device::inp_r), FUNC(abcbus_slot_device::out_w));
+	map(0x01, 0x01).rw(m_bus, FUNC(abcbus_slot_device::stat_r), FUNC(abcbus_slot_device::cs_w));
+	map(0x02, 0x02).w(m_bus, FUNC(abcbus_slot_device::c1_w));
+	map(0x03, 0x03).w(m_bus, FUNC(abcbus_slot_device::c2_w));
+	map(0x04, 0x04).w(m_bus, FUNC(abcbus_slot_device::c3_w));
+	map(0x05, 0x05).w(m_bus, FUNC(abcbus_slot_device::c4_w));
+	map(0x06, 0x06).w(this, FUNC(abc80_state::csg_w));
+	map(0x07, 0x07).r(m_bus, FUNC(abcbus_slot_device::rst_r));
+	map(0x10, 0x13).mirror(0x04).rw(m_pio, FUNC(z80pio_device::read_alt), FUNC(z80pio_device::write_alt));
+}
 
 
 
@@ -483,15 +485,15 @@ QUICKLOAD_LOAD_MEMBER( abc80_state, bac )
 //  MACHINE_CONFIG( abc80 )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_START( abc80 )
+MACHINE_CONFIG_START(abc80_state::abc80)
 	// basic machine hardware
-	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_11_9808MHz/2/2) // 2.9952 MHz
+	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL(11'980'800)/2/2) // 2.9952 MHz
 	MCFG_CPU_PROGRAM_MAP(abc80_mem)
 	MCFG_CPU_IO_MAP(abc80_io)
 	MCFG_Z80_DAISY_CHAIN(abc80_daisy_chain)
 
 	// video hardware
-	MCFG_FRAGMENT_ADD(abc80_video)
+	abc80_video(config);
 
 	// sound hardware
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -511,7 +513,7 @@ static MACHINE_CONFIG_START( abc80 )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
 	// devices
-	MCFG_DEVICE_ADD(Z80PIO_TAG, Z80PIO, XTAL_11_9808MHz/2/2)
+	MCFG_DEVICE_ADD(Z80PIO_TAG, Z80PIO, XTAL(11'980'800)/2/2)
 	MCFG_Z80PIO_OUT_INT_CB(INPUTLINE(Z80_TAG, INPUT_LINE_IRQ0))
 	MCFG_Z80PIO_IN_PA_CB(READ8(abc80_state, pio_pa_r))
 	MCFG_Z80PIO_IN_PB_CB(READ8(abc80_state, pio_pb_r))

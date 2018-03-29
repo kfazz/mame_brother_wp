@@ -54,6 +54,11 @@ public:
 	DECLARE_READ_LINE_MEMBER(ef4_r);
 	DECLARE_WRITE_LINE_MEMBER(clock_w);
 
+	void chance(machine_config &config);
+	void play_1(machine_config &config);
+	void chance_map(address_map &map);
+	void play_1_io(address_map &map);
+	void play_1_map(address_map &map);
 private:
 	uint16_t m_resetcnt;
 	uint16_t m_clockcnt;
@@ -67,29 +72,32 @@ private:
 	required_device<clock_device> m_monotone;
 };
 
-static ADDRESS_MAP_START( play_1_map, AS_PROGRAM, 8, play_1_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xfff)
-	AM_RANGE(0x0000, 0x07ff) AM_ROM AM_REGION("roms", 0)
-	AM_RANGE(0x0800, 0x081f) AM_RAM AM_SHARE("nvram") // capacitor acting as a 2-month "battery"
-	AM_RANGE(0x0c00, 0x0c1f) AM_RAM
-ADDRESS_MAP_END
+void play_1_state::play_1_map(address_map &map)
+{
+	map.global_mask(0xfff);
+	map(0x0000, 0x07ff).rom().region("roms", 0);
+	map(0x0800, 0x081f).ram().share("nvram"); // capacitor acting as a 2-month "battery"
+	map(0x0c00, 0x0c1f).ram();
+}
 
-static ADDRESS_MAP_START( chance_map, AS_PROGRAM, 8, play_1_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xfff)
-	AM_RANGE(0x0000, 0x0bff) AM_ROM AM_REGION("roms", 0)
-	AM_RANGE(0x0c00, 0x0c1f) AM_RAM
-	AM_RANGE(0x0e00, 0x0e1f) AM_RAM AM_SHARE("nvram") // capacitor acting as a 2-month "battery"
-ADDRESS_MAP_END
+void play_1_state::chance_map(address_map &map)
+{
+	map.global_mask(0xfff);
+	map(0x0000, 0x0bff).rom().region("roms", 0);
+	map(0x0c00, 0x0c1f).ram();
+	map(0x0e00, 0x0e1f).ram().share("nvram"); // capacitor acting as a 2-month "battery"
+}
 
-static ADDRESS_MAP_START( play_1_io, AS_IO, 8, play_1_state )
-	AM_RANGE(0x01, 0x01) AM_READ_PORT("IN1") AM_WRITE(port01_w) //segments
-	AM_RANGE(0x02, 0x02) AM_READ_PORT("IN2") AM_WRITE(port02_w) // N1-8
-	AM_RANGE(0x03, 0x03) AM_READ_PORT("IN3") AM_WRITE(port03_w) // D1-4
-	AM_RANGE(0x04, 0x04) AM_READ_PORT("IN4") AM_WRITE(port04_w) // U1-8
-	AM_RANGE(0x05, 0x05) AM_READ_PORT("IN5") AM_WRITE(port05_w) // V1-8
-	AM_RANGE(0x06, 0x06) AM_READ_PORT("IN6") AM_WRITE(port06_w) // W1-8
-	AM_RANGE(0x07, 0x07) AM_READ(port07_r)
-ADDRESS_MAP_END
+void play_1_state::play_1_io(address_map &map)
+{
+	map(0x01, 0x01).portr("IN1").w(this, FUNC(play_1_state::port01_w)); //segments
+	map(0x02, 0x02).portr("IN2").w(this, FUNC(play_1_state::port02_w)); // N1-8
+	map(0x03, 0x03).portr("IN3").w(this, FUNC(play_1_state::port03_w)); // D1-4
+	map(0x04, 0x04).portr("IN4").w(this, FUNC(play_1_state::port04_w)); // U1-8
+	map(0x05, 0x05).portr("IN5").w(this, FUNC(play_1_state::port05_w)); // V1-8
+	map(0x06, 0x06).portr("IN6").w(this, FUNC(play_1_state::port06_w)); // W1-8
+	map(0x07, 0x07).r(this, FUNC(play_1_state::port07_r));
+}
 
 static INPUT_PORTS_START( chance )
 	PORT_START("X.0")
@@ -457,7 +465,7 @@ WRITE_LINE_MEMBER( play_1_state::clock_w )
 	}
 }
 
-static MACHINE_CONFIG_START( play_1 )
+MACHINE_CONFIG_START(play_1_state::play_1)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", CDP1802, 400000) // 2 gates, 1 cap, 1 resistor oscillating somewhere between 350 to 450 kHz
 	MCFG_CPU_PROGRAM_MAP(play_1_map)
@@ -477,7 +485,7 @@ static MACHINE_CONFIG_START( play_1 )
 	MCFG_CLOCK_SIGNAL_HANDLER(WRITELINE(play_1_state, clock_w))
 
 	/* Sound */
-	MCFG_FRAGMENT_ADD( genpin_audio )
+	genpin_audio(config);
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_ADD("speaker", SPEAKER_SOUND, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
@@ -485,7 +493,8 @@ static MACHINE_CONFIG_START( play_1 )
 	MCFG_CLOCK_SIGNAL_HANDLER(DEVWRITELINE("speaker", speaker_sound_device, level_w))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( chance, play_1 )
+MACHINE_CONFIG_START(play_1_state::chance)
+	play_1(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(chance_map)
 MACHINE_CONFIG_END

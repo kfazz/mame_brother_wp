@@ -206,9 +206,9 @@ VBlank duration: 1/VSYNC * (16/256) = 1017.6 us
 
 #define LOG_AUDIO_DECODE    (0)
 
-#define SYSTEM_CLOCK        XTAL_20MHz
-#define CPU_CLOCK           XTAL_15MHz
-#define NTSC_CLOCK          XTAL_14_31818MHz
+#define SYSTEM_CLOCK        XTAL(20'000'000)
+#define CPU_CLOCK           XTAL(15'000'000)
+#define NTSC_CLOCK          XTAL(14'318'181)
 #define LASERDISC_CLOCK     PERIOD_OF_555_ASTABLE(16000, 10000, 0.001e-6)
 
 #define AUDIORAM_SIZE       0x400
@@ -672,7 +672,7 @@ static const char *const qbert_knocker_names[] =
 	nullptr   /* end of array */
 };
 
-MACHINE_CONFIG_START( qbert_knocker )
+MACHINE_CONFIG_START(gottlieb_state::qbert_knocker)
 	MCFG_SPEAKER_ADD("knocker", 0.0, 0.0, 1.0)
 
 	MCFG_SOUND_ADD("knocker_sam", SAMPLES, 0)
@@ -749,48 +749,50 @@ WRITE8_MEMBER(gottlieb_state::gottlieb_sh_w)
 		m_r2_sound->write(space, offset, data);
 }
 
-static ADDRESS_MAP_START( reactor_map, AS_PROGRAM, 8, gottlieb_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xffff)
-	AM_RANGE(0x0000, 0x1fff) AM_RAM
-	AM_RANGE(0x2000, 0x20ff) AM_MIRROR(0x0f00) AM_WRITEONLY AM_SHARE("spriteram")                           /* FRSEL */
-	AM_RANGE(0x3000, 0x33ff) AM_MIRROR(0x0c00) AM_RAM_WRITE(gottlieb_videoram_w) AM_SHARE("videoram")       /* BRSEL */
-	AM_RANGE(0x4000, 0x4fff) AM_RAM_WRITE(gottlieb_charram_w) AM_SHARE("charram")               /* BOJRSEL1 */
+void gottlieb_state::reactor_map(address_map &map)
+{
+	map.global_mask(0xffff);
+	map(0x0000, 0x1fff).ram();
+	map(0x2000, 0x20ff).mirror(0x0f00).writeonly().share("spriteram");                           /* FRSEL */
+	map(0x3000, 0x33ff).mirror(0x0c00).ram().w(this, FUNC(gottlieb_state::gottlieb_videoram_w)).share("videoram");       /* BRSEL */
+	map(0x4000, 0x4fff).ram().w(this, FUNC(gottlieb_state::gottlieb_charram_w)).share("charram");               /* BOJRSEL1 */
 /*  AM_RANGE(0x5000, 0x5fff) AM_WRITE() */                                                               /* BOJRSEL2 */
-	AM_RANGE(0x6000, 0x601f) AM_MIRROR(0x0fe0) AM_WRITE(gottlieb_paletteram_w) AM_SHARE("paletteram")       /* COLSEL */
-	AM_RANGE(0x7000, 0x7000) AM_MIRROR(0x0ff8) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x7001, 0x7001) AM_MIRROR(0x0ff8) AM_WRITE(gottlieb_analog_reset_w)                        /* A1J2 interface */
-	AM_RANGE(0x7002, 0x7002) AM_MIRROR(0x0ff8) AM_WRITE(gottlieb_sh_w)                                  /* trackball H */
-	AM_RANGE(0x7003, 0x7003) AM_MIRROR(0x0ff8) AM_WRITE(reactor_output_w)                               /* trackball V */
-	AM_RANGE(0x7000, 0x7000) AM_MIRROR(0x0ff8) AM_READ_PORT("DSW")
-	AM_RANGE(0x7001, 0x7001) AM_MIRROR(0x0ff8) AM_READ_PORT("IN1")                                      /* buttons */
-	AM_RANGE(0x7002, 0x7002) AM_MIRROR(0x0ff8) AM_READ_PORT("IN2")                                      /* trackball H */
-	AM_RANGE(0x7003, 0x7003) AM_MIRROR(0x0ff8) AM_READ_PORT("IN3")                                      /* trackball V */
-	AM_RANGE(0x7004, 0x7004) AM_MIRROR(0x0ff8) AM_READ_PORT("IN4")
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+	map(0x6000, 0x601f).mirror(0x0fe0).w(this, FUNC(gottlieb_state::gottlieb_paletteram_w)).share("paletteram");       /* COLSEL */
+	map(0x7000, 0x7000).mirror(0x0ff8).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x7001, 0x7001).mirror(0x0ff8).w(this, FUNC(gottlieb_state::gottlieb_analog_reset_w));                        /* A1J2 interface */
+	map(0x7002, 0x7002).mirror(0x0ff8).w(this, FUNC(gottlieb_state::gottlieb_sh_w));                                  /* trackball H */
+	map(0x7003, 0x7003).mirror(0x0ff8).w(this, FUNC(gottlieb_state::reactor_output_w));                               /* trackball V */
+	map(0x7000, 0x7000).mirror(0x0ff8).portr("DSW");
+	map(0x7001, 0x7001).mirror(0x0ff8).portr("IN1");                                      /* buttons */
+	map(0x7002, 0x7002).mirror(0x0ff8).portr("IN2");                                      /* trackball H */
+	map(0x7003, 0x7003).mirror(0x0ff8).portr("IN3");                                      /* trackball V */
+	map(0x7004, 0x7004).mirror(0x0ff8).portr("IN4");
+	map(0x8000, 0xffff).rom();
+}
 
 
-static ADDRESS_MAP_START( gottlieb_map, AS_PROGRAM, 8, gottlieb_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xffff)
-	AM_RANGE(0x0000, 0x0fff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x1000, 0x1fff) AM_RAM AM_REGION("maincpu", 0x1000)    /* or ROM */
-	AM_RANGE(0x2000, 0x2fff) AM_RAM AM_REGION("maincpu", 0x2000)    /* or ROM */
-	AM_RANGE(0x3000, 0x30ff) AM_MIRROR(0x0700) AM_WRITEONLY AM_SHARE("spriteram")                           /* FRSEL */
-	AM_RANGE(0x3800, 0x3bff) AM_MIRROR(0x0400) AM_RAM_WRITE(gottlieb_videoram_w) AM_SHARE("videoram")       /* BRSEL */
-	AM_RANGE(0x4000, 0x4fff) AM_RAM_WRITE(gottlieb_charram_w) AM_SHARE("charram")               /* BOJRSEL1 */
-	AM_RANGE(0x5000, 0x501f) AM_MIRROR(0x07e0) AM_WRITE(gottlieb_paletteram_w) AM_SHARE("paletteram")       /* COLSEL */
-	AM_RANGE(0x5800, 0x5800) AM_MIRROR(0x07f8) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x5801, 0x5801) AM_MIRROR(0x07f8) AM_WRITE(gottlieb_analog_reset_w)                        /* A1J2 interface */
-	AM_RANGE(0x5802, 0x5802) AM_MIRROR(0x07f8) AM_WRITE(gottlieb_sh_w)                                  /* OP20-27 */
-	AM_RANGE(0x5803, 0x5803) AM_MIRROR(0x07f8) AM_WRITE(general_output_w)                               /* OP30-37 */
+void gottlieb_state::gottlieb_map(address_map &map)
+{
+	map.global_mask(0xffff);
+	map(0x0000, 0x0fff).ram().share("nvram");
+	map(0x1000, 0x1fff).ram().region("maincpu", 0x1000);    /* or ROM */
+	map(0x2000, 0x2fff).ram().region("maincpu", 0x2000);    /* or ROM */
+	map(0x3000, 0x30ff).mirror(0x0700).writeonly().share("spriteram");                           /* FRSEL */
+	map(0x3800, 0x3bff).mirror(0x0400).ram().w(this, FUNC(gottlieb_state::gottlieb_videoram_w)).share("videoram");       /* BRSEL */
+	map(0x4000, 0x4fff).ram().w(this, FUNC(gottlieb_state::gottlieb_charram_w)).share("charram");               /* BOJRSEL1 */
+	map(0x5000, 0x501f).mirror(0x07e0).w(this, FUNC(gottlieb_state::gottlieb_paletteram_w)).share("paletteram");       /* COLSEL */
+	map(0x5800, 0x5800).mirror(0x07f8).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x5801, 0x5801).mirror(0x07f8).w(this, FUNC(gottlieb_state::gottlieb_analog_reset_w));                        /* A1J2 interface */
+	map(0x5802, 0x5802).mirror(0x07f8).w(this, FUNC(gottlieb_state::gottlieb_sh_w));                                  /* OP20-27 */
+	map(0x5803, 0x5803).mirror(0x07f8).w(this, FUNC(gottlieb_state::general_output_w));                               /* OP30-37 */
 /*  AM_RANGE(0x5804, 0x5804) AM_MIRROR(0x07f8) AM_WRITE()*/                                              /* OP40-47 */
-	AM_RANGE(0x5800, 0x5800) AM_MIRROR(0x07f8) AM_READ_PORT("DSW")
-	AM_RANGE(0x5801, 0x5801) AM_MIRROR(0x07f8) AM_READ_PORT("IN1")                                      /* IP10-17 */
-	AM_RANGE(0x5802, 0x5802) AM_MIRROR(0x07f8) AM_READ_PORT("IN2")                                      /* trackball H */
-	AM_RANGE(0x5803, 0x5803) AM_MIRROR(0x07f8) AM_READ_PORT("IN3")                                      /* trackball V */
-	AM_RANGE(0x5804, 0x5804) AM_MIRROR(0x07f8) AM_READ_PORT("IN4")                                      /* IP40-47 */
-	AM_RANGE(0x6000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+	map(0x5800, 0x5800).mirror(0x07f8).portr("DSW");
+	map(0x5801, 0x5801).mirror(0x07f8).portr("IN1");                                      /* IP10-17 */
+	map(0x5802, 0x5802).mirror(0x07f8).portr("IN2");                                      /* trackball H */
+	map(0x5803, 0x5803).mirror(0x07f8).portr("IN3");                                      /* trackball V */
+	map(0x5804, 0x5804).mirror(0x07f8).portr("IN4");                                      /* IP40-47 */
+	map(0x6000, 0xffff).rom();
+}
 
 
 
@@ -1764,7 +1766,7 @@ GFXDECODE_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( gottlieb_core )
+MACHINE_CONFIG_START(gottlieb_state::gottlieb_core)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", I8088, CPU_CLOCK/3)
@@ -1789,24 +1791,27 @@ static MACHINE_CONFIG_START( gottlieb_core )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( gottlieb1, gottlieb_core )
+MACHINE_CONFIG_START(gottlieb_state::gottlieb1)
+	gottlieb_core(config);
 	MCFG_SOUND_ADD("r1sound", GOTTLIEB_SOUND_REV1, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( gottlieb2, gottlieb_core )
+MACHINE_CONFIG_START(gottlieb_state::gottlieb2)
+	gottlieb_core(config);
 	MCFG_SOUND_ADD("r2sound", GOTTLIEB_SOUND_REV2, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( g2laser, gottlieb_core )
+MACHINE_CONFIG_START(gottlieb_state::g2laser)
+	gottlieb_core(config);
 	MCFG_SOUND_ADD("r2sound", GOTTLIEB_SOUND_REV2, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 
 	MCFG_LASERDISC_PR8210_ADD("laserdisc")
-	MCFG_LASERDISC_AUDIO(laserdisc_device::audio_delegate(&gottlieb_state::laserdisc_audio_process, downcast<gottlieb_state*>(owner)))
+	MCFG_LASERDISC_AUDIO(laserdisc_device::audio_delegate(&gottlieb_state::laserdisc_audio_process, this))
 	MCFG_LASERDISC_OVERLAY_DRIVER(GOTTLIEB_VIDEO_HCOUNT, GOTTLIEB_VIDEO_VCOUNT, gottlieb_state, screen_update_gottlieb)
 	MCFG_LASERDISC_OVERLAY_CLIP(0, GOTTLIEB_VIDEO_HBLANK-1, 0, GOTTLIEB_VIDEO_VBLANK-8)
 	MCFG_LASERDISC_OVERLAY_PALETTE("palette")
@@ -1826,13 +1831,15 @@ MACHINE_CONFIG_END
  *************************************/
 
 
-static MACHINE_CONFIG_DERIVED( gottlieb1_votrax, gottlieb_core )
+MACHINE_CONFIG_START(gottlieb_state::gottlieb1_votrax)
+	gottlieb_core(config);
 	MCFG_SOUND_ADD("r1sound", GOTTLIEB_SOUND_REV1_VOTRAX, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( reactor, gottlieb1_votrax )
+MACHINE_CONFIG_START(gottlieb_state::reactor)
+	gottlieb1_votrax(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -1842,29 +1849,33 @@ static MACHINE_CONFIG_DERIVED( reactor, gottlieb1_votrax )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( qbert, gottlieb1_votrax )
+MACHINE_CONFIG_START(gottlieb_state::qbert)
+	gottlieb1_votrax(config);
 
 	/* sound hardware */
-	MCFG_FRAGMENT_ADD(qbert_knocker)
+	qbert_knocker(config);
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( tylz, gottlieb1_votrax )
+MACHINE_CONFIG_START(gottlieb_state::tylz)
+	gottlieb1_votrax(config);
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( screwloo, gottlieb2 )
+MACHINE_CONFIG_START(gottlieb_state::screwloo)
+	gottlieb2(config);
 
 	MCFG_VIDEO_START_OVERRIDE(gottlieb_state,screwloo)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( cobram3, gottlieb_core )
+MACHINE_CONFIG_START(gottlieb_state::cobram3)
+	gottlieb_core(config);
 	MCFG_SOUND_ADD("r2sound", GOTTLIEB_SOUND_REV2, 0)
 	MCFG_GOTTLIEB_ENABLE_COBRAM3_MODS()
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 
 	MCFG_LASERDISC_PR8210_ADD("laserdisc")
-	MCFG_LASERDISC_AUDIO(laserdisc_device::audio_delegate(&gottlieb_state::laserdisc_audio_process, downcast<gottlieb_state*>(owner)))
+	MCFG_LASERDISC_AUDIO(laserdisc_device::audio_delegate(&gottlieb_state::laserdisc_audio_process, this))
 	MCFG_LASERDISC_OVERLAY_DRIVER(GOTTLIEB_VIDEO_HCOUNT, GOTTLIEB_VIDEO_VCOUNT, gottlieb_state, screen_update_gottlieb)
 	MCFG_LASERDISC_OVERLAY_CLIP(0, GOTTLIEB_VIDEO_HBLANK-1, 0, GOTTLIEB_VIDEO_VBLANK-8)
 	MCFG_LASERDISC_OVERLAY_PALETTE("palette")
@@ -2161,13 +2172,13 @@ ROM_END
 
 ROM_START( krull )
 	ROM_REGION( 0x10000, "maincpu", 0 )
-	ROM_LOAD( "ram2.bin",     0x1000, 0x1000, CRC(302feadf) SHA1(9d70de35e4f0490dc4e601070993ad146f250dea) )
-	ROM_LOAD( "ram4.bin",     0x2000, 0x1000, CRC(79355a60) SHA1(57ad5c904b9ac4bf7c7d828bf755bbcbba6a4fd7) )
-	ROM_LOAD( "rom4.bin",     0x6000, 0x2000, CRC(2b696394) SHA1(b18270f4ad97743f6ff8c4cbc93e523c77a8e794) )
-	ROM_LOAD( "rom3.bin",     0x8000, 0x2000, CRC(14b0ee42) SHA1(276c4008a013806b3989c529f41cbc358ec49fd6) )
-	ROM_LOAD( "rom2.bin",     0xa000, 0x2000, CRC(b5fad94a) SHA1(1bae895fbdd658cfb56c53cc2139282cc1e778de) )
-	ROM_LOAD( "rom1.bin",     0xc000, 0x2000, CRC(1ad956a3) SHA1(f5b74b196fe1bd9ab48336e0051cbf29c650cfc1) )
-	ROM_LOAD( "rom0.bin",     0xe000, 0x2000, CRC(a466afae) SHA1(d691cbb46e8c3b71f9b1688d7fcef36df82aa854) )
+	ROM_LOAD( "gv-105_ram_2.c7",      0x1000, 0x1000, CRC(302feadf) SHA1(9d70de35e4f0490dc4e601070993ad146f250dea) )
+	ROM_LOAD( "gv-105_ram_4.c9-10",   0x2000, 0x1000, CRC(79355a60) SHA1(57ad5c904b9ac4bf7c7d828bf755bbcbba6a4fd7) )
+	ROM_LOAD( "gv-105_rom_4.c16",     0x6000, 0x2000, CRC(2b696394) SHA1(b18270f4ad97743f6ff8c4cbc93e523c77a8e794) )
+	ROM_LOAD( "gv-105_rom_3.c14-15",  0x8000, 0x2000, CRC(14b0ee42) SHA1(276c4008a013806b3989c529f41cbc358ec49fd6) )
+	ROM_LOAD( "gv-105_rom_2.c13-14",  0xa000, 0x2000, CRC(b5fad94a) SHA1(1bae895fbdd658cfb56c53cc2139282cc1e778de) )
+	ROM_LOAD( "gv-105_rom_1.c12-13",  0xc000, 0x2000, CRC(1ad956a3) SHA1(f5b74b196fe1bd9ab48336e0051cbf29c650cfc1) )
+	ROM_LOAD( "gv-105_rom_0.c11-12",  0xe000, 0x2000, CRC(a466afae) SHA1(d691cbb46e8c3b71f9b1688d7fcef36df82aa854) )
 
 	ROM_REGION( 0x10000, "r1sound:audiocpu", 0 )
 	ROM_LOAD( "snd1.bin",     0x6000, 0x1000, CRC(dd2b30b4) SHA1(f01cb64932493bf69d4fc75a7fa809ff6f6e4263) )
@@ -2177,10 +2188,10 @@ ROM_START( krull )
 	/* no ROMs; RAM is used instead */
 
 	ROM_REGION( 0x8000, "sprites", 0 )
-	ROM_LOAD( "fg3.bin",      0x0000, 0x2000, CRC(82d77a45) SHA1(753476609c4bf4f0f0cd28d61fd8aef6967bda57) )
-	ROM_LOAD( "fg2.bin",      0x2000, 0x2000, CRC(25a24317) SHA1(33d2c23a388b09c4a09b9893648c30fbd5482cc3) )
-	ROM_LOAD( "fg1.bin",      0x4000, 0x2000, CRC(7e3ad7b0) SHA1(0de86e632e5a9e6c1ec82550b15dc25a17ab7066) )
-	ROM_LOAD( "fg0.bin",      0x6000, 0x2000, CRC(7402dc19) SHA1(d6d1b8aca8e9ee3bdc57f4474d22b405963909ec) )
+	ROM_LOAD( "gv-105_fg_3.k7-8",    0x0000, 0x2000, CRC(82d77a45) SHA1(753476609c4bf4f0f0cd28d61fd8aef6967bda57) )
+	ROM_LOAD( "gv-105_fg_2.k6",      0x2000, 0x2000, CRC(25a24317) SHA1(33d2c23a388b09c4a09b9893648c30fbd5482cc3) )
+	ROM_LOAD( "gv-105_fg_1.k5",      0x4000, 0x2000, CRC(7e3ad7b0) SHA1(0de86e632e5a9e6c1ec82550b15dc25a17ab7066) )
+	ROM_LOAD( "gv-105_fg_0.k4",      0x6000, 0x2000, CRC(7402dc19) SHA1(d6d1b8aca8e9ee3bdc57f4474d22b405963909ec) )
 ROM_END
 
 
@@ -2413,6 +2424,32 @@ ROM_START( cobram3 )
 	DISK_IMAGE_READONLY( "cobra", 0, SHA1(8390498294aca97a5d1769032e7b115d1a42f5d3) )
 ROM_END
 
+ROM_START( cobram3a ) // ROMS came from a blister, shows same version and date as the parent, but bh00 to bh02 differ quite a bit
+	ROM_REGION( 0x10000, "maincpu", 0 )
+	ROM_LOAD( "bh03",   0x8000, 0x2000, CRC(755cbbf5) SHA1(e3ea146f8c344af1e9bf51548ae4902cb09e589a) )
+	ROM_LOAD( "bh02",   0xa000, 0x2000, CRC(e6c4fdba) SHA1(f2ed8ebb4f4e89e14f413cd199903fa2f5407638) ) //sldh
+	ROM_LOAD( "bh01",   0xc000, 0x2000, CRC(0f658ccb) SHA1(f4405b7a66c1bfbc7ab2cf44a148d04807ece88f) ) //sldh
+	ROM_LOAD( "bh00",   0xe000, 0x2000, CRC(84548e60) SHA1(cf3226d81ce11d6c4a6ba803abdcc22be8c086a2) ) //sldh
+
+	ROM_REGION( 0x10000, "r2sound:audiocpu", 0 )
+	ROM_LOAD( "m3drom1.bin",  0xd000, 0x1000, CRC(a6e29212) SHA1(a73aafc2efa99e9ae0aecbb6075a10f7178ac938) ) // not dumped for this set
+
+	ROM_REGION( 0x10000, "r2sound:speechcpu", 0 )
+	ROM_LOAD( "bh04",   0xe000, 0x2000, CRC(c3f61bc9) SHA1(d02374e6e29238def0cfb01c96c78b206f24d77e) )
+
+	ROM_REGION( 0x2000, "bgtiles", 0 )
+	ROM_LOAD( "bh09",   0x0000, 0x1000, CRC(8c5dfac0) SHA1(5be28f807c4eb9df76a8f7519086ae57953d8c6f) )
+	ROM_LOAD( "bh0a",   0x1000, 0x1000, CRC(8b8da8dc) SHA1(9f03ac0e6b6396cd44843ea394d55d79848d6a27) )
+
+	ROM_REGION( 0x10000, "sprites", 0 )
+	ROM_LOAD( "bh05",   0x0000, 0x2000, CRC(d8f49994) SHA1(0631457264ff7f8d5fb1edc2c0211992a67c73e6) )
+	ROM_LOAD( "bh08",   0x4000, 0x2000, CRC(d6439e2f) SHA1(84a6e574f76313ce065d8765f21bdda8fe5a9a7b) )
+	ROM_LOAD( "bh07",   0x8000, 0x2000, CRC(f94668d2) SHA1(b5c3a54cf80097ac447a8140bd5877a66712e240) )
+	ROM_LOAD( "bh06",   0xc000, 0x2000, CRC(ab6c7cf1) SHA1(3625f2e00a333552036bff99af25edeac5915d78) )
+
+	DISK_REGION( "laserdisc" )
+	DISK_IMAGE_READONLY( "cobra", 0, SHA1(8390498294aca97a5d1769032e7b115d1a42f5d3) ) // not dumped for this set
+ROM_END
 
 ROM_START( usvsthem )
 	ROM_REGION( 0x10000, "maincpu", 0 )
@@ -2636,7 +2673,8 @@ GAME( 1983, screwloo,  0,        screwloo,  screwloo, gottlieb_state, screwloo, 
 GAME( 1983, mach3,     0,        g2laser,   mach3,    gottlieb_state, romtiles, ROT0,   "Mylstar",                   "M.A.C.H. 3 (set 1)", 0 )
 GAME( 1983, mach3a,    mach3,    g2laser,   mach3,    gottlieb_state, romtiles, ROT0,   "Mylstar",                   "M.A.C.H. 3 (set 2)", 0 )
 GAME( 1983, mach3b,    mach3,    g2laser,   mach3,    gottlieb_state, romtiles, ROT0,   "Mylstar",                   "M.A.C.H. 3 (set 3)", 0 )
-GAME( 1984, cobram3,   cobra,    cobram3,   cobram3,  gottlieb_state, romtiles, ROT0,   "Data East",                 "Cobra Command (M.A.C.H. 3 hardware)", 0 )
+GAME( 1984, cobram3,   cobra,    cobram3,   cobram3,  gottlieb_state, romtiles, ROT0,   "Data East",                 "Cobra Command (M.A.C.H. 3 hardware, set 1)", 0 )
+GAME( 1984, cobram3a,  cobra,    cobram3,   cobram3,  gottlieb_state, romtiles, ROT0,   "Data East",                 "Cobra Command (M.A.C.H. 3 hardware, set 2)", 0 )
 GAME( 1984, usvsthem,  0,        g2laser,   usvsthem, gottlieb_state, romtiles, ROT0,   "Mylstar",                   "Us vs. Them", 0 )
 GAME( 1984, 3stooges,  0,        gottlieb2, 3stooges, gottlieb_state, stooges,  ROT0,   "Mylstar",                   "The Three Stooges In Brides Is Brides (set 1)", 0 )
 GAME( 1984, 3stoogesa, 3stooges, gottlieb2, 3stooges, gottlieb_state, stooges,  ROT0,   "Mylstar",                   "The Three Stooges In Brides Is Brides (set 2)", 0 )

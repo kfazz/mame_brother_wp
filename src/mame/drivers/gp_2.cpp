@@ -38,6 +38,7 @@ ToDo:
 #include "cpu/z80/z80.h"
 #include "cpu/z80/z80daisy.h"
 #include "machine/i8255.h"
+#include "machine/timer.h"
 #include "machine/z80ctc.h"
 #include "gp_2.lh"
 
@@ -64,6 +65,9 @@ public:
 	DECLARE_WRITE8_MEMBER(portc_w);
 	DECLARE_READ8_MEMBER(portb_r);
 	TIMER_DEVICE_CALLBACK_MEMBER(zero_timer);
+	void gp_2(machine_config &config);
+	void gp_2_io(address_map &map);
+	void gp_2_map(address_map &map);
 private:
 	uint8_t m_u14;
 	uint8_t m_digit;
@@ -83,16 +87,18 @@ private:
 };
 
 
-static ADDRESS_MAP_START( gp_2_map, AS_PROGRAM, 8, gp_2_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM AM_REGION("roms", 0)
-	AM_RANGE(0x8c00, 0x8dff) AM_RAM AM_SHARE("nvram")
-ADDRESS_MAP_END
+void gp_2_state::gp_2_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom().region("roms", 0);
+	map(0x8c00, 0x8dff).ram().share("nvram");
+}
 
-static ADDRESS_MAP_START( gp_2_io, AS_IO, 8, gp_2_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x0f)
-	AM_RANGE(0x04, 0x07) AM_DEVREADWRITE("ppi", i8255_device, read, write)
-	AM_RANGE(0x08, 0x0b) AM_DEVREADWRITE("ctc", z80ctc_device, read, write)
-ADDRESS_MAP_END
+void gp_2_state::gp_2_io(address_map &map)
+{
+	map.global_mask(0x0f);
+	map(0x04, 0x07).rw("ppi", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x08, 0x0b).rw(m_ctc, FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+}
 
 static INPUT_PORTS_START( gp_1 )
 	PORT_START("DSW0")
@@ -570,7 +576,7 @@ static const z80_daisy_config daisy_chain[] =
 	{ nullptr }
 };
 
-static MACHINE_CONFIG_START( gp_2 )
+MACHINE_CONFIG_START(gp_2_state::gp_2)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 2457600)
 	MCFG_CPU_PROGRAM_MAP(gp_2_map)
@@ -583,7 +589,7 @@ static MACHINE_CONFIG_START( gp_2 )
 	MCFG_DEFAULT_LAYOUT(layout_gp_2)
 
 	/* Sound */
-	MCFG_FRAGMENT_ADD( genpin_audio )
+	genpin_audio(config);
 
 	/* Devices */
 	MCFG_DEVICE_ADD("ppi", I8255A, 0 )

@@ -313,14 +313,12 @@ public:
 		m_m50458(*this,"m50458"),
 		m_s3520cf(*this, "s3520cf"),
 		m_rp5h01(*this,"rp5h01"),
-		m_screen(*this, "screen"),
 		m_palette(*this, "palette")
 	{ }
 
 	required_device<m50458_device> m_m50458;
 	required_device<s3520cf_device> m_s3520cf;
 	required_device<rp5h01_device> m_rp5h01;
-	required_device<screen_device> m_screen;
 	optional_device<palette_device> m_palette;
 
 	uint8_t m_wram_wp_flag;
@@ -350,6 +348,11 @@ public:
 	INTERRUPT_GEN_MEMBER(nss_vblank_irq);
 	DECLARE_READ8_MEMBER(spc_ram_100_r);
 	DECLARE_WRITE8_MEMBER(spc_ram_100_w);
+	void nss(machine_config &config);
+	void bios_io_map(address_map &map);
+	void bios_map(address_map &map);
+	void snes_map(address_map &map);
+	void spc_mem(address_map &map);
 };
 
 
@@ -362,11 +365,12 @@ uint32_t nss_state::screen_update( screen_device &screen, bitmap_rgb32 &bitmap, 
 
 
 
-static ADDRESS_MAP_START( snes_map, AS_PROGRAM, 8, nss_state )
-	AM_RANGE(0x000000, 0x7dffff) AM_READWRITE(snes_r_bank1, snes_w_bank1)
-	AM_RANGE(0x7e0000, 0x7fffff) AM_RAM                 /* 8KB Low RAM, 24KB High RAM, 96KB Expanded RAM */
-	AM_RANGE(0x800000, 0xffffff) AM_READWRITE(snes_r_bank2, snes_w_bank2)    /* Mirror and ROM */
-ADDRESS_MAP_END
+void nss_state::snes_map(address_map &map)
+{
+	map(0x000000, 0x7dffff).rw(this, FUNC(nss_state::snes_r_bank1), FUNC(nss_state::snes_w_bank1));
+	map(0x7e0000, 0x7fffff).ram();                 /* 8KB Low RAM, 24KB High RAM, 96KB Expanded RAM */
+	map(0x800000, 0xffffff).rw(this, FUNC(nss_state::snes_r_bank2), FUNC(nss_state::snes_w_bank2));    /* Mirror and ROM */
+}
 
 READ8_MEMBER(nss_state::spc_ram_100_r)
 {
@@ -378,11 +382,12 @@ WRITE8_MEMBER(nss_state::spc_ram_100_w)
 	m_spc700->spc_ram_w(space, offset + 0x100, data);
 }
 
-static ADDRESS_MAP_START( spc_mem, AS_PROGRAM, 8, nss_state )
-	AM_RANGE(0x0000, 0x00ef) AM_DEVREADWRITE("spc700", snes_sound_device, spc_ram_r, spc_ram_w) /* lower 32k ram */
-	AM_RANGE(0x00f0, 0x00ff) AM_DEVREADWRITE("spc700", snes_sound_device, spc_io_r, spc_io_w)   /* spc io */
-	AM_RANGE(0x0100, 0xffff) AM_READWRITE(spc_ram_100_r, spc_ram_100_w)
-ADDRESS_MAP_END
+void nss_state::spc_mem(address_map &map)
+{
+	map(0x0000, 0x00ef).rw(m_spc700, FUNC(snes_sound_device::spc_ram_r), FUNC(snes_sound_device::spc_ram_w)); /* lower 32k ram */
+	map(0x00f0, 0x00ff).rw(m_spc700, FUNC(snes_sound_device::spc_io_r), FUNC(snes_sound_device::spc_io_w));   /* spc io */
+	map(0x0100, 0xffff).rw(this, FUNC(nss_state::spc_ram_100_r), FUNC(nss_state::spc_ram_100_w));
+}
 
 /* NSS specific */
 /*
@@ -501,14 +506,15 @@ WRITE8_MEMBER(nss_state::nss_prot_w)
 }
 
 
-static ADDRESS_MAP_START( bios_map, AS_PROGRAM, 8, nss_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x8fff) AM_RAM
-	AM_RANGE(0x9000, 0x9fff) AM_READWRITE(ram_wp_r,ram_wp_w)
-	AM_RANGE(0xa000, 0xa000) AM_READ_PORT("EEPROMIN")
-	AM_RANGE(0xc000, 0xdfff) AM_ROM AM_REGION("ibios_rom", 0x6000 )
-	AM_RANGE(0xe000, 0xffff) AM_READWRITE(nss_prot_r,nss_prot_w)
-ADDRESS_MAP_END
+void nss_state::bios_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x8fff).ram();
+	map(0x9000, 0x9fff).rw(this, FUNC(nss_state::ram_wp_r), FUNC(nss_state::ram_wp_w));
+	map(0xa000, 0xa000).portr("EEPROMIN");
+	map(0xc000, 0xdfff).rom().region("ibios_rom", 0x6000);
+	map(0xe000, 0xffff).rw(this, FUNC(nss_state::nss_prot_r), FUNC(nss_state::nss_prot_w));
+}
 
 READ8_MEMBER(nss_state::port_00_r)
 {
@@ -618,15 +624,16 @@ WRITE8_MEMBER(nss_state::port_07_w)
 	m_joy_flag = 1;
 }
 
-static ADDRESS_MAP_START( bios_io_map, AS_IO, 8, nss_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x7)
-	AM_RANGE(0x00, 0x00) AM_READ(port_00_r) AM_WRITE(port_00_w)
-	AM_RANGE(0x01, 0x01) AM_READ_PORT("FP")  AM_WRITE(port_01_w)
-	AM_RANGE(0x02, 0x02) AM_READ_PORT("SYSTEM") AM_WRITE(port_02_w)
-	AM_RANGE(0x03, 0x03) AM_READ_PORT("RTC") AM_WRITE(port_03_w)
-	AM_RANGE(0x04, 0x04) AM_WRITE(port_04_w)
-	AM_RANGE(0x07, 0x07) AM_WRITE(port_07_w)
-ADDRESS_MAP_END
+void nss_state::bios_io_map(address_map &map)
+{
+	map.global_mask(0x7);
+	map(0x00, 0x00).r(this, FUNC(nss_state::port_00_r)).w(this, FUNC(nss_state::port_00_w));
+	map(0x01, 0x01).portr("FP").w(this, FUNC(nss_state::port_01_w));
+	map(0x02, 0x02).portr("SYSTEM").w(this, FUNC(nss_state::port_02_w));
+	map(0x03, 0x03).portr("RTC").w(this, FUNC(nss_state::port_03_w));
+	map(0x04, 0x04).w(this, FUNC(nss_state::port_04_w));
+	map(0x07, 0x07).w(this, FUNC(nss_state::port_07_w));
+}
 
 void nss_state::machine_start()
 {
@@ -817,13 +824,14 @@ void nss_state::machine_reset()
 	m_joy_flag = 1;
 }
 
-static MACHINE_CONFIG_START( nss )
+MACHINE_CONFIG_START(nss_state::nss)
 
 	/* base snes hardware */
 	MCFG_CPU_ADD("maincpu", _5A22, MCLK_NTSC)   /* 2.68Mhz, also 3.58Mhz */
 	MCFG_CPU_PROGRAM_MAP(snes_map)
 
-	MCFG_CPU_ADD("soundcpu", SPC700, 2048000/2) /* 2.048 Mhz, but internal divider */
+	// runs at 24.576 MHz / 12 = 2.048 MHz
+	MCFG_CPU_ADD("soundcpu", SPC700, XTAL(24'576'000) / 12)
 	MCFG_CPU_PROGRAM_MAP(spc_mem)
 
 	MCFG_QUANTUM_PERFECT_CPU("maincpu")
@@ -1064,7 +1072,7 @@ DRIVER_INIT_MEMBER(nss_state,nss)
 	uint8_t *PROM = memregion("rp5h01")->base();
 
 	for (int i = 0; i < 0x10; i++)
-		PROM[i] = BITSWAP8(PROM[i],0,1,2,3,4,5,6,7) ^ 0xff;
+		PROM[i] = bitswap<8>(PROM[i],0,1,2,3,4,5,6,7) ^ 0xff;
 
 	DRIVER_INIT_CALL(snes);
 }

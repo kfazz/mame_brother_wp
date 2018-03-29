@@ -342,6 +342,7 @@
 #include "emu.h"
 #include "debugger.h"
 #include "pdp1.h"
+#include "pdp1dasm.h"
 
 #define LOG 0
 #define LOG_EXTRA 0
@@ -377,7 +378,7 @@
 #define PREVIOUS_PC     ((PC & ADDRESS_EXTENSION_MASK) | ((PC-1) & BASE_ADDRESS_MASK))
 
 
-DEFINE_DEVICE_TYPE(PDP1, pdp1_device, "pdp1_cpu", "PDP1")
+DEFINE_DEVICE_TYPE(PDP1, pdp1_device, "pdp1_cpu", "DEC PDP1")
 
 
 pdp1_device::pdp1_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
@@ -418,10 +419,9 @@ void pdp1_device::device_config_complete()
 }
 
 
-offs_t pdp1_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> pdp1_device::create_disassembler()
 {
-	extern CPU_DISASSEMBLE( pdp1 );
-	return CPU_DISASSEMBLE_NAME(pdp1)(this, stream, pc, oprom, opram, options);
+	return std::make_unique<pdp1_disassembler>();
 }
 
 

@@ -91,6 +91,8 @@ public:
 
 	INTERRUPT_GEN_MEMBER(vblank);
 	DECLARE_INPUT_CHANGED_MEMBER(color);
+	void tv990(machine_config &config);
+	void tv990_mem(address_map &map);
 private:
 	uint16_t tvi1111_regs[(0x100/2)+2];
 	emu_timer *m_rowtimer;
@@ -308,17 +310,18 @@ WRITE8_MEMBER(tv990_state::kbdc_w)
 		m_kbdc->data_w(space, 0, data);
 }
 
-static ADDRESS_MAP_START(tv990_mem, AS_PROGRAM, 16, tv990_state)
-	AM_RANGE(0x000000, 0x03ffff) AM_ROM AM_REGION("maincpu", 0)
-	AM_RANGE(0x060000, 0x06ffff) AM_RAM AM_SHARE("vram") // character/attribute RAM
-	AM_RANGE(0x080000, 0x087fff) AM_RAM AM_SHARE("fontram") // font RAM
-	AM_RANGE(0x090000, 0x0900ff) AM_READWRITE(tvi1111_r, tvi1111_w)
-	AM_RANGE(0x0a0000, 0x0a000f) AM_DEVREADWRITE8(UART0_TAG, ns16450_device, ins8250_r, ins8250_w, 0x00ff)
-	AM_RANGE(0x0a0010, 0x0a001f) AM_DEVREADWRITE8(UART1_TAG, ns16450_device, ins8250_r, ins8250_w, 0x00ff)
-	AM_RANGE(0x0a0028, 0x0a002d) AM_DEVREADWRITE8(LPT_TAG, pc_lpt_device, read, write, 0x00ff)
-	AM_RANGE(0x0b0000, 0x0b0003) AM_READWRITE8(kbdc_r, kbdc_w, 0x00ff)
-	AM_RANGE(0x0c0000, 0x0c7fff) AM_RAM AM_SHARE("nvram")// work RAM
-ADDRESS_MAP_END
+void tv990_state::tv990_mem(address_map &map)
+{
+	map(0x000000, 0x03ffff).rom().region("maincpu", 0);
+	map(0x060000, 0x06ffff).ram().share("vram"); // character/attribute RAM
+	map(0x080000, 0x087fff).ram().share("fontram"); // font RAM
+	map(0x090000, 0x0900ff).rw(this, FUNC(tv990_state::tvi1111_r), FUNC(tv990_state::tvi1111_w));
+	map(0x0a0000, 0x0a000f).rw(m_uart0, FUNC(ns16450_device::ins8250_r), FUNC(ns16450_device::ins8250_w)).umask16(0x00ff);
+	map(0x0a0010, 0x0a001f).rw(UART1_TAG, FUNC(ns16450_device::ins8250_r), FUNC(ns16450_device::ins8250_w)).umask16(0x00ff);
+	map(0x0a0028, 0x0a002d).rw(LPT_TAG, FUNC(pc_lpt_device::read), FUNC(pc_lpt_device::write)).umask16(0x00ff);
+	map(0x0b0000, 0x0b0003).rw(this, FUNC(tv990_state::kbdc_r), FUNC(tv990_state::kbdc_w)).umask16(0x00ff);
+	map(0x0c0000, 0x0c7fff).ram().share("nvram");// work RAM
+}
 
 /* Input ports */
 static INPUT_PORTS_START( tv990 )
@@ -349,7 +352,7 @@ INPUT_CHANGED_MEMBER(tv990_state::color)
 			color = rgb_t::white();
 			break;
 	}
-	m_screen->static_set_color(*m_screen, color);
+	m_screen->set_color(color);
 }
 
 void tv990_state::machine_reset()
@@ -367,7 +370,7 @@ void tv990_state::device_post_load()
 	m_screen->set_visible_area(0, m_width * 16 - 1, 0, m_height * m_rowh - 1);
 }
 
-static MACHINE_CONFIG_START( tv990 )
+MACHINE_CONFIG_START(tv990_state::tv990)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 14967500)   // verified (59.86992/4)
 	MCFG_CPU_PROGRAM_MAP(tv990_mem)
@@ -380,13 +383,13 @@ static MACHINE_CONFIG_START( tv990 )
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_PALETTE_ADD_MONOCHROME_HIGHLIGHT("palette")
 
-	MCFG_DEVICE_ADD( UART0_TAG, NS16450, XTAL_3_6864MHz )
+	MCFG_DEVICE_ADD( UART0_TAG, NS16450, XTAL(3'686'400) )
 	MCFG_INS8250_OUT_DTR_CB(DEVWRITELINE(RS232A_TAG, rs232_port_device, write_dtr))
 	MCFG_INS8250_OUT_RTS_CB(DEVWRITELINE(RS232A_TAG, rs232_port_device, write_rts))
 	MCFG_INS8250_OUT_TX_CB(DEVWRITELINE(RS232A_TAG, rs232_port_device, write_txd))
 	MCFG_INS8250_OUT_INT_CB(WRITELINE(tv990_state, uart0_irq))
 
-	MCFG_DEVICE_ADD( UART1_TAG, NS16450, XTAL_3_6864MHz )
+	MCFG_DEVICE_ADD( UART1_TAG, NS16450, XTAL(3'686'400) )
 	MCFG_INS8250_OUT_DTR_CB(DEVWRITELINE(RS232B_TAG, rs232_port_device, write_dtr))
 	MCFG_INS8250_OUT_RTS_CB(DEVWRITELINE(RS232B_TAG, rs232_port_device, write_rts))
 	MCFG_INS8250_OUT_TX_CB(DEVWRITELINE(RS232B_TAG, rs232_port_device, write_txd))

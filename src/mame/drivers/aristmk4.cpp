@@ -315,7 +315,7 @@
 
 ***********************************************************************************************************************************************/
 
-#define MAIN_CLOCK  XTAL_12MHz
+#define MAIN_CLOCK  XTAL(12'000'000)
 
 #include "emu.h"
 #include "cpu/m6809/m6809.h"
@@ -327,6 +327,7 @@
 #include "sound/samples.h"
 #include "machine/mc146818.h" // DALLAS1287 is functionally compatible.
 #include "machine/nvram.h"
+#include "machine/timer.h"
 #include "screen.h"
 #include "speaker.h"
 
@@ -431,6 +432,11 @@ public:
 	TIMER_CALLBACK_MEMBER(hopper_reset);
 	TIMER_DEVICE_CALLBACK_MEMBER(aristmk4_pf);
 	inline void uBackgroundColour();
+	void aristmk4_poker(machine_config &config);
+	void aristmk4(machine_config &config);
+	void _86lions(machine_config &config);
+	void aristmk4_map(address_map &map);
+	void aristmk4_poker_map(address_map &map);
 };
 
 /* Partial Cashcade protocol */
@@ -994,35 +1000,36 @@ ADDRESS MAP - SLOT GAMES
 
 ******************************************************************************/
 
-static ADDRESS_MAP_START( aristmk4_map, AS_PROGRAM, 8, aristmk4_state )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM AM_SHARE("mkiv_vram") // video ram -  chips U49 / U50
-	AM_RANGE(0x0800, 0x17ff) AM_RAM
-	AM_RANGE(0x1800, 0x1800) AM_DEVREADWRITE("crtc", mc6845_device, status_r, address_w)
-	AM_RANGE(0x1801, 0x1801) AM_DEVREADWRITE("crtc", mc6845_device, register_r, register_w)
-	AM_RANGE(0x1c00, 0x1cff) AM_WRITE(mk4_printer_w)
-	AM_RANGE(0x1900, 0x19ff) AM_READ(mk4_printer_r)
-	AM_RANGE(0x2000, 0x3fff) AM_ROM  // graphics rom map
-	AM_RANGE(0x4000, 0x4fff) AM_RAMBANK("bank1") AM_SHARE("nvram")
+void aristmk4_state::aristmk4_map(address_map &map)
+{
+	map(0x0000, 0x07ff).ram().share("mkiv_vram"); // video ram -  chips U49 / U50
+	map(0x0800, 0x17ff).ram();
+	map(0x1800, 0x1800).rw("crtc", FUNC(mc6845_device::status_r), FUNC(mc6845_device::address_w));
+	map(0x1801, 0x1801).rw("crtc", FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
+	map(0x1c00, 0x1cff).w(this, FUNC(aristmk4_state::mk4_printer_w));
+	map(0x1900, 0x19ff).r(this, FUNC(aristmk4_state::mk4_printer_r));
+	map(0x2000, 0x3fff).rom();  // graphics rom map
+	map(0x4000, 0x4fff).bankrw("bank1").share("nvram");
 
-	AM_RANGE(0x5000, 0x5000) AM_WRITE(u3_p0)
-	AM_RANGE(0x5002, 0x5002) AM_READ(u3_p2)
-	AM_RANGE(0x5003, 0x5003) AM_READ(u3_p3)
-	AM_RANGE(0x5005, 0x5005) AM_READ(ldsw)
-	AM_RANGE(0x500d, 0x500d) AM_READ_PORT("500d")
-	AM_RANGE(0x500e, 0x500e) AM_READ_PORT("500e")
-	AM_RANGE(0x500f, 0x500f) AM_READ_PORT("500f")
-	AM_RANGE(0x5010, 0x501f) AM_DEVREADWRITE("via6522_0",via6522_device,read,write)
-	AM_RANGE(0x5200, 0x5200) AM_READ(cashcade_r)
-	AM_RANGE(0x5201, 0x5201) AM_READ_PORT("5201")
-	AM_RANGE(0x52c0, 0x52c0) AM_READ(bv_p0)
-	AM_RANGE(0x52c1, 0x52c1) AM_READ(bv_p1)
-	AM_RANGE(0x527f, 0x5281) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)
-	AM_RANGE(0x5300, 0x5300) AM_READ_PORT("5300")
-	AM_RANGE(0x5380, 0x5383) AM_DEVREADWRITE("pia6821_0", pia6821_device, read, write)  // RTC data - PORT A , mechanical meters - PORTB ??
-	AM_RANGE(0x5440, 0x5440) AM_WRITE(mlamps) // take win and gamble lamps
-	AM_RANGE(0x5468, 0x5468) AM_READWRITE(cgdrr,cgdrw) // 4020 ripple counter outputs
-	AM_RANGE(0x6000, 0xffff) AM_ROM  // game roms
-ADDRESS_MAP_END
+	map(0x5000, 0x5000).w(this, FUNC(aristmk4_state::u3_p0));
+	map(0x5002, 0x5002).r(this, FUNC(aristmk4_state::u3_p2));
+	map(0x5003, 0x5003).r(this, FUNC(aristmk4_state::u3_p3));
+	map(0x5005, 0x5005).r(this, FUNC(aristmk4_state::ldsw));
+	map(0x500d, 0x500d).portr("500d");
+	map(0x500e, 0x500e).portr("500e");
+	map(0x500f, 0x500f).portr("500f");
+	map(0x5010, 0x501f).rw("via6522_0", FUNC(via6522_device::read), FUNC(via6522_device::write));
+	map(0x5200, 0x5200).r(this, FUNC(aristmk4_state::cashcade_r));
+	map(0x5201, 0x5201).portr("5201");
+	map(0x52c0, 0x52c0).r(this, FUNC(aristmk4_state::bv_p0));
+	map(0x52c1, 0x52c1).r(this, FUNC(aristmk4_state::bv_p1));
+	map(0x527f, 0x5281).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x5300, 0x5300).portr("5300");
+	map(0x5380, 0x5383).rw("pia6821_0", FUNC(pia6821_device::read), FUNC(pia6821_device::write));  // RTC data - PORT A , mechanical meters - PORTB ??
+	map(0x5440, 0x5440).w(this, FUNC(aristmk4_state::mlamps)); // take win and gamble lamps
+	map(0x5468, 0x5468).rw(this, FUNC(aristmk4_state::cgdrr), FUNC(aristmk4_state::cgdrw)); // 4020 ripple counter outputs
+	map(0x6000, 0xffff).rom();  // game roms
+}
 
 /******************************************************************************
 
@@ -1038,35 +1045,36 @@ The graphics rom is mapped from 0x4000 - 0x4fff
 The U87 personality rom is not required, therefore game rom code mapping is from 0x8000-0xffff
 */
 
-static ADDRESS_MAP_START( aristmk4_poker_map, AS_PROGRAM, 8, aristmk4_state )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM AM_SHARE("mkiv_vram") // video ram -  chips U49 / U50
-	AM_RANGE(0x0800, 0x17ff) AM_RAM
-	AM_RANGE(0x1800, 0x1800) AM_DEVREADWRITE("crtc", mc6845_device, status_r, address_w)
-	AM_RANGE(0x1801, 0x1801) AM_DEVREADWRITE("crtc", mc6845_device, register_r, register_w)
-	AM_RANGE(0x1c00, 0x1cff) AM_WRITE(mk4_printer_w)
-	AM_RANGE(0x1900, 0x19ff) AM_READ(mk4_printer_r)
-	AM_RANGE(0x4000, 0x4fff) AM_RAMBANK("bank1") AM_SHARE("nvram")
+void aristmk4_state::aristmk4_poker_map(address_map &map)
+{
+	map(0x0000, 0x07ff).ram().share("mkiv_vram"); // video ram -  chips U49 / U50
+	map(0x0800, 0x17ff).ram();
+	map(0x1800, 0x1800).rw("crtc", FUNC(mc6845_device::status_r), FUNC(mc6845_device::address_w));
+	map(0x1801, 0x1801).rw("crtc", FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
+	map(0x1c00, 0x1cff).w(this, FUNC(aristmk4_state::mk4_printer_w));
+	map(0x1900, 0x19ff).r(this, FUNC(aristmk4_state::mk4_printer_r));
+	map(0x4000, 0x4fff).bankrw("bank1").share("nvram");
 
-	AM_RANGE(0x5000, 0x5000) AM_WRITE(u3_p0)
-	AM_RANGE(0x5002, 0x5002) AM_READ(u3_p2)
-	AM_RANGE(0x5003, 0x5003) AM_READ_PORT("5003")
-	AM_RANGE(0x5005, 0x5005) AM_READ(ldsw)
-	AM_RANGE(0x500d, 0x500d) AM_READ_PORT("500d")
-	AM_RANGE(0x500e, 0x500e) AM_READ_PORT("500e")
-	AM_RANGE(0x500f, 0x500f) AM_READ_PORT("500f")
-	AM_RANGE(0x5010, 0x501f) AM_DEVREADWRITE("via6522_0",via6522_device,read,write)
-	AM_RANGE(0x5200, 0x5200) AM_READ(cashcade_r)
-	AM_RANGE(0x5201, 0x5201) AM_READ_PORT("5201")
-	AM_RANGE(0x52c0, 0x52c0) AM_READ(bv_p0)
-	AM_RANGE(0x52c1, 0x52c1) AM_READ(bv_p1)
-	AM_RANGE(0x527f, 0x5281) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)
-	AM_RANGE(0x5300, 0x5300) AM_READ_PORT("5300")
-	AM_RANGE(0x5380, 0x5383) AM_DEVREADWRITE("pia6821_0", pia6821_device, read, write)  // RTC data - PORT A , mechanical meters - PORTB ??
-	AM_RANGE(0x5440, 0x5440) AM_WRITE(mlamps) // take win and gamble lamps
-	AM_RANGE(0x5468, 0x5468) AM_READWRITE(cgdrr,cgdrw) // 4020 ripple counter outputs
-	AM_RANGE(0x6000, 0x7fff) AM_ROM  // graphics rom map
-	AM_RANGE(0x8000, 0xffff) AM_ROM  // game roms
-ADDRESS_MAP_END
+	map(0x5000, 0x5000).w(this, FUNC(aristmk4_state::u3_p0));
+	map(0x5002, 0x5002).r(this, FUNC(aristmk4_state::u3_p2));
+	map(0x5003, 0x5003).portr("5003");
+	map(0x5005, 0x5005).r(this, FUNC(aristmk4_state::ldsw));
+	map(0x500d, 0x500d).portr("500d");
+	map(0x500e, 0x500e).portr("500e");
+	map(0x500f, 0x500f).portr("500f");
+	map(0x5010, 0x501f).rw("via6522_0", FUNC(via6522_device::read), FUNC(via6522_device::write));
+	map(0x5200, 0x5200).r(this, FUNC(aristmk4_state::cashcade_r));
+	map(0x5201, 0x5201).portr("5201");
+	map(0x52c0, 0x52c0).r(this, FUNC(aristmk4_state::bv_p0));
+	map(0x52c1, 0x52c1).r(this, FUNC(aristmk4_state::bv_p1));
+	map(0x527f, 0x5281).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x5300, 0x5300).portr("5300");
+	map(0x5380, 0x5383).rw("pia6821_0", FUNC(pia6821_device::read), FUNC(pia6821_device::write));  // RTC data - PORT A , mechanical meters - PORTB ??
+	map(0x5440, 0x5440).w(this, FUNC(aristmk4_state::mlamps)); // take win and gamble lamps
+	map(0x5468, 0x5468).rw(this, FUNC(aristmk4_state::cgdrr), FUNC(aristmk4_state::cgdrw)); // 4020 ripple counter outputs
+	map(0x6000, 0x7fff).rom();  // graphics rom map
+	map(0x8000, 0xffff).rom();  // game roms
+}
 
 /******************************************************************************
 
@@ -1744,9 +1752,9 @@ TIMER_DEVICE_CALLBACK_MEMBER(aristmk4_state::aristmk4_pf)
 	}
 }
 
-static MACHINE_CONFIG_START( aristmk4 )
+MACHINE_CONFIG_START(aristmk4_state::aristmk4)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809, MAIN_CLOCK/8) // 1.5mhz
+	MCFG_CPU_ADD("maincpu", MC6809E, MAIN_CLOCK/8) // M68B09E @ 1.5 MHz
 	MCFG_CPU_PROGRAM_MAP(aristmk4_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", aristmk4_state,  irq0_line_hold)
 
@@ -1771,7 +1779,7 @@ static MACHINE_CONFIG_START( aristmk4 )
 	MCFG_I8255_IN_PORTB_CB(READ8(aristmk4_state, pb1_r))
 	MCFG_I8255_IN_PORTC_CB(READ8(aristmk4_state, pc1_r))
 
-	MCFG_DEVICE_ADD("via6522_0", VIA6522, 0) /* 1 MHz.(only 1 or 2 MHz.are valid) */
+	MCFG_DEVICE_ADD("via6522_0", VIA6522, MAIN_CLOCK/8) // R65C22P2
 	MCFG_VIA6522_READPA_HANDLER(READ8(aristmk4_state, via_a_r))
 	MCFG_VIA6522_READPB_HANDLER(READ8(aristmk4_state, via_b_r))
 	MCFG_VIA6522_WRITEPA_HANDLER(WRITE8(aristmk4_state, via_a_w))
@@ -1794,7 +1802,7 @@ static MACHINE_CONFIG_START( aristmk4 )
 	MCFG_MC6845_SHOW_BORDER_AREA(false)
 	MCFG_MC6845_CHAR_WIDTH(4)
 
-	MCFG_MC146818_ADD( "rtc", XTAL_4_194304Mhz )
+	MCFG_MC146818_ADD( "rtc", XTAL(4'194'304) )
 
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
@@ -1816,7 +1824,8 @@ static MACHINE_CONFIG_START( aristmk4 )
 
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( aristmk4_poker, aristmk4 )
+MACHINE_CONFIG_START(aristmk4_state::aristmk4_poker)
+	aristmk4(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(aristmk4_poker_map)
@@ -1846,7 +1855,8 @@ PALETTE_INIT_MEMBER(aristmk4_state,lions)
 	}
 }
 
-static MACHINE_CONFIG_DERIVED( 86lions, aristmk4 )
+MACHINE_CONFIG_START(aristmk4_state::_86lions)
+	aristmk4(config);
 	MCFG_PALETTE_MODIFY("palette")
 	MCFG_PALETTE_INIT_OWNER(aristmk4_state,lions)
 MACHINE_CONFIG_END
@@ -2498,7 +2508,7 @@ ROM_START( 86lions )
 	//  ROM_LOAD( "prom.x", 0x00, 0x20, NO_DUMP )
 ROM_END
 
-GAMEL( 1985, 86lions,  0,        86lions,  aristmk4, aristmk4_state, aristmk4, ROT0, "Aristocrat", "86 Lions", MACHINE_NOT_WORKING, layout_topgear )
+GAMEL( 1985, 86lions,  0,        _86lions, aristmk4, aristmk4_state, aristmk4, ROT0, "Aristocrat", "86 Lions", MACHINE_NOT_WORKING, layout_topgear )
 GAMEL( 1996, eforest,  0,        aristmk4, eforest,  aristmk4_state, aristmk4, ROT0, "Aristocrat", "Enchanted Forest (12XF528902, US)",         0, layout_eforest  ) // 92.778%
 GAMEL( 1995, eforesta, eforest,  aristmk4, aristmk4, aristmk4_state, aristmk4, ROT0, "Aristocrat", "Enchanted Forest (4VXFC818, NSW)",          0, layout_aristmk4 ) // 10c, $1 = 10 credits, 90.483%
 GAMEL( 1996, eforestb, eforest,  aristmk4, arimk4nz, aristmk4_state, aristmk4, ROT0, "Aristocrat", "Enchanted Forest (3VXFC5343, New Zealand)", 0, layout_arimk4nz ) // 5c, $2 = 40 credits, 88.43%

@@ -19,7 +19,7 @@
 
 #include "emu.h"
 #include "sc61860.h"
-
+#include "scdasm.h"
 #include "debugger.h"
 
 
@@ -45,7 +45,7 @@
 #include "logmacro.h"
 
 
-DEFINE_DEVICE_TYPE(SC61860, sc61860_device, "sc61860", "SC61860")
+DEFINE_DEVICE_TYPE(SC61860, sc61860_device, "sc61860", "Sharp SC61860")
 
 
 sc61860_device::sc61860_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
@@ -69,11 +69,9 @@ device_memory_interface::space_config_vector sc61860_device::memory_space_config
 	};
 }
 
-
-offs_t sc61860_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> sc61860_device::create_disassembler()
 {
-	extern CPU_DISASSEMBLE( sc61860 );
-	return CPU_DISASSEMBLE_NAME(sc61860)(this, stream, pc, oprom, opram, options);
+	return std::make_unique<sc61860_disassembler>();
 }
 
 
@@ -112,7 +110,7 @@ void sc61860_device::device_start()
 	m_2ms_tick_timer->adjust(attotime::from_hz(500), 0, attotime::from_hz(500));
 
 	m_program = &space(AS_PROGRAM);
-	m_direct = &m_program->direct();
+	m_direct = m_program->direct<0>();
 	m_reset.resolve();
 	m_brk.resolve();
 	m_x.resolve();

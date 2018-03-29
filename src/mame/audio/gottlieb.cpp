@@ -16,9 +16,9 @@
 #include "sound/volt_reg.h"
 
 
-#define SOUND1_CLOCK        XTAL_3_579545MHz
-#define SOUND2_CLOCK        XTAL_4MHz
-#define SOUND2_SPEECH_CLOCK XTAL_3_12MHz
+#define SOUND1_CLOCK        XTAL(3'579'545)
+#define SOUND2_CLOCK        XTAL(4'000'000)
+#define SOUND2_SPEECH_CLOCK XTAL(3'120'000)
 
 
 //**************************************************************************
@@ -77,12 +77,13 @@ WRITE8_MEMBER( gottlieb_sound_r0_device::write )
 //  audio CPU map
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( gottlieb_sound_r0_map, AS_PROGRAM, 8, gottlieb_sound_r0_device )
-	ADDRESS_MAP_GLOBAL_MASK(0x0fff)
-	AM_RANGE(0x0000, 0x003f) AM_RAM AM_MIRROR(0x1c0)
-	AM_RANGE(0x0200, 0x020f) AM_DEVREADWRITE("r6530", mos6530_device, read, write)
-	AM_RANGE(0x0400, 0x0fff) AM_ROM
-ADDRESS_MAP_END
+void gottlieb_sound_r0_device::gottlieb_sound_r0_map(address_map &map)
+{
+	map.global_mask(0x0fff);
+	map(0x0000, 0x003f).ram().mirror(0x1c0);
+	map(0x0200, 0x020f).rw("r6530", FUNC(mos6530_device::read), FUNC(mos6530_device::write));
+	map(0x0400, 0x0fff).rom();
+}
 
 
 //-------------------------------------------------
@@ -108,7 +109,7 @@ INPUT_CHANGED_MEMBER( gottlieb_sound_r0_device::audio_nmi )
 // device_add_mconfig - add device configuration
 //-------------------------------------------------
 
-MACHINE_CONFIG_MEMBER( gottlieb_sound_r0_device::device_add_mconfig )
+MACHINE_CONFIG_START(gottlieb_sound_r0_device::device_add_mconfig)
 	// audio CPU
 	MCFG_CPU_ADD("audiocpu", M6502, SOUND1_CLOCK/4) // M6503 - clock is a gate, a resistor and a capacitor. Freq unknown.
 	MCFG_CPU_PROGRAM_MAP(gottlieb_sound_r0_map)
@@ -265,16 +266,17 @@ WRITE_LINE_MEMBER( gottlieb_sound_r1_device::votrax_request )
 //  audio CPU map
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( gottlieb_sound_r1_map, AS_PROGRAM, 8, gottlieb_sound_r1_device )
+void gottlieb_sound_r1_device::gottlieb_sound_r1_map(address_map &map)
+{
 	// A15 not decoded except in expansion socket
-	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
-	AM_RANGE(0x0000, 0x007f) AM_MIRROR(0x0d80) AM_RAM
-	AM_RANGE(0x0200, 0x021f) AM_MIRROR(0x0de0) AM_DEVREADWRITE("riot", riot6532_device, read, write)
-	AM_RANGE(0x1000, 0x1000) AM_MIRROR(0x0fff) AM_DEVWRITE("dac", dac_byte_interface, write)
-	AM_RANGE(0x2000, 0x2000) AM_MIRROR(0x0fff) AM_WRITE(votrax_data_w)
-	AM_RANGE(0x3000, 0x3000) AM_MIRROR(0x0fff) AM_WRITE(speech_clock_dac_w)
-	AM_RANGE(0x6000, 0x7fff) AM_ROM
-ADDRESS_MAP_END
+	map.global_mask(0x7fff);
+	map(0x0000, 0x007f).mirror(0x0d80).ram();
+	map(0x0200, 0x021f).mirror(0x0de0).rw("riot", FUNC(riot6532_device::read), FUNC(riot6532_device::write));
+	map(0x1000, 0x1000).mirror(0x0fff).w("dac", FUNC(dac_byte_interface::write));
+	map(0x2000, 0x2000).mirror(0x0fff).w(this, FUNC(gottlieb_sound_r1_device::votrax_data_w));
+	map(0x3000, 0x3000).mirror(0x0fff).w(this, FUNC(gottlieb_sound_r1_device::speech_clock_dac_w));
+	map(0x6000, 0x7fff).rom();
+}
 
 
 //-------------------------------------------------
@@ -306,7 +308,7 @@ INPUT_PORTS_END
 // device_add_mconfig - add device configuration
 //-------------------------------------------------
 
-MACHINE_CONFIG_MEMBER( gottlieb_sound_r1_device::device_add_mconfig )
+MACHINE_CONFIG_START(gottlieb_sound_r1_device::device_add_mconfig)
 	// audio CPU
 	MCFG_CPU_ADD("audiocpu", M6502, SOUND1_CLOCK/4) // the board can be set to /2 as well
 	MCFG_CPU_PROGRAM_MAP(gottlieb_sound_r1_map)
@@ -364,7 +366,7 @@ gottlieb_sound_r1_with_votrax_device::gottlieb_sound_r1_with_votrax_device(const
 // device_add_mconfig - add device configuration
 //-------------------------------------------------
 
-MACHINE_CONFIG_MEMBER( gottlieb_sound_r1_with_votrax_device::device_add_mconfig )
+MACHINE_CONFIG_START(gottlieb_sound_r1_with_votrax_device::device_add_mconfig)
 	gottlieb_sound_r1_device::device_add_mconfig(config);
 
 	// add the VOTRAX
@@ -413,17 +415,6 @@ gottlieb_sound_r2_device::gottlieb_sound_r2_device(const machine_config &mconfig
 		m_psg_data_latch(0),
 		m_sp0250_latch(0)
 {
-}
-
-
-//-------------------------------------------------
-//  static_enable_cobram3_mods - enable changes
-//  for cobram3
-//-------------------------------------------------
-
-void gottlieb_sound_r2_device::static_enable_cobram3_mods(device_t &device)
-{
-	downcast<gottlieb_sound_r2_device &>(device).m_cobram3_mod = true;
 }
 
 
@@ -615,30 +606,32 @@ WRITE8_MEMBER( gottlieb_sound_r2_device::sp0250_latch_w )
 //  sound CPU address map
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( gottlieb_sound_r2_map, AS_PROGRAM, 8, gottlieb_sound_r2_device )
-	AM_RANGE(0x0000, 0x03ff) AM_MIRROR(0x3c00) AM_RAM
-	AM_RANGE(0x4000, 0x4000) AM_MIRROR(0x3ffe) AM_DEVWRITE("dacvol", dac_byte_interface, write)
-	AM_RANGE(0x4001, 0x4001) AM_MIRROR(0x3ffe) AM_DEVWRITE("dac", dac_byte_interface, write)
-	AM_RANGE(0x8000, 0x8000) AM_MIRROR(0x3fff) AM_READ(audio_data_r)
-	AM_RANGE(0xc000, 0xdfff) AM_MIRROR(0x2000) AM_ROM
-ADDRESS_MAP_END
+void gottlieb_sound_r2_device::gottlieb_sound_r2_map(address_map &map)
+{
+	map(0x0000, 0x03ff).mirror(0x3c00).ram();
+	map(0x4000, 0x4000).mirror(0x3ffe).w("dacvol", FUNC(dac_byte_interface::write));
+	map(0x4001, 0x4001).mirror(0x3ffe).w("dac", FUNC(dac_byte_interface::write));
+	map(0x8000, 0x8000).mirror(0x3fff).r(this, FUNC(gottlieb_sound_r2_device::audio_data_r));
+	map(0xc000, 0xdfff).mirror(0x2000).rom();
+}
 
 
 //-------------------------------------------------
 //  sppech CPU address map
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( gottlieb_speech_r2_map, AS_PROGRAM, 8, gottlieb_sound_r2_device )
-	AM_RANGE(0x0000, 0x03ff) AM_MIRROR(0x1c00) AM_RAM
-	AM_RANGE(0x2000, 0x2000) AM_MIRROR(0x1fff) AM_WRITE(sp0250_latch_w)
-	AM_RANGE(0x4000, 0x4000) AM_MIRROR(0x1fff) AM_WRITE(speech_control_w)
-	AM_RANGE(0x6000, 0x6000) AM_MIRROR(0x1fff) AM_READ_PORT("SB2")
-	AM_RANGE(0x8000, 0x8000) AM_MIRROR(0x1fff) AM_WRITE(psg_latch_w)
-	AM_RANGE(0xa000, 0xa000) AM_MIRROR(0x07ff) AM_WRITE(nmi_rate_w)
-	AM_RANGE(0xa800, 0xa800) AM_MIRROR(0x07ff) AM_READ(speech_data_r)
-	AM_RANGE(0xb000, 0xb000) AM_MIRROR(0x07ff) AM_WRITE(signal_audio_nmi_w)
-	AM_RANGE(0xc000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void gottlieb_sound_r2_device::gottlieb_speech_r2_map(address_map &map)
+{
+	map(0x0000, 0x03ff).mirror(0x1c00).ram();
+	map(0x2000, 0x2000).mirror(0x1fff).w(this, FUNC(gottlieb_sound_r2_device::sp0250_latch_w));
+	map(0x4000, 0x4000).mirror(0x1fff).w(this, FUNC(gottlieb_sound_r2_device::speech_control_w));
+	map(0x6000, 0x6000).mirror(0x1fff).portr("SB2");
+	map(0x8000, 0x8000).mirror(0x1fff).w(this, FUNC(gottlieb_sound_r2_device::psg_latch_w));
+	map(0xa000, 0xa000).mirror(0x07ff).w(this, FUNC(gottlieb_sound_r2_device::nmi_rate_w));
+	map(0xa800, 0xa800).mirror(0x07ff).r(this, FUNC(gottlieb_sound_r2_device::speech_data_r));
+	map(0xb000, 0xb000).mirror(0x07ff).w(this, FUNC(gottlieb_sound_r2_device::signal_audio_nmi_w));
+	map(0xc000, 0xffff).rom();
+}
 
 
 //-------------------------------------------------
@@ -664,7 +657,7 @@ INPUT_PORTS_END
 // device_add_mconfig - add device configuration
 //-------------------------------------------------
 
-MACHINE_CONFIG_MEMBER( gottlieb_sound_r2_device::device_add_mconfig )
+MACHINE_CONFIG_START(gottlieb_sound_r2_device::device_add_mconfig)
 	// audio CPUs
 	MCFG_CPU_ADD("audiocpu", M6502, SOUND2_CLOCK/4)
 	MCFG_CPU_PROGRAM_MAP(gottlieb_sound_r2_map)

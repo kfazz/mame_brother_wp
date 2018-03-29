@@ -133,6 +133,10 @@ public:
 	IRQ_CALLBACK_MEMBER(neocd_int_callback);
 
 	std::unique_ptr<uint8_t[]> m_meminternal_data;
+	void neocd(machine_config &config);
+	void neocd_audio_io_map(address_map &map);
+	void neocd_audio_map(address_map &map);
+	void neocd_main_map(address_map &map);
 protected:
 
 	int32_t SekIdle(int32_t nCycles);
@@ -282,7 +286,7 @@ WRITE16_MEMBER(ngcd_state::neocd_control_w)
 		case 0x0126:
 //          bprintf(PRINT_NORMAL, _T("  - NGCD Z80 BUSREQ -> 1 (PC: 0x%06X)\n"), SekGetPC(-1));
 			m_has_z80_bus = false;
-			space.machine().scheduler().synchronize();
+			machine().scheduler().synchronize();
 			m_audiocpu->set_input_line(INPUT_LINE_HALT, ASSERT_LINE);
 			break;
 		case 0x0128:
@@ -301,7 +305,7 @@ WRITE16_MEMBER(ngcd_state::neocd_control_w)
 		case 0x0146:
 //          bprintf(PRINT_NORMAL, _T("  - NGCD Z80 BUSREQ -> 0 (PC: 0x%06X)\n"), SekGetPC(-1));
 			m_has_z80_bus = true;
-			space.machine().scheduler().synchronize();
+			machine().scheduler().synchronize();
 			m_audiocpu->set_input_line(INPUT_LINE_HALT, CLEAR_LINE);
 			break;
 		case 0x0148:
@@ -885,30 +889,33 @@ MACHINE_RESET_MEMBER(ngcd_state,neocd)
  *
  *************************************/
 
-static ADDRESS_MAP_START( neocd_main_map, AS_PROGRAM, 16, ngcd_state )
+void ngcd_state::neocd_main_map(address_map &map)
+{
 //  AM_RANGE(0x000000, 0x00007f) AM_READ_BANK("vectors") // writes will fall through to area below
-	AM_RANGE(0x000000, 0x00007f) AM_READ(banked_vectors_r)
-	AM_RANGE(0x000000, 0x1fffff) AM_RAM AM_REGION("maincpu", 0x00000)
+	map(0x000000, 0x1fffff).ram().region("maincpu", 0x00000);
+	map(0x000000, 0x00007f).r(this, FUNC(ngcd_state::banked_vectors_r));
 
-	AM_RANGE(0x300000, 0x300001) AM_MIRROR(0x01fffe) AM_DEVREAD8("ctrl1", neogeo_control_port_device, ctrl_r, 0xff00)
-	AM_RANGE(0x320000, 0x320001) AM_MIRROR(0x01fffe) AM_READ_PORT("AUDIO") AM_WRITE8(audio_command_w, 0xff00)
-	AM_RANGE(0x340000, 0x340001) AM_MIRROR(0x01fffe) AM_DEVREAD8("ctrl2", neogeo_control_port_device, ctrl_r, 0xff00)
-	AM_RANGE(0x360000, 0x37ffff) AM_READ(unmapped_r)
-	AM_RANGE(0x380000, 0x380001) AM_MIRROR(0x01fffe) AM_READ(aes_in2_r)
-	AM_RANGE(0x380000, 0x38007f) AM_MIRROR(0x01ff80) AM_WRITE8(io_control_w, 0x00ff)
-	AM_RANGE(0x3a0000, 0x3a001f) AM_MIRROR(0x01ffe0) AM_READ(unmapped_r) AM_DEVWRITE8("systemlatch", hc259_device, write_a3, 0x00ff)
-	AM_RANGE(0x3c0000, 0x3c0007) AM_MIRROR(0x01fff8) AM_READ(video_register_r)
-	AM_RANGE(0x3c0000, 0x3c000f) AM_MIRROR(0x01fff0) AM_WRITE(video_register_w)
-	AM_RANGE(0x3e0000, 0x3fffff) AM_READ(unmapped_r)
-	AM_RANGE(0x400000, 0x401fff) AM_MIRROR(0x3fe000) AM_READWRITE(paletteram_r, paletteram_w)
-	AM_RANGE(0x800000, 0x803fff) AM_READWRITE(neocd_memcard_r, neocd_memcard_w)
-	AM_RANGE(0xc00000, 0xc7ffff) AM_MIRROR(0x080000) AM_ROM AM_REGION("mainbios", 0)
-	AM_RANGE(0xd00000, 0xdfffff) AM_READ(unmapped_r)
-	AM_RANGE(0xe00000, 0xefffff) AM_READWRITE8(neocd_transfer_r,neocd_transfer_w, 0xffff)
-	AM_RANGE(0xf00000, 0xfeffff) AM_READ(unmapped_r)
-	AM_RANGE(0xff0000, 0xff01ff) AM_READWRITE(neocd_control_r, neocd_control_w) // CDROM / DMA
-	AM_RANGE(0xff0200, 0xffffff) AM_READ(unmapped_r)
-ADDRESS_MAP_END
+	map(0x300000, 0x300000).mirror(0x01fffe).r(m_ctrl1, FUNC(neogeo_control_port_device::ctrl_r));
+	map(0x320000, 0x320001).mirror(0x01fffe).portr("AUDIO");
+	map(0x320000, 0x320000).mirror(0x01fffe).w(this, FUNC(ngcd_state::audio_command_w));
+	map(0x340000, 0x340000).mirror(0x01fffe).r(m_ctrl2, FUNC(neogeo_control_port_device::ctrl_r));
+	map(0x360000, 0x37ffff).r(this, FUNC(ngcd_state::unmapped_r));
+	map(0x380000, 0x380001).mirror(0x01fffe).r(this, FUNC(ngcd_state::aes_in2_r));
+	map(0x380000, 0x38007f).mirror(0x01ff80).w(this, FUNC(ngcd_state::io_control_w)).umask16(0x00ff);
+	map(0x3a0000, 0x3a001f).mirror(0x01ffe0).r(this, FUNC(ngcd_state::unmapped_r));
+	map(0x3a0000, 0x3a001f).mirror(0x01ffe0).w("systemlatch", FUNC(hc259_device::write_a3)).umask16(0x00ff);
+	map(0x3c0000, 0x3c0007).mirror(0x01fff8).r(this, FUNC(ngcd_state::video_register_r));
+	map(0x3c0000, 0x3c000f).mirror(0x01fff0).w(this, FUNC(ngcd_state::video_register_w));
+	map(0x3e0000, 0x3fffff).r(this, FUNC(ngcd_state::unmapped_r));
+	map(0x400000, 0x401fff).mirror(0x3fe000).rw(this, FUNC(ngcd_state::paletteram_r), FUNC(ngcd_state::paletteram_w));
+	map(0x800000, 0x803fff).rw(this, FUNC(ngcd_state::neocd_memcard_r), FUNC(ngcd_state::neocd_memcard_w));
+	map(0xc00000, 0xc7ffff).mirror(0x080000).rom().region("mainbios", 0);
+	map(0xd00000, 0xdfffff).r(this, FUNC(ngcd_state::unmapped_r));
+	map(0xe00000, 0xefffff).rw(this, FUNC(ngcd_state::neocd_transfer_r), FUNC(ngcd_state::neocd_transfer_w));
+	map(0xf00000, 0xfeffff).r(this, FUNC(ngcd_state::unmapped_r));
+	map(0xff0000, 0xff01ff).rw(this, FUNC(ngcd_state::neocd_control_r), FUNC(ngcd_state::neocd_control_w)); // CDROM / DMA
+	map(0xff0200, 0xffffff).r(this, FUNC(ngcd_state::unmapped_r));
+}
 
 
 /*************************************
@@ -918,24 +925,26 @@ ADDRESS_MAP_END
  *************************************/
 
 
-static ADDRESS_MAP_START( neocd_audio_map, AS_PROGRAM, 8, ngcd_state )
-	AM_RANGE(0x0000, 0xffff) AM_RAM AM_REGION("audiocpu", 0x00000)
-ADDRESS_MAP_END
+void ngcd_state::neocd_audio_map(address_map &map)
+{
+	map(0x0000, 0xffff).ram().region("audiocpu", 0x00000);
+}
 
 
-static ADDRESS_MAP_START( neocd_audio_io_map, AS_IO, 8, ngcd_state )
-	AM_RANGE(0x00, 0x00) AM_MIRROR(0xff00) AM_READ(audio_command_r) AM_DEVWRITE("soundlatch", generic_latch_8_device, clear_w)
-	AM_RANGE(0x04, 0x07) AM_MIRROR(0xff00) AM_DEVREADWRITE("ymsnd", ym2610_device, read, write)
-	AM_RANGE(0x08, 0x08) AM_MIRROR(0xff00) AM_SELECT(0x0010) AM_WRITE(audio_cpu_enable_nmi_w)
+void ngcd_state::neocd_audio_io_map(address_map &map)
+{
+	map(0x00, 0x00).mirror(0xff00).r(this, FUNC(ngcd_state::audio_command_r)).w(m_soundlatch, FUNC(generic_latch_8_device::clear_w));
+	map(0x04, 0x07).mirror(0xff00).rw(m_ym, FUNC(ym2610_device::read), FUNC(ym2610_device::write));
+	map(0x08, 0x08).mirror(0xff00).select(0x0010).w(this, FUNC(ngcd_state::audio_cpu_enable_nmi_w));
 	// banking reads are actually NOP on NeoCD? but some games still access them
 //  AM_RANGE(0x08, 0x0b) AM_MIRROR(0x00f0) AM_SELECT(0xff00) AM_READ(audio_cpu_bank_select_r)
-	AM_RANGE(0x0c, 0x0c) AM_MIRROR(0xff00) AM_DEVWRITE("soundlatch2", generic_latch_8_device, write)
+	map(0x0c, 0x0c).mirror(0xff00).w(m_soundlatch2, FUNC(generic_latch_8_device::write));
 
 	// ??
-	AM_RANGE(0x80, 0x80) AM_MIRROR(0xff00) AM_WRITENOP
-	AM_RANGE(0xc0, 0xc0) AM_MIRROR(0xff00) AM_WRITENOP
-	AM_RANGE(0xc1, 0xc1) AM_MIRROR(0xff00) AM_WRITENOP
-ADDRESS_MAP_END
+	map(0x80, 0x80).mirror(0xff00).nopw();
+	map(0xc0, 0xc0).mirror(0xff00).nopw();
+	map(0xc1, 0xc1).mirror(0xff00).nopw();
+}
 
 
 /*************************************
@@ -1037,7 +1046,8 @@ uint32_t ngcd_state::screen_update_neocd(screen_device &screen, bitmap_rgb32 &bi
 }
 
 
-static MACHINE_CONFIG_DERIVED( neocd, neogeo_base )
+MACHINE_CONFIG_START(ngcd_state::neocd)
+	neogeo_base(config);
 
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(neocd_main_map)
@@ -1083,10 +1093,12 @@ MACHINE_CONFIG_END
 
 ROM_START( neocd )
 	ROM_REGION16_BE( 0x80000, "mainbios", 0 )
-	ROM_SYSTEM_BIOS( 0, "top",   "Top loading NeoGeo CD" )
+	ROM_SYSTEM_BIOS( 0, "top",   "Top loading Neo-Geo CD" )
 	ROMX_LOAD( "top-sp1.bin",    0x00000, 0x80000, CRC(c36a47c0) SHA1(235f4d1d74364415910f73c10ae5482d90b4274f), ROM_GROUPWORD | ROM_REVERSE | ROM_BIOS(1))
-	ROM_SYSTEM_BIOS( 1, "front",   "Front loading NeoGeo CD" )
+	ROM_SYSTEM_BIOS( 1, "front",   "Front loading Neo-Geo CD" )
 	ROMX_LOAD( "front-sp1.bin",    0x00000, 0x80000, CRC(cac62307) SHA1(53bc1f283cdf00fa2efbb79f2e36d4c8038d743a), ROM_GROUPWORD | ROM_REVERSE | ROM_BIOS(2))
+	ROM_SYSTEM_BIOS( 2, "unibios32", "Universe Bios (Hack, Ver. 3.2)" )
+	ROMX_LOAD( "uni-bioscd.rom",    0x00000, 0x80000, CRC(0ffb3127) SHA1(5158b728e62b391fb69493743dcf7abbc62abc82), ROM_GROUPWORD | ROM_REVERSE | ROM_BIOS(3))
 
 	ROM_REGION( 0x100000, "ymsnd", ROMREGION_ERASEFF )
 	/* 1MB of Sound RAM */
@@ -1109,7 +1121,10 @@ ROM_END
 
 ROM_START( neocdz )
 	ROM_REGION16_BE( 0x80000, "mainbios", 0 )
-	ROM_LOAD16_WORD_SWAP( "neocd.bin",    0x00000, 0x80000, CRC(df9de490) SHA1(7bb26d1e5d1e930515219cb18bcde5b7b23e2eda) )
+	ROM_SYSTEM_BIOS( 0, "official",   "Official BIOS" )
+	ROMX_LOAD( "neocd.bin",    0x00000, 0x80000, CRC(df9de490) SHA1(7bb26d1e5d1e930515219cb18bcde5b7b23e2eda), ROM_GROUPWORD | ROM_REVERSE | ROM_BIOS(1))
+	ROM_SYSTEM_BIOS( 1, "unibios32", "Universe Bios (Hack, Ver. 3.2)" )
+	ROMX_LOAD( "uni-bioscd.rom",    0x00000, 0x80000, CRC(0ffb3127) SHA1(5158b728e62b391fb69493743dcf7abbc62abc82), ROM_GROUPWORD | ROM_REVERSE | ROM_BIOS(2))
 
 	ROM_REGION( 0x100000, "ymsnd", ROMREGION_ERASEFF )
 	/* 1MB of Sound RAM */

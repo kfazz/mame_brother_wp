@@ -15,14 +15,25 @@
         Poly-8813 is a disk-based computer with 3 mini-floppy drives.
         Booting is done by pressing the "Load" button, mounted on the
         front panel near the power switch. Although user manuals are easy
-        to obtain, technical information and schematics are not. The bios
-        makes use of illegal instructions which we do not correctly emulate.
-        The first of these is at 0x006A (print a character routine), while
-        the other is at 0x0100 (an internal copy routine). The code at 0x100
-        can be replaced by 7E 12 13 23 03 79 B0 C2 00 01 C9, which exactly
-        fits into the available space. The disk format is known to be
-        256 bytes per sector, 10 sectors per track, 35 tracks, single sided,
-        for a total of 89600 bytes.
+        to obtain, technical information and drive controller schematics
+        are not. The disk format is known to be 256 bytes per sector, 10
+        sectors per track, 35 tracks, single sided, for a total of 89600
+        bytes.
+
+        The Poly-8813 BIOS makes use of undocumented instructions which we
+        do not currently emulate. These are at 006A (print a character
+        routine - ED ED 05); another is at 0100 (move memory routine -
+        ED ED 03); the last is at 087B (disk I/O routine - ED ED 01). The
+        code at 0100 can be replaced by 7E 12 13 23 03 79 B0 C2 00 01 C9,
+        which exactly fits into the available space. The routine at 006A is
+        likewise could be exactly replaced with F5 C5 D5 E5, which enters
+        a display routine that appears in other assembly listings but seems
+        to have no entry point here. Since the ED ED opcode is defined as
+        for CALLN in the NEC V20/V30's 8080 mode, it might be the case that
+        these are actually hooks patched into the original code for
+        emulation purposes. (There is also a slim possibility that this
+        opcode invokes an undocumented feature of the NEC uPD8080AF, which
+        at least some models of the Poly-88 are known to have used.)
 
 ****************************************************************************/
 
@@ -30,46 +41,51 @@
 #include "includes/poly88.h"
 
 #include "cpu/i8085/i8085.h"
+//#include "bus/s100/s100.h"
 #include "imagedev/cassette.h"
 #include "sound/wave.h"
 #include "screen.h"
 #include "speaker.h"
 
 
-static ADDRESS_MAP_START(poly88_mem, AS_PROGRAM, 8, poly88_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x03ff) AM_ROM // Monitor ROM
-	AM_RANGE(0x0400, 0x0bff) AM_ROM // ROM Expansion
-	AM_RANGE(0x0c00, 0x0dff) AM_RAM AM_MIRROR(0x200) // System RAM (mirrored)
-	AM_RANGE(0x1000, 0x1fff) AM_ROM // System Expansion area
-	AM_RANGE(0x2000, 0x3fff) AM_RAM // Minimal user RAM area
-	AM_RANGE(0x4000, 0xf7ff) AM_RAM
-	AM_RANGE(0xf800, 0xfbff) AM_RAM AM_SHARE("video_ram") // Video RAM
-ADDRESS_MAP_END
+void poly88_state::poly88_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x03ff).rom(); // Monitor ROM
+	map(0x0400, 0x0bff).rom(); // ROM Expansion
+	map(0x0c00, 0x0dff).ram().mirror(0x200); // System RAM (mirrored)
+	map(0x1000, 0x1fff).rom(); // System Expansion area
+	map(0x2000, 0x3fff).ram(); // Minimal user RAM area
+	map(0x4000, 0xf7ff).ram();
+	map(0xf800, 0xfbff).ram().share("video_ram"); // Video RAM
+}
 
-static ADDRESS_MAP_START( poly88_io, AS_IO, 8, poly88_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_DEVREADWRITE("uart", i8251_device, data_r, data_w)
-	AM_RANGE(0x01, 0x01) AM_DEVREADWRITE("uart", i8251_device, status_r, control_w)
-	AM_RANGE(0x04, 0x04) AM_WRITE(poly88_baud_rate_w)
-	AM_RANGE(0x08, 0x08) AM_WRITE(poly88_intr_w)
-	AM_RANGE(0xf8, 0xf8) AM_READ(poly88_keyboard_r)
-ADDRESS_MAP_END
+void poly88_state::poly88_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0x00, 0x00).rw(m_uart, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x01, 0x01).rw(m_uart, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x04, 0x04).w(this, FUNC(poly88_state::poly88_baud_rate_w));
+	map(0x08, 0x08).w(this, FUNC(poly88_state::poly88_intr_w));
+	map(0xf8, 0xf8).r(this, FUNC(poly88_state::poly88_keyboard_r));
+}
 
-static ADDRESS_MAP_START(poly8813_mem, AS_PROGRAM, 8, poly88_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x03ff) AM_ROM // Monitor ROM
-	AM_RANGE(0x0400, 0x0bff) AM_ROM // Disk System ROM
-	AM_RANGE(0x0c00, 0x0fff) AM_RAM // System RAM
-	AM_RANGE(0x1800, 0x1bff) AM_RAM AM_SHARE("video_ram") // Video RAM
-	AM_RANGE(0x2000, 0xffff) AM_RAM // RAM
-ADDRESS_MAP_END
+void poly88_state::poly8813_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x03ff).rom(); // Monitor ROM
+	map(0x0400, 0x0bff).rom(); // Disk System ROM
+	map(0x0c00, 0x0fff).ram(); // System RAM
+	map(0x1800, 0x1bff).ram().share("video_ram"); // Video RAM
+	map(0x2000, 0xffff).ram(); // RAM
+}
 
-static ADDRESS_MAP_START( poly8813_io, AS_IO, 8, poly88_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-ADDRESS_MAP_END
+void poly88_state::poly8813_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+}
 
 /* Input ports */
 static INPUT_PORTS_START( poly88 )
@@ -179,9 +195,9 @@ static GFXDECODE_START( poly88 )
 	GFXDECODE_ENTRY( "chargen", 0x0000, poly88_charlayout, 0, 1 )
 GFXDECODE_END
 
-static MACHINE_CONFIG_START( poly88 )
+MACHINE_CONFIG_START(poly88_state::poly88)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",I8080, 1853000)
+	MCFG_CPU_ADD("maincpu", I8080A, XTAL(16'588'800) / 9) // uses 8224 clock generator
 	MCFG_CPU_PROGRAM_MAP(poly88_mem)
 	MCFG_CPU_IO_MAP(poly88_io)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", poly88_state,  poly88_interrupt)
@@ -211,7 +227,7 @@ static MACHINE_CONFIG_START( poly88 )
 	MCFG_CASSETTE_DEFAULT_STATE(CASSETTE_STOPPED | CASSETTE_SPEAKER_ENABLED)
 
 	/* uart */
-	MCFG_DEVICE_ADD("uart", I8251, 0)
+	MCFG_DEVICE_ADD("uart", I8251, XTAL(16'588'800) / 9)
 	MCFG_I8251_TXD_HANDLER(WRITELINE(poly88_state,write_cas_tx))
 	MCFG_I8251_RXRDY_HANDLER(WRITELINE(poly88_state,poly88_usart_rxready))
 
@@ -219,7 +235,8 @@ static MACHINE_CONFIG_START( poly88 )
 	MCFG_SNAPSHOT_ADD("snapshot", poly88_state, poly88, "img", 2)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( poly8813, poly88 )
+MACHINE_CONFIG_START(poly88_state::poly8813)
+	poly88(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(poly8813_mem)
 	MCFG_CPU_IO_MAP(poly8813_io)

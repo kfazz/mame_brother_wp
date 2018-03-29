@@ -29,6 +29,8 @@ public:
 	DECLARE_WRITE16_MEMBER(tricep_terminal_w);
 	void kbd_put(u8 data);
 
+	void tricep(machine_config &config);
+	void tricep_mem(address_map &map);
 protected:
 	virtual void machine_reset() override;
 
@@ -49,12 +51,13 @@ WRITE16_MEMBER( tricep_state::tricep_terminal_w )
 	m_terminal->write(space, 0, data >> 8);
 }
 
-static ADDRESS_MAP_START(tricep_mem, AS_PROGRAM, 16, tricep_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000000, 0x0007ffff) AM_RAM AM_SHARE("p_ram")
-	AM_RANGE(0x00fd0000, 0x00fd1fff) AM_ROM AM_REGION("user1",0)
-	AM_RANGE(0x00ff0028, 0x00ff0029) AM_READWRITE(tricep_terminal_r,tricep_terminal_w)
-ADDRESS_MAP_END
+void tricep_state::tricep_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000000, 0x0007ffff).ram().share("p_ram");
+	map(0x00fd0000, 0x00fd1fff).rom().region("user1", 0);
+	map(0x00ff0028, 0x00ff0029).rw(this, FUNC(tricep_state::tricep_terminal_r), FUNC(tricep_state::tricep_terminal_w));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( tricep )
@@ -74,9 +77,9 @@ void tricep_state::kbd_put(u8 data)
 {
 }
 
-static MACHINE_CONFIG_START( tricep )
+MACHINE_CONFIG_START(tricep_state::tricep)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M68000, XTAL_8MHz)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL(8'000'000))
 	MCFG_CPU_PROGRAM_MAP(tricep_mem)
 
 	/* video hardware */

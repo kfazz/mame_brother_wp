@@ -174,7 +174,7 @@ DEFINE_DEVICE_TYPE(POKEY, pokey_device, "pokey", "Atari C012294 POKEY")
 //**************************************************************************
 
 //-------------------------------------------------
-//  okim9810_device - constructor
+//  pokey_device - constructor
 //-------------------------------------------------
 
 pokey_device::pokey_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
@@ -200,8 +200,6 @@ void pokey_device::device_start()
 {
 	//int sample_rate = clock();
 	int i;
-
-	m_clock_period = attotime::from_hz(clock());
 
 	/* Setup channels */
 	for (i=0; i<POKEY_CHANNELS; i++)
@@ -364,12 +362,15 @@ void pokey_device::device_post_load()
 
 void pokey_device::device_clock_changed()
 {
-	m_clock_period = attotime::from_hz(clock());
+	m_clock_period = clocks_to_attotime(1);
 
-	if (m_stream != nullptr)
-		m_stream->set_sample_rate(clock());
-	else
-		m_stream = stream_alloc(0, 1, clock());
+	if (clock() != 0)
+	{
+		if (m_stream != nullptr)
+			m_stream->set_sample_rate(clock());
+		else
+			m_stream = stream_alloc(0, 1, clock());
+	}
 }
 
 //-------------------------------------------------
@@ -432,18 +433,8 @@ void pokey_device::device_timer(emu_timer &timer, device_timer_id id, int param,
 
 void pokey_device::execute_run()
 {
-	bool check_debugger = ((device_t::machine().debug_flags & DEBUG_FLAG_ENABLED) != 0);
-
 	do
 	{
-		// debugging
-		//m_ppc = m_pc; // copy PC to previous PC
-		if (check_debugger)
-			debugger_instruction_hook(this, 0); //m_pc);
-
-		// instruction fetch
-		//uint16_t op = opcode_read();
-
 		uint32_t new_out = step_one_clock();
 		if (m_output != new_out)
 		{

@@ -27,14 +27,22 @@ class risc2500_state : public driver_device
 {
 public:
 	risc2500_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
-			m_maincpu(*this, "maincpu"),
-			m_ram(*this, "ram"),
-			m_nvram(*this, "nvram"),
-			m_dac(*this, "dac"),
-			m_inputs(*this, "P%u", 0)
-		{ }
+		: driver_device(mconfig, type, tag)
+		, m_maincpu(*this, "maincpu")
+		, m_ram(*this, "ram")
+		, m_nvram(*this, "nvram")
+		, m_dac(*this, "dac")
+		, m_inputs(*this, "P%u", 0)
+		, m_digits(*this, "digit%u", 0U)
+		, m_syms(*this, "sym%u", 0U)
+		, m_leds(*this, "led%u", 0U)
+	{ }
 
+	DECLARE_INPUT_CHANGED_MEMBER(on_button);
+
+	void risc2500(machine_config &config);
+
+protected:
 	DECLARE_READ32_MEMBER(p1000_r);
 	DECLARE_WRITE32_MEMBER(p1000_w);
 	DECLARE_READ32_MEMBER(disable_boot_rom);
@@ -43,8 +51,10 @@ public:
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
-	DECLARE_INPUT_CHANGED_MEMBER(on_button);
 	void install_boot_rom();
+	void remove_boot_rom();
+
+	void risc2500_mem(address_map &map);
 
 private:
 	required_device<cpu_device> m_maincpu;
@@ -52,6 +62,9 @@ private:
 	required_device<nvram_device> m_nvram;
 	required_device<dac_byte_interface> m_dac;
 	required_ioport_array<8> m_inputs;
+	output_finder<12> m_digits;
+	output_finder<14> m_syms;
+	output_finder<16> m_leds;
 
 	uint32_t  m_p1000;
 	uint16_t  m_vram_addr;
@@ -64,6 +77,11 @@ void risc2500_state::install_boot_rom()
 	m_maincpu->space(AS_PROGRAM).install_rom(0x00000000, 0x001ffff, memregion("maincpu")->base());
 }
 
+void risc2500_state::remove_boot_rom()
+{
+	m_maincpu->space(AS_PROGRAM).install_ram(0x00000000, m_ram->size() - 1, m_ram->pointer());
+}
+
 uint32_t risc2500_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
 	for(int c=0; c<12; c++)
@@ -71,7 +89,7 @@ uint32_t risc2500_state::screen_update(screen_device &screen, bitmap_ind16 &bitm
 		// 12 characters 5 x 7
 		for(int x=0; x<5; x++)
 		{
-			uint8_t gfx = BITSWAP8(m_vram[c*5 + x], 6,5,0,1,2,3,4,7);
+			uint8_t gfx = bitswap<8>(m_vram[c*5 + x], 6,5,0,1,2,3,4,7);
 
 			for(int y=0; y<7; y++)
 				bitmap.pix16(y, 71 - (c*6 + x)) = (gfx >> (y + 1)) & 1;
@@ -80,14 +98,14 @@ uint32_t risc2500_state::screen_update(screen_device &screen, bitmap_ind16 &bitm
 		// LCD digits and symbols
 		int data_addr = 0x40 + c * 5;
 		uint16_t data = ((m_vram[data_addr + 1] & 0x3) << 5) | ((m_vram[data_addr + 2] & 0x7) << 2) | (m_vram[data_addr + 4] & 0x3);
-		data = BITSWAP8(data, 7,3,0,1,4,6,5,2) | ((m_vram[data_addr - 1] & 0x04) ? 0x80 : 0);
+		data = bitswap<8>(data, 7,3,0,1,4,6,5,2) | ((m_vram[data_addr - 1] & 0x04) ? 0x80 : 0);
 
-		output().set_digit_value(c, data);
-		output().set_indexed_value("sym", c, BIT(m_vram[data_addr + 1], 2));
+		m_digits[c] = data;
+		m_syms[c] = BIT(m_vram[data_addr + 1], 2);
 	}
 
-	output().set_indexed_value("sym", 12, BIT(m_vram[0x63], 0));
-	output().set_indexed_value("sym", 13, BIT(m_vram[0x4a], 0));
+	m_syms[12] = BIT(m_vram[0x63], 0);
+	m_syms[13] = BIT(m_vram[0x4a], 0);
 
 	return 0;
 }
@@ -233,12 +251,12 @@ WRITE32_MEMBER(risc2500_state::p1000_w)
 	else if (data & 0x80000000)                     // Vertical LED
 	{
 		for(int i=0; i<8; i++)
-			output().set_led_value(i, BIT(data, i));
+			m_leds[i] = BIT(data, i);
 	}
 	else if (data & 0x40000000)                     // Horizontal LED
 	{
 		for(int i=0; i<8; i++)
-			output().set_led_value(8 + i, BIT(data, i));
+			m_leds[8 + i] = BIT(data, i);
 	}
 	else if ((data & 0xff000000) == 0x08000000)     // Power OFF
 	{
@@ -258,16 +276,22 @@ READ32_MEMBER(risc2500_state::disable_boot_rom)
 
 TIMER_CALLBACK_MEMBER(risc2500_state::disable_boot_rom)
 {
-	m_maincpu->space(AS_PROGRAM).install_ram(0x00000000, m_ram->size() - 1, m_ram->pointer());
+	remove_boot_rom();
 }
 
 void risc2500_state::machine_start()
 {
+	m_digits.resolve();
+	m_syms.resolve();
+	m_leds.resolve();
+
 	m_nvram->set_base(m_ram->pointer(), m_ram->size());
 
 	save_item(NAME(m_p1000));
 	save_item(NAME(m_vram_addr));
 	save_item(NAME(m_vram));
+
+	machine().save().register_postload(save_prepost_delegate(FUNC(risc2500_state::remove_boot_rom), this));
 }
 
 void risc2500_state::machine_reset()
@@ -278,16 +302,17 @@ void risc2500_state::machine_reset()
 	install_boot_rom();
 }
 
-static ADDRESS_MAP_START(risc2500_mem, AS_PROGRAM, 32, risc2500_state )
-	AM_RANGE( 0x00000000,  0x0001ffff )  AM_RAM
-	AM_RANGE( 0x01800000,  0x01800003 )  AM_READ(disable_boot_rom)
-	AM_RANGE( 0x01000000,  0x01000003 )  AM_READWRITE(p1000_r, p1000_w)
-	AM_RANGE( 0x02000000,  0x0203ffff )  AM_ROM AM_REGION("maincpu", 0)
-ADDRESS_MAP_END
+void risc2500_state::risc2500_mem(address_map &map)
+{
+	map(0x00000000, 0x0001ffff).ram();
+	map(0x01800000, 0x01800003).r(this, FUNC(risc2500_state::disable_boot_rom));
+	map(0x01000000, 0x01000003).rw(this, FUNC(risc2500_state::p1000_r), FUNC(risc2500_state::p1000_w));
+	map(0x02000000, 0x0203ffff).rom().region("maincpu", 0);
+}
 
 
-static MACHINE_CONFIG_START( risc2500 )
-	MCFG_CPU_ADD("maincpu", ARM, XTAL_28_322MHz / 2)      // VY86C010
+MACHINE_CONFIG_START(risc2500_state::risc2500)
+	MCFG_CPU_ADD("maincpu", ARM, XTAL(28'322'000) / 2)      // VY86C010
 	MCFG_CPU_PROGRAM_MAP(risc2500_mem)
 	MCFG_ARM_COPRO(VL86C020)
 	MCFG_CPU_PERIODIC_INT_DRIVER(risc2500_state, irq1_line_hold, 250)
@@ -336,5 +361,5 @@ ROM_END
 
 
 /*    YEAR  NAME      PARENT   COMPAT  MACHINE    INPUT     STATE            INIT  COMPANY                      FULLNAME             FLAGS */
-CONS( 1992, risc,     0,       0,      risc2500,  risc2500, risc2500_state,  0,    "Saitek",                    "RISC 2500",         MACHINE_CLICKABLE_ARTWORK )
-CONS( 1995, montreux, 0,       0,      risc2500,  risc2500, risc2500_state,  0,    "Saitek / Hegener & Glaser", "Mephisto Montreux", MACHINE_CLICKABLE_ARTWORK )
+CONS( 1992, risc,     0,       0,      risc2500,  risc2500, risc2500_state,  0,    "Saitek",                    "RISC 2500",         MACHINE_SUPPORTS_SAVE | MACHINE_CLICKABLE_ARTWORK )
+CONS( 1995, montreux, 0,       0,      risc2500,  risc2500, risc2500_state,  0,    "Saitek / Hegener & Glaser", "Mephisto Montreux", MACHINE_SUPPORTS_SAVE | MACHINE_CLICKABLE_ARTWORK )

@@ -58,6 +58,12 @@ public:
 
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
+	static void cdrom_config(device_t *device);
+	void indigo4k(machine_config &config);
+	void indigo3k(machine_config &config);
+	void indigo3k_map(address_map &map);
+	void indigo4k_map(address_map &map);
+	void indigo_map(address_map &map);
 private:
 	struct hpc_t
 	{
@@ -451,37 +457,40 @@ WRITE32_MEMBER(indigo_state::hpc_w)
 // INT/INT2/INT3 interrupt controllers
 READ32_MEMBER(indigo_state::int_r)
 {
-	osd_printf_info("INT: read @ ofs %x (mask %x) (PC=%x)\n", offset, mem_mask, space.device().safe_pc());
+	osd_printf_info("INT: read @ ofs %x (mask %x) (PC=%x)\n", offset, mem_mask, m_maincpu->pc());
 	return 0;
 }
 
 WRITE32_MEMBER(indigo_state::int_w)
 {
-	osd_printf_info("INT: write %x to ofs %x (mask %x) (PC=%x)\n", data, offset, mem_mask, space.device().safe_pc());
+	osd_printf_info("INT: write %x to ofs %x (mask %x) (PC=%x)\n", data, offset, mem_mask, m_maincpu->pc());
 }
 
-static ADDRESS_MAP_START( indigo_map, AS_PROGRAM, 32, indigo_state )
-	AM_RANGE( 0x00000000, 0x001fffff ) AM_RAM AM_SHARE("share10")
-	AM_RANGE( 0x08000000, 0x08ffffff ) AM_RAM AM_SHARE("share5")
-	AM_RANGE( 0x09000000, 0x097fffff ) AM_RAM AM_SHARE("share6")
-	AM_RANGE( 0x0a000000, 0x0a7fffff ) AM_RAM AM_SHARE("share7")
-	AM_RANGE( 0x0c000000, 0x0c7fffff ) AM_RAM AM_SHARE("share8")
-	AM_RANGE( 0x10000000, 0x107fffff ) AM_RAM AM_SHARE("share9")
-	AM_RANGE( 0x18000000, 0x187fffff ) AM_RAM AM_SHARE("share1")
-	AM_RANGE( 0x1fb80000, 0x1fb8ffff ) AM_READWRITE(hpc_r, hpc_w )
-	AM_RANGE( 0x1fbd9000, 0x1fbd903f ) AM_READWRITE(int_r, int_w )
-ADDRESS_MAP_END
+void indigo_state::indigo_map(address_map &map)
+{
+	map(0x00000000, 0x001fffff).ram().share("share10");
+	map(0x08000000, 0x08ffffff).ram().share("share5");
+	map(0x09000000, 0x097fffff).ram().share("share6");
+	map(0x0a000000, 0x0a7fffff).ram().share("share7");
+	map(0x0c000000, 0x0c7fffff).ram().share("share8");
+	map(0x10000000, 0x107fffff).ram().share("share9");
+	map(0x18000000, 0x187fffff).ram().share("share1");
+	map(0x1fb80000, 0x1fb8ffff).rw(this, FUNC(indigo_state::hpc_r), FUNC(indigo_state::hpc_w));
+	map(0x1fbd9000, 0x1fbd903f).rw(this, FUNC(indigo_state::int_r), FUNC(indigo_state::int_w));
+}
 
-static ADDRESS_MAP_START( indigo3k_map, AS_PROGRAM, 32, indigo_state )
-	AM_IMPORT_FROM( indigo_map )
-	AM_RANGE( 0x1fc00000, 0x1fc3ffff ) AM_ROM AM_SHARE("share2") AM_REGION( "user1", 0 )
-ADDRESS_MAP_END
+void indigo_state::indigo3k_map(address_map &map)
+{
+	indigo_map(map);
+	map(0x1fc00000, 0x1fc3ffff).rom().share("share2").region("user1", 0);
+}
 
-static ADDRESS_MAP_START( indigo4k_map, AS_PROGRAM, 32, indigo_state )
-	AM_IMPORT_FROM( indigo_map )
-	AM_RANGE( 0x1fa00000, 0x1fa1ffff ) AM_DEVREADWRITE("sgi_mc", sgi_mc_device, read, write )
-	AM_RANGE( 0x1fc00000, 0x1fc7ffff ) AM_ROM AM_SHARE("share2") AM_REGION( "user1", 0 )
-ADDRESS_MAP_END
+void indigo_state::indigo4k_map(address_map &map)
+{
+	indigo_map(map);
+	map(0x1fa00000, 0x1fa1ffff).rw("sgi_mc", FUNC(sgi_mc_device::read), FUNC(sgi_mc_device::write));
+	map(0x1fc00000, 0x1fc7ffff).rom().share("share2").region("user1", 0);
+}
 
 WRITE_LINE_MEMBER(indigo_state::scsi_irq)
 {
@@ -568,12 +577,13 @@ static INPUT_PORTS_START( indigo )
 	PORT_BIT ( 0xff, IP_ACTIVE_HIGH, IPT_UNUSED )
 INPUT_PORTS_END
 
-static MACHINE_CONFIG_START( cdrom_config )
-	MCFG_DEVICE_MODIFY( "cdda" )
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "^^^^mono", 1.0)
-MACHINE_CONFIG_END
+void indigo_state::cdrom_config(device_t *device)
+{
+	device = device->subdevice("cdda");
+	MCFG_SOUND_ROUTE(0, "^^^^mono", 1.0)
+}
 
-static MACHINE_CONFIG_START( indigo3k )
+MACHINE_CONFIG_START(indigo_state::indigo3k)
 	MCFG_CPU_ADD("maincpu", R3041, 33000000)
 	MCFG_R3000_ENDIANNESS(ENDIANNESS_BIG)
 	MCFG_CPU_PROGRAM_MAP(indigo3k_map)
@@ -604,7 +614,8 @@ static MACHINE_CONFIG_START( indigo3k )
 	MCFG_EEPROM_SERIAL_93C56_ADD("eeprom")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( indigo4k, indigo3k )
+MACHINE_CONFIG_START(indigo_state::indigo4k)
+	indigo3k(config);
 	MCFG_CPU_REPLACE("maincpu", R4600BE, 150000000) // Should be R4400
 	MCFG_MIPS3_ICACHE_SIZE(32768)
 	MCFG_MIPS3_DCACHE_SIZE(32768)

@@ -162,7 +162,7 @@ WRITE32_MEMBER(policetr_state::control_w)
 
 	/* log any unknown bits */
 	if (data & 0x4f1fffff)
-		logerror("%08X: control_w = %08X & %08X\n", space.device().safe_pcbase(), data, mem_mask);
+		logerror("%08X: control_w = %08X & %08X\n", m_maincpu->pcbase(), data, mem_mask);
 }
 
 
@@ -213,7 +213,7 @@ WRITE32_MEMBER(policetr_state::speedup_w)
 	COMBINE_DATA(m_speedup_data);
 
 	/* see if the PC matches */
-	if ((space.device().safe_pcbase() & 0x1fffffff) == m_speedup_pc)
+	if ((m_maincpu->pcbase() & 0x1fffffff) == m_speedup_pc)
 	{
 		uint64_t curr_cycles = m_maincpu->total_cycles();
 
@@ -224,7 +224,7 @@ WRITE32_MEMBER(policetr_state::speedup_w)
 
 			/* more than 2 in a row and we spin */
 			if (m_loop_count > 2)
-				space.device().execute().spin_until_interrupt();
+				m_maincpu->spin_until_interrupt();
 		}
 		else
 			m_loop_count = 0;
@@ -241,42 +241,44 @@ WRITE32_MEMBER(policetr_state::speedup_w)
  *
  *************************************/
 
-static ADDRESS_MAP_START( policetr_map, AS_PROGRAM, 32, policetr_state )
-	AM_RANGE(0x00000000, 0x0001ffff) AM_RAM AM_SHARE("rambase")
-	AM_RANGE(0x00200000, 0x0020000f) AM_WRITE(policetr_video_w)
-	AM_RANGE(0x00400000, 0x00400003) AM_READ(policetr_video_r)
-	AM_RANGE(0x00500000, 0x00500003) AM_WRITENOP        // copies ROM here at startup, plus checksum
-	AM_RANGE(0x00600000, 0x00600003) AM_READ(bsmt2000_data_r)
-	AM_RANGE(0x00700000, 0x00700003) AM_WRITE(policetr_bsmt2000_reg_w)
-	AM_RANGE(0x00800000, 0x00800003) AM_WRITE(policetr_bsmt2000_data_w)
-	AM_RANGE(0x00900000, 0x00900003) AM_WRITE(policetr_palette_offset_w)
-	AM_RANGE(0x00920000, 0x00920003) AM_WRITE(policetr_palette_data_w)
-	AM_RANGE(0x00a00000, 0x00a00003) AM_WRITE(control_w)
-	AM_RANGE(0x00a00000, 0x00a00003) AM_READ_PORT("IN0")
-	AM_RANGE(0x00a20000, 0x00a20003) AM_READ_PORT("IN1")
-	AM_RANGE(0x00a40000, 0x00a40003) AM_READ_PORT("DSW")
-	AM_RANGE(0x00e00000, 0x00e00003) AM_WRITENOP        // watchdog???
-	AM_RANGE(0x1fc00000, 0x1fc7ffff) AM_ROM AM_REGION("user1", 0)
-ADDRESS_MAP_END
+void policetr_state::policetr_map(address_map &map)
+{
+	map(0x00000000, 0x0001ffff).ram().share("rambase");
+	map(0x00200000, 0x0020000f).w(this, FUNC(policetr_state::policetr_video_w));
+	map(0x00400000, 0x00400003).r(this, FUNC(policetr_state::policetr_video_r));
+	map(0x00500000, 0x00500003).nopw();        // copies ROM here at startup, plus checksum
+	map(0x00600000, 0x00600003).r(this, FUNC(policetr_state::bsmt2000_data_r));
+	map(0x00700000, 0x00700003).w(this, FUNC(policetr_state::policetr_bsmt2000_reg_w));
+	map(0x00800000, 0x00800003).w(this, FUNC(policetr_state::policetr_bsmt2000_data_w));
+	map(0x00900000, 0x00900003).w(this, FUNC(policetr_state::policetr_palette_offset_w));
+	map(0x00920000, 0x00920003).w(this, FUNC(policetr_state::policetr_palette_data_w));
+	map(0x00a00000, 0x00a00003).w(this, FUNC(policetr_state::control_w));
+	map(0x00a00000, 0x00a00003).portr("IN0");
+	map(0x00a20000, 0x00a20003).portr("IN1");
+	map(0x00a40000, 0x00a40003).portr("DSW");
+	map(0x00e00000, 0x00e00003).nopw();        // watchdog???
+	map(0x1fc00000, 0x1fc7ffff).rom().region("user1", 0);
+}
 
 
-static ADDRESS_MAP_START( sshooter_map, AS_PROGRAM, 32, policetr_state )
-	AM_RANGE(0x00000000, 0x0001ffff) AM_RAM AM_SHARE("rambase")
-	AM_RANGE(0x00200000, 0x00200003) AM_WRITE(policetr_bsmt2000_data_w)
-	AM_RANGE(0x00300000, 0x00300003) AM_WRITE(policetr_palette_offset_w)
-	AM_RANGE(0x00320000, 0x00320003) AM_WRITE(policetr_palette_data_w)
-	AM_RANGE(0x00400000, 0x00400003) AM_READ(policetr_video_r)
-	AM_RANGE(0x00500000, 0x00500003) AM_WRITENOP        // copies ROM here at startup, plus checksum
-	AM_RANGE(0x00600000, 0x00600003) AM_READ(bsmt2000_data_r)
-	AM_RANGE(0x00700000, 0x00700003) AM_WRITE(policetr_bsmt2000_reg_w)
-	AM_RANGE(0x00800000, 0x0080000f) AM_WRITE(policetr_video_w)
-	AM_RANGE(0x00a00000, 0x00a00003) AM_WRITE(control_w)
-	AM_RANGE(0x00a00000, 0x00a00003) AM_READ_PORT("IN0")
-	AM_RANGE(0x00a20000, 0x00a20003) AM_READ_PORT("IN1")
-	AM_RANGE(0x00a40000, 0x00a40003) AM_READ_PORT("DSW")
-	AM_RANGE(0x00e00000, 0x00e00003) AM_WRITENOP        // watchdog???
-	AM_RANGE(0x1fc00000, 0x1fcfffff) AM_ROM AM_REGION("user1", 0)
-ADDRESS_MAP_END
+void policetr_state::sshooter_map(address_map &map)
+{
+	map(0x00000000, 0x0001ffff).ram().share("rambase");
+	map(0x00200000, 0x00200003).w(this, FUNC(policetr_state::policetr_bsmt2000_data_w));
+	map(0x00300000, 0x00300003).w(this, FUNC(policetr_state::policetr_palette_offset_w));
+	map(0x00320000, 0x00320003).w(this, FUNC(policetr_state::policetr_palette_data_w));
+	map(0x00400000, 0x00400003).r(this, FUNC(policetr_state::policetr_video_r));
+	map(0x00500000, 0x00500003).nopw();        // copies ROM here at startup, plus checksum
+	map(0x00600000, 0x00600003).r(this, FUNC(policetr_state::bsmt2000_data_r));
+	map(0x00700000, 0x00700003).w(this, FUNC(policetr_state::policetr_bsmt2000_reg_w));
+	map(0x00800000, 0x0080000f).w(this, FUNC(policetr_state::policetr_video_w));
+	map(0x00a00000, 0x00a00003).w(this, FUNC(policetr_state::control_w));
+	map(0x00a00000, 0x00a00003).portr("IN0");
+	map(0x00a20000, 0x00a20003).portr("IN1");
+	map(0x00a40000, 0x00a40003).portr("DSW");
+	map(0x00e00000, 0x00e00003).nopw();        // watchdog???
+	map(0x1fc00000, 0x1fcfffff).rom().region("user1", 0);
+}
 
 
 
@@ -397,7 +399,7 @@ void policetr_state::machine_start()
  *
  *************************************/
 
-static MACHINE_CONFIG_START( policetr )
+MACHINE_CONFIG_START(policetr_state::policetr)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", R3041, MASTER_CLOCK/2)
@@ -428,7 +430,8 @@ static MACHINE_CONFIG_START( policetr )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( sshooter, policetr )
+MACHINE_CONFIG_START(policetr_state::sshooter)
+	policetr(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")

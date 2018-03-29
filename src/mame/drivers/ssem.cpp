@@ -31,6 +31,8 @@ public:
 	inline uint32_t reverse(uint32_t v);
 	void strlower(char *buf);
 
+	void ssem(machine_config &config);
+	void ssem_map(address_map &map);
 private:
 	template <typename Format, typename... Params>
 	void glyph_print(bitmap_rgb32 &bitmap, int32_t x, int32_t y, Format &&fmt, Params &&...args);
@@ -75,9 +77,10 @@ inline uint32_t ssem_state::reverse(uint32_t v)
 * Address map                                        *
 \****************************************************/
 
-static ADDRESS_MAP_START( ssem_map, AS_PROGRAM, 8, ssem_state )
-	AM_RANGE(0x00, 0x7f) AM_RAM AM_SHARE("store")// Primary store
-ADDRESS_MAP_END
+void ssem_state::ssem_map(address_map &map)
+{
+	map(0x00, 0x7f).ram().share("store");// Primary store
+}
 
 /****************************************************\
 * Input ports and front panel handling               *
@@ -625,7 +628,7 @@ void ssem_state::machine_reset()
 	m_store_line = 0;
 }
 
-static MACHINE_CONFIG_START( ssem )
+MACHINE_CONFIG_START(ssem_state::ssem)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", SSEMCPU, 700)
 	MCFG_CPU_PROGRAM_MAP(ssem_map)

@@ -81,10 +81,9 @@ public:
 	DECLARE_READ8_MEMBER(AY8910_port_r);
 	DECLARE_WRITE8_MEMBER(AY8910_port_w);
 	DECLARE_WRITE_LINE_MEMBER(flipscreen_w);
-	DECLARE_WRITE_LINE_MEMBER(display_enable_changed);
 	DECLARE_WRITE8_MEMBER(pia_comp_w);
 	virtual void machine_start() override;
-	DECLARE_WRITE8_MEMBER(ttl74123_output_changed);
+	DECLARE_WRITE_LINE_MEMBER(ttl74123_output_changed);
 
 	MC6845_UPDATE_ROW(crtc_update_row);
 
@@ -93,6 +92,9 @@ public:
 	required_device<cpu_device> m_audiocpu;
 	required_device<generic_latch_8_device> m_soundlatch;
 	required_device<generic_latch_8_device> m_soundlatch2;
+	void r2dtank(machine_config &config);
+	void r2dtank_audio_map(address_map &map);
+	void r2dtank_main_map(address_map &map);
 };
 
 
@@ -135,7 +137,7 @@ READ8_MEMBER(r2dtank_state::audio_command_r)
 {
 	uint8_t ret = m_soundlatch->read(space, 0);
 
-if (LOG_AUDIO_COMM) logerror("%08X  CPU#1  Audio Command Read: %x\n", space.device().safe_pc(), ret);
+if (LOG_AUDIO_COMM) logerror("%08X  CPU#1  Audio Command Read: %x\n", m_audiocpu->pc(), ret);
 
 	return ret;
 }
@@ -146,14 +148,14 @@ WRITE8_MEMBER(r2dtank_state::audio_command_w)
 	m_soundlatch->write(space, 0, ~data);
 	m_audiocpu->set_input_line(M6802_IRQ_LINE, HOLD_LINE);
 
-if (LOG_AUDIO_COMM) logerror("%08X   CPU#0  Audio Command Write: %x\n", space.device().safe_pc(), data^0xff);
+if (LOG_AUDIO_COMM) logerror("%08X   CPU#0  Audio Command Write: %x\n", m_maincpu->pc(), data^0xff);
 }
 
 
 READ8_MEMBER(r2dtank_state::audio_answer_r)
 {
 	uint8_t ret = m_soundlatch2->read(space, 0);
-if (LOG_AUDIO_COMM) logerror("%08X  CPU#0  Audio Answer Read: %x\n", space.device().safe_pc(), ret);
+if (LOG_AUDIO_COMM) logerror("%08X  CPU#0  Audio Answer Read: %x\n", m_maincpu->pc(), ret);
 
 	return ret;
 }
@@ -162,13 +164,13 @@ if (LOG_AUDIO_COMM) logerror("%08X  CPU#0  Audio Answer Read: %x\n", space.devic
 WRITE8_MEMBER(r2dtank_state::audio_answer_w)
 {
 	/* HACK - prevents lock-up, but causes game to end some in-between sreens prematurely */
-	if (space.device().safe_pc() == 0xfb12)
+	if (m_audiocpu->pc() == 0xfb12)
 		data = 0x00;
 
 	m_soundlatch2->write(space, 0, data);
 	m_maincpu->set_input_line(M6809_IRQ_LINE, HOLD_LINE);
 
-if (LOG_AUDIO_COMM) logerror("%08X  CPU#1  Audio Answer Write: %x\n", space.device().safe_pc(), data);
+if (LOG_AUDIO_COMM) logerror("%08X  CPU#1  Audio Answer Write: %x\n", m_audiocpu->pc(), data);
 }
 
 
@@ -223,11 +225,11 @@ WRITE8_MEMBER(r2dtank_state::AY8910_port_w)
  *
  *************************************/
 
-WRITE8_MEMBER(r2dtank_state::ttl74123_output_changed)
+WRITE_LINE_MEMBER(r2dtank_state::ttl74123_output_changed)
 {
 	pia6821_device *pia = machine().device<pia6821_device>("pia_main");
-	pia->ca1_w(data);
-	m_ttl74123_output = data;
+	pia->ca1_w(state);
+	m_ttl74123_output = state;
 }
 
 
@@ -310,11 +312,6 @@ MC6845_UPDATE_ROW( r2dtank_state::crtc_update_row )
 }
 
 
-WRITE_LINE_MEMBER(r2dtank_state::display_enable_changed)
-{
-	machine().device<ttl74123_device>("74123")->a_w(generic_space(), 0, state);
-}
-
 
 /*************************************
  *
@@ -329,26 +326,28 @@ WRITE8_MEMBER(r2dtank_state::pia_comp_w)
 }
 
 
-static ADDRESS_MAP_START( r2dtank_main_map, AS_PROGRAM, 8, r2dtank_state )
-	AM_RANGE(0x0000, 0x1fff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x2000, 0x3fff) AM_RAM
-	AM_RANGE(0x4000, 0x5fff) AM_RAM AM_SHARE("colorram")
-	AM_RANGE(0x6000, 0x7fff) AM_RAM
-	AM_RANGE(0x8000, 0x8003) AM_DEVREAD("pia_main", pia6821_device, read) AM_WRITE(pia_comp_w)
-	AM_RANGE(0x8004, 0x8004) AM_READWRITE(audio_answer_r, audio_command_w)
-	AM_RANGE(0xb000, 0xb000) AM_DEVWRITE("crtc", mc6845_device, address_w)
-	AM_RANGE(0xb001, 0xb001) AM_DEVWRITE("crtc", mc6845_device, register_w)
-	AM_RANGE(0xc000, 0xc007) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0xc800, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void r2dtank_state::r2dtank_main_map(address_map &map)
+{
+	map(0x0000, 0x1fff).ram().share("videoram");
+	map(0x2000, 0x3fff).ram();
+	map(0x4000, 0x5fff).ram().share("colorram");
+	map(0x6000, 0x7fff).ram();
+	map(0x8000, 0x8003).r("pia_main", FUNC(pia6821_device::read)).w(this, FUNC(r2dtank_state::pia_comp_w));
+	map(0x8004, 0x8004).rw(this, FUNC(r2dtank_state::audio_answer_r), FUNC(r2dtank_state::audio_command_w));
+	map(0xb000, 0xb000).w("crtc", FUNC(mc6845_device::address_w));
+	map(0xb001, 0xb001).w("crtc", FUNC(mc6845_device::register_w));
+	map(0xc000, 0xc007).ram().share("nvram");
+	map(0xc800, 0xffff).rom();
+}
 
 
-static ADDRESS_MAP_START( r2dtank_audio_map, AS_PROGRAM, 8, r2dtank_state )
-	AM_RANGE(0x0000, 0x007f) AM_RAM     /* internal RAM */
-	AM_RANGE(0xd000, 0xd003) AM_DEVREADWRITE("pia_audio", pia6821_device, read, write)
-	AM_RANGE(0xf000, 0xf000) AM_READWRITE(audio_command_r, audio_answer_w)
-	AM_RANGE(0xf800, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void r2dtank_state::r2dtank_audio_map(address_map &map)
+{
+	map(0x0000, 0x007f).ram();     /* internal RAM */
+	map(0xd000, 0xd003).rw("pia_audio", FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0xf000, 0xf000).rw(this, FUNC(r2dtank_state::audio_command_r), FUNC(r2dtank_state::audio_answer_w));
+	map(0xf800, 0xffff).rom();
+}
 
 
 
@@ -441,7 +440,7 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( r2dtank )
+MACHINE_CONFIG_START(r2dtank_state::r2dtank)
 	MCFG_CPU_ADD("maincpu", M6809,3000000)       /* ?? too fast ? */
 	MCFG_CPU_PROGRAM_MAP(r2dtank_main_map)
 
@@ -461,7 +460,7 @@ static MACHINE_CONFIG_START( r2dtank )
 	MCFG_MC6845_SHOW_BORDER_AREA(false)
 	MCFG_MC6845_CHAR_WIDTH(8)
 	MCFG_MC6845_UPDATE_ROW_CB(r2dtank_state, crtc_update_row)
-	MCFG_MC6845_OUT_DE_CB(WRITELINE(r2dtank_state, display_enable_changed))
+	MCFG_MC6845_OUT_DE_CB(DEVWRITELINE("74123", ttl74123_device, a_w))
 
 	/* 74LS123 */
 
@@ -472,7 +471,7 @@ static MACHINE_CONFIG_START( r2dtank )
 	MCFG_TTL74123_A_PIN_VALUE(1)                  /* A pin - driven by the CRTC */
 	MCFG_TTL74123_B_PIN_VALUE(1)                  /* B pin - pulled high */
 	MCFG_TTL74123_CLEAR_PIN_VALUE(1)                  /* Clear pin - pulled high */
-	MCFG_TTL74123_OUTPUT_CHANGED_CB(WRITE8(r2dtank_state, ttl74123_output_changed))
+	MCFG_TTL74123_OUTPUT_CHANGED_CB(WRITELINE(r2dtank_state, ttl74123_output_changed))
 
 	MCFG_DEVICE_ADD("pia_main", PIA6821, 0)
 	MCFG_PIA_READPA_HANDLER(IOPORT("IN0"))

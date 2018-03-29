@@ -11,57 +11,71 @@
 #include "emu.h"
 #include "cpu/m68000/m68000.h"
 #include "cpu/i8085/i8085.h"
+//#include "bus/s100/s100.h"
+#include "machine/i8251.h"
 #include "machine/terminal.h"
 
-#define TERMINAL_TAG "terminal"
 
 class dual68_state : public driver_device
 {
 public:
 	dual68_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
-		m_maincpu(*this, "maincpu"),
-		m_terminal(*this, TERMINAL_TAG),
-		m_p_ram(*this, "p_ram")
-	{
-	}
+		: driver_device(mconfig, type, tag)
+		, m_maincpu(*this, "maincpu")
+		, m_terminal(*this, "terminal")
+		, m_p_ram(*this, "ram")
+	{ }
 
 	void kbd_put(u8 data);
-	DECLARE_WRITE16_MEMBER( dual68_terminal_w );
+	DECLARE_WRITE16_MEMBER(terminal_w);
 
-protected:
+	void dual68(machine_config &config);
+	void dual68_mem(address_map &map);
+	void sio4_io(address_map &map);
+	void sio4_mem(address_map &map);
+private:
 	virtual void machine_reset() override;
-
 	required_device<cpu_device> m_maincpu;
 	required_device<generic_terminal_device> m_terminal;
-	//uint8_t m_term_data;
 	required_shared_ptr<uint16_t> m_p_ram;
+	//uint8_t m_term_data;
 };
 
 
 
-WRITE16_MEMBER( dual68_state::dual68_terminal_w )
+WRITE16_MEMBER( dual68_state::terminal_w )
 {
 	m_terminal->write(space, 0, data >> 8);
 }
 
-static ADDRESS_MAP_START(dual68_mem, AS_PROGRAM, 16, dual68_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000000, 0x0000ffff) AM_RAM AM_SHARE("p_ram")
-	AM_RANGE(0x00080000, 0x00081fff) AM_ROM AM_REGION("user1",0)
-	AM_RANGE(0x007f0000, 0x007f0001) AM_WRITE(dual68_terminal_w)
-	AM_RANGE(0x00800000, 0x00801fff) AM_ROM AM_REGION("user1",0)
-ADDRESS_MAP_END
+void dual68_state::dual68_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000000, 0x0000ffff).ram().share("ram");
+	map(0x00080000, 0x00081fff).rom().region("user1", 0);
+	map(0x007f0000, 0x007f0001).w(this, FUNC(dual68_state::terminal_w));
+	map(0x00800000, 0x00801fff).rom().region("user1", 0);
+}
 
-static ADDRESS_MAP_START(sio4_mem, AS_PROGRAM, 8, dual68_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x07ff) AM_ROM
-	AM_RANGE(0x0800, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void dual68_state::sio4_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x07ff).rom();
+	map(0x0800, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START(sio4_io, AS_IO, 8, dual68_state)
-	ADDRESS_MAP_UNMAP_HIGH
-ADDRESS_MAP_END
+void dual68_state::sio4_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x22, 0x22).rw("uart1", FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x23, 0x23).rw("uart1", FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x2a, 0x2a).rw("uart2", FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x2b, 0x2b).rw("uart2", FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x32, 0x32).rw("uart3", FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x33, 0x33).rw("uart3", FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x3a, 0x3a).rw("uart4", FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x3b, 0x3b).rw("uart4", FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( dual68 )
@@ -82,19 +96,23 @@ void dual68_state::kbd_put(u8 data)
 	//m_term_data = data;
 }
 
-static MACHINE_CONFIG_START( dual68 )
+MACHINE_CONFIG_START(dual68_state::dual68)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M68000, XTAL_16MHz / 2)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL(16'000'000) / 2)
 	MCFG_CPU_PROGRAM_MAP(dual68_mem)
 
-	MCFG_CPU_ADD("siocpu", I8085A, XTAL_16MHz / 8)
+	MCFG_CPU_ADD("siocpu", I8085A, XTAL(16'000'000) / 8)
 	MCFG_CPU_PROGRAM_MAP(sio4_mem)
 	MCFG_CPU_IO_MAP(sio4_io)
 
-
 	/* video hardware */
-	MCFG_DEVICE_ADD(TERMINAL_TAG, GENERIC_TERMINAL, 0)
+	MCFG_DEVICE_ADD("terminal", GENERIC_TERMINAL, 0)
 	MCFG_GENERIC_TERMINAL_KEYBOARD_CB(PUT(dual68_state, kbd_put))
+
+	MCFG_DEVICE_ADD("uart1", I8251, 0)
+	MCFG_DEVICE_ADD("uart2", I8251, 0)
+	MCFG_DEVICE_ADD("uart3", I8251, 0)
+	MCFG_DEVICE_ADD("uart4", I8251, 0)
 MACHINE_CONFIG_END
 
 /* ROM definition */

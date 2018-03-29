@@ -202,39 +202,42 @@ WRITE8_MEMBER( bw2_state::write )
 //  ADDRESS_MAP( bw2_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( bw2_mem, AS_PROGRAM, 8, bw2_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0xffff) AM_READWRITE(read, write)
-ADDRESS_MAP_END
+void bw2_state::bw2_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0xffff).rw(this, FUNC(bw2_state::read), FUNC(bw2_state::write));
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( bw2_io )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( bw2_io, AS_IO, 8, bw2_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x03) AM_DEVREADWRITE(I8255A_TAG, i8255_device, read, write)
-	AM_RANGE(0x10, 0x13) AM_DEVREADWRITE(I8253_TAG, pit8253_device, read, write)
-	AM_RANGE(0x20, 0x21) AM_DEVICE(MSM6255_TAG, msm6255_device, map)
-	AM_RANGE(0x30, 0x3f) AM_DEVREADWRITE(BW2_EXPANSION_SLOT_TAG, bw2_expansion_slot_device, slot_r, slot_w)
-	AM_RANGE(0x40, 0x40) AM_DEVREADWRITE(I8251_TAG, i8251_device, data_r, data_w)
-	AM_RANGE(0x41, 0x41) AM_DEVREADWRITE(I8251_TAG, i8251_device, status_r, control_w)
-	AM_RANGE(0x50, 0x50) AM_DEVWRITE("cent_data_out", output_latch_device, write)
-	AM_RANGE(0x60, 0x63) AM_DEVREADWRITE(WD2797_TAG, wd2797_device, read, write)
-	AM_RANGE(0x70, 0x7f) AM_DEVREADWRITE(BW2_EXPANSION_SLOT_TAG, bw2_expansion_slot_device, modsel_r, modsel_w)
-ADDRESS_MAP_END
+void bw2_state::bw2_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0x00, 0x03).rw(I8255A_TAG, FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x10, 0x13).rw(m_pit, FUNC(pit8253_device::read), FUNC(pit8253_device::write));
+	map(0x20, 0x21).m(m_lcdc, FUNC(msm6255_device::map));
+	map(0x30, 0x3f).rw(m_exp, FUNC(bw2_expansion_slot_device::slot_r), FUNC(bw2_expansion_slot_device::slot_w));
+	map(0x40, 0x40).rw(m_uart, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x41, 0x41).rw(m_uart, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x50, 0x50).w("cent_data_out", FUNC(output_latch_device::write));
+	map(0x60, 0x63).rw(m_fdc, FUNC(wd2797_device::read), FUNC(wd2797_device::write));
+	map(0x70, 0x7f).rw(m_exp, FUNC(bw2_expansion_slot_device::modsel_r), FUNC(bw2_expansion_slot_device::modsel_w));
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( lcdc_map )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( lcdc_map, 0, 8, bw2_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x3fff)
-	AM_RANGE(0x0000, 0x3fff) AM_RAM AM_SHARE("videoram")
-ADDRESS_MAP_END
+void bw2_state::lcdc_map(address_map &map)
+{
+	map.global_mask(0x3fff);
+	map(0x0000, 0x3fff).ram().share("videoram");
+}
 
 
 
@@ -496,12 +499,6 @@ READ8_MEMBER( bw2_state::ppi_pc_r )
 //  pit8253_config pit_intf
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( bw2_state::pit_out0_w )
-{
-	m_uart->write_txc(state);
-	m_uart->write_rxc(state);
-}
-
 WRITE_LINE_MEMBER( bw2_state::mtron_w )
 {
 	m_mtron = state;
@@ -575,9 +572,9 @@ void bw2_state::machine_start()
 //  MACHINE_CONFIG( bw2 )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_START( bw2 )
+MACHINE_CONFIG_START(bw2_state::bw2)
 	// basic machine hardware
-	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_16MHz/4)
+	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL(16'000'000)/4)
 	MCFG_CPU_PROGRAM_MAP(bw2_mem)
 	MCFG_CPU_IO_MAP(bw2_io)
 
@@ -594,8 +591,9 @@ static MACHINE_CONFIG_START( bw2 )
 
 	// devices
 	MCFG_DEVICE_ADD(I8253_TAG, PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_16MHz/4) // 8251 USART TXC, RXC
-	MCFG_PIT8253_OUT0_HANDLER(WRITELINE(bw2_state, pit_out0_w))
+	MCFG_PIT8253_CLK0(XTAL(16'000'000)/4) // 8251 USART TXC, RXC
+	MCFG_PIT8253_OUT0_HANDLER(DEVWRITELINE(I8251_TAG, i8251_device, write_txc))
+	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE(I8251_TAG, i8251_device, write_rxc))
 	MCFG_PIT8253_CLK1(11000) // LCD controller
 	MCFG_PIT8253_OUT1_HANDLER(DEVWRITELINE(I8253_TAG, pit8253_device, write_clk2))
 	MCFG_PIT8253_CLK2(0) // Floppy /MTRON
@@ -607,7 +605,7 @@ static MACHINE_CONFIG_START( bw2 )
 	MCFG_I8255_IN_PORTC_CB(READ8(bw2_state, ppi_pc_r))
 	MCFG_I8255_OUT_PORTC_CB(WRITE8(bw2_state, ppi_pc_w))
 
-	MCFG_DEVICE_ADD(MSM6255_TAG, MSM6255, XTAL_16MHz)
+	MCFG_DEVICE_ADD(MSM6255_TAG, MSM6255, XTAL(16'000'000))
 	MCFG_DEVICE_ADDRESS_MAP(0, lcdc_map)
 	MCFG_VIDEO_SET_SCREEN(SCREEN_TAG)
 
@@ -625,13 +623,13 @@ static MACHINE_CONFIG_START( bw2 )
 	MCFG_RS232_RXD_HANDLER(DEVWRITELINE(I8251_TAG, i8251_device, write_rxd))
 	MCFG_RS232_DSR_HANDLER(DEVWRITELINE(I8251_TAG, i8251_device, write_dsr))
 
-	MCFG_WD2797_ADD(WD2797_TAG, XTAL_16MHz/16)
+	MCFG_WD2797_ADD(WD2797_TAG, XTAL(16'000'000)/16)
 	MCFG_WD_FDC_INTRQ_CALLBACK(INPUTLINE(Z80_TAG, INPUT_LINE_IRQ0))
 	MCFG_WD_FDC_DRQ_CALLBACK(WRITELINE(bw2_state, fdc_drq_w))
 
 	MCFG_FLOPPY_DRIVE_ADD(WD2797_TAG":0", bw2_floppies, "35dd", bw2_state::floppy_formats)
 	MCFG_FLOPPY_DRIVE_ADD(WD2797_TAG":1", bw2_floppies, nullptr,   bw2_state::floppy_formats)
-	MCFG_BW2_EXPANSION_SLOT_ADD(BW2_EXPANSION_SLOT_TAG, XTAL_16MHz, bw2_expansion_cards, nullptr)
+	MCFG_BW2_EXPANSION_SLOT_ADD(BW2_EXPANSION_SLOT_TAG, XTAL(16'000'000), bw2_expansion_cards, nullptr)
 
 	// software list
 	MCFG_SOFTWARE_LIST_ADD("flop_list","bw2")

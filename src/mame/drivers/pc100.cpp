@@ -60,6 +60,7 @@
 #include "machine/i8255.h"
 #include "machine/msm58321.h"
 #include "machine/pic8259.h"
+#include "machine/timer.h"
 #include "machine/upd765.h"
 #include "sound/beep.h"
 
@@ -144,6 +145,9 @@ public:
 	WRITE_LINE_MEMBER(rtc_portc_2_w) { m_rtc_portc = (m_rtc_portc & ~(1 << 2)) | ((state & 1) << 2); }
 	WRITE_LINE_MEMBER(rtc_portc_3_w) { m_rtc_portc = (m_rtc_portc & ~(1 << 3)) | ((state & 1) << 3); }
 	uint8_t m_rtc_portc;
+	void pc100(machine_config &config);
+	void pc100_io(address_map &map);
+	void pc100_map(address_map &map);
 };
 
 void pc100_state::video_start()
@@ -228,12 +232,13 @@ WRITE16_MEMBER( pc100_state::pc100_vram_w )
 	}
 }
 
-static ADDRESS_MAP_START(pc100_map, AS_PROGRAM, 16, pc100_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000,0xbffff) AM_RAM // work ram
-	AM_RANGE(0xc0000,0xdffff) AM_READWRITE(pc100_vram_r,pc100_vram_w) // vram, blitter based!
-	AM_RANGE(0xf8000,0xfffff) AM_ROM AM_REGION("ipl", 0)
-ADDRESS_MAP_END
+void pc100_state::pc100_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000, 0xbffff).ram(); // work ram
+	map(0xc0000, 0xdffff).rw(this, FUNC(pc100_state::pc100_vram_r), FUNC(pc100_state::pc100_vram_w)); // vram, blitter based!
+	map(0xf8000, 0xfffff).rom().region("ipl", 0);
+}
 
 READ16_MEMBER( pc100_state::pc100_kanji_r )
 {
@@ -308,28 +313,29 @@ WRITE8_MEMBER( pc100_state::pc100_crtc_data_w )
 
 
 /* everything is 8-bit bus wide */
-static ADDRESS_MAP_START(pc100_io, AS_IO, 16, pc100_state)
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x03) AM_DEVREADWRITE8("pic8259", pic8259_device, read, write, 0x00ff) // i8259
+void pc100_state::pc100_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x03).rw("pic8259", FUNC(pic8259_device::read), FUNC(pic8259_device::write)).umask16(0x00ff); // i8259
 //  AM_RANGE(0x04, 0x07) i8237?
-	AM_RANGE(0x08, 0x0b) AM_DEVICE8("upd765", upd765a_device, map, 0x00ff ) // upd765
-	AM_RANGE(0x10, 0x17) AM_DEVREADWRITE8("ppi8255_1", i8255_device, read, write,0x00ff) // i8255 #1
-	AM_RANGE(0x18, 0x1f) AM_DEVREADWRITE8("ppi8255_2", i8255_device, read, write,0x00ff) // i8255 #2
-	AM_RANGE(0x20, 0x23) AM_READ8(pc100_key_r,0x00ff) //i/o, keyboard, mouse
-	AM_RANGE(0x22, 0x23) AM_WRITE8(pc100_output_w,0x00ff) //i/o, keyboard, mouse
-	AM_RANGE(0x24, 0x25) AM_WRITE8(pc100_tc_w,0x00ff) //i/o, keyboard, mouse
-	AM_RANGE(0x28, 0x29) AM_DEVREADWRITE8("uart8251", i8251_device, data_r, data_w, 0x00ff)
-	AM_RANGE(0x2a, 0x2b) AM_DEVREADWRITE8("uart8251", i8251_device, status_r, control_w, 0x00ff)
-	AM_RANGE(0x30, 0x31) AM_READWRITE8(pc100_shift_r,pc100_shift_w,0x00ff) // crtc shift
-	AM_RANGE(0x38, 0x39) AM_WRITE8(pc100_crtc_addr_w,0x00ff) //crtc address reg
-	AM_RANGE(0x3a, 0x3b) AM_WRITE8(pc100_crtc_data_w,0x00ff) //crtc data reg
-	AM_RANGE(0x3c, 0x3f) AM_READWRITE8(pc100_vs_vreg_r,pc100_vs_vreg_w,0x00ff) //crtc vertical start position
-	AM_RANGE(0x40, 0x5f) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
+	map(0x08, 0x0b).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x00ff); // upd765
+	map(0x10, 0x17).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write)).umask16(0x00ff); // i8255 #1
+	map(0x18, 0x1f).rw("ppi8255_2", FUNC(i8255_device::read), FUNC(i8255_device::write)).umask16(0x00ff); // i8255 #2
+	map(0x20, 0x23).r(this, FUNC(pc100_state::pc100_key_r)).umask16(0x00ff); //i/o, keyboard, mouse
+	map(0x22, 0x22).w(this, FUNC(pc100_state::pc100_output_w)); //i/o, keyboard, mouse
+	map(0x24, 0x24).w(this, FUNC(pc100_state::pc100_tc_w)); //i/o, keyboard, mouse
+	map(0x28, 0x28).rw("uart8251", FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x2a, 0x2a).rw("uart8251", FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x30, 0x30).rw(this, FUNC(pc100_state::pc100_shift_r), FUNC(pc100_state::pc100_shift_w)); // crtc shift
+	map(0x38, 0x38).w(this, FUNC(pc100_state::pc100_crtc_addr_w)); //crtc address reg
+	map(0x3a, 0x3a).w(this, FUNC(pc100_state::pc100_crtc_data_w)); //crtc data reg
+	map(0x3c, 0x3f).rw(this, FUNC(pc100_state::pc100_vs_vreg_r), FUNC(pc100_state::pc100_vs_vreg_w)).umask16(0x00ff); //crtc vertical start position
+	map(0x40, 0x5f).ram().w(m_palette, FUNC(palette_device::write16)).share("palette");
 //  AM_RANGE(0x60, 0x61) crtc command (16-bit wide)
-	AM_RANGE(0x80, 0x81) AM_READWRITE(pc100_kanji_r,pc100_kanji_w)
-	AM_RANGE(0x82, 0x83) AM_WRITENOP //kanji-related?
-	AM_RANGE(0x84, 0x87) AM_WRITENOP //kanji "strobe" signal 0/1
-ADDRESS_MAP_END
+	map(0x80, 0x81).rw(this, FUNC(pc100_state::pc100_kanji_r), FUNC(pc100_state::pc100_kanji_w));
+	map(0x82, 0x83).nopw(); //kanji-related?
+	map(0x84, 0x87).nopw(); //kanji "strobe" signal 0/1
+}
 
 
 /* Input ports */
@@ -490,7 +496,7 @@ SLOT_INTERFACE_END
 
 #define MASTER_CLOCK 6988800
 
-static MACHINE_CONFIG_START( pc100 )
+MACHINE_CONFIG_START(pc100_state::pc100)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", I8086, MASTER_CLOCK)
 	MCFG_CPU_PROGRAM_MAP(pc100_map)
@@ -513,7 +519,9 @@ static MACHINE_CONFIG_START( pc100 )
 	MCFG_I8255_OUT_PORTB_CB(WRITE8(pc100_state, upper_mask_w))
 	MCFG_I8255_OUT_PORTC_CB(WRITE8(pc100_state, crtc_bank_w))
 
-	MCFG_PIC8259_ADD( "pic8259", INPUTLINE("maincpu", 0), GND, NOOP)
+	MCFG_DEVICE_ADD("pic8259", PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(INPUTLINE("maincpu", 0))
+	MCFG_PIC8259_IN_SP_CB(GND) // ???
 
 	MCFG_DEVICE_ADD("uart8251", I8251, 0)
 	//MCFG_I8251_TXD_HANDLER(DEVWRITELINE("rs232", rs232_port_device, write_txd))
@@ -525,7 +533,7 @@ static MACHINE_CONFIG_START( pc100 )
 	MCFG_UPD765_INTRQ_CALLBACK(WRITELINE(pc100_state, irqnmi_w))
 	MCFG_UPD765_DRQ_CALLBACK(WRITELINE(pc100_state, drqnmi_w))
 
-	MCFG_DEVICE_ADD("rtc", MSM58321, XTAL_32_768kHz)
+	MCFG_DEVICE_ADD("rtc", MSM58321, XTAL(32'768))
 	MCFG_MSM58321_D0_HANDLER(WRITELINE(pc100_state, rtc_portc_0_w))
 	MCFG_MSM58321_D1_HANDLER(WRITELINE(pc100_state, rtc_portc_1_w))
 	MCFG_MSM58321_D2_HANDLER(WRITELINE(pc100_state, rtc_portc_2_w))

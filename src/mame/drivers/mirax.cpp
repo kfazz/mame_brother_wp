@@ -159,6 +159,9 @@ public:
 	void draw_sprites(bitmap_ind16 &bitmap, const rectangle &cliprect);
 
 	INTERRUPT_GEN_MEMBER(vblank_irq);
+	void mirax(machine_config &config);
+	void mirax_main_map(address_map &map);
+	void mirax_sound_map(address_map &map);
 };
 
 
@@ -314,37 +317,39 @@ WRITE_LINE_MEMBER(mirax_state::flip_screen_y_w)
 	m_flipscreen_y = state;
 }
 
-static ADDRESS_MAP_START( mirax_main_map, AS_PROGRAM, 8, mirax_state )
-	AM_RANGE(0x0000, 0xbfff) AM_ROM
-	AM_RANGE(0xc800, 0xd7ff) AM_RAM
-	AM_RANGE(0xe000, 0xe3ff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0xe800, 0xe9ff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0xea00, 0xea3f) AM_RAM AM_SHARE("colorram") //per-column color + bank bits for the videoram
-	AM_RANGE(0xf000, 0xf000) AM_READ_PORT("P1")
-	AM_RANGE(0xf100, 0xf100) AM_READ_PORT("P2")
-	AM_RANGE(0xf200, 0xf200) AM_READ_PORT("DSW1")
-	AM_RANGE(0xf300, 0xf300) AM_READNOP //watchdog? value is always read then discarded
-	AM_RANGE(0xf400, 0xf400) AM_READ_PORT("DSW2")
-	AM_RANGE(0xf500, 0xf507) AM_DEVWRITE("mainlatch", ls259_device, write_d0)
-	AM_RANGE(0xf800, 0xf800) AM_WRITE(sound_cmd_w)
+void mirax_state::mirax_main_map(address_map &map)
+{
+	map(0x0000, 0xbfff).rom();
+	map(0xc800, 0xd7ff).ram();
+	map(0xe000, 0xe3ff).ram().share("videoram");
+	map(0xe800, 0xe9ff).ram().share("spriteram");
+	map(0xea00, 0xea3f).ram().share("colorram"); //per-column color + bank bits for the videoram
+	map(0xf000, 0xf000).portr("P1");
+	map(0xf100, 0xf100).portr("P2");
+	map(0xf200, 0xf200).portr("DSW1");
+	map(0xf300, 0xf300).nopr(); //watchdog? value is always read then discarded
+	map(0xf400, 0xf400).portr("DSW2");
+	map(0xf500, 0xf507).w("mainlatch", FUNC(ls259_device::write_d0));
+	map(0xf800, 0xf800).w(this, FUNC(mirax_state::sound_cmd_w));
 //  AM_RANGE(0xf900, 0xf900) //sound cmd mirror? ack?
-ADDRESS_MAP_END
+}
 
-static ADDRESS_MAP_START( mirax_sound_map, AS_PROGRAM, 8, mirax_state )
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x8000, 0x8fff) AM_RAM
-	AM_RANGE(0xa000, 0xa000) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
+void mirax_state::mirax_sound_map(address_map &map)
+{
+	map(0x0000, 0x1fff).rom();
+	map(0x8000, 0x8fff).ram();
+	map(0xa000, 0xa000).r(m_soundlatch, FUNC(generic_latch_8_device::read));
 
-	AM_RANGE(0xe000, 0xe000) AM_WRITENOP
-	AM_RANGE(0xe001, 0xe001) AM_WRITENOP
-	AM_RANGE(0xe003, 0xe003) AM_WRITE(ay1_sel) //1st ay ?
+	map(0xe000, 0xe000).nopw();
+	map(0xe001, 0xe001).nopw();
+	map(0xe003, 0xe003).w(this, FUNC(mirax_state::ay1_sel)); //1st ay ?
 
-	AM_RANGE(0xe400, 0xe400) AM_WRITENOP
-	AM_RANGE(0xe401, 0xe401) AM_WRITENOP
-	AM_RANGE(0xe403, 0xe403) AM_WRITE(ay2_sel) //2nd ay ?
+	map(0xe400, 0xe400).nopw();
+	map(0xe401, 0xe401).nopw();
+	map(0xe403, 0xe403).w(this, FUNC(mirax_state::ay2_sel)); //2nd ay ?
 
-	AM_RANGE(0xf900, 0xf9ff) AM_WRITE(audio_w)
-ADDRESS_MAP_END
+	map(0xf900, 0xf9ff).w(this, FUNC(mirax_state::audio_w));
+}
 
 
 /* verified from Z80 code */
@@ -473,7 +478,7 @@ INTERRUPT_GEN_MEMBER(mirax_state::vblank_irq)
 		device.execute().set_input_line(INPUT_LINE_NMI, ASSERT_LINE);
 }
 
-static MACHINE_CONFIG_START( mirax )
+MACHINE_CONFIG_START(mirax_state::mirax)
 	MCFG_CPU_ADD("maincpu", Z80, 12000000/4) // ceramic potted module, encrypted z80
 	MCFG_CPU_PROGRAM_MAP(mirax_main_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", mirax_state, vblank_irq)
@@ -583,13 +588,13 @@ DRIVER_INIT_MEMBER(mirax_state,mirax)
 	int i;
 
 	for(i=0x0000;i<0x4000;i++)
-		ROM[BITSWAP16(i, 15,14,13,12,11,10,9, 5,7,6,8, 4,3,2,1,0)] = (BITSWAP8(DATA[i], 1, 3, 7, 0, 5, 6, 4, 2) ^ 0xff);
+		ROM[bitswap<16>(i, 15,14,13,12,11,10,9, 5,7,6,8, 4,3,2,1,0)] = (bitswap<8>(DATA[i], 1, 3, 7, 0, 5, 6, 4, 2) ^ 0xff);
 
 	for(i=0x4000;i<0x8000;i++)
-		ROM[BITSWAP16(i, 15,14,13,12,11,10,9, 5,7,6,8, 4,3,2,1,0)] = (BITSWAP8(DATA[i], 2, 1, 0, 6, 7, 5, 3, 4) ^ 0xff);
+		ROM[bitswap<16>(i, 15,14,13,12,11,10,9, 5,7,6,8, 4,3,2,1,0)] = (bitswap<8>(DATA[i], 2, 1, 0, 6, 7, 5, 3, 4) ^ 0xff);
 
 	for(i=0x8000;i<0xc000;i++)
-		ROM[BITSWAP16(i, 15,14,13,12,11,10,9, 5,7,6,8, 4,3,2,1,0)] = (BITSWAP8(DATA[i], 1, 3, 7, 0, 5, 6, 4, 2) ^ 0xff);
+		ROM[bitswap<16>(i, 15,14,13,12,11,10,9, 5,7,6,8, 4,3,2,1,0)] = (bitswap<8>(DATA[i], 1, 3, 7, 0, 5, 6, 4, 2) ^ 0xff);
 }
 
 GAME( 1985, mirax,    0,        mirax,    mirax,  mirax_state,   mirax,    ROT90, "Current Technologies", "Mirax (set 1)", MACHINE_SUPPORTS_SAVE )

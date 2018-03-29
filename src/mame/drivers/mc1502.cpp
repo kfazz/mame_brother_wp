@@ -6,6 +6,11 @@
 
     Driver file for Elektronika MS 1502
 
+    To do:
+    - fix video errors caused by 465caf8038a120b4c1ffad9df67a1dc7474e5bb1
+      "cga: treat as fixed sync monitor (nw)"
+    - debug video init in BIOS 7.2
+
 ***************************************************************************/
 
 #include "emu.h"
@@ -44,18 +49,11 @@ TIMER_CALLBACK_MEMBER(mc1502_state::keyb_signal_callback)
 {
 	uint8_t key = 0;
 
-	key |= ioport("Y1")->read();
-	key |= ioport("Y2")->read();
-	key |= ioport("Y3")->read();
-	key |= ioport("Y4")->read();
-	key |= ioport("Y5")->read();
-	key |= ioport("Y6")->read();
-	key |= ioport("Y7")->read();
-	key |= ioport("Y8")->read();
-	key |= ioport("Y9")->read();
-	key |= ioport("Y10")->read();
-	key |= ioport("Y11")->read();
-	key |= ioport("Y12")->read();
+	for (int i = 0; i < 12; i++)
+	{
+		key |= m_kbdio[i]->read();
+	}
+
 //  DBG_LOG(1,"mc1502_k_s_c",("= %02X (%d) %s\n", key, m_kbd.pulsing,
 //      (key || m_kbd.pulsing) ? " will IRQ" : ""));
 
@@ -121,18 +119,14 @@ READ8_MEMBER(mc1502_state::mc1502_kppi_porta_r)
 {
 	uint8_t key = 0;
 
-	if (m_kbd.mask & 0x0001) { key |= ioport("Y1")->read(); }
-	if (m_kbd.mask & 0x0002) { key |= ioport("Y2")->read(); }
-	if (m_kbd.mask & 0x0004) { key |= ioport("Y3")->read(); }
-	if (m_kbd.mask & 0x0008) { key |= ioport("Y4")->read(); }
-	if (m_kbd.mask & 0x0010) { key |= ioport("Y5")->read(); }
-	if (m_kbd.mask & 0x0020) { key |= ioport("Y6")->read(); }
-	if (m_kbd.mask & 0x0040) { key |= ioport("Y7")->read(); }
-	if (m_kbd.mask & 0x0080) { key |= ioport("Y8")->read(); }
-	if (m_kbd.mask & 0x0100) { key |= ioport("Y9")->read(); }
-	if (m_kbd.mask & 0x0200) { key |= ioport("Y10")->read(); }
-	if (m_kbd.mask & 0x0400) { key |= ioport("Y11")->read(); }
-	if (m_kbd.mask & 0x0800) { key |= ioport("Y12")->read(); }
+	for (int i = 0; i < 12; i++)
+	{
+		if (BIT(m_kbd.mask, i))
+		{
+			key |= m_kbdio[i]->read();
+		}
+	}
+
 	key ^= 0xff;
 //  DBG_LOG(2,"mc1502_kppi_porta_r",("= %02X\n", key));
 	return key;
@@ -223,26 +217,28 @@ MACHINE_RESET_MEMBER(mc1502_state, mc1502)
  * macros
  */
 
-static ADDRESS_MAP_START( mc1502_map, AS_PROGRAM, 8, mc1502_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0xf0000, 0xfffff) AM_ROM AM_REGION("bios", 0)
-ADDRESS_MAP_END
+void mc1502_state::mc1502_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0xf0000, 0xfffff).rom().region("bios", 0);
+}
 
-static ADDRESS_MAP_START(mc1502_io, AS_IO, 8, mc1502_state )
-	AM_RANGE(0x0020, 0x0021) AM_DEVREADWRITE("pic8259", pic8259_device, read, write)
-	AM_RANGE(0x0028, 0x0028) AM_DEVREADWRITE("upd8251", i8251_device, data_r, data_w)
-	AM_RANGE(0x0029, 0x0029) AM_DEVREADWRITE("upd8251", i8251_device, status_r, control_w)
-	AM_RANGE(0x0040, 0x0043) AM_DEVREADWRITE("pit8253", pit8253_device, read, write)
-	AM_RANGE(0x0060, 0x0063) AM_DEVREADWRITE("ppi8255n1", i8255_device, read, write)
-	AM_RANGE(0x0068, 0x006B) AM_DEVREADWRITE("ppi8255n2", i8255_device, read, write)    // keyboard poll
-ADDRESS_MAP_END
+void mc1502_state::mc1502_io(address_map &map)
+{
+	map(0x0020, 0x0021).rw(m_pic8259, FUNC(pic8259_device::read), FUNC(pic8259_device::write));
+	map(0x0028, 0x0028).rw(m_upd8251, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x0029, 0x0029).rw(m_upd8251, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x0040, 0x0043).rw(m_pit8253, FUNC(pit8253_device::read), FUNC(pit8253_device::write));
+	map(0x0060, 0x0063).rw(m_ppi8255n1, FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x0068, 0x006B).rw(m_ppi8255n2, FUNC(i8255_device::read), FUNC(i8255_device::write));    // keyboard poll
+}
 
 static INPUT_PORTS_START( mc1502 )
 	PORT_INCLUDE( mc7007_3_keyboard )
 INPUT_PORTS_END
 
-static MACHINE_CONFIG_START( mc1502 )
-	MCFG_CPU_ADD("maincpu", I8088, XTAL_16MHz/3)
+MACHINE_CONFIG_START(mc1502_state::mc1502)
+	MCFG_CPU_ADD("maincpu", I8088, XTAL(16'000'000)/3)
 	MCFG_CPU_PROGRAM_MAP(mc1502_map)
 	MCFG_CPU_IO_MAP(mc1502_io)
 	MCFG_CPU_IRQ_ACKNOWLEDGE_DEVICE("pic8259", pic8259_device, inta_cb)
@@ -251,14 +247,15 @@ static MACHINE_CONFIG_START( mc1502 )
 	MCFG_MACHINE_RESET_OVERRIDE( mc1502_state, mc1502 )
 
 	MCFG_DEVICE_ADD("pit8253", PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_16MHz/12) /* heartbeat IRQ */
+	MCFG_PIT8253_CLK0(XTAL(16'000'000)/12) /* heartbeat IRQ */
 	MCFG_PIT8253_OUT0_HANDLER(DEVWRITELINE("pic8259", pic8259_device, ir0_w))
-	MCFG_PIT8253_CLK1(XTAL_16MHz/12) /* serial port */
+	MCFG_PIT8253_CLK1(XTAL(16'000'000)/12) /* serial port */
 	MCFG_PIT8253_OUT1_HANDLER(WRITELINE(mc1502_state, mc1502_pit8253_out1_changed))
-	MCFG_PIT8253_CLK2(XTAL_16MHz/12) /* pio port c pin 4, and speaker polling enough */
+	MCFG_PIT8253_CLK2(XTAL(16'000'000)/12) /* pio port c pin 4, and speaker polling enough */
 	MCFG_PIT8253_OUT2_HANDLER(WRITELINE(mc1502_state, mc1502_pit8253_out2_changed))
 
-	MCFG_PIC8259_ADD("pic8259", INPUTLINE("maincpu", 0), VCC, NOOP)
+	MCFG_DEVICE_ADD("pic8259", PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(INPUTLINE("maincpu", 0))
 
 	MCFG_DEVICE_ADD("ppi8255n1", I8255, 0)
 	MCFG_I8255_OUT_PORTA_CB(DEVWRITE8("cent_data_out", output_latch_device, write))
@@ -348,8 +345,8 @@ ROM_START( mc1502 )
 	ROM_SYSTEM_BIOS(3, "v531", "v5.31 12/10/92")
 	ROMX_LOAD( "monitor_5_31.rom", 0xc000, 0x4000, CRC(a48295d5) SHA1(6f38977c22f9cc6c2bc6f6e53edc4048ca6b6721),ROM_BIOS(4))
 	ROM_SYSTEM_BIOS(4, "v533", "v5.33 01/08/93")
-	ROMX_LOAD( "0_(cbc0).bin", 0xc000, 0x2000, CRC(9a55bc4f) SHA1(81da44eec2e52cf04b1fc7053502270f51270590),ROM_BIOS(5))
-	ROMX_LOAD( "1_(dfe2).bin", 0xe000, 0x2000, CRC(8dec077a) SHA1(d6f6d7cc2183abc77fbd9cd59132de5766f7c458),ROM_BIOS(5))
+	ROMX_LOAD( "0,cbc0.bin", 0xc000, 0x2000, CRC(9a55bc4f) SHA1(81da44eec2e52cf04b1fc7053502270f51270590),ROM_BIOS(5))
+	ROMX_LOAD( "1,dfe2.bin", 0xe000, 0x2000, CRC(8dec077a) SHA1(d6f6d7cc2183abc77fbd9cd59132de5766f7c458),ROM_BIOS(5))
 
 	// 5.21 + 3rd party HDC support. fails checksum test so marked BAD_DUMP.
 	ROM_SYSTEM_BIOS(5, "v521h", "v5.21h 22/09/93")
@@ -358,8 +355,8 @@ ROM_START( mc1502 )
 
 	// 5.3
 	ROM_SYSTEM_BIOS(6, "v53", "v5.3 10/11/91")
-	ROMX_LOAD( "1502~3b0.pgm", 0xc000, 0x2000, CRC(dc148763) SHA1(7a5e66438007b2de328ac680614f9c4ff60f6a75),ROM_BIOS(7))
-	ROMX_LOAD( "1502~3b1.pgm", 0xe000, 0x2000, CRC(17fc2af2) SHA1(a060d7b7302dfa639025f025106b50412cf26953),ROM_BIOS(7))
+	ROMX_LOAD( "1502-3b0.pgm", 0xc000, 0x2000, CRC(dc148763) SHA1(7a5e66438007b2de328ac680614f9c4ff60f6a75),ROM_BIOS(7))
+	ROMX_LOAD( "1502-3b1.pgm", 0xe000, 0x2000, CRC(17fc2af2) SHA1(a060d7b7302dfa639025f025106b50412cf26953),ROM_BIOS(7))
 	// 5.1 -- JCUKEN keyboard
 	ROM_SYSTEM_BIOS(7, "v51", "v5.1 10/12/90")
 	ROMX_LOAD( "ms1502b0.pgm", 0xc000, 0x2000, CRC(92fcc29a) SHA1(930a4cffcd6ec6110dd9a18bd389b78f0ccb110a),ROM_BIOS(8))
@@ -370,8 +367,12 @@ ROM_START( mc1502 )
 	ROMX_LOAD( "ms531b1.pgm", 0xe000, 0x2000, CRC(b1368e1a) SHA1(286496d25dc0ac2d8fe1802caffc6c37b236d105),ROM_BIOS(9))
 	// 5.2
 	ROM_SYSTEM_BIOS(9, "v52_91", "v5.2 10/11/91")
-	ROMX_LOAD( "msv5~2b0.pgm", 0xc000, 0x2000, CRC(f7f370e9) SHA1(e069a35005581a02856853b57dd511ab8e10054b),ROM_BIOS(10))
-	ROMX_LOAD( "msv5~2b1.pgm", 0xe000, 0x2000, CRC(d50e1c43) SHA1(22724dec0052ee9e52f44f5914f2f5f3fae14612),ROM_BIOS(10))
+	ROMX_LOAD( "msv5-2b0.pgm", 0xc000, 0x2000, CRC(f7f370e9) SHA1(e069a35005581a02856853b57dd511ab8e10054b),ROM_BIOS(10))
+	ROMX_LOAD( "msv5-2b1.pgm", 0xe000, 0x2000, CRC(d50e1c43) SHA1(22724dec0052ee9e52f44f5914f2f5f3fae14612),ROM_BIOS(10))
+
+	// 7.2
+	ROM_SYSTEM_BIOS(10, "v72", "v7.2 01/21/96")
+	ROMX_LOAD( "7.2_1.bin", 0xe000, 0x2000, CRC(80912ad4) SHA1(cc54b77b2db4cc5d614efafd04367d2f06400fc8),ROM_BIOS(11))
 
 	ROM_REGION(0x2000,"gfx1", ROMREGION_ERASE00)
 	ROM_LOAD( "symgen.rom", 0x0000, 0x2000, CRC(b2747a52) SHA1(6766d275467672436e91ac2997ac6b77700eba1e))

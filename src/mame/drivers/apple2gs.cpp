@@ -74,7 +74,6 @@
 //#include "bus/a2bus/a2udrive.h"
 #include "bus/a2bus/a2hsscsi.h"
 
-#include "screen.h"
 #include "softlist.h"
 #include "speaker.h"
 
@@ -182,9 +181,15 @@ static const floppy_interface apple2gs_floppy525_floppy_interface =
 };
 
 
-static ADDRESS_MAP_START( apple2gs_map, AS_PROGRAM, 8, apple2gs_state )
+void apple2gs_state::apple2gs_map(address_map &map)
+{
 	/* nothing in the address map - everything is added dynamically */
-ADDRESS_MAP_END
+}
+
+void apple2gs_state::vectors_map(address_map &map)
+{
+	map(0x00, 0x1f).r(this, FUNC(apple2gs_state::apple2gs_read_vector));
+}
 
 // ADB microcontroller emulation
 //
@@ -250,9 +255,9 @@ WRITE8_MEMBER(apple2gs_state::adbmicro_p3_out)
 {
 	if (((data & 0x08) == 0x08) != m_adb_line)
 	{
-		m_adb_dtime = (int)(machine().time().as_ticks(XTAL_3_579545MHz*2) - m_last_adb_time);
+		m_adb_dtime = (int)(machine().time().as_ticks(XTAL(3'579'545)*2) - m_last_adb_time);
 //      printf("ADB change to %d (dtime %d)\n", (data>>3) & 1, m_adb_dtime);
-		m_last_adb_time = machine().time().as_ticks(XTAL_3_579545MHz*2);
+		m_last_adb_time = machine().time().as_ticks(XTAL(3'579'545)*2);
 		m_adb_line = (data & 0x8) ? true : false;
 	}
 }
@@ -307,12 +312,13 @@ static SLOT_INTERFACE_START(apple2_cards)
 	SLOT_INTERFACE("hsscsi", A2BUS_HSSCSI)  /* Apple II High-Speed SCSI Card */
 SLOT_INTERFACE_END
 
-static MACHINE_CONFIG_START( apple2gs )
+MACHINE_CONFIG_START(apple2gs_state::apple2gs)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", G65816, APPLE2GS_14M/5)
 	MCFG_CPU_PROGRAM_MAP(apple2gs_map)
+	MCFG_DEVICE_ADDRESS_MAP(g65816_device::AS_VECTORS, vectors_map)
 	#if RUN_ADB_MICRO
-	MCFG_CPU_ADD(ADBMICRO_TAG, M50741, XTAL_3_579545MHz)
+	MCFG_CPU_ADD(ADBMICRO_TAG, M50741, XTAL(3'579'545))
 	MCFG_M5074X_PORT0_READ_CALLBACK(READ8(apple2gs_state, adbmicro_p0_in))
 	MCFG_M5074X_PORT0_WRITE_CALLBACK(WRITE8(apple2gs_state, adbmicro_p0_out))
 	MCFG_M5074X_PORT1_READ_CALLBACK(READ8(apple2gs_state, adbmicro_p1_in))
@@ -415,11 +421,12 @@ static MACHINE_CONFIG_START( apple2gs )
 	MCFG_SOFTWARE_LIST_COMPATIBLE_ADD("flop525_list", "apple2")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( apple2gsr1, apple2gs )
+MACHINE_CONFIG_START(apple2gs_state::apple2gsr1)
+	apple2gs(config);
 	MCFG_MACHINE_START_OVERRIDE(apple2gs_state, apple2gsr1 )
 
 	#if RUN_ADB_MICRO
-	MCFG_CPU_REPLACE(ADBMICRO_TAG, M50740, XTAL_3_579545MHz)
+	MCFG_CPU_REPLACE(ADBMICRO_TAG, M50740, XTAL(3'579'545))
 	MCFG_M5074X_PORT0_READ_CALLBACK(READ8(apple2gs_state, adbmicro_p0_in))
 	MCFG_M5074X_PORT0_WRITE_CALLBACK(WRITE8(apple2gs_state, adbmicro_p0_out))
 	MCFG_M5074X_PORT1_READ_CALLBACK(READ8(apple2gs_state, adbmicro_p1_in))

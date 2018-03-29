@@ -7,6 +7,7 @@
 #include "cpu/m6809/m6809.h"
 #include "audio/dcs.h"
 #include "machine/nvram.h"
+#include "machine/timer.h"
 #include "video/wpc_dmd.h"
 #include "machine/wpc_pic.h"
 #include "machine/wpc_shift.h"
@@ -59,6 +60,8 @@ public:
 	DECLARE_WRITE_LINE_MEMBER(scanline_irq);
 	TIMER_DEVICE_CALLBACK_MEMBER(zc_timer);
 
+	void wpc_95(machine_config &config);
+	void wpc_95_map(address_map &map);
 protected:
 	// devices
 	required_device<cpu_device> maincpu;
@@ -116,44 +119,45 @@ private:
 	bool sc_aux_lamps_handler(int sid, bool state);
 };
 
-static ADDRESS_MAP_START( wpc_95_map, AS_PROGRAM, 8, wpc_95_state )
-	AM_RANGE(0x0000, 0x1fff) AM_RAM AM_SHARE("mainram")
+void wpc_95_state::wpc_95_map(address_map &map)
+{
+	map(0x0000, 0x1fff).ram().share("mainram");
 
-	AM_RANGE(0x3000, 0x31ff) AM_RAMBANK("dmd0")
-	AM_RANGE(0x3200, 0x33ff) AM_RAMBANK("dmd2")
-	AM_RANGE(0x3400, 0x35ff) AM_RAMBANK("dmd4")
-	AM_RANGE(0x3600, 0x37ff) AM_RAMBANK("dmd6")
-	AM_RANGE(0x3800, 0x39ff) AM_RAMBANK("dmd8")
-	AM_RANGE(0x3a00, 0x3bff) AM_RAMBANK("dmda")
+	map(0x3000, 0x31ff).bankrw("dmd0");
+	map(0x3200, 0x33ff).bankrw("dmd2");
+	map(0x3400, 0x35ff).bankrw("dmd4");
+	map(0x3600, 0x37ff).bankrw("dmd6");
+	map(0x3800, 0x39ff).bankrw("dmd8");
+	map(0x3a00, 0x3bff).bankrw("dmda");
 
-	AM_RANGE(0x3fb8, 0x3fbf) AM_DEVICE("dmd", wpc_dmd_device, registers)
+	map(0x3fb8, 0x3fbf).m("dmd", FUNC(wpc_dmd_device::registers));
 
-	AM_RANGE(0x3fdc, 0x3fdc) AM_READWRITE(dcs_data_r, dcs_data_w)
-	AM_RANGE(0x3fdd, 0x3fdd) AM_READWRITE(dcs_ctrl_r, dcs_reset_w)
+	map(0x3fdc, 0x3fdc).rw(this, FUNC(wpc_95_state::dcs_data_r), FUNC(wpc_95_state::dcs_data_w));
+	map(0x3fdd, 0x3fdd).rw(this, FUNC(wpc_95_state::dcs_ctrl_r), FUNC(wpc_95_state::dcs_reset_w));
 
-	AM_RANGE(0x3fe0, 0x3fe3) AM_DEVWRITE("out", wpc_out_device, out_w)
-	AM_RANGE(0x3fe4, 0x3fe4) AM_READNOP AM_DEVWRITE("lamp", wpc_lamp_device, row_w)
-	AM_RANGE(0x3fe5, 0x3fe5) AM_READNOP AM_DEVWRITE("lamp", wpc_lamp_device, col_w)
-	AM_RANGE(0x3fe6, 0x3fe6) AM_DEVWRITE("out", wpc_out_device, gi_w)
-	AM_RANGE(0x3fe7, 0x3fe7) AM_READ_PORT("DSW")
-	AM_RANGE(0x3fe8, 0x3fe8) AM_READ_PORT("DOOR")
-	AM_RANGE(0x3fe9, 0x3fe9) AM_DEVREAD("pic", wpc_pic_device, read)
-	AM_RANGE(0x3fea, 0x3fea) AM_DEVWRITE("pic", wpc_pic_device, write)
+	map(0x3fe0, 0x3fe3).w(out, FUNC(wpc_out_device::out_w));
+	map(0x3fe4, 0x3fe4).nopr().w(lamp, FUNC(wpc_lamp_device::row_w));
+	map(0x3fe5, 0x3fe5).nopr().w(lamp, FUNC(wpc_lamp_device::col_w));
+	map(0x3fe6, 0x3fe6).w(out, FUNC(wpc_out_device::gi_w));
+	map(0x3fe7, 0x3fe7).portr("DSW");
+	map(0x3fe8, 0x3fe8).portr("DOOR");
+	map(0x3fe9, 0x3fe9).r(pic, FUNC(wpc_pic_device::read));
+	map(0x3fea, 0x3fea).w(pic, FUNC(wpc_pic_device::write));
 
-	AM_RANGE(0x3fee, 0x3fee) AM_DEVWRITE("out", wpc_out_device, out4_w)
-	AM_RANGE(0x3fef, 0x3fef) AM_READ_PORT("FLIPPERS")
+	map(0x3fee, 0x3fee).w(out, FUNC(wpc_out_device::out4_w));
+	map(0x3fef, 0x3fef).portr("FLIPPERS");
 
-	AM_RANGE(0x3ff2, 0x3ff2) AM_DEVWRITE("out", wpc_out_device, led_w)
-	AM_RANGE(0x3ff3, 0x3ff3) AM_READNOP AM_WRITE(irq_ack_w)
-	AM_RANGE(0x3ff4, 0x3ff7) AM_DEVICE("shift", wpc_shift_device, registers)
-	AM_RANGE(0x3ff8, 0x3ff8) AM_READ(firq_src_r) AM_WRITENOP // ack?
-	AM_RANGE(0x3ffa, 0x3ffb) AM_READ(rtc_r)
-	AM_RANGE(0x3ffc, 0x3ffc) AM_WRITE(bank_w)
-	AM_RANGE(0x3ffd, 0x3ffe) AM_NOP // memory protection stuff?
-	AM_RANGE(0x3fff, 0x3fff) AM_READWRITE(zc_r, watchdog_w)
-	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("rombank")
-	AM_RANGE(0x8000, 0xffff) AM_ROM AM_REGION("maincpu", 0xf8000)
-ADDRESS_MAP_END
+	map(0x3ff2, 0x3ff2).w(out, FUNC(wpc_out_device::led_w));
+	map(0x3ff3, 0x3ff3).nopr().w(this, FUNC(wpc_95_state::irq_ack_w));
+	map(0x3ff4, 0x3ff7).m("shift", FUNC(wpc_shift_device::registers));
+	map(0x3ff8, 0x3ff8).r(this, FUNC(wpc_95_state::firq_src_r)).nopw(); // ack?
+	map(0x3ffa, 0x3ffb).r(this, FUNC(wpc_95_state::rtc_r));
+	map(0x3ffc, 0x3ffc).w(this, FUNC(wpc_95_state::bank_w));
+	map(0x3ffd, 0x3ffe).noprw(); // memory protection stuff?
+	map(0x3fff, 0x3fff).rw(this, FUNC(wpc_95_state::zc_r), FUNC(wpc_95_state::watchdog_w));
+	map(0x4000, 0x7fff).bankr("rombank");
+	map(0x8000, 0xffff).rom().region("maincpu", 0xf8000);
+}
 
 READ8_MEMBER(wpc_95_state::dcs_data_r)
 {
@@ -2243,11 +2247,11 @@ static INPUT_PORTS_START( ttt )
 	PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_OTHER) PORT_NAME("UL Flipper Button")
 INPUT_PORTS_END
 
-static MACHINE_CONFIG_START( wpc_95 )
+MACHINE_CONFIG_START(wpc_95_state::wpc_95)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809, XTAL_8MHz/4)
+	MCFG_CPU_ADD("maincpu", MC6809E, XTAL(8'000'000)/4) // 68B09E
 	MCFG_CPU_PROGRAM_MAP(wpc_95_map)
-	MCFG_CPU_PERIODIC_INT_DRIVER(wpc_95_state, irq0_line_assert, XTAL_8MHz/8192.0)
+	MCFG_CPU_PERIODIC_INT_DRIVER(wpc_95_state, irq0_line_assert, XTAL(8'000'000)/8192.0)
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("zero_crossing", wpc_95_state, zc_timer, attotime::from_hz(120)) // Mains power zero crossing
 
 	MCFG_WPC_PIC_ADD("pic")

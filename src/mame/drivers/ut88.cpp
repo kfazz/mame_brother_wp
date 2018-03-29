@@ -38,31 +38,35 @@ static GFXDECODE_START( ut88 )
 GFXDECODE_END
 
 /* Address maps */
-static ADDRESS_MAP_START( ut88mini_mem, AS_PROGRAM, 8, ut88_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x0000, 0x03ff ) AM_ROM  // System ROM
-	AM_RANGE( 0xc000, 0xc3ff ) AM_RAM  // RAM
-	AM_RANGE( 0x9000, 0x9fff ) AM_WRITE(ut88mini_write_led) // 7seg LED
-ADDRESS_MAP_END
+void ut88_state::ut88mini_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x03ff).rom();  // System ROM
+	map(0xc000, 0xc3ff).ram();  // RAM
+	map(0x9000, 0x9fff).w(this, FUNC(ut88_state::ut88mini_write_led)); // 7seg LED
+}
 
-static ADDRESS_MAP_START( ut88_mem, AS_PROGRAM, 8, ut88_state )
-	AM_RANGE( 0x0000, 0x07ff ) AM_RAMBANK("bank1") // First bank
-	AM_RANGE( 0x0800, 0xdfff ) AM_RAM  // RAM
-	AM_RANGE( 0xe000, 0xe7ff ) AM_RAM  // Video RAM (not used)
-	AM_RANGE( 0xe800, 0xefff ) AM_RAM AM_SHARE("videoram") // Video RAM
-	AM_RANGE( 0xf400, 0xf7ff ) AM_RAM  // System RAM
-	AM_RANGE( 0xf800, 0xffff ) AM_ROM  // System ROM
-ADDRESS_MAP_END
+void ut88_state::ut88_mem(address_map &map)
+{
+	map(0x0000, 0x07ff).bankrw("bank1"); // First bank
+	map(0x0800, 0xdfff).ram();  // RAM
+	map(0xe000, 0xe7ff).ram();  // Video RAM (not used)
+	map(0xe800, 0xefff).ram().share("videoram"); // Video RAM
+	map(0xf400, 0xf7ff).ram();  // System RAM
+	map(0xf800, 0xffff).rom();  // System ROM
+}
 
-static ADDRESS_MAP_START( ut88mini_io, AS_IO, 8, ut88_state )
-	AM_RANGE( 0xA0, 0xA0) AM_READ(ut88mini_keyboard_r)
-	AM_RANGE( 0xA1, 0xA1) AM_READ(ut88_tape_r)
-ADDRESS_MAP_END
+void ut88_state::ut88mini_io(address_map &map)
+{
+	map(0xA0, 0xA0).r(this, FUNC(ut88_state::ut88mini_keyboard_r));
+	map(0xA1, 0xA1).r(this, FUNC(ut88_state::ut88_tape_r));
+}
 
-static ADDRESS_MAP_START( ut88_io, AS_IO, 8, ut88_state )
-	AM_RANGE( 0x04, 0x07) AM_READWRITE(ut88_keyboard_r, ut88_keyboard_w)
-	AM_RANGE( 0xA1, 0xA1) AM_READWRITE(ut88_tape_r, ut88_sound_w)
-ADDRESS_MAP_END
+void ut88_state::ut88_io(address_map &map)
+{
+	map(0x04, 0x07).rw(this, FUNC(ut88_state::ut88_keyboard_r), FUNC(ut88_state::ut88_keyboard_w));
+	map(0xA1, 0xA1).rw(this, FUNC(ut88_state::ut88_tape_r), FUNC(ut88_state::ut88_sound_w));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( ut88 )
@@ -71,7 +75,7 @@ static INPUT_PORTS_START( ut88 )
 	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_1) PORT_CHAR('1') PORT_CHAR('!')
 	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_2) PORT_CHAR('2') PORT_CHAR('"')
 	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_3) PORT_CHAR('3') PORT_CHAR('#')
-	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_4) PORT_CHAR('4') PORT_CHAR('\xA4')
+	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_4) PORT_CHAR('4') PORT_CHAR(0xA4)
 	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_5) PORT_CHAR('5') PORT_CHAR('%')
 	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_6) PORT_CHAR('6') PORT_CHAR('&')
 	PORT_BIT(0x80, IP_ACTIVE_HIGH, IPT_UNUSED)
@@ -183,7 +187,7 @@ static INPUT_PORTS_START( ut88mini )
 INPUT_PORTS_END
 
 /* Machine driver */
-static MACHINE_CONFIG_START( ut88 )
+MACHINE_CONFIG_START(ut88_state::ut88)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", I8080, 2000000)
 	MCFG_CPU_PROGRAM_MAP(ut88_mem)
@@ -226,7 +230,7 @@ static MACHINE_CONFIG_START( ut88 )
 	MCFG_SOFTWARE_LIST_ADD("cass_list","ut88")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( ut88mini )
+MACHINE_CONFIG_START(ut88_state::ut88mini)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", I8080, 2000000)
 	MCFG_CPU_PROGRAM_MAP(ut88mini_mem)

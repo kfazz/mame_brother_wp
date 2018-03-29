@@ -521,22 +521,24 @@ READ_LINE_MEMBER( asic65_device::get_bio )
  *
  *************************************/
 
-static ADDRESS_MAP_START( asic65_program_map, AS_PROGRAM, 16, asic65_device )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x000, 0xfff) AM_ROM
-ADDRESS_MAP_END
+void asic65_device::asic65_program_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x000, 0xfff).rom();
+}
 
-static ADDRESS_MAP_START( asic65_io_map, AS_IO, 16, asic65_device )
-	AM_RANGE(0, 0) AM_MIRROR(6) AM_READWRITE(m68k_r, m68k_w)
-	AM_RANGE(1, 1) AM_MIRROR(6) AM_READWRITE(stat_r, stat_w)
-ADDRESS_MAP_END
+void asic65_device::asic65_io_map(address_map &map)
+{
+	map(0, 0).mirror(6).rw(this, FUNC(asic65_device::m68k_r), FUNC(asic65_device::m68k_w));
+	map(1, 1).mirror(6).rw(this, FUNC(asic65_device::stat_r), FUNC(asic65_device::stat_w));
+}
 
 
 //-------------------------------------------------
 //  device_add_mconfig - add device configuration
 //-------------------------------------------------
 
-MACHINE_CONFIG_MEMBER( asic65_device::device_add_mconfig )
+MACHINE_CONFIG_START(asic65_device::device_add_mconfig)
 
 	/* ASIC65 */
 	MCFG_CPU_ADD("asic65cpu", TMS32010, 20000000)

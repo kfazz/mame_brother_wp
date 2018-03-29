@@ -720,163 +720,179 @@ WRITE8_MEMBER(kageki_state::csport_w)
 	}
 }
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 8, tnzs_base_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0xbfff) AM_DEVICE("mainbank", address_map_bank_device, amap8)
-	AM_RANGE(0xc000, 0xcfff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spritecodelow_r8, spritecodelow_w8)
-	AM_RANGE(0xd000, 0xdfff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spritecodehigh_r8, spritecodehigh_w8)
-	AM_RANGE(0xe000, 0xefff) AM_RAM AM_SHARE("share1")
-	AM_RANGE(0xf000, 0xf2ff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spriteylow_r8, spriteylow_w8)
-	AM_RANGE(0xf300, 0xf303) AM_MIRROR(0xfc) AM_DEVWRITE("spritegen", seta001_device, spritectrl_w8)  /* control registers (0x80 mirror used by Arkanoid 2) */
-	AM_RANGE(0xf400, 0xf400) AM_DEVWRITE("spritegen", seta001_device, spritebgflag_w8)   /* enable / disable background transparency */
-	AM_RANGE(0xf600, 0xf600) AM_READNOP AM_WRITE(ramrom_bankswitch_w)
-	AM_RANGE(0xf800, 0xfbff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-ADDRESS_MAP_END
+void tnzs_base_state::main_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0xbfff).m(m_mainbank, FUNC(address_map_bank_device::amap8));
+	map(0xc000, 0xcfff).ram().rw(m_seta001, FUNC(seta001_device::spritecodelow_r8), FUNC(seta001_device::spritecodelow_w8));
+	map(0xd000, 0xdfff).ram().rw(m_seta001, FUNC(seta001_device::spritecodehigh_r8), FUNC(seta001_device::spritecodehigh_w8));
+	map(0xe000, 0xefff).ram().share("share1");
+	map(0xf000, 0xf2ff).ram().rw(m_seta001, FUNC(seta001_device::spriteylow_r8), FUNC(seta001_device::spriteylow_w8));
+	map(0xf300, 0xf303).mirror(0xfc).w(m_seta001, FUNC(seta001_device::spritectrl_w8));  /* control registers (0x80 mirror used by Arkanoid 2) */
+	map(0xf400, 0xf400).w(m_seta001, FUNC(seta001_device::spritebgflag_w8));   /* enable / disable background transparency */
+	map(0xf600, 0xf600).nopr().w(this, FUNC(tnzs_base_state::ramrom_bankswitch_w));
+	map(0xf800, 0xfbff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+}
 
-static ADDRESS_MAP_START( prompal_main_map, AS_PROGRAM, 8, extrmatn_state )
+void extrmatn_state::prompal_main_map(address_map &map)
+{
+	main_map(map);
 	/* arknoid2, extrmatn, plumppop and drtoppel have PROMs instead of RAM */
 	/* drtoppel writes here anyway! (maybe leftover from tests during development) */
-	AM_RANGE(0xf800, 0xfbff) AM_WRITENOP
-	AM_IMPORT_FROM(main_map)
-ADDRESS_MAP_END
+	map(0xf800, 0xfbff).nopw();
+}
 
-static ADDRESS_MAP_START( tnzsb_main_map, AS_PROGRAM, 8, tnzsb_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0xbfff) AM_DEVICE("mainbank", address_map_bank_device, amap8)
-	AM_RANGE(0xc000, 0xcfff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spritecodelow_r8, spritecodelow_w8)
-	AM_RANGE(0xd000, 0xdfff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spritecodehigh_r8, spritecodehigh_w8)
-	AM_RANGE(0xe000, 0xefff) AM_RAM AM_SHARE("share1")
-	AM_RANGE(0xf000, 0xf2ff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spriteylow_r8, spriteylow_w8)
-	AM_RANGE(0xf300, 0xf303) AM_MIRROR(0xfc) AM_DEVWRITE("spritegen", seta001_device, spritectrl_w8) /* control registers (0x80 mirror used by Arkanoid 2) */
-	AM_RANGE(0xf400, 0xf400) AM_DEVWRITE("spritegen", seta001_device, spritebgflag_w8)   /* enable / disable background transparency */
-	AM_RANGE(0xf600, 0xf600) AM_WRITE(ramrom_bankswitch_w)
+void tnzsb_state::tnzsb_main_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0xbfff).m(m_mainbank, FUNC(address_map_bank_device::amap8));
+	map(0xc000, 0xcfff).ram().rw(m_seta001, FUNC(seta001_device::spritecodelow_r8), FUNC(seta001_device::spritecodelow_w8));
+	map(0xd000, 0xdfff).ram().rw(m_seta001, FUNC(seta001_device::spritecodehigh_r8), FUNC(seta001_device::spritecodehigh_w8));
+	map(0xe000, 0xefff).ram().share("share1");
+	map(0xf000, 0xf2ff).ram().rw(m_seta001, FUNC(seta001_device::spriteylow_r8), FUNC(seta001_device::spriteylow_w8));
+	map(0xf300, 0xf303).mirror(0xfc).w(m_seta001, FUNC(seta001_device::spritectrl_w8)); /* control registers (0x80 mirror used by Arkanoid 2) */
+	map(0xf400, 0xf400).w(m_seta001, FUNC(seta001_device::spritebgflag_w8));   /* enable / disable background transparency */
+	map(0xf600, 0xf600).w(this, FUNC(tnzsb_state::ramrom_bankswitch_w));
 	/* kabukiz still writes here but it's not used (it's paletteram in type1 map) */
-	AM_RANGE(0xf800, 0xfbff) AM_WRITENOP
-ADDRESS_MAP_END
+	map(0xf800, 0xfbff).nopw();
+}
 
-static ADDRESS_MAP_START( base_sub_map, AS_PROGRAM, 8, tnzs_base_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x9fff) AM_ROMBANK("subbank")
-	AM_RANGE(0xa000, 0xa000) AM_WRITE(bankswitch1_w)
-	AM_RANGE(0xb000, 0xb001) AM_DEVREADWRITE("ymsnd", ym2203_device, read, write)
-	AM_RANGE(0xd000, 0xdfff) AM_RAM
-	AM_RANGE(0xe000, 0xefff) AM_RAM AM_SHARE("share1")
-ADDRESS_MAP_END
+void tnzs_base_state::base_sub_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x9fff).bankr("subbank");
+	map(0xa000, 0xa000).w(this, FUNC(tnzs_base_state::bankswitch1_w));
+	map(0xb000, 0xb001).rw("ymsnd", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+	map(0xd000, 0xdfff).ram();
+	map(0xe000, 0xefff).ram().share("share1");
+}
 
-static ADDRESS_MAP_START( tnzs_sub_map, AS_PROGRAM, 8, tnzs_mcu_state )
-	AM_RANGE(0xc000, 0xc001) AM_READWRITE(mcu_r, mcu_w)   /* not present in insectx */
-	AM_RANGE(0xa000, 0xa000) AM_WRITE(bankswitch1_w)
-	AM_RANGE(0xf000, 0xf003) AM_READ(analog_r) /* paddles in arkanoid2/plumppop. The ports are */
+void tnzs_mcu_state::tnzs_sub_map(address_map &map)
+{
+	base_sub_map(map);
+	map(0xc000, 0xc001).rw(this, FUNC(tnzs_mcu_state::mcu_r), FUNC(tnzs_mcu_state::mcu_w));   /* not present in insectx */
+	map(0xa000, 0xa000).w(this, FUNC(tnzs_mcu_state::bankswitch1_w));
+	map(0xf000, 0xf003).r(this, FUNC(tnzs_mcu_state::analog_r)); /* paddles in arkanoid2/plumppop. The ports are */
 											   /* read but not used by the other games, and are not read at */
 											   /* all by insectx. */
-	AM_IMPORT_FROM(base_sub_map)
-ADDRESS_MAP_END
+}
 
-static ADDRESS_MAP_START( arknoid2_sub_map, AS_PROGRAM, 8, arknoid2_state )
-	AM_RANGE(0xc000, 0xc001) AM_READWRITE(mcu_r, mcu_w)
-	AM_IMPORT_FROM(tnzs_sub_map)
-ADDRESS_MAP_END
+void arknoid2_state::arknoid2_sub_map(address_map &map)
+{
+	tnzs_sub_map(map);
+	map(0xc000, 0xc001).rw(this, FUNC(arknoid2_state::mcu_r), FUNC(arknoid2_state::mcu_w));
+}
 
-static ADDRESS_MAP_START( kageki_sub_map, AS_PROGRAM, 8, kageki_state )
-	AM_RANGE(0xc000, 0xc000) AM_READ_PORT("IN0")
-	AM_RANGE(0xc001, 0xc001) AM_READ_PORT("IN1")
-	AM_RANGE(0xc002, 0xc002) AM_READ_PORT("IN2")
-	AM_IMPORT_FROM(base_sub_map)
-ADDRESS_MAP_END
+void kageki_state::kageki_sub_map(address_map &map)
+{
+	base_sub_map(map);
+	map(0xc000, 0xc000).portr("IN0");
+	map(0xc001, 0xc001).portr("IN1");
+	map(0xc002, 0xc002).portr("IN2");
+}
 
-static ADDRESS_MAP_START( insectx_sub_map, AS_PROGRAM, 8, insectx_state )
-	AM_RANGE(0xc000, 0xc000) AM_READ_PORT("IN0")
-	AM_RANGE(0xc001, 0xc001) AM_READ_PORT("IN1")
-	AM_RANGE(0xc002, 0xc002) AM_READ_PORT("IN2")
-	AM_IMPORT_FROM(base_sub_map)
-ADDRESS_MAP_END
+void insectx_state::insectx_sub_map(address_map &map)
+{
+	base_sub_map(map);
+	map(0xc000, 0xc000).portr("IN0");
+	map(0xc001, 0xc001).portr("IN1");
+	map(0xc002, 0xc002).portr("IN2");
+}
 
 /* the later board is different, it has a third CPU (and of course no mcu) */
 
-static ADDRESS_MAP_START( tnzsb_base_sub_map, AS_PROGRAM, 8, tnzsb_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x9fff) AM_ROMBANK("subbank")
-	AM_RANGE(0xa000, 0xa000) AM_WRITE(bankswitch1_w)
-	AM_RANGE(0xb002, 0xb002) AM_READ_PORT("DSWA")
-	AM_RANGE(0xb003, 0xb003) AM_READ_PORT("DSWB")
-	AM_RANGE(0xb004, 0xb004) AM_WRITE(sound_command_w)
-	AM_RANGE(0xc000, 0xc000) AM_READ_PORT("IN0")
-	AM_RANGE(0xc001, 0xc001) AM_READ_PORT("IN1")
-	AM_RANGE(0xc002, 0xc002) AM_READ_PORT("IN2")
-	AM_RANGE(0xd000, 0xdfff) AM_RAM
-	AM_RANGE(0xe000, 0xefff) AM_RAM AM_SHARE("share1")
-ADDRESS_MAP_END
+void tnzsb_state::tnzsb_base_sub_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x9fff).bankr("subbank");
+	map(0xa000, 0xa000).w(this, FUNC(tnzsb_state::bankswitch1_w));
+	map(0xb002, 0xb002).portr("DSWA");
+	map(0xb003, 0xb003).portr("DSWB");
+	map(0xb004, 0xb004).w(this, FUNC(tnzsb_state::sound_command_w));
+	map(0xc000, 0xc000).portr("IN0");
+	map(0xc001, 0xc001).portr("IN1");
+	map(0xc002, 0xc002).portr("IN2");
+	map(0xd000, 0xdfff).ram();
+	map(0xe000, 0xefff).ram().share("share1");
+}
 
-static ADDRESS_MAP_START( tnzsb_sub_map, AS_PROGRAM, 8, tnzsb_state )
-	AM_RANGE(0xf000, 0xf003) AM_READONLY
-	AM_RANGE(0xf000, 0xf3ff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_IMPORT_FROM(tnzsb_base_sub_map)
-ADDRESS_MAP_END
+void tnzsb_state::tnzsb_sub_map(address_map &map)
+{
+	tnzsb_base_sub_map(map);
+	map(0xf000, 0xf3ff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+}
 
-static ADDRESS_MAP_START( kabukiz_sub_map, AS_PROGRAM, 8, kabukiz_state )
-	AM_RANGE(0xf800, 0xfbff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_IMPORT_FROM(tnzsb_base_sub_map)
-ADDRESS_MAP_END
+void kabukiz_state::kabukiz_sub_map(address_map &map)
+{
+	tnzsb_base_sub_map(map);
+	map(0xf800, 0xfbff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+}
 
-static ADDRESS_MAP_START( tnzsb_cpu2_map, AS_PROGRAM, 8, tnzsb_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0xc000, 0xdfff) AM_RAM
-ADDRESS_MAP_END
+void tnzsb_state::tnzsb_cpu2_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0xc000, 0xdfff).ram();
+}
 
-static ADDRESS_MAP_START( kabukiz_cpu2_map, AS_PROGRAM, 8, kabukiz_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK("audiobank")
-	AM_RANGE(0xe000, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void kabukiz_state::kabukiz_cpu2_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0xbfff).bankr("audiobank");
+	map(0xe000, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START( tnzsb_io_map, AS_IO, 8, tnzsb_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x01) AM_DEVREADWRITE("ymsnd", ym2203_device, read, write)
-	AM_RANGE(0x02, 0x02) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+void tnzsb_state::tnzsb_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x01).rw("ymsnd", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+	map(0x02, 0x02).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
-static ADDRESS_MAP_START( jpopnics_main_map, AS_PROGRAM, 8, jpopnics_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0xbfff) AM_DEVICE("mainbank", address_map_bank_device, amap8)
-	AM_RANGE(0xc000, 0xcfff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spritecodelow_r8, spritecodelow_w8)
-	AM_RANGE(0xd000, 0xdfff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spritecodehigh_r8, spritecodehigh_w8)
-	AM_RANGE(0xe000, 0xefff) AM_RAM AM_SHARE("share1") /* WORK RAM (shared by the 2 z80's) */
-	AM_RANGE(0xf000, 0xf2ff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spriteylow_r8, spriteylow_w8)
-	AM_RANGE(0xf300, 0xf303) AM_MIRROR(0xfc) AM_DEVWRITE("spritegen", seta001_device, spritectrl_w8) /* control registers (0x80 mirror used by Arkanoid 2) */
-	AM_RANGE(0xf400, 0xf400) AM_DEVWRITE("spritegen", seta001_device, spritebgflag_w8)   /* enable / disable background transparency */
-	AM_RANGE(0xf600, 0xf600) AM_READNOP AM_WRITE(ramrom_bankswitch_w)
-	AM_RANGE(0xf800, 0xffff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-ADDRESS_MAP_END
+void jpopnics_state::jpopnics_main_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0xbfff).m(m_mainbank, FUNC(address_map_bank_device::amap8));
+	map(0xc000, 0xcfff).ram().rw(m_seta001, FUNC(seta001_device::spritecodelow_r8), FUNC(seta001_device::spritecodelow_w8));
+	map(0xd000, 0xdfff).ram().rw(m_seta001, FUNC(seta001_device::spritecodehigh_r8), FUNC(seta001_device::spritecodehigh_w8));
+	map(0xe000, 0xefff).ram().share("share1"); /* WORK RAM (shared by the 2 z80's) */
+	map(0xf000, 0xf2ff).ram().rw(m_seta001, FUNC(seta001_device::spriteylow_r8), FUNC(seta001_device::spriteylow_w8));
+	map(0xf300, 0xf303).mirror(0xfc).w(m_seta001, FUNC(seta001_device::spritectrl_w8)); /* control registers (0x80 mirror used by Arkanoid 2) */
+	map(0xf400, 0xf400).w(m_seta001, FUNC(seta001_device::spritebgflag_w8));   /* enable / disable background transparency */
+	map(0xf600, 0xf600).nopr().w(this, FUNC(jpopnics_state::ramrom_bankswitch_w));
+	map(0xf800, 0xffff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+}
 
-static ADDRESS_MAP_START( jpopnics_sub_map, AS_PROGRAM, 8, jpopnics_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x9fff) AM_ROMBANK("subbank")
+void jpopnics_state::jpopnics_sub_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x9fff).bankr("subbank");
 
-	AM_RANGE(0xa000, 0xa000) AM_WRITE(subbankswitch_w)
-	AM_RANGE(0xb000, 0xb001) AM_DEVREADWRITE("ymsnd", ym2151_device, read, write)
-	AM_RANGE(0xc000, 0xc000) AM_READ_PORT("IN1")
-	AM_RANGE(0xc001, 0xc001) AM_READ_PORT("IN2")
-	AM_RANGE(0xc600, 0xc600) AM_READ_PORT("DSWA")
-	AM_RANGE(0xc601, 0xc601) AM_READ_PORT("DSWB")
+	map(0xa000, 0xa000).w(this, FUNC(jpopnics_state::subbankswitch_w));
+	map(0xb000, 0xb001).rw("ymsnd", FUNC(ym2151_device::read), FUNC(ym2151_device::write));
+	map(0xc000, 0xc000).portr("IN1");
+	map(0xc001, 0xc001).portr("IN2");
+	map(0xc600, 0xc600).portr("DSWA");
+	map(0xc601, 0xc601).portr("DSWB");
 
-	AM_RANGE(0xd000, 0xdfff) AM_RAM
-	AM_RANGE(0xe000, 0xefff) AM_RAM AM_SHARE("share1")
+	map(0xd000, 0xdfff).ram();
+	map(0xe000, 0xefff).ram().share("share1");
 
-	AM_RANGE(0xf000, 0xf003) AM_DEVREAD("upd4701", upd4701_device, read_xy)
-ADDRESS_MAP_END
+	map(0xf000, 0xf003).r(m_upd4701, FUNC(upd4701_device::read_xy));
+}
 
 /* RAM/ROM bank that maps at 0x8000-0xbfff on maincpu */
-static ADDRESS_MAP_START( mainbank_map, AS_PROGRAM, 8, tnzs_base_state )
-	AM_RANGE(0x00000, 0x07fff) AM_RAM // instead of the first two banks of ROM being repeated redundantly the hardware maps RAM here
-	AM_RANGE(0x08000, 0x1ffff) AM_ROM AM_REGION(":maincpu", 0x8000)
-ADDRESS_MAP_END
+void tnzs_base_state::mainbank_map(address_map &map)
+{
+	map(0x00000, 0x07fff).ram(); // instead of the first two banks of ROM being repeated redundantly the hardware maps RAM here
+	map(0x08000, 0x1ffff).rom().region(":maincpu", 0x8000);
+}
 
-MACHINE_CONFIG_START( tnzs_mainbank )
+MACHINE_CONFIG_START(tnzs_base_state::tnzs_mainbank)
 	MCFG_DEVICE_ADD("mainbank", ADDRESS_MAP_BANK, 0)
 	MCFG_DEVICE_PROGRAM_MAP(mainbank_map)
 	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_LITTLE)
-	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(8)
-	MCFG_ADDRESS_MAP_BANK_ADDRBUS_WIDTH(17)
+	MCFG_ADDRESS_MAP_BANK_DATA_WIDTH(8)
+	MCFG_ADDRESS_MAP_BANK_ADDR_WIDTH(17)
 	MCFG_ADDRESS_MAP_BANK_STRIDE(0x4000)
 MACHINE_CONFIG_END
 
@@ -1517,17 +1533,17 @@ static GFXDECODE_START( insectx )
 	GFXDECODE_ENTRY( "gfx1", 0, insectx_charlayout, 0, 32 )
 GFXDECODE_END
 
-static MACHINE_CONFIG_START( tnzs_base )
+MACHINE_CONFIG_START(tnzs_base_state::tnzs_base)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80,XTAL_12MHz/2)       /* 6.0 MHz ??? - Main board Crystal is 12MHz, verified on insectx, kageki, tnzsb */
+	MCFG_CPU_ADD("maincpu", Z80,XTAL(12'000'000)/2)       /* 6.0 MHz ??? - Main board Crystal is 12MHz, verified on insectx, kageki, tnzsb */
 	MCFG_CPU_PROGRAM_MAP(main_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", tnzs_base_state,  irq0_line_hold)
 
-	MCFG_CPU_ADD("sub", Z80,XTAL_12MHz/2)       /* 6.0 MHz ??? - Main board Crystal is 12MHz, verified on insectx, kageki, tnzsb */
+	MCFG_CPU_ADD("sub", Z80,XTAL(12'000'000)/2)       /* 6.0 MHz ??? - Main board Crystal is 12MHz, verified on insectx, kageki, tnzsb */
 	MCFG_CPU_PROGRAM_MAP(base_sub_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", tnzs_base_state,  irq0_line_hold)
 
-	MCFG_FRAGMENT_ADD(tnzs_mainbank)
+	tnzs_mainbank(config);
 
 	MCFG_QUANTUM_PERFECT_CPU("maincpu")
 
@@ -1552,7 +1568,8 @@ static MACHINE_CONFIG_START( tnzs_base )
 	MCFG_SPEAKER_STANDARD_MONO("speaker")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( tnzs, tnzs_base )
+MACHINE_CONFIG_START(tnzs_mcu_state::tnzs)
+	tnzs_base(config);
 	MCFG_CPU_ADD("mcu", I8742, 12000000/2)  /* 400KHz ??? - Main board Crystal is 12MHz */
 	MCFG_MCS48_PORT_P1_IN_CB(READ8(tnzs_mcu_state, mcu_port1_r))
 	MCFG_MCS48_PORT_P2_IN_CB(READ8(tnzs_mcu_state, mcu_port2_r))
@@ -1569,13 +1586,14 @@ static MACHINE_CONFIG_DERIVED( tnzs, tnzs_base )
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
 
 	/* sound hardware */
-	MCFG_SOUND_ADD("ymsnd", YM2203, XTAL_12MHz/4)
+	MCFG_SOUND_ADD("ymsnd", YM2203, XTAL(12'000'000)/4)
 	MCFG_AY8910_PORT_A_READ_CB(IOPORT("DSWA"))
 	MCFG_AY8910_PORT_B_READ_CB(IOPORT("DSWB"))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.3)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( extrmatn, tnzs )
+MACHINE_CONFIG_START(extrmatn_state::extrmatn)
+	tnzs(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(prompal_main_map)
@@ -1589,13 +1607,15 @@ static MACHINE_CONFIG_DERIVED( extrmatn, tnzs )
 	MCFG_PALETTE_INIT_OWNER(tnzs_base_state, prompalette)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( plumppop, extrmatn )
+MACHINE_CONFIG_START(extrmatn_state::plumppop)
+	extrmatn(config);
 	MCFG_DEVICE_ADD("upd4701", UPD4701A, 0)
 	MCFG_UPD4701_PORTX("AN1")
 	MCFG_UPD4701_PORTY("AN2")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( arknoid2, plumppop )
+MACHINE_CONFIG_START(arknoid2_state::arknoid2)
+	plumppop(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", arknoid2_state, mcu_interrupt)
@@ -1607,7 +1627,8 @@ static MACHINE_CONFIG_DERIVED( arknoid2, plumppop )
 	MCFG_DEVICE_DISABLE()
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( insectx, tnzs_base )
+MACHINE_CONFIG_START(insectx_state::insectx)
+	tnzs_base(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("sub")
 	MCFG_CPU_PROGRAM_MAP(insectx_sub_map)
@@ -1616,20 +1637,21 @@ static MACHINE_CONFIG_DERIVED( insectx, tnzs_base )
 	MCFG_GFXDECODE_MODIFY("gfxdecode", insectx)
 
 	/* sound hardware */
-	MCFG_SOUND_ADD("ymsnd", YM2203, XTAL_12MHz/4) /* verified on pcb */
+	MCFG_SOUND_ADD("ymsnd", YM2203, XTAL(12'000'000)/4) /* verified on pcb */
 	MCFG_AY8910_PORT_A_READ_CB(IOPORT("DSWA"))
 	MCFG_AY8910_PORT_B_READ_CB(IOPORT("DSWB"))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.3)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( kageki, tnzs_base )
+MACHINE_CONFIG_START(kageki_state::kageki)
+	tnzs_base(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("sub")
 	MCFG_CPU_PROGRAM_MAP(kageki_sub_map)
 
 	/* sound hardware */
-	MCFG_SOUND_ADD("ymsnd", YM2203, XTAL_12MHz/4) /* verified on pcb */
+	MCFG_SOUND_ADD("ymsnd", YM2203, XTAL(12'000'000)/4) /* verified on pcb */
 	MCFG_AY8910_PORT_A_READ_CB(READ8(kageki_state, csport_r))
 	MCFG_AY8910_PORT_B_WRITE_CB(WRITE8(kageki_state, csport_w))
 	MCFG_SOUND_ROUTE(0, "speaker", 0.15)
@@ -1643,7 +1665,8 @@ static MACHINE_CONFIG_DERIVED( kageki, tnzs_base )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( tnzsb, tnzs_base )
+MACHINE_CONFIG_START(tnzsb_state::tnzsb)
+	tnzs_base(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(tnzsb_main_map)
@@ -1651,7 +1674,7 @@ static MACHINE_CONFIG_DERIVED( tnzsb, tnzs_base )
 	MCFG_CPU_MODIFY("sub") /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(tnzsb_sub_map)
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_12MHz/2) /* verified on pcb */
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(12'000'000)/2) /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(tnzsb_cpu2_map)
 	MCFG_CPU_IO_MAP(tnzsb_io_map)
 
@@ -1662,7 +1685,7 @@ static MACHINE_CONFIG_DERIVED( tnzsb, tnzs_base )
 	/* sound hardware */
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
 
-	MCFG_SOUND_ADD("ymsnd", YM2203, XTAL_12MHz/4) /* verified on pcb */
+	MCFG_SOUND_ADD("ymsnd", YM2203, XTAL(12'000'000)/4) /* verified on pcb */
 	MCFG_YM2203_IRQ_HANDLER(WRITELINE(tnzsb_state, ym2203_irqhandler))
 	MCFG_SOUND_ROUTE(0, "speaker", 1.0)
 	MCFG_SOUND_ROUTE(1, "speaker", 1.0)
@@ -1671,7 +1694,8 @@ static MACHINE_CONFIG_DERIVED( tnzsb, tnzs_base )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( kabukiz, tnzsb )
+MACHINE_CONFIG_START(kabukiz_state::kabukiz)
+	tnzsb(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("sub")
@@ -1691,7 +1715,8 @@ static MACHINE_CONFIG_DERIVED( kabukiz, tnzsb )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( jpopnics, tnzs_base )
+MACHINE_CONFIG_START(jpopnics_state::jpopnics)
+	tnzs_base(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(jpopnics_main_map)
@@ -1710,7 +1735,7 @@ static MACHINE_CONFIG_DERIVED( jpopnics, tnzs_base )
 	MCFG_PALETTE_ENDIANNESS(ENDIANNESS_BIG)
 
 	/* sound hardware */
-	MCFG_YM2151_ADD("ymsnd", XTAL_12MHz/4) /* Not verified - Main board Crystal is 12MHz */
+	MCFG_YM2151_ADD("ymsnd", XTAL(12'000'000)/4) /* Not verified - Main board Crystal is 12MHz */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.3)
 MACHINE_CONFIG_END
 
@@ -1886,11 +1911,11 @@ ROM_END
 
 ROM_START( extrmatnur )
 	ROM_REGION( 0x20000, "maincpu", 0 )             /* Region 0 - main cpu */
-	ROM_LOAD( "b06_15",  0x00000, 0x10000, CRC(4b3ee597) SHA1(024964faebd0fa894ab4868a8e009267e828cbfb) )
-	ROM_LOAD( "b06_16",  0x10000, 0x10000, CRC(86175ea4) SHA1(0f30cbb1a6a32355528543707799f752a1b9b75e) )
+	ROM_LOAD( "b06-15.11c",  0x00000, 0x10000, CRC(4b3ee597) SHA1(024964faebd0fa894ab4868a8e009267e828cbfb) )
+	ROM_LOAD( "b06-16.9c",   0x10000, 0x10000, CRC(86175ea4) SHA1(0f30cbb1a6a32355528543707799f752a1b9b75e) )
 
 	ROM_REGION( 0x10000, "sub", 0 )             /* Region 2 - sound cpu */
-	ROM_LOAD( "b06_17", 0x00000, 0x10000, CRC(744f2c84) SHA1(7565c1594c2a3bae1ae45afcbf93363fe2b12d58) )
+	ROM_LOAD( "b06-17.4e", 0x00000, 0x10000, CRC(744f2c84) SHA1(7565c1594c2a3bae1ae45afcbf93363fe2b12d58) )
 
 	ROM_REGION( 0x10000, "mcu", 0 )    /* M-Chip (i8x42 internal ROM) */
 	ROM_LOAD( "b06__14.1g", 0x0000, 0x0800, CRC(28907072) SHA1(21c7017af8a8ceb8e43d7e798f48518b136fd45c) ) /* Labeled B06-14 and under printed label "Taito M-001, 128P, 720100", is a mask 8042 */
@@ -2286,23 +2311,8 @@ ROM_END
 Chuka Taisen
 Taito, 1988
 
-This PCB comes in two variations: one which is on the older, color prom based P0-025-A PCB as used on extrmatn, drtoppel
-and one which is a unique PCB sort of an 'older version of p0-051-a' which uses color ram like tnzs.
-The color prom version is not dumped yet.
-
-The chukatai (p0-025-a) PCB has a sticker label which says "????????? // CHUKATAISEN"
-The chukatai (p0-028-a) PCB has a sticker label which says "K1100??2A // CHUKATAISEN"
-
-PCB:
-Older(technically 'newer rom ids but used to get rid of old pcb stock') set is:
-Seta: P0-025-A
-Taito: K1100241A J1100107A
-
-The two newer sets are:
-Seta: P0-028-A
+ Seta: P0-028-A
 Taito: K1100416A J1100332A
-which is described in the diagram below.
-
 |--------------------------------------------------|
 |    SETA                     SETA         12MHz   |
 |    X1-003     6116          X1-001               |
@@ -2334,18 +2344,52 @@ which is described in the diagram below.
 Notes:
       6264: 8K x8 SRAM
       6116: 2K x8 SRAM
+      Graphics ROMs are 23C1000/TC531000 MASK ROMs
 
-The undumped Chuka Taisen set has a daughterboard which plugs into the
-GFX ROM sockets and allows use of 27c1000d eproms instead of 23c1000 mask roms.
-The undumped set, unlike the two here, runs on an older drtoppel/extrmatn pcb
-and uses color proms!
 
+Chuka Taisen 'later' version:
+   Seta: PO-025-A
+  Taito: K1100241A J1100107A
+Sticker: K1100364A CHUKA TAISEN
+
+Technically newer ROM ID#s but was used to get rid of old pcb stock.
+This set, unlike the PO-028-A PCB versions, uses two color proms.
+
+
+************************************************
+Guru-Readme for EPROM version of Chuuka Taisen
+------------------------------------------------
+
+Main Board (same as Extermination/Dr Toppel etc)
+----------
+PO-025-A
+J1100107A K1100241A
+Sticker: K1100364A CHUUKA TAISEN
+Sticker: M4300092A CHUUKA TAISEN
+
+All EPROMs are NEC D27C512D-15
+M-Chip labelled "B06 14" at location 3G
+
+PALs (all MMI PAL16L8A-2CN): B06-13.2C, B06-12.3C, B06-11.6D, B06-10.8D
+PALs are protected
+
+PROMs are AM27S29
+
+
+ROM Board
+---------
+K9100189A J9100141A ROM7PCB
+Sticker: K9100189A CHUUKA TAISEN
+
+All EPROMs are Toshiba TC571000D-20
+
+************************************************
 
 */
 
 ROM_START( chukatai )
 	ROM_REGION( 0x20000, "maincpu", 0 ) /* 64k + bankswitch areas for the first CPU */
-	ROM_LOAD( "b44-10", 0x00000, 0x10000, CRC(8c69e008) SHA1(7825965f517f3562a508345b7c0d32b8a57bd38a) )
+	ROM_LOAD( "b44-10", 0x00000, 0x10000, CRC(8c69e008) SHA1(7825965f517f3562a508345b7c0d32b8a57bd38a) ) /* P0-028-A PCB set */
 	ROM_LOAD( "b44-11", 0x10000, 0x10000, CRC(32484094) SHA1(f320fea2910816b5085ca9aa37e30af665fb6be1) )
 
 	ROM_REGION( 0x10000, "sub", 0 ) /* 64k for the second CPU */
@@ -2373,7 +2417,7 @@ ROM_END
 
 ROM_START( chukataiu )
 	ROM_REGION( 0x20000, "maincpu", 0 ) /* 64k + bankswitch areas for the first CPU */
-	ROM_LOAD( "b44-10", 0x00000, 0x10000, CRC(8c69e008) SHA1(7825965f517f3562a508345b7c0d32b8a57bd38a) )
+	ROM_LOAD( "b44-10", 0x00000, 0x10000, CRC(8c69e008) SHA1(7825965f517f3562a508345b7c0d32b8a57bd38a) ) /* P0-028-A PCB set */
 	ROM_LOAD( "b44-11", 0x10000, 0x10000, CRC(32484094) SHA1(f320fea2910816b5085ca9aa37e30af665fb6be1) )
 
 	ROM_REGION( 0x10000, "sub", 0 ) /* 64k for the second CPU */
@@ -2401,7 +2445,7 @@ ROM_END
 
 ROM_START( chukataij )
 	ROM_REGION( 0x20000, "maincpu", 0 ) /* 64k + bankswitch areas for the first CPU */
-	ROM_LOAD( "b44-10", 0x00000, 0x10000, CRC(8c69e008) SHA1(7825965f517f3562a508345b7c0d32b8a57bd38a) )
+	ROM_LOAD( "b44-10", 0x00000, 0x10000, CRC(8c69e008) SHA1(7825965f517f3562a508345b7c0d32b8a57bd38a) ) /* P0-028-A PCB set */
 	ROM_LOAD( "b44-11", 0x10000, 0x10000, CRC(32484094) SHA1(f320fea2910816b5085ca9aa37e30af665fb6be1) )
 
 	ROM_REGION( 0x10000, "sub", 0 ) /* 64k for the second CPU */
@@ -2427,10 +2471,37 @@ ROM_START( chukataij )
 	ROM_LOAD( "b06-13.pal16l8a.c2.jed", 0x03000, 0x01000, NO_DUMP)
 ROM_END
 
-/*An undumped set of chuka taisen exists with all roms in the b44-14
-thru b44-25 number range and 27c1000d gfx roms, AND COLOR PROMS, using the older p0-025-a pcb
-This set, unlike the others, does use the b06-10.pal16l8a.d9.jed "older" pal rather than the 'newer' b06-101.pal16l8a.d9.jed pal.
-*/
+ROM_START( chukataija )
+	ROM_REGION( 0x20000, "maincpu", 0 ) /* 64k + bankswitch areas for the first CPU */
+	ROM_LOAD( "b44-31.11c", 0x00000, 0x10000, CRC(134d3c9e) SHA1(e686a75b9c267db9e8dad7f162c93f1992e395ec) ) /* P0-025-A PCB set */
+	ROM_LOAD( "b44-11.9c",  0x10000, 0x10000, CRC(32484094) SHA1(f320fea2910816b5085ca9aa37e30af665fb6be1) )
+
+	ROM_REGION( 0x10000, "sub", 0 ) /* 64k for the second CPU */
+	ROM_LOAD( "b44-32.4e", 0x00000, 0x10000, CRC(f52d2f90) SHA1(f040b16e29553ae510e50e1ed55344a36fdcc56d) )
+
+	ROM_REGION( 0x10000, "mcu", 0 ) /* M-Chip (i8x42 internal ROM) */
+	ROM_LOAD( "b06__14.1g", 0x0000, 0x0800, CRC(28907072) SHA1(21c7017af8a8ceb8e43d7e798f48518b136fd45c) ) /* Labeled B06-14 and under printed label "Taito M-001, 128P, 720100", is a mask 8042 */
+
+	ROM_REGION( 0x100000, "gfx1", 0 ) /* located on the K9100189A J9100141A ROM7PCB daughterboard */
+	ROM_LOAD( "b44-21.rom4l", 0x00000, 0x20000, CRC(aae7b3d5) SHA1(52809ea22d98811ece2fb27e80db6ddf4fbacb07) ) /* same data as B44-01 through B44-08 */
+	ROM_LOAD( "b44-22.rom4h", 0x20000, 0x20000, CRC(7f0b9568) SHA1(415d2638d1b0eb36b2e2f63219cbc0dbebe02dc6) )
+	ROM_LOAD( "b44-23.rom3l", 0x40000, 0x20000, CRC(5a54a3b9) SHA1(6b219f1c3570f16eb4a06221d7e527c735437bac) )
+	ROM_LOAD( "b44-24.rom3h", 0x60000, 0x20000, CRC(3c5f544b) SHA1(d3b0ee18f1027483a36ef02757b62f42a086a8e2) )
+	ROM_LOAD( "b44-25.rom2l", 0x80000, 0x20000, CRC(d1b7e314) SHA1(8b4181caa32955b4274614a4238bb24d67ecb729) )
+	ROM_LOAD( "b44-26.rom2h", 0xa0000, 0x20000, CRC(269978a8) SHA1(aef7b8d3d00dcc4201e0a1e28026f6f1bdafd0b7) )
+	ROM_LOAD( "b44-27.rom1l", 0xc0000, 0x20000, CRC(3e0e737e) SHA1(f8d62c7b69c79da9df7ef5ce454060d3645e5884) )
+	ROM_LOAD( "b44-28.rom1h", 0xe0000, 0x20000, CRC(6cb1e8fc) SHA1(4ab0c2cce1de2616044a9bfb9bf17f95a49baffd) )
+
+	ROM_REGION( 0x0400, "proms", 0 )
+	ROM_LOAD( "b44-30.15f", 0x00000, 0x200, CRC(b3de8312) SHA1(dac0d9bfb593d691fd7030e2b1b13be1218929a4) )  /* hi bytes, AM27S29 or compatible like MB7124 */
+	ROM_LOAD( "b44-29.17f", 0x00200, 0x200, CRC(ae44b8fb) SHA1(2bf5aca32bb301c0187deb05a3f4a482ac97f0ef) )  /* lo bytes, AM27S29 or compatible like MB7124 */
+
+	ROM_REGION( 0x10000, "pal", 0 ) /* these are shared with extermination */
+	ROM_LOAD( "b06-10.pal16l8a.d9.jed", 0x00000, 0x01000, NO_DUMP)
+	ROM_LOAD( "b06-11.pal16l8a.d6.jed", 0x01000, 0x01000, NO_DUMP)
+	ROM_LOAD( "b06-12.pal16l8a.c3.jed", 0x02000, 0x01000, NO_DUMP)
+	ROM_LOAD( "b06-13.pal16l8a.c2.jed", 0x03000, 0x01000, NO_DUMP)
+ROM_END
 
 
 /*
@@ -2697,7 +2768,7 @@ ROM_START( tnzsop ) // prototype (location test?) version; has different rom lab
 	ROM_LOAD( "e-3__6-24__c4ach.tmm27512d-20.u38", 0x00000, 0x10000, CRC(c7662e96) SHA1(be28298bfde4e3867cfe75633ffb0f8611dbbd8b) ) // Labeled as PCB location, date of 6/24 & checksum - TMM27512D  eprom
 
 	ROM_REGION( 0x10000, "mcu", 0 ) /* M-Chip (i8x42 internal ROM) */
-	ROM_LOAD( "b8042h__'88-6-22__0fcc.d8742.u46", 0x0000, 0x0800, CRC(a4bfce19) SHA1(9340862d5bdc1ad4799dc92cae9bce1428b47478) ) // Dated  '88/6/22 with checksum - Intel D8742 MCU
+	ROM_LOAD( "b8042h___88-6-22__0fcc.d8742.u46", 0x0000, 0x0800, CRC(a4bfce19) SHA1(9340862d5bdc1ad4799dc92cae9bce1428b47478) ) // Dated  '88/6/22 with checksum - Intel D8742 MCU
 
 	ROM_REGION( 0x100000, "gfx1", 0 )
 	ROM_LOAD( "a13__03e8.d27c1000d-15.a13",  0x00000, 0x20000, CRC(7e0bd5bb) SHA1(95dfb00ec915778e02d8bfa996735ab817191adc) ) // labels contain the PCB location & checksum
@@ -2832,30 +2903,31 @@ GAME( 1987, extrmatnur,extrmatn, extrmatn, extrmatn, extrmatn_state, 0, ROT270, 
 GAME( 1987, extrmatnj, extrmatn, extrmatn, extrmatn, extrmatn_state, 0, ROT270, "Taito Corporation",                               "Extermination (Japan)", MACHINE_SUPPORTS_SAVE )
 
 GAME( 1987, arknoid2,  0,        arknoid2, arknoid2, arknoid2_state, 0, ROT270, "Taito Corporation Japan",                     "Arkanoid - Revenge of DOH (World)", MACHINE_SUPPORTS_SAVE )
-GAME( 1987, arknoid2u, arknoid2, arknoid2, arknid2u, arknoid2_state, 0, ROT270, "Taito America Corporation (Romstar license)", "Arkanoid - Revenge of DOH (US)", MACHINE_SUPPORTS_SAVE )
+GAME( 1987, arknoid2u, arknoid2, arknoid2, arknid2u, arknoid2_state, 0, ROT270, "Taito America Corporation (Romstar license)", "Arkanoid - Revenge of DOH (US)",    MACHINE_SUPPORTS_SAVE )
 GAME( 1987, arknoid2j, arknoid2, arknoid2, arknid2u, arknoid2_state, 0, ROT270, "Taito Corporation",                           "Arkanoid - Revenge of DOH (Japan)", MACHINE_SUPPORTS_SAVE )
 GAME( 1987, arknoid2b, arknoid2, arknoid2, arknid2u, arknoid2_state, 0, ROT270, "bootleg",                                     "Arkanoid - Revenge of DOH (Japan bootleg)", MACHINE_SUPPORTS_SAVE )
 
 GAME( 1987, drtoppel,  0,        extrmatn, drtoppel, extrmatn_state, 0, ROT90,  "Kaneko / Taito Corporation Japan",   "Dr. Toppel's Adventure (World)", MACHINE_SUPPORTS_SAVE ) /* Possible region hack */
-GAME( 1987, drtoppelu, drtoppel, extrmatn, drtopplu, extrmatn_state, 0, ROT90,  "Kaneko / Taito America Corporation", "Dr. Toppel's Adventure (US)", MACHINE_SUPPORTS_SAVE ) /* Possible region hack */
+GAME( 1987, drtoppelu, drtoppel, extrmatn, drtopplu, extrmatn_state, 0, ROT90,  "Kaneko / Taito America Corporation", "Dr. Toppel's Adventure (US)",    MACHINE_SUPPORTS_SAVE ) /* Possible region hack */
 GAME( 1987, drtoppelj, drtoppel, extrmatn, drtopplu, extrmatn_state, 0, ROT90,  "Kaneko / Taito Corporation",         "Dr. Toppel's Tankentai (Japan)", MACHINE_SUPPORTS_SAVE )
 
 GAME( 1988, kageki,    0,        kageki,   kageki,   kageki_state,   0, ROT90,  "Kaneko / Taito Corporation",                           "Kageki (World)", MACHINE_SUPPORTS_SAVE )
-GAME( 1988, kagekiu,   kageki,   kageki,   kagekiu,  kageki_state,   0, ROT90,  "Kaneko / Taito America Corporation (Romstar license)", "Kageki (US)", MACHINE_SUPPORTS_SAVE )
+GAME( 1988, kagekiu,   kageki,   kageki,   kagekiu,  kageki_state,   0, ROT90,  "Kaneko / Taito America Corporation (Romstar license)", "Kageki (US)",    MACHINE_SUPPORTS_SAVE )
 GAME( 1988, kagekij,   kageki,   kageki,   kagekij,  kageki_state,   0, ROT90,  "Kaneko / Taito Corporation",                           "Kageki (Japan)", MACHINE_SUPPORTS_SAVE )
-GAME( 1992, kagekih,   kageki,   kageki,   kageki,   kageki_state,   0, ROT90,  "hack",                                                 "Kageki (hack)", MACHINE_SUPPORTS_SAVE ) // date is hacked at least, might also be a Japan set hacked to show english
+GAME( 1992, kagekih,   kageki,   kageki,   kageki,   kageki_state,   0, ROT90,  "hack",                                                 "Kageki (hack)",  MACHINE_SUPPORTS_SAVE ) // date is hacked at least, might also be a Japan set hacked to show english
 
-GAME( 1988, chukatai,  0,        tnzs,     chukatai, tnzs_state,     0, ROT0,   "Taito Corporation Japan",   "Chuka Taisen (World)", MACHINE_SUPPORTS_SAVE ) /* Possible region hack */
-GAME( 1988, chukataiu, chukatai, tnzs,     chukatau, tnzs_state,     0, ROT0,   "Taito America Corporation", "Chuka Taisen (US)", MACHINE_SUPPORTS_SAVE ) /* Possible region hack */
-GAME( 1988, chukataij, chukatai, tnzs,     chukatau, tnzs_state,     0, ROT0,   "Taito Corporation",         "Chuka Taisen (Japan)", MACHINE_SUPPORTS_SAVE )
+GAME( 1988, chukatai,  0,        tnzs,     chukatai, tnzs_state,     0, ROT0,   "Taito Corporation Japan",   "Chuka Taisen (World) (P0-028-A PCB)", MACHINE_SUPPORTS_SAVE ) /* Possible region hack */
+GAME( 1988, chukataiu, chukatai, tnzs,     chukatau, tnzs_state,     0, ROT0,   "Taito America Corporation", "Chuka Taisen (US) (P0-028-A PCB)",    MACHINE_SUPPORTS_SAVE ) /* Possible region hack */
+GAME( 1988, chukataij, chukatai, tnzs,     chukatau, tnzs_state,     0, ROT0,   "Taito Corporation",         "Chuka Taisen (Japan) (P0-028-A PCB)", MACHINE_SUPPORTS_SAVE )
+GAME( 1988, chukataija,chukatai, extrmatn, chukatau, extrmatn_state, 0, ROT0,   "Taito Corporation",         "Chuka Taisen (Japan) (P0-025-A PCB)", MACHINE_SUPPORTS_SAVE ) /* Higher rom ID# but older PCB stock */
 
-GAME( 1988, tnzs,      0,        tnzsb,    tnzs,     tnzsb_state,    0, ROT0,   "Taito Corporation Japan",   "The NewZealand Story (World, new version) (newer PCB)", MACHINE_SUPPORTS_SAVE )
-GAME( 1988, tnzsj,     tnzs,     tnzsb,    tnzsj,    tnzsb_state,    0, ROT0,   "Taito Corporation",         "The NewZealand Story (Japan, new version) (newer PCB)", MACHINE_SUPPORTS_SAVE )
-GAME( 1988, tnzso,     tnzs,     tnzs,     tnzsop,   tnzs_state,     0, ROT0,   "Taito Corporation Japan",   "The NewZealand Story (World, old version) (older PCB)", MACHINE_SUPPORTS_SAVE )
-GAME( 1988, tnzsjo,    tnzs,     tnzs,     tnzsjo,   tnzs_state,     0, ROT0,   "Taito Corporation",         "The NewZealand Story (Japan, old version) (older PCB)", MACHINE_SUPPORTS_SAVE )
-GAME( 1988, tnzsuo,    tnzs,     tnzs,     tnzsjo,   tnzs_state,     0, ROT0,   "Taito America Corporation", "The NewZealand Story (US, old version) (older PCB)",    MACHINE_SUPPORTS_SAVE )
-GAME( 1988, tnzsoa,    tnzs,     tnzs,     tnzsop,   tnzs_state,     0, ROT0,   "Taito Corporation Japan",   "The NewZealand Story (World, unknown version) (older PCB)", MACHINE_SUPPORTS_SAVE )
-GAME( 1988, tnzsop,    tnzs,     tnzs,     tnzsop,   tnzs_state,     0, ROT0,   "Taito Corporation Japan",   "The NewZealand Story (World, prototype) (older PCB)", MACHINE_SUPPORTS_SAVE )
+GAME( 1988, tnzs,      0,        tnzsb,    tnzs,     tnzsb_state,    0, ROT0,   "Taito Corporation Japan",   "The NewZealand Story (World, new version) (P0-043A PCB)", MACHINE_SUPPORTS_SAVE )
+GAME( 1988, tnzsj,     tnzs,     tnzsb,    tnzsj,    tnzsb_state,    0, ROT0,   "Taito Corporation",         "The NewZealand Story (Japan, new version) (P0-043A PCB)", MACHINE_SUPPORTS_SAVE )
+GAME( 1988, tnzso,     tnzs,     tnzs,     tnzsop,   tnzs_state,     0, ROT0,   "Taito Corporation Japan",   "The NewZealand Story (World, old version) (P0-041A PCB)", MACHINE_SUPPORTS_SAVE )
+GAME( 1988, tnzsjo,    tnzs,     tnzs,     tnzsjo,   tnzs_state,     0, ROT0,   "Taito Corporation",         "The NewZealand Story (Japan, old version) (P0-041A PCB)", MACHINE_SUPPORTS_SAVE )
+GAME( 1988, tnzsuo,    tnzs,     tnzs,     tnzsjo,   tnzs_state,     0, ROT0,   "Taito America Corporation", "The NewZealand Story (US, old version) (P0-041A PCB)",    MACHINE_SUPPORTS_SAVE )
+GAME( 1988, tnzsoa,    tnzs,     tnzs,     tnzsop,   tnzs_state,     0, ROT0,   "Taito Corporation Japan",   "The NewZealand Story (World, unknown version) (P0-041A PCB)", MACHINE_SUPPORTS_SAVE )
+GAME( 1988, tnzsop,    tnzs,     tnzs,     tnzsop,   tnzs_state,     0, ROT0,   "Taito Corporation Japan",   "The NewZealand Story (World, prototype) (P0-041-1 PCB)",  MACHINE_SUPPORTS_SAVE )
 
 GAME( 1988, kabukiz,   0,        kabukiz,  kabukiz,  kabukiz_state,  0, ROT0,   "Kaneko / Taito Corporation Japan", "Kabuki-Z (World)", MACHINE_SUPPORTS_SAVE )
 GAME( 1988, kabukizj,  kabukiz,  kabukiz,  kabukizj, kabukiz_state,  0, ROT0,   "Kaneko / Taito Corporation",       "Kabuki-Z (Japan)", MACHINE_SUPPORTS_SAVE )

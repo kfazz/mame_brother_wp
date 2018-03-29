@@ -89,6 +89,7 @@ coco_state::coco_state(const machine_config &mconfig, device_type type, const ch
 	m_dac(*this, "dac"),
 	m_sbs(*this, "sbs"),
 	m_wave(*this, WAVE_TAG),
+	m_screen(*this, SCREEN_TAG),
 	m_cococart(*this, CARTRIDGE_TAG),
 	m_ram(*this, RAM_TAG),
 	m_cassette(*this, "cassette"),
@@ -837,7 +838,7 @@ void coco_state::poll_joystick(bool *joyin, uint8_t *buttons)
 			/* get the vertical position of the lightgun */
 			dclg_vpos = analog->input(joystick, 1);
 
-			if (machine().first_screen()->vpos() == dclg_vpos)
+			if (m_screen->vpos() == dclg_vpos)
 			{
 				/* if gun is pointing at the current scan line, set hit bit and cache horizontal timer value */
 				m_dclg_output_h |= 0x02;
@@ -849,7 +850,7 @@ void coco_state::poll_joystick(bool *joyin, uint8_t *buttons)
 			if (m_dclg_state == 7)
 			{
 				/* while in state 7, prepare to check next video frame for a hit */
-				attotime dclg_time = machine().first_screen()->time_until_pos(dclg_vpos, 0);
+				attotime dclg_time = m_screen->time_until_pos(dclg_vpos, 0);
 				m_diecom_lightgun_timer->adjust(dclg_time);
 			}
 			break;
@@ -1108,7 +1109,7 @@ void coco_state::poll_hires_joystick(void)
 			double value = m_joystick.input(joystick_index, axis) / 255.0;
 			value *= is_cocomax3 ? 2500.0 : 4160.0;
 			value += is_cocomax3 ? 400.0 : 592.0;
-			attotime duration = maincpu().clocks_to_attotime((uint64_t) value) * 8;
+			attotime duration = maincpu().clocks_to_attotime((uint64_t) value) * 2;
 			m_hiresjoy_transition_timer[axis]->adjust(duration);
 		}
 		else if (!m_hiresjoy_ca && newvalue)
@@ -1399,16 +1400,16 @@ static const char *const os9syscalls[] =
 //  os9_dasm_override
 //-------------------------------------------------
 
-offs_t coco_state::os9_dasm_override(device_t &device, std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, int options)
+offs_t coco_state::os9_dasm_override(std::ostream &stream, offs_t pc, const util::disasm_interface::data_buffer &opcodes, const util::disasm_interface::data_buffer &params)
 {
 	unsigned call;
 	offs_t result = 0;
 
 	// Microware OS-9 (on the CoCo) and a number of other 6x09 based systems used the SWI2
 	// instruction for syscalls.  This checks for a SWI2 and looks up the syscall as appropriate
-	if ((oprom[0] == 0x10) && (oprom[1] == 0x3F))
+	if ((opcodes.r8(pc) == 0x10) && (opcodes.r8(pc+1) == 0x3F))
 	{
-		call = oprom[2];
+		call = opcodes.r8(pc+2);
 		if ((call < ARRAY_LENGTH(os9syscalls)) && (os9syscalls[call] != nullptr))
 		{
 			util::stream_format(stream, "OS9   %s", os9syscalls[call]);
@@ -1419,7 +1420,7 @@ offs_t coco_state::os9_dasm_override(device_t &device, std::ostream &stream, off
 }
 
 
-offs_t coco_state::dasm_override(device_t &device, std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, int options)
+offs_t coco_state::dasm_override(std::ostream &stream, offs_t pc, const util::disasm_interface::data_buffer &opcodes, const util::disasm_interface::data_buffer &params)
 {
-	return os9_dasm_override(device, stream, pc, oprom, opram, options);
+	return os9_dasm_override(stream, pc, opcodes, params);
 }

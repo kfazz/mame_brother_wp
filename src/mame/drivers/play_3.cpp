@@ -91,6 +91,15 @@ public:
 	DECLARE_READ8_MEMBER(port02_a_r);
 	DECLARE_READ_LINE_MEMBER(clear_a_r);
 
+	void sklflite(machine_config &config);
+	void play_3(machine_config &config);
+	void megaaton(machine_config &config);
+	void megaaton_io(address_map &map);
+	void play_3_audio_io(address_map &map);
+	void play_3_audio_map(address_map &map);
+	void play_3_io(address_map &map);
+	void play_3_map(address_map &map);
+	void sklflite_io(address_map &map);
 private:
 	u16 m_clockcnt;
 	u16 m_resetcnt;
@@ -114,42 +123,48 @@ private:
 };
 
 
-static ADDRESS_MAP_START( play_3_map, AS_PROGRAM, 8, play_3_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x8000, 0x80ff) AM_RAM AM_SHARE("nvram") // pair of 5101, battery-backed
-ADDRESS_MAP_END
+void play_3_state::play_3_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x8000, 0x80ff).ram().share("nvram"); // pair of 5101, battery-backed
+}
 
-static ADDRESS_MAP_START( play_3_io, AS_IO, 8, play_3_state )
-	AM_RANGE(0x01, 0x01) AM_WRITE(port01_w) // digits, scan-lines
-	AM_RANGE(0x02, 0x02) AM_WRITE(port02_w) // sound code
-	AM_RANGE(0x03, 0x03) AM_WRITE(port03_w) //
-	AM_RANGE(0x04, 0x04) AM_READ(port04_r) // switches
-	AM_RANGE(0x05, 0x05) AM_READ(port05_r) // more switches
-	AM_RANGE(0x06, 0x06) AM_WRITE(port06_w) // segments
-	AM_RANGE(0x07, 0x07) AM_WRITE(port07_w) // flipflop clear
-ADDRESS_MAP_END
+void play_3_state::play_3_io(address_map &map)
+{
+	map(0x01, 0x01).w(this, FUNC(play_3_state::port01_w)); // digits, scan-lines
+	map(0x02, 0x02).w(this, FUNC(play_3_state::port02_w)); // sound code
+	map(0x03, 0x03).w(this, FUNC(play_3_state::port03_w)); //
+	map(0x04, 0x04).r(this, FUNC(play_3_state::port04_r)); // switches
+	map(0x05, 0x05).r(this, FUNC(play_3_state::port05_r)); // more switches
+	map(0x06, 0x06).w(this, FUNC(play_3_state::port06_w)); // segments
+	map(0x07, 0x07).w(this, FUNC(play_3_state::port07_w)); // flipflop clear
+}
 
-static ADDRESS_MAP_START( megaaton_io, AS_IO, 8, play_3_state )
-	AM_RANGE(0x01, 0x01) AM_WRITE(megaaton_port01_w) // digits, scan-lines
-	AM_IMPORT_FROM(play_3_io)
-ADDRESS_MAP_END
+void play_3_state::megaaton_io(address_map &map)
+{
+	play_3_io(map);
+	map(0x01, 0x01).w(this, FUNC(play_3_state::megaaton_port01_w)); // digits, scan-lines
+}
 
-static ADDRESS_MAP_START( sklflite_io, AS_IO, 8, play_3_state )
-	AM_RANGE(0x03, 0x03) AM_WRITE(sklflite_port03_w) //
-	AM_IMPORT_FROM(play_3_io)
-ADDRESS_MAP_END
+void play_3_state::sklflite_io(address_map &map)
+{
+	play_3_io(map);
+	map(0x03, 0x03).w(this, FUNC(play_3_state::sklflite_port03_w)); //
+}
 
-static ADDRESS_MAP_START( play_3_audio_map, AS_PROGRAM, 8, play_3_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x4001) AM_MIRROR(0x1ffe) AM_DEVREADWRITE("aysnd1", ay8910_device, data_r, address_data_w)
-	AM_RANGE(0x6000, 0x6001) AM_MIRROR(0x1ffe) AM_DEVREADWRITE("aysnd2", ay8910_device, data_r, address_data_w)
-	AM_RANGE(0x8000, 0x80ff) AM_RAM
-ADDRESS_MAP_END
+void play_3_state::play_3_audio_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x4001).mirror(0x1ffe).rw(m_aysnd1, FUNC(ay8910_device::data_r), FUNC(ay8910_device::address_data_w));
+	map(0x6000, 0x6001).mirror(0x1ffe).rw(m_aysnd2, FUNC(ay8910_device::data_r), FUNC(ay8910_device::address_data_w));
+	map(0x8000, 0x80ff).ram();
+}
 
-static ADDRESS_MAP_START( play_3_audio_io, AS_IO, 8, play_3_state )
-	AM_RANGE(0x01, 0x01) AM_WRITE(port01_a_w) // irq counter
-	AM_RANGE(0x02, 0x02) AM_READ(port02_a_r) // sound code
-ADDRESS_MAP_END
+void play_3_state::play_3_audio_io(address_map &map)
+{
+	map(0x01, 0x01).w(this, FUNC(play_3_state::port01_a_w)); // irq counter
+	map(0x02, 0x02).r(this, FUNC(play_3_state::port02_a_r)); // sound code
+}
 
 
 static INPUT_PORTS_START( play_3 )
@@ -455,9 +470,9 @@ WRITE_LINE_MEMBER( play_3_state::q4013a_w )
 	m_clockcnt = 0;
 }
 
-static MACHINE_CONFIG_START( play_3 )
+MACHINE_CONFIG_START(play_3_state::play_3)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", CDP1802, XTAL_3_579545MHz)
+	MCFG_CPU_ADD("maincpu", CDP1802, XTAL(3'579'545))
 	MCFG_CPU_PROGRAM_MAP(play_3_map)
 	MCFG_CPU_IO_MAP(play_3_io)
 	MCFG_COSMAC_WAIT_CALLBACK(VCC)
@@ -472,7 +487,7 @@ static MACHINE_CONFIG_START( play_3 )
 	MCFG_DEFAULT_LAYOUT(layout_play_3)
 
 	// Devices
-	MCFG_DEVICE_ADD("tpb_clock", CLOCK, XTAL_3_579545MHz / 8) // TPB line from CPU
+	MCFG_DEVICE_ADD("tpb_clock", CLOCK, XTAL(3'579'545) / 8) // TPB line from CPU
 	MCFG_CLOCK_SIGNAL_HANDLER(WRITELINE(play_3_state, clock_w))
 
 	MCFG_DEVICE_ADD("xpoint", CLOCK, 60) // crossing-point detector
@@ -488,31 +503,33 @@ static MACHINE_CONFIG_START( play_3 )
 	MCFG_7474_COMP_OUTPUT_CB(DEVWRITELINE("maincpu", cosmac_device, int_w)) MCFG_DEVCB_INVERT // inverted
 
 	/* Sound */
-	MCFG_FRAGMENT_ADD( genpin_audio )
+	genpin_audio(config);
 
-	MCFG_CPU_ADD("audiocpu", CDP1802, XTAL_3_579545MHz)
+	MCFG_CPU_ADD("audiocpu", CDP1802, XTAL(3'579'545))
 	MCFG_CPU_PROGRAM_MAP(play_3_audio_map)
 	MCFG_CPU_IO_MAP(play_3_audio_io)
 	MCFG_COSMAC_WAIT_CALLBACK(VCC)
 	MCFG_COSMAC_CLEAR_CALLBACK(READLINE(play_3_state, clear_a_r))
 
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MCFG_SOUND_ADD("aysnd1", AY8910, XTAL_3_579545MHz / 2)
+	MCFG_SOUND_ADD("aysnd1", AY8910, XTAL(3'579'545) / 2)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
-	MCFG_SOUND_ADD("aysnd2", AY8910, XTAL_3_579545MHz / 2)
+	MCFG_SOUND_ADD("aysnd2", AY8910, XTAL(3'579'545) / 2)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( megaaton, play_3 )
+MACHINE_CONFIG_START(play_3_state::megaaton)
+	play_3(config);
 	MCFG_CPU_MODIFY("maincpu")
-	MCFG_CPU_CLOCK(XTAL_2_95MHz)
+	MCFG_CPU_CLOCK(XTAL(2'950'000))
 	MCFG_CPU_IO_MAP(megaaton_io)
 
 	MCFG_DEVICE_MODIFY("tpb_clock")
-	MCFG_DEVICE_CLOCK(XTAL_2_95MHz / 8) // TPB line from CPU
+	MCFG_DEVICE_CLOCK(XTAL(2'950'000) / 8) // TPB line from CPU
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( sklflite, play_3 )
+MACHINE_CONFIG_START(play_3_state::sklflite)
+	play_3(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_IO_MAP(sklflite_io)
 
@@ -740,36 +757,36 @@ ROM_END
 // actual year uncertain; schematic in manual says hardware was designed in 1986, so probably not 1985 as claimed
 ROM_START(eballchps)
 	ROM_REGION(0x8000, "maincpu", 0) // Z80-based
-	ROM_LOAD("U18-JEB 5A0 - CPU.BIN", 0x0000, 0x8000, CRC(87615a7d) SHA1(b27ca2d863040a2641f88f9bd3143467a83f181b))
+	ROM_LOAD("u18-jeb 5a0 - cpu.bin", 0x0000, 0x8000, CRC(87615a7d) SHA1(b27ca2d863040a2641f88f9bd3143467a83f181b))
 
 	ROM_REGION(0x28000, "zsu:soundcpu", 0) // Z80-based
-	ROM_LOAD("U3-EBE A02 - Sonido.BIN", 0x00000, 0x8000, CRC(34be32ee) SHA1(ce0271540164639f28d617753760ecc479b6b0d0))
-	ROM_LOAD("U4-EBE B01 - Sonido.BIN", 0x08000, 0x8000, CRC(d696c4e8) SHA1(501e18c258e6d42819d25d72e1907984a6cfeecb))
-	ROM_LOAD("U5-EBE C01 - Sonido.BIN", 0x10000, 0x8000, CRC(fe78d7ef) SHA1(ed91c51dd230854a007f88446011f786759687ca))
-	ROM_LOAD("U6-EBE D02 - Sonido.BIN", 0x18000, 0x8000, CRC(a507081b) SHA1(72d025852a12f455981c61a405f97eaaac9c6fac))
+	ROM_LOAD("u3-ebe a02 - sonido.bin", 0x00000, 0x8000, CRC(34be32ee) SHA1(ce0271540164639f28d617753760ecc479b6b0d0))
+	ROM_LOAD("u4-ebe b01 - sonido.bin", 0x08000, 0x8000, CRC(d696c4e8) SHA1(501e18c258e6d42819d25d72e1907984a6cfeecb))
+	ROM_LOAD("u5-ebe c01 - sonido.bin", 0x10000, 0x8000, CRC(fe78d7ef) SHA1(ed91c51dd230854a007f88446011f786759687ca))
+	ROM_LOAD("u6-ebe d02 - sonido.bin", 0x18000, 0x8000, CRC(a507081b) SHA1(72d025852a12f455981c61a405f97eaaac9c6fac))
 ROM_END
 
 // Cobra (Playbar)
 ROM_START(cobrapb)
 	ROM_REGION(0x8000, "maincpu", 0) // Z80-based
-	ROM_LOAD("U18 - JCB 4 A0 - CPU.BIN", 0x0000, 0x8000, CRC(c663910e) SHA1(c38692343f114388259c4e7b7943e5be934189ca))
+	ROM_LOAD("u18 - jcb 4 a0 - cpu.bin", 0x0000, 0x8000, CRC(c663910e) SHA1(c38692343f114388259c4e7b7943e5be934189ca))
 
 	ROM_REGION(0x28000, "zsu:soundcpu", 0) // Z80-based
-	ROM_LOAD("U3 - SCB 1 A0 - Sonido.BIN", 0x00000, 0x8000, CRC(d3675770) SHA1(882ce748308f2d78cccd28fc8cd64fe69bd223e3))
-	ROM_LOAD("U4 - SCB 1 B0 - Sonido.BIN", 0x08000, 0x8000, CRC(e8e1bdbb) SHA1(215bdfab751cb0ea47aa529df0ac30976de4f772))
-	ROM_LOAD("U5 - SCB 1 C0 - Sonido.BIN", 0x10000, 0x8000, CRC(c36340ab) SHA1(cd662457959de3a929ba02779e2046ed18b797e2))
+	ROM_LOAD("u3 - scb 1 a0 - sonido.bin", 0x00000, 0x8000, CRC(d3675770) SHA1(882ce748308f2d78cccd28fc8cd64fe69bd223e3))
+	ROM_LOAD("u4 - scb 1 b0 - sonido.bin", 0x08000, 0x8000, CRC(e8e1bdbb) SHA1(215bdfab751cb0ea47aa529df0ac30976de4f772))
+	ROM_LOAD("u5 - scb 1 c0 - sonido.bin", 0x10000, 0x8000, CRC(c36340ab) SHA1(cd662457959de3a929ba02779e2046ed18b797e2))
 ROM_END
 
 #ifdef UNUSED_DEFINITION
 // Come Back (Nondum)
 ROM_START(comeback)
 	ROM_REGION(0x8000, "maincpu", 0)
-	ROM_LOAD("JCO_6a0.u18", 0x0000, 0x8000, NO_DUMP)
+	ROM_LOAD("jco_6a0.u18", 0x0000, 0x8000, NO_DUMP)
 
 	ROM_REGION(0x28000, "zsu:soundcpu", 0)
-	ROM_LOAD("CBS_3a0.u3", 0x00000, 0x8000, NO_DUMP)
-	ROM_LOAD("CBS_3b0.u4", 0x08000, 0x8000, NO_DUMP)
-	ROM_LOAD("CBS_1c0.u5", 0x10000, 0x8000, NO_DUMP)
+	ROM_LOAD("cbs_3a0.u3", 0x00000, 0x8000, NO_DUMP)
+	ROM_LOAD("cbs_3b0.u4", 0x08000, 0x8000, NO_DUMP)
+	ROM_LOAD("cbs_1c0.u5", 0x10000, 0x8000, NO_DUMP)
 ROM_END
 #endif
 

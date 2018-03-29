@@ -170,7 +170,7 @@
 #include "speaker.h"
 
 
-#define MASTER_CLOCK    XTAL_16MHz
+#define MASTER_CLOCK    XTAL(16'000'000)
 
 
 class supercrd_state : public driver_device
@@ -194,6 +194,8 @@ public:
 	uint32_t screen_update_supercrd(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	required_device<cpu_device> m_maincpu;
 	required_device<gfxdecode_device> m_gfxdecode;
+	void supercrd(machine_config &config);
+	void supercrd_map(address_map &map);
 };
 
 
@@ -285,14 +287,15 @@ uint32_t supercrd_state::screen_update_supercrd(screen_device &screen, bitmap_in
 *   Memory map information   *
 *****************************/
 
-static ADDRESS_MAP_START( supercrd_map, AS_PROGRAM, 8, supercrd_state )
-	AM_RANGE(0x0000, 0xbfff) AM_ROM
-	AM_RANGE(0xc000, 0xcfff) AM_RAM_WRITE(supercrd_videoram_w) AM_SHARE("videoram") // wrong
-	AM_RANGE(0xd000, 0xdfff) AM_RAM_WRITE(supercrd_colorram_w) AM_SHARE("colorram") // wrong
+void supercrd_state::supercrd_map(address_map &map)
+{
+	map(0x0000, 0xbfff).rom();
+	map(0xc000, 0xcfff).ram().w(this, FUNC(supercrd_state::supercrd_videoram_w)).share("videoram"); // wrong
+	map(0xd000, 0xdfff).ram().w(this, FUNC(supercrd_state::supercrd_colorram_w)).share("colorram"); // wrong
 //  AM_RANGE(0x0000, 0x0000) AM_RAM AM_SHARE("nvram")
 //  AM_RANGE(0xe000, 0xe000) AM_DEVWRITE("crtc", mc6845_device, address_w)
 //  AM_RANGE(0xe001, 0xe001) AM_DEVREADWRITE("crtc", mc6845_device, register_r, register_w)
-ADDRESS_MAP_END
+}
 
 
 /*****************************
@@ -412,7 +415,7 @@ GFXDECODE_END
 *     Machine Drivers     *
 **************************/
 
-static MACHINE_CONFIG_START( supercrd )
+MACHINE_CONFIG_START(supercrd_state::supercrd)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK/8)    /* 2MHz, guess */
 	MCFG_CPU_PROGRAM_MAP(supercrd_map)

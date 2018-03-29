@@ -190,12 +190,13 @@ READ8_MEMBER(starfire_state::fireone_input_r)
  *
  *************************************/
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 8, starfire_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x9fff) AM_READWRITE(starfire_scratch_r, starfire_scratch_w)
-	AM_RANGE(0xa000, 0xbfff) AM_READWRITE(starfire_colorram_r, starfire_colorram_w) AM_SHARE("colorram")
-	AM_RANGE(0xc000, 0xffff) AM_READWRITE(starfire_videoram_r, starfire_videoram_w) AM_SHARE("videoram")
-ADDRESS_MAP_END
+void starfire_state::main_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x9fff).rw(this, FUNC(starfire_state::starfire_scratch_r), FUNC(starfire_state::starfire_scratch_w));
+	map(0xa000, 0xbfff).rw(this, FUNC(starfire_state::starfire_colorram_r), FUNC(starfire_state::starfire_colorram_w)).share("colorram");
+	map(0xc000, 0xffff).rw(this, FUNC(starfire_state::starfire_videoram_r), FUNC(starfire_state::starfire_videoram_w)).share("videoram");
+}
 
 
 
@@ -327,7 +328,7 @@ INTERRUPT_GEN_MEMBER(starfire_state::vblank_int)
 }
 
 
-static MACHINE_CONFIG_START( fireone )
+MACHINE_CONFIG_START(starfire_state::fireone)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, STARFIRE_CPU_CLOCK)
@@ -343,7 +344,8 @@ static MACHINE_CONFIG_START( fireone )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( starfire, fireone )
+MACHINE_CONFIG_START(starfire_state::starfire)
+	fireone(config);
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")

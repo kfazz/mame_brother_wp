@@ -26,7 +26,6 @@ DEFINE_DEVICE_TYPE(BBC_ACORN1770, bbc_acorn1770_device, "bbc_acorn1770", "Acorn 
 FLOPPY_FORMATS_MEMBER( bbc_acorn8271_device::floppy_formats )
 	FLOPPY_ACORN_SSD_FORMAT,
 	FLOPPY_ACORN_DSD_FORMAT,
-	FLOPPY_TORCH_CPN_FORMAT,
 	FLOPPY_FSD_FORMAT
 FLOPPY_FORMATS_END0
 
@@ -100,20 +99,20 @@ ROM_START( acorn1770 )
 	ROM_DEFAULT_BIOS("dfs223")
 	// Acorn
 	ROM_SYSTEM_BIOS(0, "dfs210", "Acorn DFS 2.10")
-	ROMX_LOAD("dfs v2.10 (1985)(acorn).bin", 0x0000, 0x4000, CRC(4f828787) SHA1(112a315e1598cb4db2abcfe9d89fcd97444b276d), ROM_BIOS(1))
+	ROMX_LOAD("dfs v2.10,1985,acorn.bin", 0x0000, 0x4000, CRC(4f828787) SHA1(112a315e1598cb4db2abcfe9d89fcd97444b276d), ROM_BIOS(1))
 	ROM_SYSTEM_BIOS(1, "dfs220", "Acorn DFS 2.20")
-	ROMX_LOAD("dfs v2.20 (1986)(acorn).bin", 0x0000, 0x4000, CRC(2844001e) SHA1(d72f11af35756ac648095ba1992211cf6741dd80), ROM_BIOS(2))
+	ROMX_LOAD("dfs v2.20,1986,acorn.bin", 0x0000, 0x4000, CRC(2844001e) SHA1(d72f11af35756ac648095ba1992211cf6741dd80), ROM_BIOS(2))
 	ROM_SYSTEM_BIOS(2, "dfs223", "Acorn DFS 2.23")
-	ROMX_LOAD("dfs v2.23 (1986)(acorn).bin", 0x0000, 0x4000, CRC(7891f9b7) SHA1(0d7ed0b0b3852cb61970ada1993244f2896896aa), ROM_BIOS(3))
+	ROMX_LOAD("dfs v2.23,1986,acorn.bin", 0x0000, 0x4000, CRC(7891f9b7) SHA1(0d7ed0b0b3852cb61970ada1993244f2896896aa), ROM_BIOS(3))
 	ROM_SYSTEM_BIOS(3, "dfs225", "Acorn DFS 2.25")
-	ROMX_LOAD("dfs v2.25 (1986)(acorn).bin", 0x0000, 0x4000, CRC(f855a75b) SHA1(f11271748e6303c60182955e5fa478624b616fcf), ROM_BIOS(4))
+	ROMX_LOAD("dfs v2.25,1986,acorn.bin", 0x0000, 0x4000, CRC(f855a75b) SHA1(f11271748e6303c60182955e5fa478624b616fcf), ROM_BIOS(4))
 	ROM_SYSTEM_BIOS(4, "dfs226", "Acorn DFS 2.26")
-	ROMX_LOAD("dfs v2.26 (1986)(acorn).bin", 0x0000, 0x4000, CRC(5ae33e94) SHA1(cf2ebc422a8d24ec6f1a0320520c38a0e704109a), ROM_BIOS(5))
+	ROMX_LOAD("dfs v2.26,1986,acorn.bin", 0x0000, 0x4000, CRC(5ae33e94) SHA1(cf2ebc422a8d24ec6f1a0320520c38a0e704109a), ROM_BIOS(5))
 	// Advanced Computer Products
 	ROM_SYSTEM_BIOS(5, "acp108", "Advanced 1770 DFS 1.08")
-	ROMX_LOAD("advanced 1770 dfs 1.08 (acp).rom", 0x0000, 0x4000, CRC(eb0eaa34) SHA1(d16ba3c8ed5e5ab6af62aad13a8e567b1c3639c2), ROM_BIOS(6))
+	ROMX_LOAD("advanced 1770 dfs 1.08,acp.rom", 0x0000, 0x4000, CRC(eb0eaa34) SHA1(d16ba3c8ed5e5ab6af62aad13a8e567b1c3639c2), ROM_BIOS(6))
 	ROM_SYSTEM_BIOS(6, "acp200", "Advanced 1770 DFS 2.00")
-	ROMX_LOAD("advanced 1770 dfs 2.00 (acp).rom", 0x0000, 0x4000, CRC(65c0d170) SHA1(6907806e2b5b904a6f2041c11f8ccbd298d63ab9), ROM_BIOS(7))
+	ROMX_LOAD("advanced 1770 dfs 2.00,acp.rom", 0x0000, 0x4000, CRC(65c0d170) SHA1(6907806e2b5b904a6f2041c11f8ccbd298d63ab9), ROM_BIOS(7))
 ROM_END
 
 
@@ -121,7 +120,7 @@ ROM_END
 //  device_add_mconfig - add device configuration
 //-------------------------------------------------
 
-MACHINE_CONFIG_MEMBER( bbc_acorn8271_device::device_add_mconfig )
+MACHINE_CONFIG_START(bbc_acorn8271_device::device_add_mconfig)
 	MCFG_DEVICE_ADD("i8271", I8271, 0)
 	MCFG_I8271_IRQ_CALLBACK(WRITELINE(bbc_acorn8271_device, fdc_intrq_w))
 	MCFG_I8271_HDL_CALLBACK(WRITELINE(bbc_acorn8271_device, motor_w))
@@ -132,8 +131,8 @@ MACHINE_CONFIG_MEMBER( bbc_acorn8271_device::device_add_mconfig )
 	MCFG_FLOPPY_DRIVE_SOUND(true)
 MACHINE_CONFIG_END
 
-MACHINE_CONFIG_MEMBER( bbc_acorn1770_device::device_add_mconfig )
-	MCFG_WD1770_ADD("wd1770", XTAL_16MHz / 2)
+MACHINE_CONFIG_START(bbc_acorn1770_device::device_add_mconfig)
+	MCFG_WD1770_ADD("wd1770", XTAL(16'000'000) / 2)
 	MCFG_WD_FDC_INTRQ_CALLBACK(WRITELINE(bbc_acorn1770_device, fdc_intrq_w))
 	MCFG_WD_FDC_DRQ_CALLBACK(WRITELINE(bbc_acorn1770_device, fdc_drq_w))
 	MCFG_FLOPPY_DRIVE_ADD("wd1770:0", bbc_floppies_525, "525qd", bbc_acorn8271_device::floppy_formats)

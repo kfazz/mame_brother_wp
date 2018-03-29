@@ -60,6 +60,11 @@ public:
 	DECLARE_READ16_MEMBER( coin_chip_r );
 	DECLARE_WRITE16_MEMBER( coin_chip_w );
 
+	void mquake(machine_config &config);
+	void a500_mem(address_map &map);
+	void main_map(address_map &map);
+	void mquake_es5503_map(address_map &map);
+	void overlay_512kb_map(address_map &map);
 private:
 	required_device<es5503_device> m_es5503;
 	required_region_ptr<uint8_t> m_es5503_rom;
@@ -79,14 +84,15 @@ READ8_MEMBER( mquake_state::es5503_sample_r )
 	return m_es5503_rom[offset + (m_es5503->get_channel_strobe() * 0x10000)];
 }
 
-static ADDRESS_MAP_START( mquake_es5503_map, 0, 8, mquake_state )
-	AM_RANGE(0x000000, 0x1ffff) AM_READ(es5503_sample_r)
-ADDRESS_MAP_END
+void mquake_state::mquake_es5503_map(address_map &map)
+{
+	map(0x000000, 0x1ffff).r(this, FUNC(mquake_state::es5503_sample_r));
+}
 
 WRITE16_MEMBER( mquake_state::output_w )
 {
 	if (ACCESSING_BITS_0_7)
-		logerror("%06x:output_w(%x) = %02x\n", space.device().safe_pc(), offset, data);
+		logerror("%06x:output_w(%x) = %02x\n", m_maincpu->pc(), offset, data);
 }
 
 
@@ -94,13 +100,13 @@ READ16_MEMBER( mquake_state::coin_chip_r )
 {
 	if (offset == 1)
 		return ioport("COINCHIP")->read();
-	logerror("%06x:coin_chip_r(%02x) & %04x\n", space.device().safe_pc(), offset, mem_mask);
+	logerror("%06x:coin_chip_r(%02x) & %04x\n", m_maincpu->pc(), offset, mem_mask);
 	return 0xffff;
 }
 
 WRITE16_MEMBER( mquake_state::coin_chip_w )
 {
-	logerror("%06x:coin_chip_w(%02x) = %04x & %04x\n", space.device().safe_pc(), offset, data, mem_mask);
+	logerror("%06x:coin_chip_w(%02x) = %04x & %04x\n", m_maincpu->pc(), offset, data, mem_mask);
 }
 
 // inputs at 282000, 282002 (full word)
@@ -117,36 +123,39 @@ WRITE16_MEMBER( mquake_state::coin_chip_w )
  *
  *************************************/
 
-static ADDRESS_MAP_START( overlay_512kb_map, AS_PROGRAM, 16, mquake_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x000000, 0x07ffff) AM_MIRROR(0x180000) AM_RAM AM_SHARE("chip_ram")
-	AM_RANGE(0x200000, 0x27ffff) AM_ROM AM_REGION("kickstart", 0)
-ADDRESS_MAP_END
+void mquake_state::overlay_512kb_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x000000, 0x07ffff).mirror(0x180000).ram().share("chip_ram");
+	map(0x200000, 0x27ffff).rom().region("kickstart", 0);
+}
 
-static ADDRESS_MAP_START( a500_mem, AS_PROGRAM, 16, mquake_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x000000, 0x1fffff) AM_DEVICE("overlay", address_map_bank_device, amap16)
-	AM_RANGE(0xa00000, 0xbfffff) AM_READWRITE(cia_r, cia_w)
-	AM_RANGE(0xc00000, 0xd7ffff) AM_READWRITE(custom_chip_r, custom_chip_w)
-	AM_RANGE(0xd80000, 0xddffff) AM_NOP
-	AM_RANGE(0xde0000, 0xdeffff) AM_READWRITE(custom_chip_r, custom_chip_w)
-	AM_RANGE(0xdf0000, 0xdfffff) AM_READWRITE(custom_chip_r, custom_chip_w)
-	AM_RANGE(0xe00000, 0xe7ffff) AM_WRITENOP AM_READ(rom_mirror_r)
-	AM_RANGE(0xe80000, 0xefffff) AM_NOP // autoconfig space (installed by devices)
-	AM_RANGE(0xf80000, 0xffffff) AM_ROM AM_REGION("kickstart", 0)
-ADDRESS_MAP_END
+void mquake_state::a500_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x000000, 0x1fffff).m(m_overlay, FUNC(address_map_bank_device::amap16));
+	map(0xa00000, 0xbfffff).rw(this, FUNC(mquake_state::cia_r), FUNC(mquake_state::cia_w));
+	map(0xc00000, 0xd7ffff).rw(this, FUNC(mquake_state::custom_chip_r), FUNC(mquake_state::custom_chip_w));
+	map(0xd80000, 0xddffff).noprw();
+	map(0xde0000, 0xdeffff).rw(this, FUNC(mquake_state::custom_chip_r), FUNC(mquake_state::custom_chip_w));
+	map(0xdf0000, 0xdfffff).rw(this, FUNC(mquake_state::custom_chip_r), FUNC(mquake_state::custom_chip_w));
+	map(0xe00000, 0xe7ffff).nopw().r(this, FUNC(mquake_state::rom_mirror_r));
+	map(0xe80000, 0xefffff).noprw(); // autoconfig space (installed by devices)
+	map(0xf80000, 0xffffff).rom().region("kickstart", 0);
+}
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 16, mquake_state )
-	AM_IMPORT_FROM(a500_mem)
-	AM_RANGE(0x200000, 0x203fff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x204000, 0x2041ff) AM_DEVREADWRITE8("es5503", es5503_device, read, write, 0x00ff)
-	AM_RANGE(0x282000, 0x282001) AM_READ_PORT("SW.LO")
-	AM_RANGE(0x282002, 0x282003) AM_READ_PORT("SW.HI")
-	AM_RANGE(0x284000, 0x28400f) AM_WRITE(output_w)
-	AM_RANGE(0x286000, 0x28600f) AM_READWRITE(coin_chip_r, coin_chip_w)
-	AM_RANGE(0x300000, 0x3bffff) AM_ROM AM_REGION("user2", 0)
-	AM_RANGE(0xf00000, 0xfbffff) AM_ROM AM_REGION("user2", 0)           /* Custom ROM */
-ADDRESS_MAP_END
+void mquake_state::main_map(address_map &map)
+{
+	a500_mem(map);
+	map(0x200000, 0x203fff).ram().share("nvram");
+	map(0x204000, 0x2041ff).rw(m_es5503, FUNC(es5503_device::read), FUNC(es5503_device::write)).umask16(0x00ff);
+	map(0x282000, 0x282001).portr("SW.LO");
+	map(0x282002, 0x282003).portr("SW.HI");
+	map(0x284000, 0x28400f).w(this, FUNC(mquake_state::output_w));
+	map(0x286000, 0x28600f).rw(this, FUNC(mquake_state::coin_chip_r), FUNC(mquake_state::coin_chip_w));
+	map(0x300000, 0x3bffff).rom().region("user2", 0);
+	map(0xf00000, 0xfbffff).rom().region("user2", 0);           /* Custom ROM */
+}
 
 
 
@@ -302,7 +311,7 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( mquake )
+MACHINE_CONFIG_START(mquake_state::mquake)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, amiga_state::CLK_7M_NTSC)
@@ -311,14 +320,14 @@ static MACHINE_CONFIG_START( mquake )
 	MCFG_DEVICE_ADD("overlay", ADDRESS_MAP_BANK, 0)
 	MCFG_DEVICE_PROGRAM_MAP(overlay_512kb_map)
 	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_BIG)
-	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(16)
-	MCFG_ADDRESS_MAP_BANK_ADDRBUS_WIDTH(22)
+	MCFG_ADDRESS_MAP_BANK_DATA_WIDTH(16)
+	MCFG_ADDRESS_MAP_BANK_ADDR_WIDTH(22)
 	MCFG_ADDRESS_MAP_BANK_STRIDE(0x200000)
 
 	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MCFG_FRAGMENT_ADD(ntsc_video)
+	ntsc_video(config);
 
 	MCFG_PALETTE_ADD("palette", 4096)
 	MCFG_PALETTE_INIT_OWNER(mquake_state,amiga)
@@ -353,6 +362,10 @@ static MACHINE_CONFIG_START( mquake )
 	/* fdc */
 	MCFG_DEVICE_ADD("fdc", AMIGA_FDC, amiga_state::CLK_7M_NTSC)
 	MCFG_AMIGA_FDC_INDEX_CALLBACK(DEVWRITELINE("cia_1", mos8520_device, flag_w))
+	MCFG_AMIGA_FDC_READ_DMA_CALLBACK(READ16(amiga_state, chip_ram_r))
+	MCFG_AMIGA_FDC_WRITE_DMA_CALLBACK(WRITE16(amiga_state, chip_ram_w))
+	MCFG_AMIGA_FDC_DSKBLK_CALLBACK(WRITELINE(amiga_state, fdc_dskblk_w))
+	MCFG_AMIGA_FDC_DSKSYN_CALLBACK(WRITELINE(amiga_state, fdc_dsksyn_w))
 MACHINE_CONFIG_END
 
 

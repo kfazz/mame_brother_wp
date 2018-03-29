@@ -77,6 +77,9 @@ public:
 	virtual void video_start() override;
 
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
+	void hotblock(machine_config &config);
+	void hotblock_io(address_map &map);
+	void hotblock_map(address_map &map);
 };
 
 
@@ -104,9 +107,6 @@ READ8_MEMBER(hotblock_state::port4_r)
 
 WRITE8_MEMBER(hotblock_state::port4_w)
 {
-//  osd_printf_debug("port4_w: pc = %06x : data %04x\n", space.device().safe_pc(), data);
-//  popmessage("port4_w: pc = %06x : data %04x", space.device().safe_pc(), data);
-
 	m_port4 = data;
 }
 
@@ -114,8 +114,6 @@ WRITE8_MEMBER(hotblock_state::port4_w)
 
 WRITE8_MEMBER(hotblock_state::port0_w)
 {
-//  popmessage("port4_w: pc = %06x : data %04x", space.device().safe_pc(), data);
-
 	m_port0 = data;
 }
 
@@ -132,18 +130,20 @@ WRITE8_MEMBER(hotblock_state::video_write)
 	}
 }
 
-static ADDRESS_MAP_START( hotblock_map, AS_PROGRAM, 8, hotblock_state )
-	AM_RANGE(0x00000, 0x0ffff) AM_RAM
-	AM_RANGE(0x10000, 0x1ffff) AM_READWRITE(video_read, video_write) AM_SHARE("vram")
-	AM_RANGE(0x20000, 0xfffff) AM_ROM
-ADDRESS_MAP_END
+void hotblock_state::hotblock_map(address_map &map)
+{
+	map(0x00000, 0x0ffff).ram();
+	map(0x10000, 0x1ffff).rw(this, FUNC(hotblock_state::video_read), FUNC(hotblock_state::video_write)).share("vram");
+	map(0x20000, 0xfffff).rom();
+}
 
-static ADDRESS_MAP_START( hotblock_io, AS_IO, 8, hotblock_state )
-	AM_RANGE(0x0000, 0x0000) AM_WRITE(port0_w)
-	AM_RANGE(0x0004, 0x0004) AM_READWRITE(port4_r, port4_w)
-	AM_RANGE(0x8000, 0x8001) AM_DEVWRITE("aysnd", ym2149_device, address_data_w)
-	AM_RANGE(0x8001, 0x8001) AM_DEVREAD("aysnd", ym2149_device, data_r)
-ADDRESS_MAP_END
+void hotblock_state::hotblock_io(address_map &map)
+{
+	map(0x0000, 0x0000).w(this, FUNC(hotblock_state::port0_w));
+	map(0x0004, 0x0004).rw(this, FUNC(hotblock_state::port4_r), FUNC(hotblock_state::port4_w));
+	map(0x8000, 0x8001).w("aysnd", FUNC(ym2149_device::address_data_w));
+	map(0x8001, 0x8001).r("aysnd", FUNC(ym2149_device::data_r));
+}
 
 
 
@@ -206,7 +206,7 @@ static INPUT_PORTS_START( hotblock )
 INPUT_PORTS_END
 
 
-static MACHINE_CONFIG_START( hotblock )
+MACHINE_CONFIG_START(hotblock_state::hotblock)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", I8088, 10000000)

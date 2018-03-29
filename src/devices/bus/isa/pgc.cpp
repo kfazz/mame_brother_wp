@@ -105,21 +105,23 @@ read only
     3C001       INIT L/INIT H
 */
 
-static ADDRESS_MAP_START( pgc_map, AS_PROGRAM, 8, isa8_pgc_device )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000, 0x07fff) AM_ROM
-	AM_RANGE(0x08000, 0x0ffff) AM_ROM AM_REGION("maincpu", 0x8000)
-	AM_RANGE(0x10000, 0x1001f) AM_READWRITE(stateparam_r, stateparam_w)
+void isa8_pgc_device::pgc_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000, 0x07fff).rom();
+	map(0x08000, 0x0ffff).rom().region("maincpu", 0x8000);
+	map(0x10000, 0x1001f).rw(this, FUNC(isa8_pgc_device::stateparam_r), FUNC(isa8_pgc_device::stateparam_w));
 //  AM_RANGE(0x18000, 0x18fff) AM_RAM   // ??
-	AM_RANGE(0x28000, 0x287ff) AM_RAM AM_REGION("commarea", 0) AM_MIRROR(0x800)
-	AM_RANGE(0x3c000, 0x3c001) AM_READ(init_r)
+	map(0x28000, 0x287ff).ram().region("commarea", 0).mirror(0x800);
+	map(0x3c000, 0x3c001).r(this, FUNC(isa8_pgc_device::init_r));
 //  AM_RANGE(0x3e000, 0x3efff) AM_RAM   // ??
-	AM_RANGE(0xf8000, 0xfffff) AM_ROM AM_REGION("maincpu", 0x8000)
-ADDRESS_MAP_END
+	map(0xf8000, 0xfffff).rom().region("maincpu", 0x8000);
+}
 
-static ADDRESS_MAP_START( pgc_io, AS_IO, 8, isa8_pgc_device )
-	ADDRESS_MAP_UNMAP_HIGH
-ADDRESS_MAP_END
+void isa8_pgc_device::pgc_io(address_map &map)
+{
+	map.unmap_value_high();
+}
 
 static const gfx_layout pgc_charlayout =
 {
@@ -150,8 +152,8 @@ DEFINE_DEVICE_TYPE(ISA8_PGC, isa8_pgc_device, "isa_ibm_pgc", "IBM Professional G
 //  device_add_mconfig - add device configuration
 //-------------------------------------------------
 
-MACHINE_CONFIG_MEMBER( isa8_pgc_device::device_add_mconfig )
-	MCFG_CPU_ADD("maincpu", I8088, XTAL_24MHz/3)
+MACHINE_CONFIG_START(isa8_pgc_device::device_add_mconfig)
+	MCFG_CPU_ADD("maincpu", I8088, XTAL(24'000'000)/3)
 	MCFG_CPU_PROGRAM_MAP(pgc_map)
 	MCFG_CPU_IO_MAP(pgc_io)
 #if 0
@@ -161,10 +163,10 @@ MACHINE_CONFIG_MEMBER( isa8_pgc_device::device_add_mconfig )
 
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("scantimer", isa8_pgc_device, scanline_callback,
 		attotime::from_hz(60*PGC_TOTAL_VERT))
-	MCFG_TIMER_START_DELAY(attotime::from_hz(XTAL_50MHz/(2*PGC_HORZ_START)))
+	MCFG_TIMER_START_DELAY(attotime::from_hz(XTAL(50'000'000)/(2*PGC_HORZ_START)))
 
 	MCFG_SCREEN_ADD(PGC_SCREEN_NAME, RASTER)
-	MCFG_SCREEN_RAW_PARAMS(XTAL_50MHz/2,
+	MCFG_SCREEN_RAW_PARAMS(XTAL(50'000'000)/2,
 		PGC_TOTAL_HORZ, PGC_HORZ_START, PGC_HORZ_START+PGC_DISP_HORZ,
 		PGC_TOTAL_VERT, PGC_VERT_START, PGC_VERT_START+PGC_DISP_VERT)
 	MCFG_SCREEN_UPDATE_DRIVER(isa8_pgc_device, screen_update)

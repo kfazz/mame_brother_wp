@@ -169,6 +169,8 @@ public:
 	int m_kbackctl;
 
 	void update_kback();
+	void victor9k(machine_config &config);
+	void victor9k_mem(address_map &map);
 };
 
 
@@ -189,24 +191,25 @@ public:
 //  ADDRESS_MAP( victor9k_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( victor9k_mem, AS_PROGRAM, 8, victor9k_state )
-	AM_RANGE(0x00000, 0x1ffff) AM_RAM
-	AM_RANGE(0x20000, 0xdffff) AM_NOP
-	AM_RANGE(0xe0000, 0xe0001) AM_MIRROR(0x7f00) AM_DEVREADWRITE(I8259A_TAG, pic8259_device, read, write)
-	AM_RANGE(0xe0020, 0xe0023) AM_MIRROR(0x7f00) AM_DEVREADWRITE(I8253_TAG, pit8253_device, read, write)
-	AM_RANGE(0xe0040, 0xe0043) AM_MIRROR(0x7f00) AM_DEVREADWRITE(UPD7201_TAG, upd7201_device, cd_ba_r, cd_ba_w)
-	AM_RANGE(0xe8000, 0xe8000) AM_MIRROR(0x7f00) AM_DEVREADWRITE(HD46505S_TAG, mc6845_device, status_r, address_w)
-	AM_RANGE(0xe8001, 0xe8001) AM_MIRROR(0x7f00) AM_DEVREADWRITE(HD46505S_TAG, mc6845_device, register_r, register_w)
-	AM_RANGE(0xe8020, 0xe802f) AM_MIRROR(0x7f00) AM_DEVREADWRITE(M6522_1_TAG, via6522_device, read, write)
-	AM_RANGE(0xe8040, 0xe804f) AM_MIRROR(0x7f00) AM_DEVREADWRITE(M6522_2_TAG, via6522_device, read, write)
-	AM_RANGE(0xe8060, 0xe8061) AM_MIRROR(0x7f00) AM_DEVREADWRITE(MC6852_TAG, mc6852_device, read, write)
-	AM_RANGE(0xe8080, 0xe808f) AM_MIRROR(0x7f00) AM_DEVREADWRITE(M6522_3_TAG, via6522_device, read, write)
-	AM_RANGE(0xe80a0, 0xe80af) AM_MIRROR(0x7f00) AM_DEVREADWRITE(FDC_TAG, victor_9000_fdc_device, cs5_r, cs5_w)
-	AM_RANGE(0xe80c0, 0xe80cf) AM_MIRROR(0x7f00) AM_DEVREADWRITE(FDC_TAG, victor_9000_fdc_device, cs6_r, cs6_w)
-	AM_RANGE(0xe80e0, 0xe80ef) AM_MIRROR(0x7f00) AM_DEVREADWRITE(FDC_TAG, victor_9000_fdc_device, cs7_r, cs7_w)
-	AM_RANGE(0xf0000, 0xf0fff) AM_MIRROR(0x1000) AM_RAM AM_SHARE("video_ram")
-	AM_RANGE(0xf8000, 0xf9fff) AM_MIRROR(0x6000) AM_ROM AM_REGION(I8088_TAG, 0)
-ADDRESS_MAP_END
+void victor9k_state::victor9k_mem(address_map &map)
+{
+	map(0x00000, 0x1ffff).ram();
+	map(0x20000, 0xdffff).noprw();
+	map(0xe0000, 0xe0001).mirror(0x7f00).rw(m_pic, FUNC(pic8259_device::read), FUNC(pic8259_device::write));
+	map(0xe0020, 0xe0023).mirror(0x7f00).rw(I8253_TAG, FUNC(pit8253_device::read), FUNC(pit8253_device::write));
+	map(0xe0040, 0xe0043).mirror(0x7f00).rw(m_upd7201, FUNC(upd7201_device::cd_ba_r), FUNC(upd7201_device::cd_ba_w));
+	map(0xe8000, 0xe8000).mirror(0x7f00).rw(m_crtc, FUNC(mc6845_device::status_r), FUNC(mc6845_device::address_w));
+	map(0xe8001, 0xe8001).mirror(0x7f00).rw(m_crtc, FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
+	map(0xe8020, 0xe802f).mirror(0x7f00).rw(m_via1, FUNC(via6522_device::read), FUNC(via6522_device::write));
+	map(0xe8040, 0xe804f).mirror(0x7f00).rw(m_via2, FUNC(via6522_device::read), FUNC(via6522_device::write));
+	map(0xe8060, 0xe8061).mirror(0x7f00).rw(m_ssda, FUNC(mc6852_device::read), FUNC(mc6852_device::write));
+	map(0xe8080, 0xe808f).mirror(0x7f00).rw(m_via3, FUNC(via6522_device::read), FUNC(via6522_device::write));
+	map(0xe80a0, 0xe80af).mirror(0x7f00).rw(m_fdc, FUNC(victor_9000_fdc_device::cs5_r), FUNC(victor_9000_fdc_device::cs5_w));
+	map(0xe80c0, 0xe80cf).mirror(0x7f00).rw(m_fdc, FUNC(victor_9000_fdc_device::cs6_r), FUNC(victor_9000_fdc_device::cs6_w));
+	map(0xe80e0, 0xe80ef).mirror(0x7f00).rw(m_fdc, FUNC(victor_9000_fdc_device::cs7_r), FUNC(victor_9000_fdc_device::cs7_w));
+	map(0xf0000, 0xf0fff).mirror(0x1000).ram().share("video_ram");
+	map(0xf8000, 0xf9fff).mirror(0x6000).rom().region(I8088_TAG, 0);
+}
 
 
 
@@ -246,7 +249,7 @@ MC6845_UPDATE_ROW( victor9k_state::crtc_update_row )
 	if (m_hires != hires)
 	{
 		m_hires = hires;
-		m_crtc->set_clock(XTAL_30MHz / width);
+		m_crtc->set_clock(XTAL(30'000'000) / width);
 		m_crtc->set_hpixels_per_column(width);
 	}
 
@@ -674,9 +677,9 @@ void victor9k_state::machine_reset()
 //  MACHINE_CONFIG( victor9k )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_START( victor9k )
+MACHINE_CONFIG_START(victor9k_state::victor9k)
 	// basic machine hardware
-	MCFG_CPU_ADD(I8088_TAG, I8088, XTAL_30MHz/6)
+	MCFG_CPU_ADD(I8088_TAG, I8088, XTAL(30'000'000)/6)
 	MCFG_CPU_PROGRAM_MAP(victor9k_mem)
 	MCFG_CPU_IRQ_ACKNOWLEDGE_DEVICE(I8259A_TAG, pic8259_device, inta_cb)
 
@@ -690,7 +693,7 @@ static MACHINE_CONFIG_START( victor9k )
 	MCFG_PALETTE_ADD("palette", 16)
 	MCFG_PALETTE_INIT_OWNER(victor9k_state, victor9k)
 
-	MCFG_MC6845_ADD(HD46505S_TAG, HD6845, SCREEN_TAG, XTAL_30MHz/10) // HD6845 == HD46505S
+	MCFG_MC6845_ADD(HD46505S_TAG, HD6845, SCREEN_TAG, XTAL(30'000'000)/10) // HD6845 == HD46505S
 	MCFG_MC6845_SHOW_BORDER_AREA(true)
 	MCFG_MC6845_CHAR_WIDTH(10)
 	MCFG_MC6845_UPDATE_ROW_CB(victor9k_state, crtc_update_row)
@@ -713,7 +716,8 @@ static MACHINE_CONFIG_START( victor9k )
 	MCFG_IEEE488_NRFD_CALLBACK(WRITELINE(victor9k_state, write_nfrd))
 	MCFG_IEEE488_NDAC_CALLBACK(WRITELINE(victor9k_state, write_ndac))
 
-	MCFG_PIC8259_ADD(I8259A_TAG, INPUTLINE(I8088_TAG, INPUT_LINE_IRQ0), VCC, NOOP)
+	MCFG_DEVICE_ADD(I8259A_TAG, PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(INPUTLINE(I8088_TAG, INPUT_LINE_IRQ0))
 
 	MCFG_DEVICE_ADD(I8253_TAG, PIT8253, 0)
 	MCFG_PIT8253_CLK0(2500000)
@@ -723,7 +727,7 @@ static MACHINE_CONFIG_START( victor9k )
 	MCFG_PIT8253_CLK2(100000)
 	MCFG_PIT8253_OUT2_HANDLER(DEVWRITELINE(I8259A_TAG, pic8259_device, ir2_w))
 
-	MCFG_UPD7201_ADD(UPD7201_TAG, XTAL_30MHz/30, 0, 0, 0, 0)
+	MCFG_DEVICE_ADD(UPD7201_TAG, UPD7201, XTAL(30'000'000)/30)
 	MCFG_Z80DART_OUT_TXDA_CB(DEVWRITELINE(RS232_A_TAG, rs232_port_device, write_txd))
 	MCFG_Z80DART_OUT_DTRA_CB(DEVWRITELINE(RS232_A_TAG, rs232_port_device, write_dtr))
 	MCFG_Z80DART_OUT_RTSA_CB(DEVWRITELINE(RS232_A_TAG, rs232_port_device, write_rts))
@@ -732,24 +736,24 @@ static MACHINE_CONFIG_START( victor9k )
 	MCFG_Z80DART_OUT_RTSB_CB(DEVWRITELINE(RS232_B_TAG, rs232_port_device, write_rts))
 	MCFG_Z80DART_OUT_INT_CB(DEVWRITELINE(I8259A_TAG, pic8259_device, ir1_w))
 
-	MCFG_DEVICE_ADD(MC6852_TAG, MC6852, XTAL_30MHz/30)
+	MCFG_DEVICE_ADD(MC6852_TAG, MC6852, XTAL(30'000'000)/30)
 	MCFG_MC6852_TX_DATA_CALLBACK(DEVWRITELINE(HC55516_TAG, hc55516_device, digit_w))
 	MCFG_MC6852_SM_DTR_CALLBACK(WRITELINE(victor9k_state, ssda_sm_dtr_w))
 	MCFG_MC6852_IRQ_CALLBACK(WRITELINE(victor9k_state, ssda_irq_w))
 
-	MCFG_DEVICE_ADD(M6522_1_TAG, VIA6522, XTAL_30MHz/30)
+	MCFG_DEVICE_ADD(M6522_1_TAG, VIA6522, XTAL(30'000'000)/30)
 	MCFG_VIA6522_READPA_HANDLER(DEVREAD8(IEEE488_TAG, ieee488_device, dio_r))
 	MCFG_VIA6522_WRITEPA_HANDLER(WRITE8(victor9k_state, via1_pa_w))
 	MCFG_VIA6522_WRITEPB_HANDLER(WRITE8(victor9k_state, via1_pb_w))
 	MCFG_VIA6522_CB2_HANDLER(WRITELINE(victor9k_state, codec_vol_w))
 	MCFG_VIA6522_IRQ_HANDLER(WRITELINE(victor9k_state, via1_irq_w))
 
-	MCFG_DEVICE_ADD(M6522_2_TAG, VIA6522, XTAL_30MHz/30)
+	MCFG_DEVICE_ADD(M6522_2_TAG, VIA6522, XTAL(30'000'000)/30)
 	MCFG_VIA6522_WRITEPA_HANDLER(WRITE8(victor9k_state, via2_pa_w))
 	MCFG_VIA6522_WRITEPB_HANDLER(WRITE8(victor9k_state, via2_pb_w))
 	MCFG_VIA6522_IRQ_HANDLER(WRITELINE(victor9k_state, via2_irq_w))
 
-	MCFG_DEVICE_ADD(M6522_3_TAG, VIA6522, XTAL_30MHz/30)
+	MCFG_DEVICE_ADD(M6522_3_TAG, VIA6522, XTAL(30'000'000)/30)
 	MCFG_VIA6522_WRITEPB_HANDLER(WRITE8(victor9k_state, via3_pb_w))
 	MCFG_VIA6522_IRQ_HANDLER(WRITELINE(victor9k_state, via3_irq_w))
 

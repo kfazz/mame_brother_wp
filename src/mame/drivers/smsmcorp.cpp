@@ -253,6 +253,11 @@ public:
 	uint32_t screen_update_sms(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	required_device<cpu_device> m_maincpu;
 	required_device<screen_device> m_screen;
+	void sureshot(machine_config &config);
+	void sms(machine_config &config);
+	void sms_map(address_map &map);
+	void sub_map(address_map &map);
+	void sureshot_map(address_map &map);
 };
 
 
@@ -479,34 +484,37 @@ uint32_t smsmfg_state::screen_update_sms(screen_device &screen, bitmap_ind16 &bi
  *
  *************************************/
 
-static ADDRESS_MAP_START( sms_map, AS_PROGRAM, 8, smsmfg_state )
-	AM_RANGE(0x00000, 0x007ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x00800, 0x00803) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)
-	AM_RANGE(0x01000, 0x01007) AM_WRITE(video_w)
-	AM_RANGE(0x01800, 0x01803) AM_READWRITE(link_r, link_w)
-	AM_RANGE(0x04000, 0x07fff) AM_ROMBANK("bank1")
-	AM_RANGE(0x04000, 0x04000) AM_WRITE(bankswitch_w)
-	AM_RANGE(0x08000, 0x0ffff) AM_ROM
-	AM_RANGE(0xf8000, 0xfffff) AM_ROM // mirror for vectors
-ADDRESS_MAP_END
+void smsmfg_state::sms_map(address_map &map)
+{
+	map(0x00000, 0x007ff).ram().share("nvram");
+	map(0x00800, 0x00803).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x01000, 0x01007).w(this, FUNC(smsmfg_state::video_w));
+	map(0x01800, 0x01803).rw(this, FUNC(smsmfg_state::link_r), FUNC(smsmfg_state::link_w));
+	map(0x04000, 0x07fff).bankr("bank1");
+	map(0x04000, 0x04000).w(this, FUNC(smsmfg_state::bankswitch_w));
+	map(0x08000, 0x0ffff).rom();
+	map(0xf8000, 0xfffff).rom(); // mirror for vectors
+}
 
-static ADDRESS_MAP_START( sureshot_map, AS_PROGRAM, 8, smsmfg_state )
-	AM_RANGE(0x00000, 0x007ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x02000, 0x02007) AM_WRITE(video_w)
-	AM_RANGE(0x03000, 0x03003) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)
-	AM_RANGE(0x03800, 0x03803) AM_READWRITE(link_r, link_w)
-	AM_RANGE(0x08000, 0x0ffff) AM_ROM
-	AM_RANGE(0xf8000, 0xfffff) AM_ROM // mirror for vectors
-ADDRESS_MAP_END
+void smsmfg_state::sureshot_map(address_map &map)
+{
+	map(0x00000, 0x007ff).ram().share("nvram");
+	map(0x02000, 0x02007).w(this, FUNC(smsmfg_state::video_w));
+	map(0x03000, 0x03003).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x03800, 0x03803).rw(this, FUNC(smsmfg_state::link_r), FUNC(smsmfg_state::link_w));
+	map(0x08000, 0x0ffff).rom();
+	map(0xf8000, 0xfffff).rom(); // mirror for vectors
+}
 
-static ADDRESS_MAP_START( sub_map, AS_PROGRAM, 8, smsmfg_state )
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x2000, 0x27ff) AM_RAM
-	AM_RANGE(0x3100, 0x3103) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)
-	AM_RANGE(0x3381, 0x3382) AM_DEVWRITE("aysnd", ay8910_device, data_address_w)
-	AM_RANGE(0x3400, 0x3400) AM_READ(z80_8088_r)
-	AM_RANGE(0x3500, 0x3501) AM_READWRITE(p03_r, p03_w)
-ADDRESS_MAP_END
+void smsmfg_state::sub_map(address_map &map)
+{
+	map(0x0000, 0x1fff).rom();
+	map(0x2000, 0x27ff).ram();
+	map(0x3100, 0x3103).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x3381, 0x3382).w("aysnd", FUNC(ay8910_device::data_address_w));
+	map(0x3400, 0x3400).r(this, FUNC(smsmfg_state::z80_8088_r));
+	map(0x3500, 0x3501).rw(this, FUNC(smsmfg_state::p03_r), FUNC(smsmfg_state::p03_w));
+}
 
 /*************************************
  *
@@ -533,11 +541,11 @@ void smsmfg_state::machine_reset()
 	m_communication_port_status = 0;
 }
 
-static MACHINE_CONFIG_START( sms )
-	MCFG_CPU_ADD("maincpu", I8088, XTAL_24MHz/8)
+MACHINE_CONFIG_START(smsmfg_state::sms)
+	MCFG_CPU_ADD("maincpu", I8088, XTAL(24'000'000)/8)
 	MCFG_CPU_PROGRAM_MAP(sms_map)
 
-	MCFG_CPU_ADD("soundcpu", Z80, XTAL_16MHz/8)
+	MCFG_CPU_ADD("soundcpu", Z80, XTAL(16'000'000)/8)
 	MCFG_CPU_PROGRAM_MAP(sub_map)
 
 	MCFG_QUANTUM_TIME(attotime::from_hz(6000))
@@ -568,11 +576,12 @@ static MACHINE_CONFIG_START( sms )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_SOUND_ADD("aysnd", AY8910, XTAL_16MHz/8)
+	MCFG_SOUND_ADD("aysnd", AY8910, XTAL(16'000'000)/8)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( sureshot, sms )
+MACHINE_CONFIG_START(smsmfg_state::sureshot)
+	sms(config);
 
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(sureshot_map)
@@ -846,6 +855,35 @@ ROM_START( trvhanga )
 	ROM_LOAD( "dmpal14h4nc.145.bin", 0x000000, 0x00003c, CRC(ab2af8de) SHA1(775495d47435c23eecf3defba15f5ca890836354) )
 ROM_END
 
+
+ROM_START( sms4in1 )
+	ROM_REGION( 0x100000, "maincpu", 0 )
+	ROM_LOAD( "set4_u19_2764.bin", 0xf8000, 0x02000, CRC(6f6116b9) SHA1(f91412ca9b911e2a822dab91c96e5f655e7ebb1b) )
+	ROM_LOAD( "set4_u18_2764.bin", 0xfa000, 0x02000, CRC(cc13a404) SHA1(1c00d173706c5e88cee69f9c52efa64dbdf4c15b) )
+	ROM_LOAD( "set4_u17_2764.bin", 0xfc000, 0x02000, CRC(fee0f422) SHA1(56ffafce78cf96c0b91b44a8408909b06499c960) )
+	ROM_LOAD( "set4_u16_2764.bin", 0xfe000, 0x02000, CRC(87ed2873) SHA1(daa13f20cac4a41335d972be6772dff5d7555c10) )
+	ROM_COPY( "maincpu",  0xf8000, 0x08000, 0x8000 )
+
+	ROM_REGION( 0x10000, "soundcpu", 0 )
+	ROM_LOAD( "set4_u26_73184_2732.bin", 0x0000, 0x1000, CRC(e04bb922) SHA1(1df90720f11a5b736273f43272d7727b3020f848) )
+	ROM_RELOAD(           0x1000, 0x1000 )
+ROM_END
+
+
+ROM_START( smsjoker )
+	ROM_REGION( 0x100000, "maincpu", 0 )
+	// U19 was not populated
+	ROM_LOAD( "set3_u18_hl_dlxe_080585.bin", 0xfa000, 0x02000, CRC(70614c00) SHA1(90c53e892ece4ceca0476be3653f160a49fd4bc9) )
+	ROM_LOAD( "set3_u17_hl_dlxe_080585.bin", 0xfc000, 0x02000, CRC(872fb1c4) SHA1(a23d093b26c42aa66279d6dfa6d59789f5862d96) )
+	ROM_LOAD( "set3_u16_hl_dlxe_080585.bin", 0xfe000, 0x02000, CRC(786c0792) SHA1(a7eea01c79b0d8baecdbda06ddbca40b39d8513a) )
+	ROM_COPY( "maincpu",  0xf8000, 0x08000, 0x8000 )
+
+	ROM_REGION( 0x10000, "soundcpu", 0 )
+	ROM_LOAD( "set3_u26_26_73184_2732.bin", 0x0000, 0x1000, CRC(e04bb922) SHA1(1df90720f11a5b736273f43272d7727b3020f848) )
+	ROM_RELOAD(           0x1000, 0x1000 )
+ROM_END
+
+
 ROM_START( sureshot )
 	ROM_REGION( 0x100000, "maincpu", 0 )
 	ROM_LOAD( "u-19 hldly s.shot 020687.u19.a12.bin", 0xf8000, 0x02000, CRC(028bdb61) SHA1(e39c27cc6dec12de5a5e60d544f35448e49baee1) )
@@ -902,14 +940,16 @@ ROM_START( secondch )
 	ROM_LOAD( "u18.18", 0xfa000, 0x02000, CRC(941a1401) SHA1(92934d40bb256e18b996582c1af253d06732462f) )
 	ROM_LOAD( "u17.17", 0xfc000, 0x02000, CRC(88717e9f) SHA1(01b78f3ddd78e74e799d5f8ffe2f3cbcf5e6b7a2) )
 	ROM_LOAD( "u16.16", 0xfe000, 0x02000, CRC(6c9a0224) SHA1(01152024b48461c3b9ac63a9265129dabacd0462) )
-	ROM_COPY( "maincpu",  0xf8000, 0x08000, 0x8000 )
+	ROM_COPY( "maincpu",0xf8000, 0x08000, 0x8000 )
 
 	ROM_REGION( 0x10000, "soundcpu", 0 )
-	ROM_LOAD( "#26.26", 0x0000, 0x1000, CRC(e04bb922) SHA1(1df90720f11a5b736273f43272d7727b3020f848) )
-	ROM_RELOAD(           0x1000, 0x1000 )
+	ROM_LOAD( "@26.26", 0x0000, 0x1000, CRC(e04bb922) SHA1(1df90720f11a5b736273f43272d7727b3020f848) )
+	ROM_RELOAD(         0x1000, 0x1000 )
 ROM_END
 
-GAME( 1984, trvhang,  0, sms,      sms, smsmfg_state, 0, ROT0, "SMS Manufacturing Corp.", "Trivia Hangup (question set 1)", MACHINE_SUPPORTS_SAVE ) /* Version Trivia-1-050185 */
-GAME( 1984, trvhanga, 0, sms,      sms, smsmfg_state, 0, ROT0, "SMS Manufacturing Corp.", "Trivia Hangup (question set 2)", MACHINE_NOT_WORKING ) /* Version Trivia-2-011586 */
-GAME( 1985, sureshot, 0, sureshot, sms, smsmfg_state, 0, ROT0, "SMS Manufacturing Corp.", "Sure Shot",                      MACHINE_SUPPORTS_SAVE )
-GAME( 1985, secondch, 0, sureshot, sms, smsmfg_state, 0, ROT0, "SMS Manufacturing Corp.", "Second Chance",                  MACHINE_SUPPORTS_SAVE )
+GAME( 1984, trvhang,  0, sms,      sms, smsmfg_state, 0, ROT0, "SMS Manufacturing Corp.", "Trivia Hangup (question set 1)",   MACHINE_SUPPORTS_SAVE ) /* Version Trivia-1-050185 */
+GAME( 1984, trvhanga, 0, sms,      sms, smsmfg_state, 0, ROT0, "SMS Manufacturing Corp.", "Trivia Hangup (question set 2)",   MACHINE_NOT_WORKING ) /* Version Trivia-2-011586 */
+GAME( 1984, sms4in1,  0, sureshot, sms, smsmfg_state, 0, ROT0, "SMS Manufacturing Corp.", "4-in-1",                           MACHINE_SUPPORTS_SAVE )
+GAME( 1985, smsjoker, 0, sureshot, sms, smsmfg_state, 0, ROT0, "SMS Manufacturing Corp.", "Joker Poker With Hi-Lo Double-Up", MACHINE_SUPPORTS_SAVE )
+GAME( 1985, sureshot, 0, sureshot, sms, smsmfg_state, 0, ROT0, "SMS Manufacturing Corp.", "Sure Shot",                        MACHINE_SUPPORTS_SAVE )
+GAME( 1985, secondch, 0, sureshot, sms, smsmfg_state, 0, ROT0, "SMS Manufacturing Corp.", "Second Chance",                    MACHINE_SUPPORTS_SAVE )

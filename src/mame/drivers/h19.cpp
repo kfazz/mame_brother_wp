@@ -61,9 +61,9 @@ Address   Description
 
 
 // Standard H19 used a 2.048 MHz clock
-#define H19_CLOCK (XTAL_12_288MHz / 6)
-#define MC6845_CLOCK (XTAL_12_288MHz /8)
-#define INS8250_CLOCK (XTAL_12_288MHz /4)
+#define H19_CLOCK (XTAL(12'288'000) / 6)
+#define MC6845_CLOCK (XTAL(12'288'000) /8)
+#define INS8250_CLOCK (XTAL(12'288'000) /4)
 
 // Capacitor value in pF
 #define H19_KEY_DEBOUNCE_CAPACITOR 5000
@@ -108,6 +108,9 @@ public:
 
 	MC6845_UPDATE_ROW(crtc_update_row);
 
+	void h19(machine_config &config);
+	void io_map(address_map &map);
+	void mem_map(address_map &map);
 private:
 	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 	virtual void machine_reset() override;
@@ -153,26 +156,28 @@ void h19_state::device_timer(emu_timer &timer, device_timer_id id, int param, vo
 
 
 
-static ADDRESS_MAP_START(h19_mem, AS_PROGRAM, 8, h19_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x1fff) AM_MIRROR(0x2000) AM_ROM
-	AM_RANGE(0x4000, 0x4100) AM_MIRROR(0x3e00) AM_RAM
-	AM_RANGE(0xc000, 0xc7ff) AM_MIRROR(0x3800) AM_RAM AM_SHARE("videoram")
-ADDRESS_MAP_END
+void h19_state::mem_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x1fff).mirror(0x2000).rom();
+	map(0x4000, 0x4100).mirror(0x3e00).ram();
+	map(0xc000, 0xc7ff).mirror(0x3800).ram().share("videoram");
+}
 
-static ADDRESS_MAP_START( h19_io, AS_IO, 8, h19_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_MIRROR(0x1f) AM_READ_PORT("SW401")
-	AM_RANGE(0x20, 0x20) AM_MIRROR(0x1f) AM_READ_PORT("SW402")
-	AM_RANGE(0x40, 0x47) AM_MIRROR(0x18) AM_DEVREADWRITE("ins8250", ins8250_device, ins8250_r, ins8250_w )
-	AM_RANGE(0x60, 0x60) AM_MIRROR(0x1E) AM_DEVWRITE("crtc", mc6845_device, address_w)
-	AM_RANGE(0x61, 0x61) AM_MIRROR(0x1E) AM_DEVREADWRITE("crtc", mc6845_device, register_r, register_w)
-	AM_RANGE(0x80, 0x80) AM_MIRROR(0x1f) AM_READ(kbd_key_r)
-	AM_RANGE(0xA0, 0xA0) AM_MIRROR(0x1f) AM_READ(kbd_flags_r)
-	AM_RANGE(0xC0, 0xC0) AM_MIRROR(0x1f) AM_WRITE(h19_keyclick_w)
-	AM_RANGE(0xE0, 0xE0) AM_MIRROR(0x1f) AM_WRITE(h19_bell_w)
-ADDRESS_MAP_END
+void h19_state::io_map(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0x00, 0x00).mirror(0x1f).portr("SW401");
+	map(0x20, 0x20).mirror(0x1f).portr("SW402");
+	map(0x40, 0x47).mirror(0x18).rw(m_ace, FUNC(ins8250_device::ins8250_r), FUNC(ins8250_device::ins8250_w));
+	map(0x60, 0x60).mirror(0x1E).w(m_crtc, FUNC(mc6845_device::address_w));
+	map(0x61, 0x61).mirror(0x1E).rw(m_crtc, FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
+	map(0x80, 0x80).mirror(0x1f).r(this, FUNC(h19_state::kbd_key_r));
+	map(0xA0, 0xA0).mirror(0x1f).r(this, FUNC(h19_state::kbd_flags_r));
+	map(0xC0, 0xC0).mirror(0x1f).w(this, FUNC(h19_state::h19_keyclick_w));
+	map(0xE0, 0xE0).mirror(0x1f).w(this, FUNC(h19_state::h19_bell_w));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( h19 )
@@ -512,11 +517,11 @@ static GFXDECODE_START( h19 )
 	GFXDECODE_ENTRY( "chargen", 0x0000, h19_charlayout, 0, 1 )
 GFXDECODE_END
 
-static MACHINE_CONFIG_START( h19 )
+MACHINE_CONFIG_START(h19_state::h19)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, H19_CLOCK) // From schematics
-	MCFG_CPU_PROGRAM_MAP(h19_mem)
-	MCFG_CPU_IO_MAP(h19_io)
+	MCFG_CPU_PROGRAM_MAP(mem_map)
+	MCFG_CPU_IO_MAP(io_map)
 
 	/* video hardware */
 	// TODO: make configurable, Heath offered 3 different CRTs - White, Green, Amber.

@@ -58,6 +58,13 @@ public:
 
 	DECLARE_WRITE_LINE_MEMBER( usart_clock_tick );
 
+	void isbc8010b(machine_config &config);
+	void isbc8010a(machine_config &config);
+	void isbc8010(machine_config &config);
+	void isbc8010_io(address_map &map);
+	void isbc8010_mem(address_map &map);
+	void isbc8010a_mem(address_map &map);
+	void isbc8010b_mem(address_map &map);
 private:
 	required_device<cpu_device> m_maincpu;
 	required_device<i8251_device> m_usart;
@@ -70,34 +77,38 @@ private:
 	uint8_t m_usart_clock_state;
 };
 
-static ADDRESS_MAP_START(isbc8010_mem, AS_PROGRAM, 8, isbc8010_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x0fff) AM_ROM
-	AM_RANGE(0x3c00, 0x3fff) AM_RAM
-ADDRESS_MAP_END
+void isbc8010_state::isbc8010_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x0fff).rom();
+	map(0x3c00, 0x3fff).ram();
+}
 
-static ADDRESS_MAP_START(isbc8010a_mem, AS_PROGRAM, 8, isbc8010_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x3c00, 0x3fff) AM_RAM
-ADDRESS_MAP_END
+void isbc8010_state::isbc8010a_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x1fff).rom();
+	map(0x3c00, 0x3fff).ram();
+}
 
-static ADDRESS_MAP_START(isbc8010b_mem, AS_PROGRAM, 8, isbc8010_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x3c00, 0x3fff) AM_RAM
-ADDRESS_MAP_END
+void isbc8010_state::isbc8010b_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x3bff).rom();
+	map(0x3c00, 0x3fff).ram();
+}
 
-static ADDRESS_MAP_START(isbc8010_io, AS_IO, 8, isbc8010_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0xe4, 0xe7) AM_DEVREADWRITE(I8255A_1_TAG, i8255_device, read, write)
-	AM_RANGE(0xe8, 0xeb) AM_DEVREADWRITE(I8255A_2_TAG, i8255_device, read, write)
-	AM_RANGE(0xec, 0xec) AM_MIRROR(0x02) AM_DEVREADWRITE(I8251A_TAG, i8251_device, data_r, data_w)
-	AM_RANGE(0xed, 0xed) AM_MIRROR(0x02) AM_DEVREADWRITE(I8251A_TAG, i8251_device, status_r, control_w)
+void isbc8010_state::isbc8010_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0xe4, 0xe7).rw(m_ppi_0, FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0xe8, 0xeb).rw(m_ppi_1, FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0xec, 0xec).mirror(0x02).rw(m_usart, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0xed, 0xed).mirror(0x02).rw(m_usart, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
 	//AM_RANGE(0xf0, 0xf7) MCS0 - iSBX Multimodule
 	//AM_RANGE(0xf8, 0xff) MCS1 - iSBX Multimodule
-ADDRESS_MAP_END
+}
 
 static INPUT_PORTS_START( isbc8010 )
 	PORT_START(I8251A_BAUD_TAG)
@@ -159,9 +170,9 @@ static DEVICE_INPUT_DEFAULTS_START( terminal ) // set up terminal to default to 
 	DEVICE_INPUT_DEFAULTS( "RS232_STOPBITS", 0xff, RS232_STOPBITS_1 )
 DEVICE_INPUT_DEFAULTS_END
 
-static MACHINE_CONFIG_START( isbc8010 )
+MACHINE_CONFIG_START(isbc8010_state::isbc8010)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", I8080A, XTAL_18_432MHz/9)
+	MCFG_CPU_ADD("maincpu", I8080A, XTAL(18'432'000)/9)
 	MCFG_CPU_PROGRAM_MAP(isbc8010_mem)
 	MCFG_CPU_IO_MAP(isbc8010_io)
 
@@ -179,7 +190,7 @@ static MACHINE_CONFIG_START( isbc8010 )
 	MCFG_RS232_CTS_HANDLER(DEVWRITELINE(I8251A_TAG, i8251_device, write_cts))
 	MCFG_DEVICE_CARD_DEVICE_INPUT_DEFAULTS("terminal", terminal)
 
-	MCFG_DEVICE_ADD("usart_clock", CLOCK, XTAL_18_432MHz/60)
+	MCFG_DEVICE_ADD("usart_clock", CLOCK, XTAL(18'432'000)/60)
 	MCFG_CLOCK_SIGNAL_HANDLER(WRITELINE(isbc8010_state, usart_clock_tick))
 
 	/* video hardware */
@@ -206,8 +217,8 @@ static MACHINE_CONFIG_START( isbc8010 )
 
 	// Video board UART
 //  MCFG_DEVICE_ADD( "hd6402", AY31015, 0 )
-//  MCFG_AY31015_TX_CLOCK(( XTAL_16MHz / 16 ) / 256)
-//  MCFG_AY31015_RX_CLOCK(( XTAL_16MHz / 16 ) / 256)
+//  MCFG_AY31015_TX_CLOCK(( XTAL(16'000'000) / 16 ) / 256)
+//  MCFG_AY31015_RX_CLOCK(( XTAL(16'000'000) / 16 ) / 256)
 //  MCFG_AY51013_READ_SI_CB(READ8(sdk80_state, nascom1_hd6402_si))
 //  MCFG_AY51013_WRITE_SO_CB(WRITE8(sdk80_state, nascom1_hd6402_so))
 
@@ -222,13 +233,15 @@ static MACHINE_CONFIG_START( isbc8010 )
 
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( isbc8010a, isbc8010 )
+MACHINE_CONFIG_START(isbc8010_state::isbc8010a)
+	isbc8010(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY( "maincpu" )
 	MCFG_CPU_PROGRAM_MAP(isbc8010a_mem)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( isbc8010b, isbc8010 )
+MACHINE_CONFIG_START(isbc8010_state::isbc8010b)
+	isbc8010(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(isbc8010b_mem)

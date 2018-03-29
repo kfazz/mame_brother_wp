@@ -21,10 +21,11 @@ they are internally.
 
 #include "emu.h"
 #include "sm8500.h"
+#include "sm8500d.h"
 #include "debugger.h"
 
 
-DEFINE_DEVICE_TYPE(SM8500, sm8500_cpu_device, "sm8500", "SM8500")
+DEFINE_DEVICE_TYPE(SM8500, sm8500_cpu_device, "sm8500", "Sharp SM8500")
 
 
 static constexpr uint8_t sm8500_b2w[8] = {
@@ -348,10 +349,9 @@ void sm8500_cpu_device::process_interrupts()
 }
 
 
-offs_t sm8500_cpu_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> sm8500_cpu_device::create_disassembler()
 {
-	extern CPU_DISASSEMBLE( sm8500 );
-	return CPU_DISASSEMBLE_NAME(sm8500)(this, stream, pc, oprom, opram, options);
+	return std::make_unique<sm8500_disassembler>();
 }
 
 

@@ -532,8 +532,9 @@ WRITE8_MEMBER( mpz80_state::disp_col_w )
 //  ADDRESS_MAP( mpz80_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( mpz80_mem, AS_PROGRAM, 8, mpz80_state )
-	AM_RANGE(0x0000, 0xffff) AM_READWRITE(mmu_r, mmu_w)
+void mpz80_state::mpz80_mem(address_map &map)
+{
+	map(0x0000, 0xffff).rw(this, FUNC(mpz80_state::mmu_r), FUNC(mpz80_state::mmu_w));
 /*
     Task 0 Segment 0 map:
 
@@ -546,15 +547,16 @@ static ADDRESS_MAP_START( mpz80_mem, AS_PROGRAM, 8, mpz80_state )
     AM_RANGE(0x0800, 0x0bff) AM_ROM AM_REGION(Z80_TAG, 0)
     AM_RANGE(0x0c00, 0x0c00) AM_DEVREADWRITE(AM9512_TAG, am9512_device, read, write)
 */
-ADDRESS_MAP_END
+}
 
 //-------------------------------------------------
 //  ADDRESS_MAP( mpz80_io )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( mpz80_io, AS_IO, 8, mpz80_state )
-	AM_RANGE(0x0000, 0xffff) AM_READWRITE(mmu_io_r, mmu_io_w)
-ADDRESS_MAP_END
+void mpz80_state::mpz80_io(address_map &map)
+{
+	map(0x0000, 0xffff).rw(this, FUNC(mpz80_state::mmu_io_r), FUNC(mpz80_state::mmu_io_w));
+}
 
 
 
@@ -709,31 +711,31 @@ void mpz80_state::machine_reset()
 //  MACHINE_CONFIG( mpz80 )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_START( mpz80 )
+MACHINE_CONFIG_START(mpz80_state::mpz80)
 	// basic machine hardware
-	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_4MHz)
+	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(mpz80_mem)
 	MCFG_CPU_IO_MAP(mpz80_io)
 
 	// S-100
-	MCFG_S100_BUS_ADD()
+	MCFG_DEVICE_ADD(S100_TAG, S100_BUS, XTAL(4'000'000) / 2)
 	MCFG_S100_IRQ_CALLBACK(WRITELINE(mpz80_state, s100_pint_w))
 	MCFG_S100_NMI_CALLBACK(WRITELINE(mpz80_state, s100_nmi_w))
 	MCFG_S100_RDY_CALLBACK(INPUTLINE(Z80_TAG, Z80_INPUT_LINE_BOGUSWAIT))
-	MCFG_S100_SLOT_ADD("s100_1", mpz80_s100_cards, "mm65k16s")
-	MCFG_S100_SLOT_ADD("s100_2", mpz80_s100_cards, "wunderbus")
-	MCFG_S100_SLOT_ADD("s100_3", mpz80_s100_cards, "dj2db")
-	MCFG_S100_SLOT_ADD("s100_4", mpz80_s100_cards, nullptr)//"hdcdma")
-	MCFG_S100_SLOT_ADD("s100_5", mpz80_s100_cards, nullptr)
-	MCFG_S100_SLOT_ADD("s100_6", mpz80_s100_cards, nullptr)
-	MCFG_S100_SLOT_ADD("s100_7", mpz80_s100_cards, nullptr)
-	MCFG_S100_SLOT_ADD("s100_8", mpz80_s100_cards, nullptr)
-	MCFG_S100_SLOT_ADD("s100_9", mpz80_s100_cards, nullptr)
-	MCFG_S100_SLOT_ADD("s100_10", mpz80_s100_cards, nullptr)
-	MCFG_S100_SLOT_ADD("s100_11", mpz80_s100_cards, nullptr)
-	MCFG_S100_SLOT_ADD("s100_12", mpz80_s100_cards, nullptr)
-	MCFG_S100_SLOT_ADD("s100_13", mpz80_s100_cards, nullptr)
-	MCFG_S100_SLOT_ADD("s100_14", mpz80_s100_cards, nullptr)
+	MCFG_S100_SLOT_ADD(S100_TAG ":1", mpz80_s100_cards, "mm65k16s")
+	MCFG_S100_SLOT_ADD(S100_TAG ":2", mpz80_s100_cards, "wunderbus")
+	MCFG_S100_SLOT_ADD(S100_TAG ":3", mpz80_s100_cards, "dj2db")
+	MCFG_S100_SLOT_ADD(S100_TAG ":4", mpz80_s100_cards, nullptr)//"hdcdma")
+	MCFG_S100_SLOT_ADD(S100_TAG ":5", mpz80_s100_cards, nullptr)
+	MCFG_S100_SLOT_ADD(S100_TAG ":6", mpz80_s100_cards, nullptr)
+	MCFG_S100_SLOT_ADD(S100_TAG ":7", mpz80_s100_cards, nullptr)
+	MCFG_S100_SLOT_ADD(S100_TAG ":8", mpz80_s100_cards, nullptr)
+	MCFG_S100_SLOT_ADD(S100_TAG ":9", mpz80_s100_cards, nullptr)
+	MCFG_S100_SLOT_ADD(S100_TAG ":10", mpz80_s100_cards, nullptr)
+	MCFG_S100_SLOT_ADD(S100_TAG ":11", mpz80_s100_cards, nullptr)
+	MCFG_S100_SLOT_ADD(S100_TAG ":12", mpz80_s100_cards, nullptr)
+	MCFG_S100_SLOT_ADD(S100_TAG ":13", mpz80_s100_cards, nullptr)
+	MCFG_S100_SLOT_ADD(S100_TAG ":14", mpz80_s100_cards, nullptr)
 
 	// internal ram
 	MCFG_RAM_ADD(RAM_TAG)

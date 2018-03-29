@@ -44,6 +44,7 @@
 
 #include "emu.h"
 #include "v30mz.h"
+#include "cpu/nec/necdasm.h"
 #include "debugger.h"
 
 
@@ -94,7 +95,7 @@ enum BREGS {
 
 /***************************************************************************/
 
-DEFINE_DEVICE_TYPE(V30MZ, v30mz_cpu_device, "v30mz", "V30MZ")
+DEFINE_DEVICE_TYPE(V30MZ, v30mz_cpu_device, "v30mz", "NEC V30MZ")
 
 
 v30mz_cpu_device::v30mz_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
@@ -146,7 +147,7 @@ device_memory_interface::space_config_vector v30mz_cpu_device::memory_space_conf
 void v30mz_cpu_device::device_start()
 {
 	m_program = &space(AS_PROGRAM);
-	m_direct = &m_program->direct();
+	m_direct = m_program->direct<0>();
 	m_io = &space(AS_IO);
 
 	save_item(NAME(m_regs.w));
@@ -1304,10 +1305,9 @@ void v30mz_cpu_device::execute_set_input( int inptnum, int state )
 }
 
 
-offs_t v30mz_cpu_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> v30mz_cpu_device::create_disassembler()
 {
-	extern CPU_DISASSEMBLE( nec );
-	return CPU_DISASSEMBLE_NAME(nec)(this, stream, pc, oprom, opram, options);
+	return std::make_unique<nec_disassembler>();
 }
 
 

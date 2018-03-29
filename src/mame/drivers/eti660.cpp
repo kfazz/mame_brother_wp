@@ -80,20 +80,22 @@ WRITE8_MEMBER( eti660_state::colorram_w )
 
 /* Memory Maps */
 
-static ADDRESS_MAP_START( eti660_map, AS_PROGRAM, 8, eti660_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xfff)
-	AM_RANGE(0x0000, 0x03ff) AM_ROM
-	AM_RANGE(0x0400, 0x047f) AM_RAM
-	AM_RANGE(0x0480, 0x05ff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x0600, 0x0fff) AM_RAM
-ADDRESS_MAP_END
+void eti660_state::mem_map(address_map &map)
+{
+	map.global_mask(0xfff);
+	map(0x0000, 0x03ff).rom();
+	map(0x0400, 0x047f).ram();
+	map(0x0480, 0x05ff).ram().share("videoram");
+	map(0x0600, 0x0fff).ram();
+}
 
-static ADDRESS_MAP_START( eti660_io_map, AS_IO, 8, eti660_state )
-	AM_RANGE(0x01, 0x01) AM_DEVREADWRITE(CDP1864_TAG, cdp1864_device, dispon_r, step_bgcolor_w)
-	AM_RANGE(0x02, 0x02) AM_READWRITE(pia_r, pia_w)
-	AM_RANGE(0x03, 0x03) AM_WRITE(colorram_w)
-	AM_RANGE(0x04, 0x04) AM_DEVREADWRITE(CDP1864_TAG, cdp1864_device, dispoff_r, tone_latch_w)
-ADDRESS_MAP_END
+void eti660_state::io_map(address_map &map)
+{
+	map(0x01, 0x01).rw(m_cti, FUNC(cdp1864_device::dispon_r), FUNC(cdp1864_device::step_bgcolor_w));
+	map(0x02, 0x02).rw(this, FUNC(eti660_state::pia_r), FUNC(eti660_state::pia_w));
+	map(0x03, 0x03).w(this, FUNC(eti660_state::colorram_w));
+	map(0x04, 0x04).rw(m_cti, FUNC(cdp1864_device::dispoff_r), FUNC(cdp1864_device::tone_latch_w));
+}
 
 /* Input Ports */
 static INPUT_PORTS_START( eti660 )
@@ -302,11 +304,11 @@ QUICKLOAD_LOAD_MEMBER( eti660_state, eti660 )
 
 /* Machine Drivers */
 
-static MACHINE_CONFIG_START( eti660 )
+MACHINE_CONFIG_START(eti660_state::eti660)
 	/* basic machine hardware */
-	MCFG_CPU_ADD(CDP1802_TAG, CDP1802, XTAL_8_867238MHz/5)
-	MCFG_CPU_PROGRAM_MAP(eti660_map)
-	MCFG_CPU_IO_MAP(eti660_io_map)
+	MCFG_CPU_ADD(CDP1802_TAG, CDP1802, XTAL(8'867'238)/5)
+	MCFG_CPU_PROGRAM_MAP(mem_map)
+	MCFG_CPU_IO_MAP(io_map)
 	MCFG_COSMAC_WAIT_CALLBACK(VCC)
 	MCFG_COSMAC_CLEAR_CALLBACK(READLINE(eti660_state, clear_r))
 	MCFG_COSMAC_EF2_CALLBACK(READLINE(eti660_state, ef2_r))
@@ -315,12 +317,12 @@ static MACHINE_CONFIG_START( eti660 )
 	MCFG_COSMAC_DMAW_CALLBACK(WRITE8(eti660_state, dma_w))
 
 	/* video hardware */
-	MCFG_CDP1864_SCREEN_ADD(SCREEN_TAG, XTAL_8_867238MHz/5)
+	MCFG_CDP1864_SCREEN_ADD(SCREEN_TAG, XTAL(8'867'238)/5)
 	MCFG_SCREEN_UPDATE_DEVICE(CDP1864_TAG, cdp1864_device, screen_update)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_CDP1864_ADD(CDP1864_TAG, SCREEN_TAG, XTAL_8_867238MHz/5, GND, INPUTLINE(CDP1802_TAG, COSMAC_INPUT_LINE_INT), INPUTLINE(CDP1802_TAG, COSMAC_INPUT_LINE_DMAOUT), INPUTLINE(CDP1802_TAG, COSMAC_INPUT_LINE_EF1), NOOP, READLINE(eti660_state, rdata_r), READLINE(eti660_state, bdata_r), READLINE(eti660_state, gdata_r))
+	MCFG_CDP1864_ADD(CDP1864_TAG, SCREEN_TAG, XTAL(8'867'238)/5, GND, INPUTLINE(CDP1802_TAG, COSMAC_INPUT_LINE_INT), INPUTLINE(CDP1802_TAG, COSMAC_INPUT_LINE_DMAOUT), INPUTLINE(CDP1802_TAG, COSMAC_INPUT_LINE_EF1), NOOP, READLINE(eti660_state, rdata_r), READLINE(eti660_state, bdata_r), READLINE(eti660_state, gdata_r))
 	MCFG_CDP1864_CHROMINANCE(RES_K(2.2), RES_K(1), RES_K(4.7), RES_K(4.7)) // R7, R5, R6, R4
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 

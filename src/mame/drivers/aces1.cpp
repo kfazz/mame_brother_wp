@@ -229,6 +229,9 @@ public:
 	virtual void machine_reset() override;
 	TIMER_CALLBACK_MEMBER(m_aces1_irq_timer_callback);
 	TIMER_CALLBACK_MEMBER(m_aces1_nmi_timer_callback);
+	void aces1(machine_config &config);
+	void aces1_map(address_map &map);
+	void aces1_portmap(address_map &map);
 };
 
 
@@ -266,21 +269,23 @@ void aces1_state::machine_reset()
 	aces1_reset_irq_timer();
 }
 
-static ADDRESS_MAP_START( aces1_map, AS_PROGRAM, 8, aces1_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x8fff) AM_RAM
-	AM_RANGE(0xadf0, 0xadf3) AM_DEVREADWRITE("aysnd", ay8910_device, data_r, address_data_w) //  Dips, Sound
-	AM_RANGE(0xafb0, 0xafb3) AM_DEVREADWRITE("ic24", i8255_device, read, write) // IC24 - lamps, 7segs
-	AM_RANGE(0xafd0, 0xafd3) AM_DEVREADWRITE("ic25", i8255_device, read, write) // IC25 - lamps, meters, reel comms (writes)
-	AM_RANGE(0xafe0, 0xafe3) AM_DEVREADWRITE("ic37", i8255_device, read, write)//  IC37 - doors, coins, reel optics (reads)
-	AM_RANGE(0xc000, 0xc000) AM_READ(aces1_unk_r) // illegal or reset irq?
-	AM_RANGE(0xe000, 0xe000) AM_READWRITE(aces1_nmi_counter_reset_r, aces1_nmi_counter_reset_w)
-ADDRESS_MAP_END
+void aces1_state::aces1_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x8fff).ram();
+	map(0xadf0, 0xadf3).rw("aysnd", FUNC(ay8910_device::data_r), FUNC(ay8910_device::address_data_w)); //  Dips, Sound
+	map(0xafb0, 0xafb3).rw("ic24", FUNC(i8255_device::read), FUNC(i8255_device::write)); // IC24 - lamps, 7segs
+	map(0xafd0, 0xafd3).rw("ic25", FUNC(i8255_device::read), FUNC(i8255_device::write)); // IC25 - lamps, meters, reel comms (writes)
+	map(0xafe0, 0xafe3).rw("ic37", FUNC(i8255_device::read), FUNC(i8255_device::write));//  IC37 - doors, coins, reel optics (reads)
+	map(0xc000, 0xc000).r(this, FUNC(aces1_state::aces1_unk_r)); // illegal or reset irq?
+	map(0xe000, 0xe000).rw(this, FUNC(aces1_state::aces1_nmi_counter_reset_r), FUNC(aces1_state::aces1_nmi_counter_reset_w));
+}
 
 
-static ADDRESS_MAP_START( aces1_portmap, AS_IO, 8, aces1_state )
-	AM_RANGE(0x00, 0x00) AM_READ(aces1_unk_port00_r) // read before enabling interrupts?
-ADDRESS_MAP_END
+void aces1_state::aces1_portmap(address_map &map)
+{
+	map(0x00, 0x00).r(this, FUNC(aces1_state::aces1_unk_port00_r)); // read before enabling interrupts?
+}
 
 
 static INPUT_PORTS_START( aces1 )
@@ -428,7 +433,7 @@ static INPUT_PORTS_START( aces1 )
 INPUT_PORTS_END
 
 
-static MACHINE_CONFIG_START( aces1 )
+MACHINE_CONFIG_START(aces1_state::aces1)
 
 	MCFG_CPU_ADD("maincpu", Z80, 4000000) /* ?? Mhz */
 	MCFG_CPU_PROGRAM_MAP(aces1_map)

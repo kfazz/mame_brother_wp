@@ -71,9 +71,10 @@ To load and play a game:
  */
 
 
-static ADDRESS_MAP_START(pdp1_map, AS_PROGRAM, 32, pdp1_state )
-	AM_RANGE(0x00000, 0x3ffff) AM_RAM
-ADDRESS_MAP_END
+void pdp1_state::pdp1_map(address_map &map)
+{
+	map(0x00000, 0x3ffff).ram();
+}
 
 static INPUT_PORTS_START( pdp1 )
 	PORT_START("SPACEWAR")      /* 0: spacewar controllers */
@@ -1917,7 +1918,7 @@ INTERRUPT_GEN_MEMBER(pdp1_state::pdp1_interrupt)
 }
 
 
-static MACHINE_CONFIG_START( pdp1 )
+MACHINE_CONFIG_START(pdp1_state::pdp1)
 
 	/* basic machine hardware */
 	/* PDP1 CPU @ 200 kHz (no master clock, but the instruction and memory rate is 200 kHz) */

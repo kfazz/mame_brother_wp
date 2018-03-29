@@ -109,33 +109,35 @@ const tiny_rom_entry *d9060_device_base::device_rom_region() const
 //  ADDRESS_MAP( d9060_main_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( d9060_main_mem, AS_PROGRAM, 8, d9060_device_base )
-	AM_RANGE(0x0000, 0x007f) AM_MIRROR(0x0100) AM_DEVICE(M6532_0_TAG, mos6532_new_device, ram_map)
-	AM_RANGE(0x0080, 0x00ff) AM_MIRROR(0x0100) AM_DEVICE(M6532_1_TAG, mos6532_new_device, ram_map)
-	AM_RANGE(0x0200, 0x021f) AM_MIRROR(0x0d60) AM_DEVICE(M6532_0_TAG, mos6532_new_device, io_map)
-	AM_RANGE(0x0280, 0x029f) AM_MIRROR(0x0d60) AM_DEVICE(M6532_1_TAG, mos6532_new_device, io_map)
-	AM_RANGE(0x1000, 0x13ff) AM_MIRROR(0x0c00) AM_RAM AM_SHARE("share1")
-	AM_RANGE(0x2000, 0x23ff) AM_MIRROR(0x0c00) AM_RAM AM_SHARE("share2")
-	AM_RANGE(0x3000, 0x33ff) AM_MIRROR(0x0c00) AM_RAM AM_SHARE("share3")
-	AM_RANGE(0x4000, 0x43ff) AM_MIRROR(0x0c00) AM_RAM AM_SHARE("share4")
-	AM_RANGE(0xc000, 0xffff) AM_ROM AM_REGION(M6502_DOS_TAG, 0)
-ADDRESS_MAP_END
+void d9060_device_base::d9060_main_mem(address_map &map)
+{
+	map(0x0000, 0x007f).mirror(0x0100).m(M6532_0_TAG, FUNC(mos6532_new_device::ram_map));
+	map(0x0080, 0x00ff).mirror(0x0100).m(M6532_1_TAG, FUNC(mos6532_new_device::ram_map));
+	map(0x0200, 0x021f).mirror(0x0d60).m(M6532_0_TAG, FUNC(mos6532_new_device::io_map));
+	map(0x0280, 0x029f).mirror(0x0d60).m(M6532_1_TAG, FUNC(mos6532_new_device::io_map));
+	map(0x1000, 0x13ff).mirror(0x0c00).ram().share("share1");
+	map(0x2000, 0x23ff).mirror(0x0c00).ram().share("share2");
+	map(0x3000, 0x33ff).mirror(0x0c00).ram().share("share3");
+	map(0x4000, 0x43ff).mirror(0x0c00).ram().share("share4");
+	map(0xc000, 0xffff).rom().region(M6502_DOS_TAG, 0);
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( d9060_hdc_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( d9060_hdc_mem, AS_PROGRAM, 8, d9060_device_base )
-	ADDRESS_MAP_GLOBAL_MASK(0x1fff)
-	AM_RANGE(0x0000, 0x007f) AM_MIRROR(0x300) AM_RAM
-	AM_RANGE(0x0080, 0x008f) AM_MIRROR(0x370) AM_DEVREADWRITE(M6522_TAG, via6522_device, read, write)
-	AM_RANGE(0x0400, 0x07ff) AM_RAM AM_SHARE("share1")
-	AM_RANGE(0x0800, 0x0bff) AM_RAM AM_SHARE("share2")
-	AM_RANGE(0x0c00, 0x0fff) AM_RAM AM_SHARE("share3")
-	AM_RANGE(0x1000, 0x13ff) AM_RAM AM_SHARE("share4")
-	AM_RANGE(0x1800, 0x1fff) AM_ROM AM_REGION(M6502_HDC_TAG, 0)
-ADDRESS_MAP_END
+void d9060_device_base::d9060_hdc_mem(address_map &map)
+{
+	map.global_mask(0x1fff);
+	map(0x0000, 0x007f).mirror(0x300).ram();
+	map(0x0080, 0x008f).mirror(0x370).rw(M6522_TAG, FUNC(via6522_device::read), FUNC(via6522_device::write));
+	map(0x0400, 0x07ff).ram().share("share1");
+	map(0x0800, 0x0bff).ram().share("share2");
+	map(0x0c00, 0x0fff).ram().share("share3");
+	map(0x1000, 0x13ff).ram().share("share4");
+	map(0x1800, 0x1fff).rom().region(M6502_HDC_TAG, 0);
+}
 
 
 //-------------------------------------------------
@@ -368,16 +370,16 @@ WRITE8_MEMBER( d9060_device_base::scsi_data_w )
 //  device_add_mconfig - add device configuration
 //-------------------------------------------------
 
-MACHINE_CONFIG_MEMBER( d9060_device_base::device_add_mconfig )
+MACHINE_CONFIG_START(d9060_device_base::device_add_mconfig)
 	// DOS
-	MCFG_CPU_ADD(M6502_DOS_TAG, M6502, XTAL_4MHz/4)
+	MCFG_CPU_ADD(M6502_DOS_TAG, M6502, XTAL(4'000'000)/4)
 	MCFG_CPU_PROGRAM_MAP(d9060_main_mem)
 
-	MCFG_DEVICE_ADD(M6532_0_TAG, MOS6532_NEW, XTAL_4MHz/4)
+	MCFG_DEVICE_ADD(M6532_0_TAG, MOS6532_NEW, XTAL(4'000'000)/4)
 	MCFG_MOS6530n_IN_PA_CB(READ8(d9060_device_base, dio_r))
 	MCFG_MOS6530n_OUT_PB_CB(WRITE8(d9060_device_base, dio_w))
 
-	MCFG_DEVICE_ADD(M6532_1_TAG, MOS6532_NEW, XTAL_4MHz/4)
+	MCFG_DEVICE_ADD(M6532_1_TAG, MOS6532_NEW, XTAL(4'000'000)/4)
 	MCFG_MOS6530n_IN_PA_CB(READ8(d9060_device_base, riot1_pa_r))
 	MCFG_MOS6530n_OUT_PA_CB(WRITE8(d9060_device_base, riot1_pa_w))
 	MCFG_MOS6530n_IN_PB_CB(READ8(d9060_device_base, riot1_pb_r))
@@ -385,10 +387,10 @@ MACHINE_CONFIG_MEMBER( d9060_device_base::device_add_mconfig )
 	MCFG_MOS6530n_IRQ_CB(INPUTLINE(M6502_DOS_TAG, INPUT_LINE_IRQ0))
 
 	// controller
-	MCFG_CPU_ADD(M6502_HDC_TAG, M6502, XTAL_4MHz/4)
+	MCFG_CPU_ADD(M6502_HDC_TAG, M6502, XTAL(4'000'000)/4)
 	MCFG_CPU_PROGRAM_MAP(d9060_hdc_mem)
 
-	MCFG_DEVICE_ADD(M6522_TAG, VIA6522, XTAL_4MHz/4)
+	MCFG_DEVICE_ADD(M6522_TAG, VIA6522, XTAL(4'000'000)/4)
 	MCFG_VIA6522_WRITEPA_HANDLER(WRITE8(d9060_device_base, scsi_data_w))
 	MCFG_VIA6522_WRITEPB_HANDLER(WRITE8(d9060_device_base, via_pb_w))
 	MCFG_VIA6522_CA2_HANDLER(WRITELINE(d9060_device_base, ack_w))

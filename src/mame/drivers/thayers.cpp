@@ -104,6 +104,9 @@ public:
 	required_device<cpu_device> m_maincpu;
 	required_ioport_array<10> m_row;
 
+	void thayers(machine_config &config);
+	void thayers_io_map(address_map &map);
+	void thayers_map(address_map &map);
 protected:
 	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 };
@@ -494,7 +497,7 @@ WRITE8_MEMBER(thayers_state::den2_w)
 
 */
 
-#define SSI263_CLOCK (XTAL_4MHz/2)
+#define SSI263_CLOCK (XTAL(4'000'000)/2)
 
 static const char SSI263_PHONEMES[0x40][5] =
 {
@@ -614,29 +617,31 @@ READ8_MEMBER(thayers_state::ssi263_register_r)
 
 /* Memory Maps */
 
-static ADDRESS_MAP_START( thayers_map, AS_PROGRAM, 8, thayers_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0xbfff) AM_RAM
-	AM_RANGE(0xc000, 0xdfff) AM_ROM
-ADDRESS_MAP_END
+void thayers_state::thayers_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0xbfff).ram();
+	map(0xc000, 0xdfff).rom();
+}
 
-static ADDRESS_MAP_START( thayers_io_map, AS_IO, 8, thayers_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x07) AM_READWRITE(ssi263_register_r, ssi263_register_w)
-	AM_RANGE(0x20, 0x20) AM_WRITE(control_w)
-	AM_RANGE(0x40, 0x40) AM_READWRITE(irqstate_r, control2_w)
-	AM_RANGE(0x80, 0x80) AM_READWRITE(cop_data_r, cop_data_w)
-	AM_RANGE(0xa0, 0xa0) AM_WRITE(timer_int_ack_w)
-	AM_RANGE(0xc0, 0xc0) AM_WRITE(data_rdy_int_ack_w)
-	AM_RANGE(0xf0, 0xf0) AM_READ(laserdsc_data_r)
-	AM_RANGE(0xf1, 0xf1) AM_READ(dsw_b_r)
-	AM_RANGE(0xf2, 0xf2) AM_READ_PORT("DSWA")
-	AM_RANGE(0xf3, 0xf3) AM_WRITE(intrq_w)
-	AM_RANGE(0xf4, 0xf4) AM_WRITE(laserdsc_data_w)
-	AM_RANGE(0xf5, 0xf5) AM_WRITE(laserdsc_control_w)
-	AM_RANGE(0xf6, 0xf6) AM_WRITE(den1_w)
-	AM_RANGE(0xf7, 0xf7) AM_WRITE(den2_w)
-ADDRESS_MAP_END
+void thayers_state::thayers_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x07).rw(this, FUNC(thayers_state::ssi263_register_r), FUNC(thayers_state::ssi263_register_w));
+	map(0x20, 0x20).w(this, FUNC(thayers_state::control_w));
+	map(0x40, 0x40).rw(this, FUNC(thayers_state::irqstate_r), FUNC(thayers_state::control2_w));
+	map(0x80, 0x80).rw(this, FUNC(thayers_state::cop_data_r), FUNC(thayers_state::cop_data_w));
+	map(0xa0, 0xa0).w(this, FUNC(thayers_state::timer_int_ack_w));
+	map(0xc0, 0xc0).w(this, FUNC(thayers_state::data_rdy_int_ack_w));
+	map(0xf0, 0xf0).r(this, FUNC(thayers_state::laserdsc_data_r));
+	map(0xf1, 0xf1).r(this, FUNC(thayers_state::dsw_b_r));
+	map(0xf2, 0xf2).portr("DSWA");
+	map(0xf3, 0xf3).w(this, FUNC(thayers_state::intrq_w));
+	map(0xf4, 0xf4).w(this, FUNC(thayers_state::laserdsc_data_w));
+	map(0xf5, 0xf5).w(this, FUNC(thayers_state::laserdsc_control_w));
+	map(0xf6, 0xf6).w(this, FUNC(thayers_state::den1_w));
+	map(0xf7, 0xf7).w(this, FUNC(thayers_state::den2_w));
+}
 
 /* Input Ports */
 
@@ -786,14 +791,14 @@ void thayers_state::machine_reset()
 
 /* Machine Driver */
 
-static MACHINE_CONFIG_START( thayers )
+MACHINE_CONFIG_START(thayers_state::thayers)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_4MHz)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(thayers_map)
 	MCFG_CPU_IO_MAP(thayers_io_map)
 
-	MCFG_CPU_ADD("mcu", COP421, XTAL_4MHz/2) // COP421L-PCA/N
+	MCFG_CPU_ADD("mcu", COP421, XTAL(4'000'000)/2) // COP421L-PCA/N
 	MCFG_COP400_CONFIG( COP400_CKI_DIVISOR_16, COP400_CKO_OSCILLATOR_OUTPUT, false )
 	MCFG_COP400_READ_L_CB(READ8(thayers_state, cop_l_r))
 	MCFG_COP400_WRITE_L_CB(WRITE8(thayers_state, cop_l_w))

@@ -5,6 +5,9 @@ Konami 007420
 ------
 Sprite generator. 8 bytes per sprite with zoom. It uses 0x200 bytes of RAM,
 and a variable amount of ROM. Nothing is known about its external interface.
+
+TODO:
+- sprite X wraparound? (Rock N Rage sprites disappears on left edge of screen)
 */
 
 #include "emu.h"
@@ -244,14 +247,4 @@ void k007420_device::sprites_draw( bitmap_ind16 &bitmap, const rectangle &clipre
 			m_ram[(current_sprite*8)+6], m_ram[(current_sprite*8)+7]);
 	}
 #endif
-}
-
-//-------------------------------------------------
-//  static_set_palette_tag: Set the tag of the
-//  palette device
-//-------------------------------------------------
-
-void k007420_device::static_set_palette_tag(device_t &device, const char *tag)
-{
-	downcast<k007420_device &>(device).m_palette.set_tag(tag);
 }

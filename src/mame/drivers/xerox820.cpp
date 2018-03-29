@@ -165,49 +165,55 @@ WRITE8_MEMBER( xerox820ii_state::sync_w )
 
 /* Memory Maps */
 
-static ADDRESS_MAP_START( xerox820_mem, AS_PROGRAM, 8, xerox820_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x3000, 0x3fff) AM_RAM AM_SHARE("video_ram")
-	AM_RANGE(0x4000, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void xerox820_state::xerox820_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x3000, 0x3fff).ram().share("video_ram");
+	map(0x4000, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START( xerox820_io, AS_IO, 8, xerox820_state )
-	AM_RANGE(0x00, 0x00) AM_MIRROR(0xff03) AM_DEVWRITE(COM8116_TAG, com8116_device, str_w)
-	AM_RANGE(0x04, 0x07) AM_MIRROR(0xff00) AM_DEVREADWRITE(Z80SIO_TAG, z80sio0_device, ba_cd_r, ba_cd_w)
-	AM_RANGE(0x08, 0x0b) AM_MIRROR(0xff00) AM_DEVREADWRITE(Z80PIO_GP_TAG, z80pio_device, read_alt, write_alt)
-	AM_RANGE(0x0c, 0x0c) AM_MIRROR(0xff03) AM_DEVWRITE(COM8116_TAG, com8116_device, stt_w)
-	AM_RANGE(0x10, 0x13) AM_MIRROR(0xff00) AM_READWRITE(fdc_r, fdc_w)
-	AM_RANGE(0x14, 0x14) AM_MIRROR(0x0003) AM_SELECT(0xff00) AM_WRITE(scroll_w)
-	AM_RANGE(0x18, 0x1b) AM_MIRROR(0xff00) AM_DEVREADWRITE(Z80CTC_TAG, z80ctc_device, read, write)
-	AM_RANGE(0x1c, 0x1f) AM_MIRROR(0xff00) AM_DEVREADWRITE(Z80PIO_KB_TAG, z80pio_device, read_alt, write_alt)
-ADDRESS_MAP_END
+void xerox820_state::xerox820_io(address_map &map)
+{
+	map(0x00, 0x00).mirror(0xff03).w(COM8116_TAG, FUNC(com8116_device::str_w));
+	map(0x04, 0x07).mirror(0xff00).rw(m_sio, FUNC(z80sio0_device::ba_cd_r), FUNC(z80sio0_device::ba_cd_w));
+	map(0x08, 0x0b).mirror(0xff00).rw(Z80PIO_GP_TAG, FUNC(z80pio_device::read_alt), FUNC(z80pio_device::write_alt));
+	map(0x0c, 0x0c).mirror(0xff03).w(COM8116_TAG, FUNC(com8116_device::stt_w));
+	map(0x10, 0x13).mirror(0xff00).rw(this, FUNC(xerox820_state::fdc_r), FUNC(xerox820_state::fdc_w));
+	map(0x14, 0x14).mirror(0x0003).select(0xff00).w(this, FUNC(xerox820_state::scroll_w));
+	map(0x18, 0x1b).mirror(0xff00).rw(m_ctc, FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+	map(0x1c, 0x1f).mirror(0xff00).rw(m_kbpio, FUNC(z80pio_device::read_alt), FUNC(z80pio_device::write_alt));
+}
 
-static ADDRESS_MAP_START( xerox820ii_mem, AS_PROGRAM, 8, xerox820ii_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x3000, 0x3fff) AM_RAM AM_SHARE("video_ram")
-	AM_RANGE(0xc000, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void xerox820ii_state::xerox820ii_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x3000, 0x3fff).ram().share("video_ram");
+	map(0xc000, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START( xerox820ii_io, AS_IO, 8, xerox820ii_state )
-	AM_IMPORT_FROM(xerox820_io)
-	AM_RANGE(0x28, 0x29) AM_MIRROR(0xff00) AM_WRITE(bell_w)
-	AM_RANGE(0x30, 0x31) AM_MIRROR(0xff00) AM_WRITE(slden_w)
-	AM_RANGE(0x34, 0x35) AM_MIRROR(0xff00) AM_WRITE(chrom_w)
-	AM_RANGE(0x36, 0x36) AM_MIRROR(0xff00) AM_WRITE(lowlite_w)
-	AM_RANGE(0x68, 0x69) AM_MIRROR(0xff00) AM_WRITE(sync_w)
-ADDRESS_MAP_END
+void xerox820ii_state::xerox820ii_io(address_map &map)
+{
+	xerox820_io(map);
+	map(0x28, 0x29).mirror(0xff00).w(this, FUNC(xerox820ii_state::bell_w));
+	map(0x30, 0x31).mirror(0xff00).w(this, FUNC(xerox820ii_state::slden_w));
+	map(0x34, 0x35).mirror(0xff00).w(this, FUNC(xerox820ii_state::chrom_w));
+	map(0x36, 0x36).mirror(0xff00).w(this, FUNC(xerox820ii_state::lowlite_w));
+	map(0x68, 0x69).mirror(0xff00).w(this, FUNC(xerox820ii_state::sync_w));
+}
 
-static ADDRESS_MAP_START( xerox168_mem, AS_PROGRAM, 16, xerox820ii_state )
-	AM_RANGE(0x00000, 0x3ffff) AM_RAM
-	AM_RANGE(0xff000, 0xfffff) AM_ROM AM_REGION(I8086_TAG, 0)
-ADDRESS_MAP_END
+void xerox820ii_state::xerox168_mem(address_map &map)
+{
+	map(0x00000, 0x3ffff).ram();
+	map(0xff000, 0xfffff).rom().region(I8086_TAG, 0);
+}
 
-static ADDRESS_MAP_START( mk83_mem, AS_PROGRAM, 8, xerox820_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x3000, 0x6fff) AM_RAM
-	AM_RANGE(0x7000, 0x7fff) AM_RAM AM_SHARE("video_ram")
-	AM_RANGE(0x8000, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void xerox820_state::mk83_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x3000, 0x6fff).ram();
+	map(0x7000, 0x7fff).ram().share("video_ram");
+	map(0x8000, 0xffff).ram();
+}
 
 
 /* Input Ports */
@@ -285,7 +291,7 @@ WRITE8_MEMBER( xerox820_state::kbpio_pa_w )
 		{
 			m_8n5 = _8n5;
 
-			m_fdc->set_unscaled_clock(m_8n5 ? XTAL_20MHz/10 : XTAL_20MHz/20);
+			m_fdc->set_unscaled_clock(m_8n5 ? XTAL(20'000'000)/10 : XTAL(20'000'000)/20);
 		}
 
 		m_400_460 = !floppy->twosid_r();
@@ -380,10 +386,60 @@ static const z80_daisy_config xerox820_daisy_chain[] =
 	{ nullptr }
 };
 
+
+
+/***********************************************************
+
+    Quickload
+
+    This loads a .COM file to address 0x100 then jumps
+    there. Sometimes .COM has been renamed to .CPM to
+    prevent windows going ballistic. These can be loaded
+    as well.
+
+************************************************************/
+
+QUICKLOAD_LOAD_MEMBER( xerox820_state, xerox820 )
+{
+	address_space& prog_space = m_maincpu->space(AS_PROGRAM);
+
+	if (quickload_size >= 0xfd00)
+		return image_init_result::FAIL;
+
+	bankswitch(0);
+
+	/* Avoid loading a program if CP/M-80 is not in memory */
+	if ((prog_space.read_byte(0) != 0xc3) || (prog_space.read_byte(5) != 0xc3))
+	{
+		machine_reset();
+		return image_init_result::FAIL;
+	}
+
+	/* Load image to the TPA (Transient Program Area) */
+	for (uint16_t i = 0; i < quickload_size; i++)
+	{
+		uint8_t data;
+		if (image.fread( &data, 1) != 1)
+			return image_init_result::FAIL;
+		prog_space.write_byte(i+0x100, data);
+	}
+
+	/* clear out command tail */
+	prog_space.write_byte(0x80, 0);   prog_space.write_byte(0x81, 0);
+
+	/* Roughly set SP basing on the BDOS position */
+	m_maincpu->set_state_int(Z80_SP, 256 * prog_space.read_byte(7) - 300);
+	m_maincpu->set_pc(0x100);   // start program
+
+	return image_init_result::PASS;
+}
+
+
+
 /* WD1771 Interface */
 
 static SLOT_INTERFACE_START( xerox820_floppies )
-	SLOT_INTERFACE( "sa400", FLOPPY_525_SSSD_35T ) // Shugart SA-400
+	SLOT_INTERFACE( "sa400", FLOPPY_525_SSSD ) // Shugart SA-400
 	SLOT_INTERFACE( "sa450", FLOPPY_525_DD ) // Shugart SA-450
 	SLOT_INTERFACE( "sa800", FLOPPY_8_SSDD ) // Shugart SA-800
 	SLOT_INTERFACE( "sa850", FLOPPY_8_DSDD ) // Shugart SA-850
@@ -545,9 +601,9 @@ GFXDECODE_END
 
 /* Machine Drivers */
 
-static MACHINE_CONFIG_START( xerox820 )
+MACHINE_CONFIG_START(xerox820_state::xerox820)
 	/* basic machine hardware */
-	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_20MHz/8)
+	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL(20'000'000)/8)
 	MCFG_CPU_PROGRAM_MAP(xerox820_mem)
 	MCFG_CPU_IO_MAP(xerox820_io)
 	MCFG_Z80_DAISY_CHAIN(xerox820_daisy_chain)
@@ -555,34 +611,34 @@ static MACHINE_CONFIG_START( xerox820 )
 	/* video hardware */
 	MCFG_SCREEN_ADD(SCREEN_TAG, RASTER)
 	MCFG_SCREEN_UPDATE_DRIVER(xerox820_state, screen_update)
-	MCFG_SCREEN_RAW_PARAMS(XTAL_10_69425MHz, 700, 0, 560, 260, 0, 240)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(10'694'250), 700, 0, 560, 260, 0, 240)
 
 	MCFG_GFXDECODE_ADD("gfxdecode", "palette", xerox820)
 	MCFG_PALETTE_ADD_MONOCHROME("palette")
 
 	/* devices */
-	MCFG_DEVICE_ADD(Z80PIO_KB_TAG, Z80PIO, XTAL_20MHz/8)
+	MCFG_DEVICE_ADD(Z80PIO_KB_TAG, Z80PIO, XTAL(20'000'000)/8)
 	MCFG_Z80PIO_OUT_INT_CB(INPUTLINE(Z80_TAG, INPUT_LINE_IRQ0))
 	MCFG_Z80PIO_IN_PA_CB(READ8(xerox820_state, kbpio_pa_r))
 	MCFG_Z80PIO_OUT_PA_CB(WRITE8(xerox820_state, kbpio_pa_w))
 	MCFG_Z80PIO_IN_PB_CB(READ8(xerox820_state, kbpio_pb_r))
 
-	MCFG_DEVICE_ADD(Z80PIO_GP_TAG, Z80PIO, XTAL_20MHz/8)
+	MCFG_DEVICE_ADD(Z80PIO_GP_TAG, Z80PIO, XTAL(20'000'000)/8)
 	MCFG_Z80PIO_OUT_INT_CB(INPUTLINE(Z80_TAG, INPUT_LINE_IRQ0))
 
-	MCFG_DEVICE_ADD(Z80CTC_TAG, Z80CTC, XTAL_20MHz/8)
+	MCFG_DEVICE_ADD(Z80CTC_TAG, Z80CTC, XTAL(20'000'000)/8)
 	MCFG_Z80CTC_INTR_CB(INPUTLINE(Z80_TAG, INPUT_LINE_IRQ0))
 	MCFG_Z80CTC_ZC0_CB(DEVWRITELINE(Z80CTC_TAG, z80ctc_device, trg1))
 	MCFG_Z80CTC_ZC2_CB(DEVWRITELINE(Z80CTC_TAG, z80ctc_device, trg3))
-	//MCFG_TIMER_DRIVER_ADD_PERIODIC("ctc", xerox820_state, ctc_tick, attotime::from_hz(XTAL_20MHz/8))
+	//MCFG_TIMER_DRIVER_ADD_PERIODIC("ctc", xerox820_state, ctc_tick, attotime::from_hz(XTAL(20'000'000)/8))
 
-	MCFG_FD1771_ADD(FD1771_TAG, XTAL_20MHz/20)
+	MCFG_FD1771_ADD(FD1771_TAG, XTAL(20'000'000)/20)
 	MCFG_WD_FDC_INTRQ_CALLBACK(WRITELINE(xerox820_state, fdc_intrq_w))
 	MCFG_WD_FDC_DRQ_CALLBACK(WRITELINE(xerox820_state, fdc_drq_w))
 	MCFG_FLOPPY_DRIVE_ADD(FD1771_TAG":0", xerox820_floppies, "sa400", floppy_image_device::default_floppy_formats)
 	MCFG_FLOPPY_DRIVE_ADD(FD1771_TAG":1", xerox820_floppies, "sa400", floppy_image_device::default_floppy_formats)
 
-	MCFG_Z80SIO0_ADD(Z80SIO_TAG, XTAL_20MHz/8, 0, 0, 0, 0)
+	MCFG_DEVICE_ADD(Z80SIO_TAG, Z80SIO0, XTAL(20'000'000)/8)
 	MCFG_Z80DART_OUT_TXDA_CB(DEVWRITELINE(RS232_A_TAG, rs232_port_device, write_txd))
 	MCFG_Z80DART_OUT_DTRA_CB(DEVWRITELINE(RS232_A_TAG, rs232_port_device, write_dtr))
 	MCFG_Z80DART_OUT_RTSA_CB(DEVWRITELINE(RS232_A_TAG, rs232_port_device, write_rts))
@@ -597,7 +653,7 @@ static MACHINE_CONFIG_START( xerox820 )
 	MCFG_RS232_PORT_ADD(RS232_B_TAG, default_rs232_devices, nullptr)
 	MCFG_RS232_RXD_HANDLER(DEVWRITELINE(Z80SIO_TAG, z80sio0_device, rxb_w))
 
-	MCFG_DEVICE_ADD(COM8116_TAG, COM8116, XTAL_5_0688MHz)
+	MCFG_DEVICE_ADD(COM8116_TAG, COM8116, XTAL(5'068'800))
 	MCFG_COM8116_FR_HANDLER(WRITELINE(xerox820_state, fr_w))
 	MCFG_COM8116_FT_HANDLER(DEVWRITELINE(Z80SIO_TAG, z80dart_device, rxtxcb_w))
 
@@ -610,18 +666,20 @@ static MACHINE_CONFIG_START( xerox820 )
 
 	// software lists
 	MCFG_SOFTWARE_LIST_ADD("flop_list", "xerox820")
+	MCFG_QUICKLOAD_ADD("quickload", xerox820_state, xerox820, "com,cpm", 3)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( bigboard, xerox820 )
+MACHINE_CONFIG_START(bigboard_state::bigboard)
+	xerox820(config);
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_ADD("beeper", BEEP, 950)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00) /* bigboard only */
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( xerox820ii )
+MACHINE_CONFIG_START(xerox820ii_state::xerox820ii)
 	/* basic machine hardware */
-	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_16MHz/4)
+	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL(16'000'000)/4)
 	MCFG_CPU_PROGRAM_MAP(xerox820ii_mem)
 	MCFG_CPU_IO_MAP(xerox820ii_io)
 	MCFG_Z80_DAISY_CHAIN(xerox820_daisy_chain)
@@ -629,7 +687,7 @@ static MACHINE_CONFIG_START( xerox820ii )
 	/* video hardware */
 	MCFG_SCREEN_ADD(SCREEN_TAG, RASTER)
 	MCFG_SCREEN_UPDATE_DRIVER(xerox820ii_state, screen_update)
-	MCFG_SCREEN_RAW_PARAMS(XTAL_10_69425MHz, 700, 0, 560, 260, 0, 240)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(10'694'250), 700, 0, 560, 260, 0, 240)
 
 	MCFG_GFXDECODE_ADD("gfxdecode", "palette", xerox820ii)
 	MCFG_PALETTE_ADD_MONOCHROME("palette")
@@ -640,16 +698,16 @@ static MACHINE_CONFIG_START( xerox820ii )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
 	/* devices */
-	MCFG_DEVICE_ADD(Z80PIO_KB_TAG, Z80PIO, XTAL_16MHz/4)
+	MCFG_DEVICE_ADD(Z80PIO_KB_TAG, Z80PIO, XTAL(16'000'000)/4)
 	MCFG_Z80PIO_OUT_INT_CB(INPUTLINE(Z80_TAG, INPUT_LINE_IRQ0))
 	MCFG_Z80PIO_IN_PA_CB(READ8(xerox820_state, kbpio_pa_r))
 	MCFG_Z80PIO_OUT_PA_CB(WRITE8(xerox820_state, kbpio_pa_w))
 	MCFG_Z80PIO_IN_PB_CB(READ8(xerox820_state, kbpio_pb_r))
 
-	MCFG_DEVICE_ADD(Z80PIO_GP_TAG, Z80PIO, XTAL_16MHz/4)
+	MCFG_DEVICE_ADD(Z80PIO_GP_TAG, Z80PIO, XTAL(16'000'000)/4)
 	MCFG_Z80PIO_OUT_INT_CB(INPUTLINE(Z80_TAG, INPUT_LINE_IRQ0))
 
-	MCFG_DEVICE_ADD(Z80PIO_RD_TAG, Z80PIO, XTAL_20MHz/8)
+	MCFG_DEVICE_ADD(Z80PIO_RD_TAG, Z80PIO, XTAL(20'000'000)/8)
 	MCFG_Z80PIO_OUT_INT_CB(INPUTLINE(Z80_TAG, INPUT_LINE_IRQ0))
 	MCFG_Z80PIO_IN_PA_CB(DEVREAD8("sasi_data_in", input_buffer_device, read))
 	MCFG_Z80PIO_OUT_PA_CB(DEVWRITE8("sasi_data_out", output_latch_device, write))
@@ -657,19 +715,19 @@ static MACHINE_CONFIG_START( xerox820ii )
 	MCFG_Z80PIO_IN_PB_CB(DEVREAD8("sasi_ctrl_in", input_buffer_device, read))
 	MCFG_Z80PIO_OUT_PB_CB(WRITE8(xerox820ii_state, rdpio_pb_w))
 
-	MCFG_DEVICE_ADD(Z80CTC_TAG, Z80CTC, XTAL_16MHz/4)
+	MCFG_DEVICE_ADD(Z80CTC_TAG, Z80CTC, XTAL(16'000'000)/4)
 	MCFG_Z80CTC_INTR_CB(INPUTLINE(Z80_TAG, INPUT_LINE_IRQ0))
 	MCFG_Z80CTC_ZC0_CB(DEVWRITELINE(Z80CTC_TAG, z80ctc_device, trg1))
 	MCFG_Z80CTC_ZC2_CB(DEVWRITELINE(Z80CTC_TAG, z80ctc_device, trg3))
-	//MCFG_TIMER_DRIVER_ADD_PERIODIC("ctc", xerox820_state, ctc_tick, attotime::from_hz(XTAL_16MHz/4))
+	//MCFG_TIMER_DRIVER_ADD_PERIODIC("ctc", xerox820_state, ctc_tick, attotime::from_hz(XTAL(16'000'000)/4))
 
-	MCFG_FD1797_ADD(FD1797_TAG, XTAL_16MHz/8)
+	MCFG_FD1797_ADD(FD1797_TAG, XTAL(16'000'000)/8)
 	MCFG_WD_FDC_INTRQ_CALLBACK(WRITELINE(xerox820_state, fdc_intrq_w))
 	MCFG_WD_FDC_DRQ_CALLBACK(WRITELINE(xerox820_state, fdc_drq_w))
 	MCFG_FLOPPY_DRIVE_ADD(FD1797_TAG":0", xerox820_floppies, "sa450", floppy_image_device::default_floppy_formats)
 	MCFG_FLOPPY_DRIVE_ADD(FD1797_TAG":1", xerox820_floppies, "sa450", floppy_image_device::default_floppy_formats)
 
-	MCFG_Z80SIO0_ADD(Z80SIO_TAG, XTAL_16MHz/4, 0, 0, 0, 0)
+	MCFG_DEVICE_ADD(Z80SIO_TAG, Z80SIO0, XTAL(16'000'000)/4)
 	MCFG_Z80DART_OUT_TXDA_CB(DEVWRITELINE(RS232_A_TAG, rs232_port_device, write_txd))
 	MCFG_Z80DART_OUT_DTRA_CB(DEVWRITELINE(RS232_A_TAG, rs232_port_device, write_dtr))
 	MCFG_Z80DART_OUT_RTSA_CB(DEVWRITELINE(RS232_A_TAG, rs232_port_device, write_rts))
@@ -684,7 +742,7 @@ static MACHINE_CONFIG_START( xerox820ii )
 	MCFG_RS232_PORT_ADD(RS232_B_TAG, default_rs232_devices, nullptr)
 	MCFG_RS232_RXD_HANDLER(DEVWRITELINE(Z80SIO_TAG, z80sio0_device, rxb_w))
 
-	MCFG_DEVICE_ADD(COM8116_TAG, COM8116, XTAL_5_0688MHz)
+	MCFG_DEVICE_ADD(COM8116_TAG, COM8116, XTAL(5'068'800))
 	MCFG_COM8116_FR_HANDLER(WRITELINE(xerox820_state, fr_w))
 	MCFG_COM8116_FT_HANDLER(DEVWRITELINE(Z80SIO_TAG, z80dart_device, rxtxcb_w))
 
@@ -712,9 +770,11 @@ static MACHINE_CONFIG_START( xerox820ii )
 
 	// software lists
 	MCFG_SOFTWARE_LIST_ADD("flop_list", "xerox820ii")
+	MCFG_QUICKLOAD_ADD("quickload", xerox820_state, xerox820, "com,cpm", 3)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( xerox168, xerox820ii )
+MACHINE_CONFIG_START(xerox820ii_state::xerox168)
+	xerox820ii(config);
 	MCFG_CPU_ADD(I8086_TAG, I8086, 4770000)
 	MCFG_CPU_PROGRAM_MAP(xerox168_mem)
 
@@ -724,7 +784,8 @@ static MACHINE_CONFIG_DERIVED( xerox168, xerox820ii )
 	MCFG_RAM_EXTRA_OPTIONS("320K")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( mk83, xerox820 )
+MACHINE_CONFIG_START(xerox820_state::mk83)
+	xerox820(config);
 	MCFG_CPU_MODIFY(Z80_TAG)
 	MCFG_CPU_PROGRAM_MAP(mk83_mem)
 MACHINE_CONFIG_END

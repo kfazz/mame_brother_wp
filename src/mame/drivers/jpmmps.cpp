@@ -33,6 +33,7 @@
 
 #include "cpu/tms9900/tms9995.h"
 #include "sound/sn76496.h"
+#include "machine/74259.h"
 #include "machine/i8255.h"
 #include "machine/tms9902.h"
 #include "machine/meters.h"
@@ -149,6 +150,9 @@ public:
 	uint8_t m_psg_latch;
 	virtual void machine_reset() override;
 
+	void jpmmps(machine_config &config);
+	void jpmmps_io_map(address_map &map);
+	void jpmmps_map(address_map &map);
 protected:
 
 	// devices
@@ -161,20 +165,22 @@ public:
 	DECLARE_WRITE8_MEMBER(jpmmps_ic22_portc_w);
 };
 
-static ADDRESS_MAP_START( jpmmps_map, AS_PROGRAM, 8, jpmmps_state )
-	AM_RANGE(0x0000, 0xbfff) AM_ROM
+void jpmmps_state::jpmmps_map(address_map &map)
+{
+	map(0x0000, 0xbfff).rom();
 
-	AM_RANGE(0xc000, 0xc003) AM_DEVREADWRITE("ppi8255_ic26", i8255_device, read, write)
-	AM_RANGE(0xc004, 0xc007) AM_DEVREADWRITE("ppi8255_ic21", i8255_device, read, write)
-	AM_RANGE(0xc008, 0xc00b) AM_DEVREADWRITE("ppi8255_ic22", i8255_device, read, write)
-	AM_RANGE(0xc00c, 0xc00f) AM_DEVREADWRITE("ppi8255_ic25", i8255_device, read, write)
+	map(0xc000, 0xc003).rw("ppi8255_ic26", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0xc004, 0xc007).rw("ppi8255_ic21", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0xc008, 0xc00b).rw("ppi8255_ic22", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0xc00c, 0xc00f).rw("ppi8255_ic25", FUNC(i8255_device::read), FUNC(i8255_device::write));
 
-	AM_RANGE(0xe800, 0xefff) AM_RAM
-ADDRESS_MAP_END
+	map(0xe800, 0xefff).ram();
+}
 
-static ADDRESS_MAP_START( jpmmps_io_map, AS_IO, 8, jpmmps_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x0000, 0x001f) AM_DEVREADWRITE("tms9902_ic5", tms9902_device, cruread, cruwrite)
+void jpmmps_state::jpmmps_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x0000, 0x001f).rw("tms9902_ic5", FUNC(tms9902_device::cruread), FUNC(tms9902_device::cruwrite));
 
 //  AM_RANGE(0x0020, 0x0020) // power fail
 //  AM_RANGE(0x0021, 0x0021) // wd timeout
@@ -184,17 +190,9 @@ static ADDRESS_MAP_START( jpmmps_io_map, AS_IO, 8, jpmmps_state )
 //  AM_RANGE(0x0026, 0x0026) // uart4 int
 //  AM_RANGE(0x0027, 0x0027) // uart2 int
 
-	AM_RANGE(0x0040, 0x005f) AM_DEVREADWRITE("tms9902_ic10", tms9902_device, cruread, cruwrite)
-
-//  AM_RANGE(0x0060, 0x0060) // watchdog
-//  AM_RANGE(0x0061, 0x0061) // ram en
-//  AM_RANGE(0x0062, 0x0062) // alarm
-//  AM_RANGE(0x0063, 0x0063) // nmi en
-//  AM_RANGE(0x0064, 0x0064) // reel en
-//  AM_RANGE(0x0065, 0x0065) // io en
-//  AM_RANGE(0x0066, 0x0066) // bb
-//  AM_RANGE(0x0067, 0x0067) // diagnostic led
-ADDRESS_MAP_END
+	map(0x0040, 0x005f).rw("tms9902_ic10", FUNC(tms9902_device::cruread), FUNC(tms9902_device::cruwrite));
+	map(0x0060, 0x0067).w("mainlatch", FUNC(ls259_device::write_d0));
+}
 
 
 static INPUT_PORTS_START( jpmmps )
@@ -232,22 +230,36 @@ WRITE8_MEMBER(jpmmps_state::jpmmps_ic22_portc_w)
 }
 
 
-// these are wrong
-#define MAIN_CLOCK 2000000
-#define SOUND_CLOCK 2000000
-#define DUART_CLOCK 2000000
+// BCLKOUT (used by peripherals) is normally TMS9995 CLKOUT; however, MPS1 allows an external CLK DMA to be selected instead
+#define MAIN_CLOCK XTAL(6'000'000)
+#define SOUND_CLOCK (MAIN_CLOCK / 4)
+#define DUART_CLOCK (MAIN_CLOCK / 4)
 
 
 void jpmmps_state::machine_reset()
 {
 	// Disable auto wait state generation by raising the READY line on reset
-	static_cast<tms9995_device*>(machine().device("maincpu"))->ready_line(ASSERT_LINE);
+	tms9995_device* cpu = static_cast<tms9995_device*>(machine().device("maincpu"));
+	cpu->ready_line(ASSERT_LINE);
+	cpu->reset_line(ASSERT_LINE);
 }
 
-static MACHINE_CONFIG_START( jpmmps )
+MACHINE_CONFIG_START(jpmmps_state::jpmmps)
 
 	// CPU TMS9995, standard variant; no line connections
 	MCFG_TMS99xx_ADD("maincpu", TMS9995, MAIN_CLOCK, jpmmps_map, jpmmps_io_map)
+
+	MCFG_DEVICE_ADD("mainlatch", LS259, 0) // IC10
+	MCFG_ADDRESSABLE_LATCH_Q0_OUT_CB(NOOP) // watchdog
+	MCFG_ADDRESSABLE_LATCH_Q1_OUT_CB(NOOP) // ram en
+	MCFG_ADDRESSABLE_LATCH_Q2_OUT_CB(NOOP) // alarm
+	MCFG_ADDRESSABLE_LATCH_Q3_OUT_CB(NOOP) // nmi en
+	//MCFG_ADDRESSABLE_LATCH_Q4_OUT_CB(INPUTLINE("reelmcu", INPUT_LINE_RESET)) MCFG_DEVCB_INVERT // reel en
+	MCFG_ADDRESSABLE_LATCH_Q5_OUT_CB(NOOP) // io en
+	MCFG_ADDRESSABLE_LATCH_Q6_OUT_CB(NOOP) // bb
+	MCFG_ADDRESSABLE_LATCH_Q7_OUT_CB(NOOP) // diagnostic led
+
+	//MCFG_CPU_ADD("reelmcu", TMS7041, XTAL(5'000'000))
 
 	MCFG_DEVICE_ADD("ppi8255_ic26", I8255, 0)
 	// Port B 0 is coin lockout
@@ -333,7 +345,7 @@ ROM_END
 
 ROM_START( j2adnotei )
 	ROM_REGION( 0x10000, "maincpu", 0 )
-	ROM_LOAD( "addanote 74% fixed 1b1.bin", 0x0000, 0x8000, CRC(ecfab9ba) SHA1(ea273d82e11a62c847cbaaef58a7d8b24a834bca) )
+	ROM_LOAD( "addanote 74_ fixed 1b1.bin", 0x0000, 0x8000, CRC(ecfab9ba) SHA1(ea273d82e11a62c847cbaaef58a7d8b24a834bca) )
 	ROM_LOAD( "addanote 1.2.bin",           0x8000, 0x8000, CRC(e421d220) SHA1(566ddf237cdb36bca9d8b6b67596e1602850971d) )
 ROM_END
 

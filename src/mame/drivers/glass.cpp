@@ -1,13 +1,13 @@
 // license:BSD-3-Clause
-// copyright-holders:Manuel Abadia
+// copyright-holders:Manuel Abadia, David Haywood
 /***************************************************************************
 
 Glass (c) 1993 Gaelco (Developed by OMK. Produced by Gaelco)
 
 Driver by Manuel Abadia <emumanu+mame@gmail.com>
 
-The DS5002FP has up to 128KB undumped gameplay code making the game unplayable,
-except for the Promat licensed Korean version which is unprotected.
+Todo:
+ - video priorities are incorrect, like most earlier Gaelco titles in MAME
 
 ***************************************************************************/
 
@@ -16,6 +16,7 @@ except for the Promat licensed Korean version which is unprotected.
 
 #include "machine/gaelco_ds5002fp.h"
 #include "cpu/m68000/m68000.h"
+#include "cpu/mcs51/mcs51.h"
 #include "sound/okim6295.h"
 #include "screen.h"
 #include "speaker.h"
@@ -103,35 +104,38 @@ WRITE_LINE_MEMBER(glass_state::coin2_counter_w)
 }
 
 
-static ADDRESS_MAP_START( mcu_hostmem_map, 0, 8, glass_state )
-	AM_RANGE(0x0000, 0xffff) AM_MASK(0x3fff) AM_READWRITE(shareram_r, shareram_w) // shared RAM with the main CPU
-ADDRESS_MAP_END
+void glass_state::mcu_hostmem_map(address_map &map)
+{
+	map(0x0000, 0xffff).mask(0x3fff).rw(this, FUNC(glass_state::shareram_r), FUNC(glass_state::shareram_w)); // shared RAM with the main CPU
+}
 
 
-static ADDRESS_MAP_START( glass_map, AS_PROGRAM, 16, glass_state )
-	AM_RANGE(0x000000, 0x0fffff) AM_ROM                                                                   // ROM
-	AM_RANGE(0x100000, 0x101fff) AM_RAM_WRITE(vram_w) AM_SHARE("videoram")                                // Video RAM
-	AM_RANGE(0x102000, 0x102fff) AM_RAM                                                                   // Extra Video RAM
-	AM_RANGE(0x108000, 0x108007) AM_WRITEONLY AM_SHARE("vregs")                                           // Video Registers
-	AM_RANGE(0x108008, 0x108009) AM_WRITE(clr_int_w)                                                      // CLR INT Video
-	AM_RANGE(0x200000, 0x2007ff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")    // Palette
-	AM_RANGE(0x440000, 0x440fff) AM_RAM AM_SHARE("spriteram")                                             // Sprite RAM
-	AM_RANGE(0x700000, 0x700001) AM_READ_PORT("DSW2")
-	AM_RANGE(0x700002, 0x700003) AM_READ_PORT("DSW1")
-	AM_RANGE(0x700004, 0x700005) AM_READ_PORT("P1")
-	AM_RANGE(0x700006, 0x700007) AM_READ_PORT("P2")
-	AM_RANGE(0x700008, 0x700009) AM_WRITE(blitter_w)                                                      // serial blitter
-	AM_RANGE(0x70000a, 0x70000b) AM_SELECT(0x000070) AM_WRITE(coin_w)                                     // Coin Counters/Lockout
-	AM_RANGE(0x70000c, 0x70000d) AM_WRITE(OKIM6295_bankswitch_w)                                          // OKI6295 bankswitch
-	AM_RANGE(0x70000e, 0x70000f) AM_DEVREADWRITE8("oki", okim6295_device, read, write, 0x00ff)            // OKI6295 status register
-	AM_RANGE(0xfec000, 0xfeffff) AM_RAM AM_SHARE("shareram")                                              // Work RAM (partially shared with DS5002FP)
-ADDRESS_MAP_END
+void glass_state::glass_map(address_map &map)
+{
+	map(0x000000, 0x0fffff).rom();                                                                   // ROM
+	map(0x100000, 0x101fff).ram().w(this, FUNC(glass_state::vram_w)).share("videoram");                                // Video RAM
+	map(0x102000, 0x102fff).ram();                                                                   // Extra Video RAM
+	map(0x108000, 0x108007).writeonly().share("vregs");                                           // Video Registers
+	map(0x108008, 0x108009).w(this, FUNC(glass_state::clr_int_w));                                                      // CLR INT Video
+	map(0x200000, 0x2007ff).ram().w(m_palette, FUNC(palette_device::write16)).share("palette");    // Palette
+	map(0x440000, 0x440fff).ram().share("spriteram");                                             // Sprite RAM
+	map(0x700000, 0x700001).portr("DSW2");
+	map(0x700002, 0x700003).portr("DSW1");
+	map(0x700004, 0x700005).portr("P1");
+	map(0x700006, 0x700007).portr("P2");
+	map(0x700008, 0x700009).w(this, FUNC(glass_state::blitter_w));                                                      // serial blitter
+	map(0x70000a, 0x70000b).select(0x000070).w(this, FUNC(glass_state::coin_w));                                     // Coin Counters/Lockout
+	map(0x70000c, 0x70000d).w(this, FUNC(glass_state::OKIM6295_bankswitch_w));                                          // OKI6295 bankswitch
+	map(0x70000f, 0x70000f).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));            // OKI6295 status register
+	map(0xfec000, 0xfeffff).ram().share("shareram");                                              // Work RAM (partially shared with DS5002FP)
+}
 
 
-static ADDRESS_MAP_START( oki_map, 0, 8, glass_state )
-	AM_RANGE(0x00000, 0x2ffff) AM_ROM
-	AM_RANGE(0x30000, 0x3ffff) AM_ROMBANK("okibank")
-ADDRESS_MAP_END
+void glass_state::oki_map(address_map &map)
+{
+	map(0x00000, 0x2ffff).rom();
+	map(0x30000, 0x3ffff).bankr("okibank");
+}
 
 
 static INPUT_PORTS_START( glass )
@@ -227,10 +231,10 @@ void glass_state::machine_reset()
 		m_blitter_serial_buffer[i] = 0;
 }
 
-static MACHINE_CONFIG_START( glass )
+MACHINE_CONFIG_START(glass_state::glass)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M68000, XTAL_24MHz/2)      /* 12 MHz verified on PCB */
+	MCFG_CPU_ADD("maincpu", M68000, XTAL(24'000'000)/2)      /* 12 MHz verified on PCB */
 	MCFG_CPU_PROGRAM_MAP(glass_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", glass_state,  interrupt)
 
@@ -257,13 +261,14 @@ static MACHINE_CONFIG_START( glass )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_OKIM6295_ADD("oki", XTAL_1MHz, PIN7_HIGH) /* 1MHz Resonator & pin 7 high verified on PCB */
+	MCFG_OKIM6295_ADD("oki", XTAL(1'000'000), PIN7_HIGH) /* 1MHz Resonator & pin 7 high verified on PCB */
 	MCFG_DEVICE_ADDRESS_MAP(0, oki_map)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( glass_ds5002fp, glass )
-	MCFG_DEVICE_ADD("gaelco_ds5002fp", GAELCO_DS5002FP, XTAL_24MHz / 2) /* verified on pcb */
+MACHINE_CONFIG_START(glass_state::glass_ds5002fp)
+	glass(config);
+	MCFG_DEVICE_ADD("gaelco_ds5002fp", GAELCO_DS5002FP, XTAL(24'000'000) / 2) /* verified on pcb */
 	MCFG_DEVICE_ADDRESS_MAP(0, mcu_hostmem_map)
 MACHINE_CONFIG_END
 
@@ -273,12 +278,13 @@ ROM_START( glass ) /* Version 1.1 */
 	ROM_LOAD16_BYTE( "2.c22", 0x000001, 0x040000, CRC(165e2e01) SHA1(180a2e2b5151f2321d85ac23eff7fbc9f52023a5) )
 
 	ROM_REGION( 0x8000, "gaelco_ds5002fp:sram", 0 ) /* DS5002FP code */
-	ROM_LOAD( "glass_ds5002fp.bin", 0x00000, 0x8000, NO_DUMP )
+	ROM_LOAD( "glass_ds5002fp_sram.bin", 0x00000, 0x8000, CRC(47c9df4c) SHA1(e0ac4f3d3086a4e8164d42aaae125037c222118a) )
 
 	ROM_REGION( 0x100, "gaelco_ds5002fp:mcu:internal", ROMREGION_ERASE00 )
-	//DS5002FP_SET_MON( 0x88 )
-	//DS5002FP_SET_RPCTL( 0x00 )
-	//DS5002FP_SET_CRCR( 0x80 )
+	/* these are the default states stored in NVRAM */
+	DS5002FP_SET_MON( 0x29 )
+	DS5002FP_SET_RPCTL( 0x00 )
+	DS5002FP_SET_CRCR( 0x80 )
 
 	ROM_REGION( 0x400000, "gfx1", ROMREGION_ERASE00 )   /* Graphics */
 	/* 0x000000-0x3fffff filled in later in the DRIVER_INIT */
@@ -301,12 +307,13 @@ ROM_START( glass10 ) /* Version 1.0 */
 	ROM_LOAD16_BYTE( "c22.bin", 0x000001, 0x040000, CRC(ab17c992) SHA1(1509b5b4bbfb4e022e0ab6fbbc0ffc070adfa531) )
 
 	ROM_REGION( 0x8000, "gaelco_ds5002fp:sram", 0 ) /* DS5002FP code */
-	ROM_LOAD( "glass_ds5002fp.bin", 0x00000, 0x8000, NO_DUMP )
+	ROM_LOAD( "glass_ds5002fp_sram.bin", 0x00000, 0x8000, CRC(47c9df4c) SHA1(e0ac4f3d3086a4e8164d42aaae125037c222118a) )
 
 	ROM_REGION( 0x100, "gaelco_ds5002fp:mcu:internal", ROMREGION_ERASE00 )
-	//DS5002FP_SET_MON( x )
-	//DS5002FP_SET_RPCTL( x )
-	//DS5002FP_SET_CRCR( x )
+	/* these are the default states stored in NVRAM */
+	DS5002FP_SET_MON( 0x29 )
+	DS5002FP_SET_RPCTL( 0x00 )
+	DS5002FP_SET_CRCR( 0x80 )
 
 	ROM_REGION( 0x400000, "gfx1", ROMREGION_ERASE00 )   /* Graphics */
 	/* 0x000000-0x3fffff filled in later in the DRIVER_INIT */
@@ -329,12 +336,13 @@ ROM_START( glass10a ) /* Title screen shows "GLASS" and under that "Break Editio
 	ROM_LOAD16_BYTE( "spl-c22.bin", 0x000001, 0x040000, CRC(0d6fa33e) SHA1(37e9258ef7e108d034c80abc8e5e5ab6dacf0a61) )
 
 	ROM_REGION( 0x8000, "gaelco_ds5002fp:sram", 0 ) /* DS5002FP code */
-	ROM_LOAD( "glass_ds5002fp.bin", 0x00000, 0x8000, NO_DUMP )
+	ROM_LOAD( "glass_ds5002fp_sram.bin", 0x00000, 0x8000, CRC(47c9df4c) SHA1(e0ac4f3d3086a4e8164d42aaae125037c222118a) )
 
 	ROM_REGION( 0x100, "gaelco_ds5002fp:mcu:internal", ROMREGION_ERASE00 )
-	//DS5002FP_SET_MON( x )
-	//DS5002FP_SET_RPCTL( x )
-	//DS5002FP_SET_CRCR( x )
+	/* these are the default states stored in NVRAM */
+	DS5002FP_SET_MON( 0x29 )
+	DS5002FP_SET_RPCTL( 0x00 )
+	DS5002FP_SET_CRCR( 0x80 )
 
 	ROM_REGION( 0x400000, "gfx1", ROMREGION_ERASE00 )   /* Graphics */
 	/* 0x000000-0x3fffff filled in later in the DRIVER_INIT */
@@ -419,13 +427,16 @@ DRIVER_INIT_MEMBER(glass_state, glass)
 }
 
 
+/*
+ ALL versions of Glass contain the 'Break Edition' string (it just seems to be part of the title?)
+ The 2 version 1.0 releases are very similar code, it was thought that one was a break edition and the other wasn't, but this is not the case.
 
-// ALL versions of Glass contain the 'Break Edition' string (it just seems to be part of the title?)
-// The 2 version 1.0 releases are very similar code, it was thought that one was a break edition and the other wasn't, but as both contain the string this seems unlikely.
-// Version 1.1 releases also show Version 1994 on the title screen.  These versions do not have skulls in the playfield (at least not on early stages)
-// The unprotected version appears to be a Korean set, is censored, and has different girl pictures.
+ Version 1.1 releases also show Version 1994 on the title screen.  These versions do not have skulls in the playfield (at least not on early stages)
+ The protected version 1.1 also doesn't show any kind of attract gameplay, looks like it was patched out? (should be verified on an untouched original 1.1 using it's original SRAM tho)
+ The unprotected version appears to be a Korean set, is censored, and has different girl pictures.
+*/
 
-GAME( 1994, glass,    0,     glass_ds5002fp, glass, glass_state, glass, ROT0, "OMK / Gaelco",                  "Glass (Ver 1.1, Break Edition, Version 1994)",                           MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )
-GAME( 1994, glasskr,  glass, glass,          glass, glass_state, glass, ROT0, "OMK / Gaelco (Promat license)", "Glass (Ver 1.1, Break Edition, Version 1994) (censored, unprotected)",   MACHINE_SUPPORTS_SAVE ) // promat stickers on program roms
-GAME( 1993, glass10,  glass, glass_ds5002fp, glass, glass_state, glass, ROT0, "OMK / Gaelco",                  "Glass (Ver 1.0, Break Edition) (set 1)",                                 MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )
-GAME( 1993, glass10a, glass, glass_ds5002fp, glass, glass_state, glass, ROT0, "OMK / Gaelco",                  "Glass (Ver 1.0, Break Edition) (set 2)",                                 MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )
+GAME( 1994, glass,    0,     glass_ds5002fp, glass, glass_state, glass, ROT0, "OMK / Gaelco",                  "Glass (Ver 1.1, Break Edition, Checksum 49D5E66B, Version 1994)",                           MACHINE_SUPPORTS_SAVE | MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1994, glasskr,  glass, glass,          glass, glass_state, glass, ROT0, "OMK / Gaelco (Promat license)", "Glass (Ver 1.1, Break Edition, Checksum D419AB69, Version 1994) (censored, unprotected)",   MACHINE_SUPPORTS_SAVE | MACHINE_IMPERFECT_GRAPHICS ) // promat stickers on program roms
+GAME( 1993, glass10,  glass, glass_ds5002fp, glass, glass_state, glass, ROT0, "OMK / Gaelco",                  "Glass (Ver 1.0, Break Edition, Checksum C5513F3C)",                                 MACHINE_SUPPORTS_SAVE | MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1993, glass10a, glass, glass_ds5002fp, glass, glass_state, glass, ROT0, "OMK / Gaelco",                  "Glass (Ver 1.0, Break Edition, Checksum D3864FDB)",                                 MACHINE_SUPPORTS_SAVE | MACHINE_IMPERFECT_GRAPHICS )

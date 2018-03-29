@@ -8,6 +8,8 @@
 
 #include "emu.h"
 #include "audio/exidy.h"
+#include "includes/exidy.h"
+#include "includes/victory.h"
 
 #include "cpu/z80/z80.h"
 #include "machine/rescap.h"
@@ -22,7 +24,7 @@
  *
  *************************************/
 
-#define CRYSTAL_OSC             (XTAL_3_579545MHz)
+#define CRYSTAL_OSC             (XTAL(3'579'545))
 #define SH8253_CLOCK            (CRYSTAL_OSC / 2)
 #define SH6840_CLOCK            (CRYSTAL_OSC / 4)
 #define SH6532_CLOCK            (CRYSTAL_OSC / 4)
@@ -194,9 +196,9 @@ void exidy_sound_device::sh6840_register_state_globals()
 
 void exidy_sound_device::common_sh_start()
 {
-	int sample_rate = SH8253_CLOCK;
+	int sample_rate = SH8253_CLOCK.value();
 
-	m_sh6840_clocks_per_sample = (int)((double)SH6840_CLOCK / (double)sample_rate * (double)(1 << 24));
+	m_sh6840_clocks_per_sample = (int)(SH6840_CLOCK.dvalue() / (double)sample_rate * (double)(1 << 24));
 
 	/* allocate the stream */
 	m_stream = machine().sound().stream_alloc(*this, 0, 1, sample_rate);
@@ -406,11 +408,11 @@ void exidy_sound_device::r6532_irq(int state)
 WRITE8_MEMBER( exidy_sound_device::r6532_porta_w )
 {
 	if (m_cvsd != nullptr)
-		space.machine().device("cvsdcpu")->execute().set_input_line(INPUT_LINE_RESET, (data & 0x10) ? CLEAR_LINE : ASSERT_LINE);
+		machine().device("cvsdcpu")->execute().set_input_line(INPUT_LINE_RESET, (data & 0x10) ? CLEAR_LINE : ASSERT_LINE);
 
 	if (m_tms != nullptr)
 	{
-		logerror("(%f)%s:TMS5220 data write = %02X\n", space.machine().time().as_double(), space.machine().describe_context(), m_riot->porta_out_get());
+		logerror("(%f)%s:TMS5220 data write = %02X\n", machine().time().as_double(), machine().describe_context(), m_riot->porta_out_get());
 		m_tms->data_w(space, 0, data);
 	}
 }
@@ -419,7 +421,7 @@ READ8_MEMBER( exidy_sound_device::r6532_porta_r )
 {
 	if (m_tms != nullptr)
 	{
-		logerror("(%f)%s:TMS5220 status read = %02X\n", space.machine().time().as_double(), space.machine().describe_context(), m_tms->status_r(space, 0));
+		logerror("(%f)%s:TMS5220 status read = %02X\n", machine().time().as_double(), machine().describe_context(), m_tms->status_r(space, 0));
 		return m_tms->status_r(space, 0);
 	}
 	else
@@ -503,7 +505,7 @@ WRITE8_MEMBER( exidy_sound_device::sh8253_w )
 				m_sh8253_timer[chan].clstate = 0;
 				m_sh8253_timer[chan].count = (m_sh8253_timer[chan].count & 0x00ff) | ((data << 8) & 0xff00);
 				if (m_sh8253_timer[chan].count)
-					m_sh8253_timer[chan].step = m_freq_to_step * (double)SH8253_CLOCK / (double)m_sh8253_timer[chan].count;
+					m_sh8253_timer[chan].step = m_freq_to_step * SH8253_CLOCK.dvalue() / m_sh8253_timer[chan].count;
 				else
 					m_sh8253_timer[chan].step = 0;
 			}
@@ -685,7 +687,7 @@ void venture_sound_device::device_start()
 	m_cvsd = machine().device<hc55516_device>("cvsd");
 
 	/* 8253 */
-	m_freq_to_step = (double)(1 << 24) / (double)SH8253_CLOCK;
+	m_freq_to_step = (1 << 24) / SH8253_CLOCK;
 
 	save_item(NAME(m_riot_irq_state));
 	sh8253_register_state_globals();
@@ -724,20 +726,21 @@ void venture_sound_device::sound_stream_update(sound_stream &stream, stream_samp
 
 
 
-static ADDRESS_MAP_START( venture_audio_map, AS_PROGRAM, 8, venture_sound_device )
-	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
-	AM_RANGE(0x0000, 0x007f) AM_MIRROR(0x0780) AM_RAM
-	AM_RANGE(0x0800, 0x087f) AM_MIRROR(0x0780) AM_DEVREADWRITE("riot", riot6532_device, read, write)
-	AM_RANGE(0x1000, 0x1003) AM_MIRROR(0x07fc) AM_DEVREADWRITE("pia1", pia6821_device, read, write)
-	AM_RANGE(0x1800, 0x1803) AM_MIRROR(0x07fc) AM_DEVREADWRITE("custom", venture_sound_device, sh8253_r, sh8253_w)
-	AM_RANGE(0x2000, 0x27ff) AM_DEVWRITE("custom", venture_sound_device, filter_w)
-	AM_RANGE(0x2800, 0x2807) AM_MIRROR(0x07f8) AM_DEVREADWRITE("custom", venture_sound_device, sh6840_r, sh6840_w)
-	AM_RANGE(0x3000, 0x3003) AM_MIRROR(0x07fc) AM_DEVWRITE("custom", venture_sound_device, sfxctrl_w)
-	AM_RANGE(0x5800, 0x7fff) AM_ROM
-ADDRESS_MAP_END
+void exidy_state::venture_audio_map(address_map &map)
+{
+	map.global_mask(0x7fff);
+	map(0x0000, 0x007f).mirror(0x0780).ram();
+	map(0x0800, 0x087f).mirror(0x0780).rw("riot", FUNC(riot6532_device::read), FUNC(riot6532_device::write));
+	map(0x1000, 0x1003).mirror(0x07fc).rw("pia1", FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x1800, 0x1803).mirror(0x07fc).rw("custom", FUNC(venture_sound_device::sh8253_r), FUNC(venture_sound_device::sh8253_w));
+	map(0x2000, 0x27ff).w("custom", FUNC(venture_sound_device::filter_w));
+	map(0x2800, 0x2807).mirror(0x07f8).rw("custom", FUNC(venture_sound_device::sh6840_r), FUNC(venture_sound_device::sh6840_w));
+	map(0x3000, 0x3003).mirror(0x07fc).w("custom", FUNC(venture_sound_device::sfxctrl_w));
+	map(0x5800, 0x7fff).rom();
+}
 
 
-MACHINE_CONFIG_START( venture_audio )
+MACHINE_CONFIG_START(exidy_state::venture_audio)
 
 	MCFG_CPU_ADD("audiocpu", M6502, 3579545/4)
 	MCFG_CPU_PROGRAM_MAP(venture_audio_map)
@@ -804,19 +807,21 @@ READ8_MEMBER( venture_sound_device::mtrap_voiceio_r )
 }
 
 
-static ADDRESS_MAP_START( cvsd_map, AS_PROGRAM, 8, venture_sound_device )
-	ADDRESS_MAP_GLOBAL_MASK(0x3fff)
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-ADDRESS_MAP_END
+void exidy_state::cvsd_map(address_map &map)
+{
+	map.global_mask(0x3fff);
+	map(0x0000, 0x3fff).rom();
+}
 
 
-static ADDRESS_MAP_START( cvsd_iomap, AS_IO, 8, venture_sound_device )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0xff) AM_DEVREADWRITE("custom", venture_sound_device, mtrap_voiceio_r, mtrap_voiceio_w)
-ADDRESS_MAP_END
+void exidy_state::cvsd_iomap(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0xff).rw("custom", FUNC(venture_sound_device::mtrap_voiceio_r), FUNC(venture_sound_device::mtrap_voiceio_w));
+}
 
 
-MACHINE_CONFIG_START( mtrap_cvsd_audio )
+MACHINE_CONFIG_START(exidy_state::mtrap_cvsd_audio)
 
 	MCFG_CPU_ADD("cvsdcpu", Z80, CVSD_Z80_CLOCK)
 	MCFG_CPU_PROGRAM_MAP(cvsd_map)
@@ -835,7 +840,7 @@ MACHINE_CONFIG_END
  *
  *************************************/
 
-#define VICTORY_AUDIO_CPU_CLOCK     (XTAL_3_579545MHz / 4)
+#define VICTORY_AUDIO_CPU_CLOCK     (XTAL(3'579'545) / 4)
 #define VICTORY_LOG_SOUND           0
 
 
@@ -874,7 +879,7 @@ WRITE8_MEMBER( victory_sound_device::command_w )
 {
 	if (VICTORY_LOG_SOUND) logerror("%04X:!!!! Sound command = %02X\n", m_maincpu->pcbase(), data);
 
-	space.machine().scheduler().synchronize(timer_expired_delegate(FUNC(victory_sound_device::delayed_command_w), this), data);
+	machine().scheduler().synchronize(timer_expired_delegate(FUNC(victory_sound_device::delayed_command_w), this), data);
 }
 
 
@@ -935,7 +940,7 @@ void victory_sound_device::device_start()
 	m_cvsd = machine().device<hc55516_device>("cvsd");
 
 	/* 8253 */
-	m_freq_to_step = (double)(1 << 24) / (double)SH8253_CLOCK;
+	m_freq_to_step = (1 << 24) / SH8253_CLOCK;
 
 	save_item(NAME(m_riot_irq_state));
 	sh8253_register_state_globals();
@@ -978,20 +983,21 @@ void victory_sound_device::sound_stream_update(sound_stream &stream, stream_samp
 
 
 
-static ADDRESS_MAP_START( victory_audio_map, AS_PROGRAM, 8, venture_sound_device )
-	AM_RANGE(0x0000, 0x00ff) AM_MIRROR(0x0f00) AM_RAM
-	AM_RANGE(0x1000, 0x107f) AM_MIRROR(0x0f80) AM_DEVREADWRITE("riot", riot6532_device, read, write)
-	AM_RANGE(0x2000, 0x2003) AM_MIRROR(0x0ffc) AM_DEVREADWRITE("pia1", pia6821_device, read, write)
-	AM_RANGE(0x3000, 0x3003) AM_MIRROR(0x0ffc) AM_DEVREADWRITE("custom", victory_sound_device, sh8253_r, sh8253_w)
-	AM_RANGE(0x4000, 0x4fff) AM_NOP
-	AM_RANGE(0x5000, 0x5007) AM_MIRROR(0x0ff8) AM_DEVREADWRITE("custom", victory_sound_device, sh6840_r, sh6840_w)
-	AM_RANGE(0x6000, 0x6003) AM_MIRROR(0x0ffc) AM_DEVWRITE("custom", victory_sound_device, sfxctrl_w)
-	AM_RANGE(0x7000, 0xafff) AM_NOP
-	AM_RANGE(0xb000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void victory_state::victory_audio_map(address_map &map)
+{
+	map(0x0000, 0x00ff).mirror(0x0f00).ram();
+	map(0x1000, 0x107f).mirror(0x0f80).rw("riot", FUNC(riot6532_device::read), FUNC(riot6532_device::write));
+	map(0x2000, 0x2003).mirror(0x0ffc).rw("pia1", FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x3000, 0x3003).mirror(0x0ffc).rw("custom", FUNC(victory_sound_device::sh8253_r), FUNC(victory_sound_device::sh8253_w));
+	map(0x4000, 0x4fff).noprw();
+	map(0x5000, 0x5007).mirror(0x0ff8).rw("custom", FUNC(victory_sound_device::sh6840_r), FUNC(victory_sound_device::sh6840_w));
+	map(0x6000, 0x6003).mirror(0x0ffc).w("custom", FUNC(victory_sound_device::sfxctrl_w));
+	map(0x7000, 0xafff).noprw();
+	map(0xb000, 0xffff).rom();
+}
 
 
-MACHINE_CONFIG_START( victory_audio )
+MACHINE_CONFIG_START(victory_state::victory_audio)
 
 	MCFG_CPU_ADD("audiocpu", M6502, VICTORY_AUDIO_CPU_CLOCK)
 	MCFG_CPU_PROGRAM_MAP(victory_audio_map)

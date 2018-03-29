@@ -40,6 +40,8 @@ public:
 	DECLARE_READ8_MEMBER(keyboard_status_r);
 	void kbd_put(u8 data);
 
+	void harriet(machine_config &config);
+	void harriet_map(address_map &map);
 protected:
 	// driver_device overrides
 	virtual void machine_start() override;
@@ -107,20 +109,21 @@ READ8_MEMBER(harriet_state::keyboard_status_r)
 	return res;
 }
 
-static ADDRESS_MAP_START( harriet_map, AS_PROGRAM, 16, harriet_state )
-	AM_RANGE(0x000000, 0x007fff) AM_ROM
-	AM_RANGE(0x040000, 0x040fff) AM_RAM // NVRAM
-	AM_RANGE(0x7f0000, 0x7fffff) AM_RAM // todo: boundaries, 0x7fe000 - 0x7fffff tested on boot
-	AM_RANGE(0xf1000e, 0xf1000f) AM_READ8(unk_r,0x00ff)
-	AM_RANGE(0xf1001c, 0xf1001f) AM_WRITE8(unk_w,0x00ff)
-	AM_RANGE(0xf20022, 0xf20023) AM_READ8(unk2_r,0x00ff)
-	AM_RANGE(0xf20024, 0xf20025) AM_READ8(unk2_r,0x00ff)
-	AM_RANGE(0xf2002c, 0xf2002d) AM_READ8(unk3_r,0x00ff)
-	AM_RANGE(0xf2002e, 0xf2002f) AM_WRITE8(serial_w,0x00ff)
+void harriet_state::harriet_map(address_map &map)
+{
+	map(0x000000, 0x007fff).rom();
+	map(0x040000, 0x040fff).ram(); // NVRAM
+	map(0x7f0000, 0x7fffff).ram(); // todo: boundaries, 0x7fe000 - 0x7fffff tested on boot
+	map(0xf1000f, 0xf1000f).r(this, FUNC(harriet_state::unk_r));
+	map(0xf1001c, 0xf1001f).w(this, FUNC(harriet_state::unk_w)).umask16(0x00ff);
+	map(0xf20023, 0xf20023).r(this, FUNC(harriet_state::unk2_r));
+	map(0xf20025, 0xf20025).r(this, FUNC(harriet_state::unk2_r));
+	map(0xf2002d, 0xf2002d).r(this, FUNC(harriet_state::unk3_r));
+	map(0xf2002f, 0xf2002f).w(this, FUNC(harriet_state::serial_w));
 //  AM_RANGE(0xf4001e, 0xf4001f) AM_READ8(keyboard_status_r,0x00ff)
 //  AM_RANGE(0xf4002e, 0xf4002f) AM_READ8(keyboard_status_r,0x00ff)
-	AM_RANGE(0xf4003e, 0xf4003f) AM_READ8(keyboard_status_r,0x00ff)
-ADDRESS_MAP_END
+	map(0xf4003f, 0xf4003f).r(this, FUNC(harriet_state::keyboard_status_r));
+}
 
 static INPUT_PORTS_START( harriet )
 	/* dummy active high structure */
@@ -193,10 +196,10 @@ void harriet_state::machine_reset()
 }
 
 
-static MACHINE_CONFIG_START( harriet )
+MACHINE_CONFIG_START(harriet_state::harriet)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",M68010,XTAL_8MHz) // TODO: clock
+	MCFG_CPU_ADD("maincpu",M68010,XTAL(8'000'000)) // TODO: clock
 	MCFG_CPU_PROGRAM_MAP(harriet_map)
 
 	/* video hardware */

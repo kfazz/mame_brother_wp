@@ -138,32 +138,34 @@ INTERRUPT_GEN_MEMBER(yiear_state::yiear_nmi_interrupt)
 }
 
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 8, yiear_state )
-	AM_RANGE(0x0000, 0x0000) AM_READ(yiear_speech_r)
-	AM_RANGE(0x4000, 0x4000) AM_WRITE(yiear_control_w)
-	AM_RANGE(0x4800, 0x4800) AM_WRITE(konami_SN76496_latch_w)
-	AM_RANGE(0x4900, 0x4900) AM_WRITE(konami_SN76496_w)
-	AM_RANGE(0x4a00, 0x4a00) AM_WRITE(yiear_VLM5030_control_w)
-	AM_RANGE(0x4b00, 0x4b00) AM_DEVWRITE("vlm", vlm5030_device, data_w)
-	AM_RANGE(0x4c00, 0x4c00) AM_READ_PORT("DSW2")
-	AM_RANGE(0x4d00, 0x4d00) AM_READ_PORT("DSW3")
-	AM_RANGE(0x4e00, 0x4e00) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0x4e01, 0x4e01) AM_READ_PORT("P1")
-	AM_RANGE(0x4e02, 0x4e02) AM_READ_PORT("P2")
-	AM_RANGE(0x4e03, 0x4e03) AM_READ_PORT("DSW1")
-	AM_RANGE(0x4f00, 0x4f00) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x5000, 0x502f) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0x5400, 0x542f) AM_RAM AM_SHARE("spriteram2")
-	AM_RANGE(0x5800, 0x5fff) AM_WRITE(yiear_videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x5000, 0x5fff) AM_RAM
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void yiear_state::main_map(address_map &map)
+{
+	map(0x0000, 0x0000).r(this, FUNC(yiear_state::yiear_speech_r));
+	map(0x4000, 0x4000).w(this, FUNC(yiear_state::yiear_control_w));
+	map(0x4800, 0x4800).w(this, FUNC(yiear_state::konami_SN76496_latch_w));
+	map(0x4900, 0x4900).w(this, FUNC(yiear_state::konami_SN76496_w));
+	map(0x4a00, 0x4a00).w(this, FUNC(yiear_state::yiear_VLM5030_control_w));
+	map(0x4b00, 0x4b00).w(m_vlm, FUNC(vlm5030_device::data_w));
+	map(0x4c00, 0x4c00).portr("DSW2");
+	map(0x4d00, 0x4d00).portr("DSW3");
+	map(0x4e00, 0x4e00).portr("SYSTEM");
+	map(0x4e01, 0x4e01).portr("P1");
+	map(0x4e02, 0x4e02).portr("P2");
+	map(0x4e03, 0x4e03).portr("DSW1");
+	map(0x4f00, 0x4f00).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x5000, 0x5fff).ram();
+	map(0x5000, 0x502f).ram().share("spriteram");
+	map(0x5400, 0x542f).ram().share("spriteram2");
+	map(0x5800, 0x5fff).w(this, FUNC(yiear_state::yiear_videoram_w)).share("videoram");
+	map(0x8000, 0xffff).rom();
+}
 
 
-static ADDRESS_MAP_START( vlm_map, 0, 8, yiear_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x1fff)
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-ADDRESS_MAP_END
+void yiear_state::vlm_map(address_map &map)
+{
+	map.global_mask(0x1fff);
+	map(0x0000, 0x1fff).rom();
+}
 
 
 static INPUT_PORTS_START( yiear )
@@ -278,10 +280,10 @@ void yiear_state::machine_reset()
 	m_yiear_nmi_enable = 0;
 }
 
-static MACHINE_CONFIG_START( yiear )
+MACHINE_CONFIG_START(yiear_state::yiear)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809,XTAL_18_432MHz/12)   /* verified on pcb */
+	MCFG_CPU_ADD("maincpu", MC6809E, XTAL(18'432'000)/12)   /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(main_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", yiear_state,  yiear_vblank_interrupt)
 	MCFG_CPU_PERIODIC_INT_DRIVER(yiear_state, yiear_nmi_interrupt, 480) /* music tempo (correct frequency unknown) */
@@ -306,10 +308,10 @@ static MACHINE_CONFIG_START( yiear )
 
 	MCFG_SOUND_ADD("trackfld_audio", TRACKFLD_AUDIO, 0)
 
-	MCFG_SOUND_ADD("snsnd", SN76489A, XTAL_18_432MHz/12)   /* verified on pcb */
+	MCFG_SOUND_ADD("snsnd", SN76489A, XTAL(18'432'000)/12)   /* verified on pcb */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MCFG_SOUND_ADD("vlm", VLM5030, XTAL_3_579545MHz)   /* verified on pcb */
+	MCFG_SOUND_ADD("vlm", VLM5030, XTAL(3'579'545))   /* verified on pcb */
 	MCFG_DEVICE_ADDRESS_MAP(0, vlm_map)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END

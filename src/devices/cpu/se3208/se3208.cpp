@@ -2,6 +2,7 @@
 // copyright-holders:ElSemi
 #include "emu.h"
 #include "se3208.h"
+#include "se3208dis.h"
 
 #include "debugger.h"
 
@@ -44,7 +45,7 @@
 // are such accesses simply illegal, be handled in a different way, or simply not be happening in the first place?
 #define ALLOW_UNALIGNED_DWORD_ACCESS 0
 
-DEFINE_DEVICE_TYPE(SE3208, se3208_device, "se3208", "SE3208")
+DEFINE_DEVICE_TYPE(SE3208, se3208_device, "se3208", "ADChips SE3208")
 
 
 se3208_device::se3208_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
@@ -1720,7 +1721,7 @@ void se3208_device::device_reset()
 	m_ER = 0;
 	m_PPC = 0;
 	m_program = &space(AS_PROGRAM);
-	m_direct = &m_program->direct();
+	m_direct = m_program->direct<0>();
 	m_PC=SE3208_Read32(0);
 	m_SR=0;
 	m_IRQ=CLEAR_LINE;
@@ -1785,7 +1786,7 @@ void se3208_device::device_start()
 	BuildTable();
 
 	m_program = &space(AS_PROGRAM);
-	m_direct = &m_program->direct();
+	m_direct = m_program->direct<0>();
 
 	save_item(NAME(m_R));
 	save_item(NAME(m_PC));
@@ -1847,8 +1848,7 @@ void se3208_device::execute_set_input( int line, int state )
 		m_IRQ=state;
 }
 
-offs_t se3208_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> se3208_device::create_disassembler()
 {
-	extern CPU_DISASSEMBLE( se3208 );
-	return CPU_DISASSEMBLE_NAME(se3208)(this, stream, pc, oprom, opram, options);
+	return std::make_unique<se3208_disassembler>();
 }

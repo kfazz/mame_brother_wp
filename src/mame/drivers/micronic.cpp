@@ -218,37 +218,39 @@ WRITE8_MEMBER( micronic_state::rtc_data_w )
     Machine
 ***************************************************************************/
 
-static ADDRESS_MAP_START(micronic_mem, AS_PROGRAM, 8, micronic_state)
-	AM_RANGE(0x0000, 0x7fff) AM_RAMBANK("bank1")
-	AM_RANGE(0x8000, 0xffff) AM_RAM  AM_SHARE("ram_base")
-ADDRESS_MAP_END
+void micronic_state::micronic_mem(address_map &map)
+{
+	map(0x0000, 0x7fff).bankrw("bank1");
+	map(0x8000, 0xffff).ram().share("ram_base");
+}
 
-static ADDRESS_MAP_START(micronic_io, AS_IO, 8, micronic_state)
-	ADDRESS_MAP_GLOBAL_MASK (0xff)
+void micronic_state::micronic_io(address_map &map)
+{
+	map.global_mask(0xff);
 
 	/* keypad */
-	AM_RANGE(0x00, 0x00) AM_READ(keypad_r)
-	AM_RANGE(0x02, 0x02) AM_WRITE(kp_matrix_w)
+	map(0x00, 0x00).r(this, FUNC(micronic_state::keypad_r));
+	map(0x02, 0x02).w(this, FUNC(micronic_state::kp_matrix_w));
 
 	/* hd61830 */
-	AM_RANGE(0x03, 0x03) AM_DEVREADWRITE(HD61830_TAG, hd61830_device, data_r, data_w)
-	AM_RANGE(0x23, 0x23) AM_DEVREADWRITE(HD61830_TAG, hd61830_device, status_r, control_w)
+	map(0x03, 0x03).rw(m_lcdc, FUNC(hd61830_device::data_r), FUNC(hd61830_device::data_w));
+	map(0x23, 0x23).rw(m_lcdc, FUNC(hd61830_device::status_r), FUNC(hd61830_device::control_w));
 
 	/* rtc-146818 */
-	AM_RANGE(0x08, 0x08) AM_WRITE(rtc_address_w)
-	AM_RANGE(0x28, 0x28) AM_READWRITE(rtc_data_r, rtc_data_w)
+	map(0x08, 0x08).w(this, FUNC(micronic_state::rtc_address_w));
+	map(0x28, 0x28).rw(this, FUNC(micronic_state::rtc_data_r), FUNC(micronic_state::rtc_data_w));
 
 	/* sound */
-	AM_RANGE(0x2b, 0x2b) AM_WRITE(beep_w)
+	map(0x2b, 0x2b).w(this, FUNC(micronic_state::beep_w));
 
 	/* basic machine */
-	AM_RANGE(0x05, 0x05) AM_READ(irq_flag_r)
-	AM_RANGE(0x2c, 0x2c) AM_WRITE(port_2c_w)
-	AM_RANGE(0x47, 0x47) AM_WRITE(bank_select_w)
-	AM_RANGE(0x46, 0x46) AM_WRITE(lcd_contrast_w)
-	AM_RANGE(0x48, 0x48) AM_WRITE(status_flag_w)
-	AM_RANGE(0x49, 0x49) AM_READ(status_flag_r)
-ADDRESS_MAP_END
+	map(0x05, 0x05).r(this, FUNC(micronic_state::irq_flag_r));
+	map(0x2c, 0x2c).w(this, FUNC(micronic_state::port_2c_w));
+	map(0x47, 0x47).w(this, FUNC(micronic_state::bank_select_w));
+	map(0x46, 0x46).w(this, FUNC(micronic_state::lcd_contrast_w));
+	map(0x48, 0x48).w(this, FUNC(micronic_state::status_flag_w));
+	map(0x49, 0x49).r(this, FUNC(micronic_state::status_flag_r));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( micronic )
@@ -348,9 +350,9 @@ WRITE_LINE_MEMBER( micronic_state::mc146818_irq )
 }
 
 
-static MACHINE_CONFIG_START( micronic )
+MACHINE_CONFIG_START(micronic_state::micronic)
 	/* basic machine hardware */
-	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_3_579545MHz)
+	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL(3'579'545))
 	MCFG_CPU_PROGRAM_MAP(micronic_mem)
 	MCFG_CPU_IO_MAP(micronic_io)
 
@@ -367,7 +369,7 @@ static MACHINE_CONFIG_START( micronic )
 	MCFG_PALETTE_ADD("palette", 2)
 	MCFG_PALETTE_INIT_OWNER(micronic_state, micronic)
 
-	MCFG_DEVICE_ADD(HD61830_TAG, HD61830, XTAL_4_9152MHz/2/2)
+	MCFG_DEVICE_ADD(HD61830_TAG, HD61830, XTAL(4'915'200)/2/2)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO( "mono" )
@@ -381,7 +383,7 @@ static MACHINE_CONFIG_START( micronic )
 	MCFG_NVRAM_ADD_CUSTOM_DRIVER("nvram1", micronic_state, nvram_init)  // base ram
 	MCFG_NVRAM_ADD_CUSTOM_DRIVER("nvram2", micronic_state, nvram_init)  // additional ram banks
 
-	MCFG_MC146818_ADD( MC146818_TAG, XTAL_32_768kHz )
+	MCFG_MC146818_ADD( MC146818_TAG, XTAL(32'768) )
 	MCFG_MC146818_IRQ_HANDLER(WRITELINE(micronic_state, mc146818_irq))
 MACHINE_CONFIG_END
 

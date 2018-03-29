@@ -284,7 +284,7 @@ TODO:
 #include "speaker.h"
 
 
-#define MAIN_XTAL   XTAL_24MHz
+#define MAIN_XTAL   XTAL(24'000'000)
 
 
 /*************************************
@@ -292,30 +292,33 @@ TODO:
  *  Address maps
  *
  *************************************/
-static ADDRESS_MAP_START( common_maincpu_map, AS_PROGRAM, 8, bublbobl_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK("bank1")
-	AM_RANGE(0xc000, 0xdcff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0xdd00, 0xdfff) AM_RAM AM_SHARE("objectram")
-	AM_RANGE(0xe000, 0xf7ff) AM_RAM AM_SHARE("share1")
-	AM_RANGE(0xf800, 0xf9ff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-ADDRESS_MAP_END
+void bublbobl_state::common_maincpu_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0xbfff).bankr("bank1");
+	map(0xc000, 0xdcff).ram().share("videoram");
+	map(0xdd00, 0xdfff).ram().share("objectram");
+	map(0xe000, 0xf7ff).ram().share("share1");
+	map(0xf800, 0xf9ff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+}
 
-static ADDRESS_MAP_START( bublbobl_maincpu_map, AS_PROGRAM, 8, bublbobl_state )
-	AM_IMPORT_FROM(common_maincpu_map)
-	AM_RANGE(0xfa00, 0xfa00) AM_MIRROR(0x007c) AM_DEVREAD("sound_to_main", generic_latch_8_device, read) AM_DEVWRITE("main_to_sound", generic_latch_8_device, write)
-	AM_RANGE(0xfa01, 0xfa01) AM_MIRROR(0x007c) AM_READ(common_sound_semaphores_r)
-	AM_RANGE(0xfa03, 0xfa03) AM_MIRROR(0x007c) AM_WRITE(bublbobl_soundcpu_reset_w)
-	AM_RANGE(0xfa80, 0xfa80) AM_MIRROR(0x007f) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0xfb00, 0xfb00) AM_MIRROR(0x003f) AM_WRITE(bublbobl_nmitrigger_w)
-	AM_RANGE(0xfb40, 0xfb40) AM_MIRROR(0x003f) AM_WRITE(bublbobl_bankswitch_w)
-	AM_RANGE(0xfc00, 0xffff) AM_RAM AM_SHARE("mcu_sharedram")
-ADDRESS_MAP_END
+void bublbobl_state::bublbobl_maincpu_map(address_map &map)
+{
+	common_maincpu_map(map);
+	map(0xfa00, 0xfa00).mirror(0x007c).r(m_sound_to_main, FUNC(generic_latch_8_device::read)).w(m_main_to_sound, FUNC(generic_latch_8_device::write));
+	map(0xfa01, 0xfa01).mirror(0x007c).r(this, FUNC(bublbobl_state::common_sound_semaphores_r));
+	map(0xfa03, 0xfa03).mirror(0x007c).w(this, FUNC(bublbobl_state::bublbobl_soundcpu_reset_w));
+	map(0xfa80, 0xfa80).mirror(0x007f).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0xfb00, 0xfb00).mirror(0x003f).w(this, FUNC(bublbobl_state::bublbobl_nmitrigger_w));
+	map(0xfb40, 0xfb40).mirror(0x003f).w(this, FUNC(bublbobl_state::bublbobl_bankswitch_w));
+	map(0xfc00, 0xffff).ram().share("mcu_sharedram");
+}
 
-static ADDRESS_MAP_START( subcpu_map, AS_PROGRAM, 8, bublbobl_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0xe000, 0xf7ff) AM_RAM AM_SHARE("share1")
-ADDRESS_MAP_END
+void bublbobl_state::subcpu_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0xe000, 0xf7ff).ram().share("share1");
+}
 
 /* Sound cpu address map
            |           |           |
@@ -343,92 +346,100 @@ Sound cpu semaphores are both active low:
  74ls74@ic9 [1/2] 'sound_has_written', appears on d0
  74ls74@ic10 [2/2] 'maincpu_has_written', appears on d1
 */
-static ADDRESS_MAP_START( sound_map, AS_PROGRAM, 8, bublbobl_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x8fff) AM_RAM
-	AM_RANGE(0x9000, 0x9001) AM_MIRROR(0x0ffe) AM_DEVREADWRITE("ym1", ym2203_device, read, write)
-	AM_RANGE(0xa000, 0xa001) AM_MIRROR(0x0ffe) AM_DEVREADWRITE("ym2", ym3526_device, read, write)
-	AM_RANGE(0xb000, 0xb000) AM_MIRROR(0x0ffc) AM_DEVREAD("main_to_sound", generic_latch_8_device, read) AM_DEVWRITE("sound_to_main", generic_latch_8_device, write)
-	AM_RANGE(0xb001, 0xb001) AM_MIRROR(0x0ffc) AM_READ(common_sound_semaphores_r) AM_DEVWRITE("soundnmi", input_merger_device, in_set<0>)
-	AM_RANGE(0xb002, 0xb002) AM_MIRROR(0x0ffc) AM_DEVWRITE("soundnmi", input_merger_device, in_clear<0>);
-	AM_RANGE(0xe000, 0xffff) AM_ROM // space for diagnostic ROM?
-ADDRESS_MAP_END
+void bublbobl_state::sound_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x8fff).ram();
+	map(0x9000, 0x9001).mirror(0x0ffe).rw("ym1", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+	map(0xa000, 0xa001).mirror(0x0ffe).rw("ym2", FUNC(ym3526_device::read), FUNC(ym3526_device::write));
+	map(0xb000, 0xb000).mirror(0x0ffc).r(m_main_to_sound, FUNC(generic_latch_8_device::read)).w(m_sound_to_main, FUNC(generic_latch_8_device::write));
+	map(0xb001, 0xb001).mirror(0x0ffc).r(this, FUNC(bublbobl_state::common_sound_semaphores_r)).w(m_soundnmi, FUNC(input_merger_device::in_set<0>));
+	map(0xb002, 0xb002).mirror(0x0ffc).w(m_soundnmi, FUNC(input_merger_device::in_clear<0>));
+	map(0xe000, 0xffff).rom(); // space for diagnostic ROM?
+}
 
-static ADDRESS_MAP_START( mcu_map, AS_PROGRAM, 8, bublbobl_state )
-	AM_RANGE(0x0000, 0x0000) AM_READWRITE(bublbobl_mcu_ddr1_r, bublbobl_mcu_ddr1_w)
-	AM_RANGE(0x0001, 0x0001) AM_READWRITE(bublbobl_mcu_ddr2_r, bublbobl_mcu_ddr2_w)
-	AM_RANGE(0x0002, 0x0002) AM_READWRITE(bublbobl_mcu_port1_r, bublbobl_mcu_port1_w)
-	AM_RANGE(0x0003, 0x0003) AM_READWRITE(bublbobl_mcu_port2_r, bublbobl_mcu_port2_w)
-	AM_RANGE(0x0004, 0x0004) AM_READWRITE(bublbobl_mcu_ddr3_r, bublbobl_mcu_ddr3_w)
-	AM_RANGE(0x0005, 0x0005) AM_READWRITE(bublbobl_mcu_ddr4_r, bublbobl_mcu_ddr4_w)
-	AM_RANGE(0x0006, 0x0006) AM_READWRITE(bublbobl_mcu_port3_r, bublbobl_mcu_port3_w)
-	AM_RANGE(0x0007, 0x0007) AM_READWRITE(bublbobl_mcu_port4_r, bublbobl_mcu_port4_w)
-	AM_RANGE(0x0040, 0x00ff) AM_RAM
-	AM_RANGE(0xf000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void bublbobl_state::mcu_map(address_map &map)
+{
+	map(0x0000, 0x0000).rw(this, FUNC(bublbobl_state::bublbobl_mcu_ddr1_r), FUNC(bublbobl_state::bublbobl_mcu_ddr1_w));
+	map(0x0001, 0x0001).rw(this, FUNC(bublbobl_state::bublbobl_mcu_ddr2_r), FUNC(bublbobl_state::bublbobl_mcu_ddr2_w));
+	map(0x0002, 0x0002).rw(this, FUNC(bublbobl_state::bublbobl_mcu_port1_r), FUNC(bublbobl_state::bublbobl_mcu_port1_w));
+	map(0x0003, 0x0003).rw(this, FUNC(bublbobl_state::bublbobl_mcu_port2_r), FUNC(bublbobl_state::bublbobl_mcu_port2_w));
+	map(0x0004, 0x0004).rw(this, FUNC(bublbobl_state::bublbobl_mcu_ddr3_r), FUNC(bublbobl_state::bublbobl_mcu_ddr3_w));
+	map(0x0005, 0x0005).rw(this, FUNC(bublbobl_state::bublbobl_mcu_ddr4_r), FUNC(bublbobl_state::bublbobl_mcu_ddr4_w));
+	map(0x0006, 0x0006).rw(this, FUNC(bublbobl_state::bublbobl_mcu_port3_r), FUNC(bublbobl_state::bublbobl_mcu_port3_w));
+	map(0x0007, 0x0007).rw(this, FUNC(bublbobl_state::bublbobl_mcu_port4_r), FUNC(bublbobl_state::bublbobl_mcu_port4_w));
+	map(0x0040, 0x00ff).ram();
+	map(0xf000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START( bootleg_map, AS_PROGRAM, 8, bublbobl_state )
-	AM_IMPORT_FROM(common_maincpu_map)
-	AM_RANGE(0xfa00, 0xfa00) AM_MIRROR(0x007c) AM_DEVREAD("sound_to_main", generic_latch_8_device, read) AM_DEVWRITE("main_to_sound", generic_latch_8_device, write)
-	AM_RANGE(0xfa01, 0xfa01) AM_MIRROR(0x007c) AM_READ(common_sound_semaphores_r)
-	AM_RANGE(0xfa03, 0xfa03) AM_MIRROR(0x007c) AM_WRITE(bublbobl_soundcpu_reset_w)
-	AM_RANGE(0xfa80, 0xfa80) AM_MIRROR(0x007f) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0xfb00, 0xfb00) AM_MIRROR(0x003f) AM_WRITE(bublbobl_nmitrigger_w)
-	AM_RANGE(0xfb40, 0xfb40) AM_MIRROR(0x003f) AM_WRITE(bublbobl_bankswitch_w)
+void bublbobl_state::bootleg_map(address_map &map)
+{
+	common_maincpu_map(map);
+	map(0xfa00, 0xfa00).mirror(0x007c).r(m_sound_to_main, FUNC(generic_latch_8_device::read)).w(m_main_to_sound, FUNC(generic_latch_8_device::write));
+	map(0xfa01, 0xfa01).mirror(0x007c).r(this, FUNC(bublbobl_state::common_sound_semaphores_r));
+	map(0xfa03, 0xfa03).mirror(0x007c).w(this, FUNC(bublbobl_state::bublbobl_soundcpu_reset_w));
+	map(0xfa80, 0xfa80).mirror(0x007f).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0xfb00, 0xfb00).mirror(0x003f).w(this, FUNC(bublbobl_state::bublbobl_nmitrigger_w));
+	map(0xfb40, 0xfb40).mirror(0x003f).w(this, FUNC(bublbobl_state::bublbobl_bankswitch_w));
 	// above here is identical to non-bootleg
-	AM_RANGE(0xfc00, 0xfcff) AM_RAM
-	AM_RANGE(0xfd00, 0xfdff) AM_RAM
-	AM_RANGE(0xfe00, 0xfe03) AM_READWRITE(boblbobl_ic43_a_r, boblbobl_ic43_a_w)
-	AM_RANGE(0xfe80, 0xfe83) AM_READWRITE(boblbobl_ic43_b_r, boblbobl_ic43_b_w)
-	AM_RANGE(0xff00, 0xff00) AM_READ_PORT("DSW0")
-	AM_RANGE(0xff01, 0xff01) AM_READ_PORT("DSW1")
-	AM_RANGE(0xff02, 0xff02) AM_READ_PORT("IN0")
-	AM_RANGE(0xff03, 0xff03) AM_READ_PORT("IN1")
-	AM_RANGE(0xff94, 0xff94) AM_WRITENOP // ???
-	AM_RANGE(0xff98, 0xff98) AM_WRITENOP // ???
-ADDRESS_MAP_END
+	map(0xfc00, 0xfcff).ram();
+	map(0xfd00, 0xfdff).ram();
+	map(0xfe00, 0xfe03).rw(this, FUNC(bublbobl_state::boblbobl_ic43_a_r), FUNC(bublbobl_state::boblbobl_ic43_a_w));
+	map(0xfe80, 0xfe83).rw(this, FUNC(bublbobl_state::boblbobl_ic43_b_r), FUNC(bublbobl_state::boblbobl_ic43_b_w));
+	map(0xff00, 0xff00).portr("DSW0");
+	map(0xff01, 0xff01).portr("DSW1");
+	map(0xff02, 0xff02).portr("IN0");
+	map(0xff03, 0xff03).portr("IN1");
+	map(0xff94, 0xff94).nopw(); // ???
+	map(0xff98, 0xff98).nopw(); // ???
+}
 
 
-static ADDRESS_MAP_START( tokio_map, AS_PROGRAM, 8, bublbobl_state )
-	AM_IMPORT_FROM(common_maincpu_map)
-	AM_RANGE(0xfa00, 0xfa00) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0xfa03, 0xfa03) AM_READ_PORT("DSW0")
-	AM_RANGE(0xfa04, 0xfa04) AM_READ_PORT("DSW1")
-	AM_RANGE(0xfa05, 0xfa05) AM_READ_PORT("IN0")
-	AM_RANGE(0xfa06, 0xfa06) AM_READ_PORT("IN1")
-	AM_RANGE(0xfa07, 0xfa07) AM_READ_PORT("IN2")
-	AM_RANGE(0xfa80, 0xfa80) AM_WRITE(tokio_bankswitch_w)
-	AM_RANGE(0xfb00, 0xfb00) AM_WRITE(tokio_videoctrl_w)
-	AM_RANGE(0xfb80, 0xfb80) AM_WRITE(bublbobl_nmitrigger_w)
-	AM_RANGE(0xfc00, 0xfc00) AM_DEVREAD("sound_to_main", generic_latch_8_device, read) AM_DEVWRITE("main_to_sound", generic_latch_8_device, write)
-ADDRESS_MAP_END
+void bublbobl_state::tokio_map(address_map &map)
+{
+	common_maincpu_map(map);
+	map(0xfa00, 0xfa00).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0xfa03, 0xfa03).portr("DSW0");
+	map(0xfa04, 0xfa04).portr("DSW1");
+	map(0xfa05, 0xfa05).portr("IN0");
+	map(0xfa06, 0xfa06).portr("IN1");
+	map(0xfa07, 0xfa07).portr("IN2");
+	map(0xfa80, 0xfa80).w(this, FUNC(bublbobl_state::tokio_bankswitch_w));
+	map(0xfb00, 0xfb00).w(this, FUNC(bublbobl_state::tokio_videoctrl_w));
+	map(0xfb80, 0xfb80).w(this, FUNC(bublbobl_state::bublbobl_nmitrigger_w));
+	map(0xfc00, 0xfc00).r(m_sound_to_main, FUNC(generic_latch_8_device::read)).w(m_main_to_sound, FUNC(generic_latch_8_device::write));
+}
 
-static ADDRESS_MAP_START( tokio_map_mcu, AS_PROGRAM, 8, bublbobl_state )
-	AM_IMPORT_FROM(tokio_map)
-	AM_RANGE(0xfe00, 0xfe00) AM_DEVREADWRITE("bmcu", taito68705_mcu_device, data_r, data_w)
-ADDRESS_MAP_END
+void bublbobl_state::tokio_map_mcu(address_map &map)
+{
+	tokio_map(map);
+	map(0xfe00, 0xfe00).rw("bmcu", FUNC(taito68705_mcu_device::data_r), FUNC(taito68705_mcu_device::data_w));
+}
 
-static ADDRESS_MAP_START( tokio_map_bootleg, AS_PROGRAM, 8, bublbobl_state )
-	AM_IMPORT_FROM(tokio_map)
-	AM_RANGE(0xfe00, 0xfe00) AM_READ( tokiob_mcu_r )
-ADDRESS_MAP_END
+void bublbobl_state::tokio_map_bootleg(address_map &map)
+{
+	tokio_map(map);
+	map(0xfe00, 0xfe00).r(this, FUNC(bublbobl_state::tokiob_mcu_r));
+}
 
 
-static ADDRESS_MAP_START( tokio_subcpu_map, AS_PROGRAM, 8, bublbobl_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x97ff) AM_RAM AM_SHARE("share1")
-ADDRESS_MAP_END
+void bublbobl_state::tokio_subcpu_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x97ff).ram().share("share1");
+}
 
-static ADDRESS_MAP_START( tokio_sound_map, AS_PROGRAM, 8, bublbobl_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x8fff) AM_RAM
-	AM_RANGE(0x9000, 0x9000) AM_DEVREAD("main_to_sound", generic_latch_8_device, read) AM_DEVWRITE("sound_to_main", generic_latch_8_device, write)
-	AM_RANGE(0x9800, 0x9800) AM_READ(common_sound_semaphores_r)
-	AM_RANGE(0xa000, 0xa000) AM_DEVWRITE("soundnmi", input_merger_device, in_clear<0>)
-	AM_RANGE(0xa800, 0xa800) AM_DEVWRITE("soundnmi", input_merger_device, in_set<0>)
-	AM_RANGE(0xb000, 0xb001) AM_DEVREADWRITE("ymsnd", ym2203_device, read, write)
-	AM_RANGE(0xe000, 0xffff) AM_ROM // space for diagnostic ROM?
-ADDRESS_MAP_END
+void bublbobl_state::tokio_sound_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x8fff).ram();
+	map(0x9000, 0x9000).r(m_main_to_sound, FUNC(generic_latch_8_device::read)).w(m_sound_to_main, FUNC(generic_latch_8_device::write));
+	map(0x9800, 0x9800).r(this, FUNC(bublbobl_state::common_sound_semaphores_r));
+	map(0xa000, 0xa000).w(m_soundnmi, FUNC(input_merger_device::in_clear<0>));
+	map(0xa800, 0xa800).w(m_soundnmi, FUNC(input_merger_device::in_set<0>));
+	map(0xb000, 0xb001).rw("ymsnd", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+	map(0xe000, 0xffff).rom(); // space for diagnostic ROM?
+}
 
 
 /*************************************
@@ -833,7 +844,7 @@ MACHINE_RESET_MEMBER(bublbobl_state,tokio)
 	tokio_videoctrl_w(m_maincpu->device_t::memory().space(AS_PROGRAM), 0, 0x00, 0xFF); // TODO: does /RESET clear this the same as above? probably yes, needs tracing...
 }
 
-static MACHINE_CONFIG_START( tokio )
+MACHINE_CONFIG_START(bublbobl_state::tokio)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MAIN_XTAL/4) // 6 MHz
@@ -887,7 +898,8 @@ static MACHINE_CONFIG_START( tokio )
 	MCFG_SOUND_ROUTE(3, "mono", 1.0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( bublboblp, tokio )
+MACHINE_CONFIG_START(bublbobl_state::bublboblp)
+	tokio(config);
 	MCFG_DEVICE_REMOVE("bmcu") // no mcu, socket is empty
 
 	// watchdog circuit is actually present on the prototype pcb, but is either
@@ -901,7 +913,8 @@ static MACHINE_CONFIG_DERIVED( bublboblp, tokio )
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", bublbobl_state, irq0_line_hold)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( tokiob, tokio )
+MACHINE_CONFIG_START(bublbobl_state::tokiob)
+	tokio(config);
 	MCFG_DEVICE_REMOVE("bmcu") // no mcu, but see below...
 
 	MCFG_CPU_REPLACE("maincpu", Z80, MAIN_XTAL/4) // 6 MHz
@@ -947,12 +960,11 @@ MACHINE_RESET_MEMBER(bublbobl_state,bublbobl)
 	m_port4_out = 0;
 }
 
-static MACHINE_CONFIG_START( bublbobl )
+MACHINE_CONFIG_START(bublbobl_state::bublbobl_nomcu)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MAIN_XTAL/4) // 6 MHz
 	MCFG_CPU_PROGRAM_MAP(bublbobl_maincpu_map)
-	// IRQs are triggered by the MCU
 
 	MCFG_CPU_ADD("subcpu", Z80, MAIN_XTAL/4) // 6 MHz
 	MCFG_CPU_PROGRAM_MAP(subcpu_map)
@@ -960,10 +972,6 @@ static MACHINE_CONFIG_START( bublbobl )
 
 	MCFG_CPU_ADD("audiocpu", Z80, MAIN_XTAL/8) // 3 MHz
 	MCFG_CPU_PROGRAM_MAP(sound_map) // IRQs are triggered by the YM2203
-
-	MCFG_CPU_ADD("mcu", M6801, XTAL_4MHz) // actually 6801U4 - xtal is 4MHz, divided by 4 internally
-	MCFG_CPU_PROGRAM_MAP(mcu_map)
-	MCFG_CPU_VBLANK_INT_DRIVER("screen", bublbobl_state, irq0_line_pulse) // comes from the same clock that latches the INT pin on the second Z80
 
 	MCFG_QUANTUM_TIME(attotime::from_hz(6000)) // 100 CPU slices per frame - a high value to ensure proper synchronization of the CPUs
 
@@ -1007,6 +1015,15 @@ static MACHINE_CONFIG_START( bublbobl )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 MACHINE_CONFIG_END
 
+MACHINE_CONFIG_START(bublbobl_state::bublbobl)
+	bublbobl_nomcu(config);
+	MCFG_CPU_ADD("mcu", M6801, XTAL(4'000'000)) // actually 6801U4 - xtal is 4MHz, divided by 4 internally
+	MCFG_CPU_PROGRAM_MAP(mcu_map)
+
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VBLANK_CALLBACK(INPUTLINE("mcu", M6801_IRQ_LINE)) // same clock latches the INT pin on the second Z80
+MACHINE_CONFIG_END
+
 MACHINE_START_MEMBER(bublbobl_state,boblbobl)
 {
 	MACHINE_START_CALL_MEMBER(common);
@@ -1024,7 +1041,8 @@ MACHINE_RESET_MEMBER(bublbobl_state,boblbobl)
 	m_ic43_b = 0;
 }
 
-static MACHINE_CONFIG_DERIVED( boblbobl, bublbobl )
+MACHINE_CONFIG_START(bublbobl_state::boblbobl)
+	bublbobl_nomcu(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -1033,8 +1051,6 @@ static MACHINE_CONFIG_DERIVED( boblbobl, bublbobl )
 
 	MCFG_MACHINE_START_OVERRIDE(bublbobl_state, boblbobl)
 	MCFG_MACHINE_RESET_OVERRIDE(bublbobl_state, boblbobl)
-
-	MCFG_DEVICE_REMOVE("mcu")
 MACHINE_CONFIG_END
 
 
@@ -1060,12 +1076,11 @@ MACHINE_RESET_MEMBER(bub68705_state, bub68705)
 	m_latch = 0;
 }
 
-static MACHINE_CONFIG_DERIVED( bub68705, bublbobl )
+MACHINE_CONFIG_START(bub68705_state::bub68705)
+	bublbobl_nomcu(config);
 
 	/* basic machine hardware */
-	MCFG_DEVICE_REMOVE("mcu")
-
-	MCFG_CPU_ADD("mcu", M68705P3, XTAL_4MHz) // xtal is 4MHz, divided by 4 internally
+	MCFG_CPU_ADD("mcu", M68705P3, XTAL(4'000'000)) // xtal is 4MHz, divided by 4 internally
 	MCFG_M68705_PORTC_R_CB(IOPORT("IN0"))
 	MCFG_M68705_PORTA_W_CB(WRITE8(bub68705_state, port_a_w))
 	MCFG_M68705_PORTB_W_CB(WRITE8(bub68705_state, port_b_w))
@@ -2008,10 +2023,10 @@ DRIVER_INIT_MEMBER(bublbobl_state,dland)
 	int i;
 	uint8_t* src = memregion("gfx1")->base();
 	for (i = 0; i < 0x40000; i++)
-		src[i] = BITSWAP8(src[i],7,6,5,4,0,1,2,3);
+		src[i] = bitswap<8>(src[i],7,6,5,4,0,1,2,3);
 
 	for (i = 0x40000; i < 0x80000; i++)
-		src[i] = BITSWAP8(src[i],7,4,5,6,3,0,1,2);
+		src[i] = bitswap<8>(src[i],7,4,5,6,3,0,1,2);
 
 	DRIVER_INIT_CALL(common);
 }

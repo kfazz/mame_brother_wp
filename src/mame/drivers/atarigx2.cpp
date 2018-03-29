@@ -28,6 +28,7 @@
 #include "includes/atarigx2.h"
 
 #include "cpu/m68000/m68000.h"
+#include "machine/eeprompar.h"
 #include "speaker.h"
 
 
@@ -45,7 +46,7 @@ void atarigx2_state::update_interrupts()
 }
 
 
-MACHINE_RESET_MEMBER(atarigx2_state,atarigx2)
+void atarigx2_state::machine_reset()
 {
 	atarigen_state::machine_reset();
 	scanline_timer_reset(*m_screen, 8);
@@ -141,9 +142,9 @@ WRITE32_MEMBER(atarigx2_state::mo_command_w)
 WRITE32_MEMBER(atarigx2_state::atarigx2_protection_w)
 {
 	{
-		int pc = space.device().safe_pcbase();
+		int pc = m_maincpu->pcbase();
 //      if (pc == 0x11cbe || pc == 0x11c30)
-//          logerror("%06X:Protection W@%04X = %04X  (result to %06X)\n", pc, offset, data, space.device().state().state_int(M68K_A2));
+//          logerror("%06X:Protection W@%04X = %04X  (result to %06X)\n", pc, offset, data, m_maincpu->state_int(M68K_A2));
 //      else
 		if (ACCESSING_BITS_16_31)
 			logerror("%06X:Protection W@%04X = %04X\n", pc, offset * 4, data >> 16);
@@ -1171,14 +1172,14 @@ READ32_MEMBER(atarigx2_state::atarigx2_protection_r)
 				result = machine().rand() << 16;
 			else
 				result = 0xffff << 16;
-			logerror("%06X:Unhandled protection R@%04X = %04X\n", space.device().safe_pcbase(), offset, result);
+			logerror("%06X:Unhandled protection R@%04X = %04X\n", m_maincpu->pcbase(), offset, result);
 		}
 	}
 
 	if (ACCESSING_BITS_16_31)
-		logerror("%06X:Protection R@%04X = %04X\n", space.device().safe_pcbase(), offset * 4, result >> 16);
+		logerror("%06X:Protection R@%04X = %04X\n", m_maincpu->pcbase(), offset * 4, result >> 16);
 	else
-		logerror("%06X:Protection R@%04X = %04X\n", space.device().safe_pcbase(), offset * 4 + 2, result);
+		logerror("%06X:Protection R@%04X = %04X\n", m_maincpu->pcbase(), offset * 4 + 2, result);
 	return result;
 }
 
@@ -1195,29 +1196,30 @@ READ32_MEMBER( atarigx2_state::rrreveng_prot_r )
  *
  *************************************/
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 32, atarigx2_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x000000, 0x07ffff) AM_ROM
-	AM_RANGE(0xc80000, 0xc80fff) AM_RAM
-	AM_RANGE(0xd00000, 0xd1ffff) AM_READ(a2d_data_r)
-	AM_RANGE(0xd20000, 0xd20fff) AM_DEVREADWRITE8("eeprom", atari_eeprom_device, read, write, 0xff00ff00)
-	AM_RANGE(0xd40000, 0xd40fff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0xd72000, 0xd75fff) AM_DEVWRITE("playfield", tilemap_device, write) AM_SHARE("playfield")
-	AM_RANGE(0xd76000, 0xd76fff) AM_DEVWRITE("alpha", tilemap_device, write) AM_SHARE("alpha")
-	AM_RANGE(0xd78000, 0xd78fff) AM_RAM AM_SHARE("rle")
-	AM_RANGE(0xd7a200, 0xd7a203) AM_WRITE(mo_command_w) AM_SHARE("mo_command")
-	AM_RANGE(0xd70000, 0xd7ffff) AM_RAM
-	AM_RANGE(0xd80000, 0xd9ffff) AM_DEVWRITE("eeprom", atari_eeprom_device, unlock_write)
-	AM_RANGE(0xe06000, 0xe06003) AM_DEVWRITE8("jsa", atari_jsa_iiis_device, main_command_w, 0xff000000)
-	AM_RANGE(0xe08000, 0xe08003) AM_WRITE(latch_w)
-	AM_RANGE(0xe0c000, 0xe0c003) AM_WRITE16(video_int_ack_w, 0xffffffff)
-	AM_RANGE(0xe0e000, 0xe0e003) AM_WRITENOP//watchdog_reset_w },
-	AM_RANGE(0xe80000, 0xe80003) AM_READ_PORT("P1_P2")
-	AM_RANGE(0xe82000, 0xe82003) AM_READ(special_port2_r)
-	AM_RANGE(0xe82004, 0xe82007) AM_READ(special_port3_r)
-	AM_RANGE(0xe86000, 0xe86003) AM_DEVREAD8("jsa", atari_jsa_iiis_device, main_response_r, 0xff000000)
-	AM_RANGE(0xff8000, 0xffffff) AM_RAM
-ADDRESS_MAP_END
+void atarigx2_state::main_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x000000, 0x07ffff).rom();
+	map(0xc80000, 0xc80fff).ram();
+	map(0xd00000, 0xd1ffff).r(this, FUNC(atarigx2_state::a2d_data_r));
+	map(0xd20000, 0xd20fff).rw("eeprom", FUNC(eeprom_parallel_28xx_device::read), FUNC(eeprom_parallel_28xx_device::write)).umask32(0xff00ff00);
+	map(0xd40000, 0xd40fff).ram().w(m_palette, FUNC(palette_device::write32)).share("palette");
+	map(0xd70000, 0xd7ffff).ram();
+	map(0xd72000, 0xd75fff).w(m_playfield_tilemap, FUNC(tilemap_device::write32)).share("playfield");
+	map(0xd76000, 0xd76fff).w(m_alpha_tilemap, FUNC(tilemap_device::write32)).share("alpha");
+	map(0xd78000, 0xd78fff).ram().share("rle");
+	map(0xd7a200, 0xd7a203).w(this, FUNC(atarigx2_state::mo_command_w)).share("mo_command");
+	map(0xd80000, 0xd9ffff).w("eeprom", FUNC(eeprom_parallel_28xx_device::unlock_write32));
+	map(0xe06000, 0xe06000).w(m_jsa, FUNC(atari_jsa_iiis_device::main_command_w));
+	map(0xe08000, 0xe08003).w(this, FUNC(atarigx2_state::latch_w));
+	map(0xe0c000, 0xe0c003).w(this, FUNC(atarigx2_state::video_int_ack_w));
+	map(0xe0e000, 0xe0e003).nopw();//watchdog_reset_w },
+	map(0xe80000, 0xe80003).portr("P1_P2");
+	map(0xe82000, 0xe82003).r(this, FUNC(atarigx2_state::special_port2_r));
+	map(0xe82004, 0xe82007).r(this, FUNC(atarigx2_state::special_port3_r));
+	map(0xe86000, 0xe86000).r(m_jsa, FUNC(atari_jsa_iiis_device::main_response_r));
+	map(0xff8000, 0xffffff).ram();
+}
 
 
 
@@ -1493,16 +1495,15 @@ static const atari_rle_objects_config modesc_0x400 =
  *
  *************************************/
 
-static MACHINE_CONFIG_START( atarigx2 )
+MACHINE_CONFIG_START(atarigx2_state::atarigx2)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68EC020, ATARI_CLOCK_14MHz)
 	MCFG_CPU_PROGRAM_MAP(main_map)
-	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", atarigen_state, video_int_gen)
+	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", atarigx2_state, video_int_gen)
 
-	MCFG_MACHINE_RESET_OVERRIDE(atarigx2_state,atarigx2)
-
-	MCFG_ATARI_EEPROM_2816_ADD("eeprom")
+	MCFG_EEPROM_2816_ADD("eeprom")
+	MCFG_EEPROM_28XX_LOCK_AFTER_WRITE(true)
 
 	/* video hardware */
 	MCFG_GFXDECODE_ADD("gfxdecode", "palette", atarigx2)
@@ -1520,24 +1521,24 @@ static MACHINE_CONFIG_START( atarigx2 )
 	MCFG_SCREEN_UPDATE_DRIVER(atarigx2_state, screen_update_atarigx2)
 	MCFG_SCREEN_PALETTE("palette")
 
-	MCFG_VIDEO_START_OVERRIDE(atarigx2_state,atarigx2)
-
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MCFG_ATARI_JSA_IIIS_ADD("jsa", WRITELINE(atarigen_state, sound_int_write_line))
+	MCFG_ATARI_JSA_IIIS_ADD("jsa", WRITELINE(atarigx2_state, sound_int_write_line))
 	MCFG_ATARI_JSA_TEST_PORT("SERVICE", 6)
 	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
 	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( atarigx2_0x200, atarigx2 )
+MACHINE_CONFIG_START(atarigx2_state::atarigx2_0x200)
+	atarigx2(config);
 	MCFG_DEVICE_ADD("xga", ATARI_136094_0072, 0)
 	MCFG_ATARIRLE_ADD("rle", modesc_0x200)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( atarigx2_0x400, atarigx2 )
+MACHINE_CONFIG_START(atarigx2_state::atarigx2_0x400)
+	atarigx2(config);
 	MCFG_DEVICE_ADD("xga", ATARI_136095_0072, 0)
 	MCFG_ATARIRLE_ADD("rle", modesc_0x400)
 MACHINE_CONFIG_END

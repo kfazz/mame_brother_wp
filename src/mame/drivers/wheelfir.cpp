@@ -210,8 +210,10 @@ suspicious code:
 #include "cpu/m68000/m68000.h"
 #include "machine/eepromser.h"
 #include "machine/gen_latch.h"
+#include "machine/timer.h"
 #include "sound/dac.h"
 #include "sound/volt_reg.h"
+#include "video/ramdac.h"
 #include "screen.h"
 #include "speaker.h"
 
@@ -249,9 +251,6 @@ public:
 	std::unique_ptr<int32_t[]> m_zoom_table;
 	std::unique_ptr<uint16_t[]> m_blitter_data;
 
-	std::unique_ptr<uint8_t[]> m_palette_ptr;
-	int32_t m_palpos;
-
 	scroll_info *m_scanlines;
 
 	int32_t m_direct_write_x0;
@@ -279,8 +278,6 @@ public:
 	}
 	DECLARE_WRITE16_MEMBER(wheelfir_scanline_cnt_w);
 	DECLARE_WRITE16_MEMBER(wheelfir_blit_w);
-	DECLARE_WRITE16_MEMBER(pal_reset_pos_w);
-	DECLARE_WRITE16_MEMBER(pal_data_w);
 	DECLARE_WRITE16_MEMBER(wheelfir_7c0000_w);
 	DECLARE_READ16_MEMBER(wheelfir_7c0000_r);
 	DECLARE_WRITE16_MEMBER(wheelfir_snd_w);
@@ -291,6 +288,10 @@ public:
 	uint32_t screen_update_wheelfir(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	DECLARE_WRITE_LINE_MEMBER(screen_vblank_wheelfir);
 	TIMER_DEVICE_CALLBACK_MEMBER(scanline_timer_callback);
+	void wheelfir(machine_config &config);
+	void ramdac_map(address_map &map);
+	void wheelfir_main(address_map &map);
+	void wheelfir_sub(address_map &map);
 };
 
 
@@ -563,28 +564,6 @@ WRITE_LINE_MEMBER(wheelfir_state::screen_vblank_wheelfir)
 }
 
 
-WRITE16_MEMBER(wheelfir_state::pal_reset_pos_w)
-{
-	m_palpos = 0;
-}
-
-WRITE16_MEMBER(wheelfir_state::pal_data_w)
-{
-	int color=m_palpos/3;
-	m_palette_ptr[m_palpos] = data & 0xff;
-	++m_palpos;
-
-	m_palpos %=NUM_COLORS*3;
-
-	{
-		int r = m_palette_ptr[color*3];
-		int g = m_palette_ptr[color*3+1];
-		int b = m_palette_ptr[color*3+2];
-		m_palette->set_pen_color(color, rgb_t(r,g,b));
-	}
-
-}
-
 WRITE16_MEMBER(wheelfir_state::wheelfir_7c0000_w)
 {
 	if (ACCESSING_BITS_8_15)
@@ -630,36 +609,38 @@ WRITE16_MEMBER(wheelfir_state::coin_cnt_w)
 	machine().bookkeeping().coin_counter_w(1, data & 0x02);
 }
 
-static ADDRESS_MAP_START( wheelfir_main, AS_PROGRAM, 16, wheelfir_state )
-	AM_RANGE(0x000000, 0x0fffff) AM_ROM
-	AM_RANGE(0x200000, 0x20ffff) AM_RAM
+void wheelfir_state::wheelfir_main(address_map &map)
+{
+	map(0x000000, 0x0fffff).rom();
+	map(0x200000, 0x20ffff).ram();
 
-	AM_RANGE(0x700000, 0x70001f) AM_WRITE(wheelfir_blit_w)
-	AM_RANGE(0x720000, 0x720001) AM_WRITE(pal_reset_pos_w)
-	AM_RANGE(0x720002, 0x720003) AM_WRITE(pal_data_w)
-	AM_RANGE(0x720004, 0x720005) AM_WRITENOP // always ffff?
-	AM_RANGE(0x740000, 0x740001) AM_DEVWRITE("soundlatch", generic_latch_16_device, write)
-	AM_RANGE(0x760000, 0x760001) AM_WRITE(coin_cnt_w)
-	AM_RANGE(0x780000, 0x780005) AM_WRITENOP // Start ADC0808 conversion
-	AM_RANGE(0x780000, 0x780001) AM_READ_PORT("STEERING")
-	AM_RANGE(0x780002, 0x780003) AM_READ_PORT("ACCELERATOR")
-	AM_RANGE(0x780004, 0x780005) AM_READ_PORT("BRAKE")
-	AM_RANGE(0x7a0000, 0x7a0001) AM_WRITE(wheelfir_scanline_cnt_w)
-	AM_RANGE(0x7c0000, 0x7c0001) AM_READWRITE(wheelfir_7c0000_r, wheelfir_7c0000_w)
-	AM_RANGE(0x7e0000, 0x7e0001) AM_READ_PORT("P1")
-	AM_RANGE(0x7e0002, 0x7e0003) AM_READ_PORT("P2")
-ADDRESS_MAP_END
+	map(0x700000, 0x70001f).w(this, FUNC(wheelfir_state::wheelfir_blit_w));
+	map(0x720001, 0x720001).w("ramdac", FUNC(ramdac_device::index_w));
+	map(0x720003, 0x720003).w("ramdac", FUNC(ramdac_device::pal_w));
+	map(0x720005, 0x720005).w("ramdac", FUNC(ramdac_device::mask_w)); // word write?
+	map(0x740000, 0x740001).w("soundlatch", FUNC(generic_latch_16_device::write));
+	map(0x760000, 0x760001).w(this, FUNC(wheelfir_state::coin_cnt_w));
+	map(0x780000, 0x780005).nopw(); // Start ADC0808 conversion
+	map(0x780000, 0x780001).portr("STEERING");
+	map(0x780002, 0x780003).portr("ACCELERATOR");
+	map(0x780004, 0x780005).portr("BRAKE");
+	map(0x7a0000, 0x7a0001).w(this, FUNC(wheelfir_state::wheelfir_scanline_cnt_w));
+	map(0x7c0000, 0x7c0001).rw(this, FUNC(wheelfir_state::wheelfir_7c0000_r), FUNC(wheelfir_state::wheelfir_7c0000_w));
+	map(0x7e0000, 0x7e0001).portr("P1");
+	map(0x7e0002, 0x7e0003).portr("P2");
+}
 
 
-static ADDRESS_MAP_START( wheelfir_sub, AS_PROGRAM, 16, wheelfir_state )
-	AM_RANGE(0x000000, 0x0fffff) AM_ROM
-	AM_RANGE(0x200000, 0x20ffff) AM_RAM
+void wheelfir_state::wheelfir_sub(address_map &map)
+{
+	map(0x000000, 0x0fffff).rom();
+	map(0x200000, 0x20ffff).ram();
 
-	AM_RANGE(0x780000, 0x780001) AM_DEVREAD("soundlatch", generic_latch_16_device, read)
+	map(0x780000, 0x780001).r("soundlatch", FUNC(generic_latch_16_device::read));
 
-	AM_RANGE(0x700000, 0x700001) AM_DEVWRITE("ldac", dac_word_interface, write)
-	AM_RANGE(0x740000, 0x740001) AM_DEVWRITE("rdac", dac_word_interface, write)
-ADDRESS_MAP_END
+	map(0x700000, 0x700001).w("ldac", FUNC(dac_word_interface::write));
+	map(0x740000, 0x740001).w("rdac", FUNC(dac_word_interface::write));
+}
 
 
 static INPUT_PORTS_START( wheelfir )
@@ -742,7 +723,6 @@ void wheelfir_state::machine_start()
 	m_blitter_data = std::make_unique<uint16_t[]>(16);
 
 	m_scanlines = reinterpret_cast<scroll_info*>(auto_alloc_array(machine(), uint8_t, sizeof(scroll_info)*(NUM_SCANLINES+NUM_VBLANK_LINES)));
-	m_palette_ptr = std::make_unique<uint8_t[]>(NUM_COLORS*3);
 
 
 	for(int i=0;i<(ZOOM_TABLE_SIZE);++i)
@@ -769,8 +749,12 @@ void wheelfir_state::machine_start()
 	}
 }
 
+void wheelfir_state::ramdac_map(address_map &map)
+{
+	map(0x000, 0x3ff).rw("ramdac", FUNC(ramdac_device::ramdac_pal_r), FUNC(ramdac_device::ramdac_rgb888_w));
+}
 
-static MACHINE_CONFIG_START( wheelfir )
+MACHINE_CONFIG_START(wheelfir_state::wheelfir)
 
 	MCFG_CPU_ADD("maincpu", M68000, 32000000/2)
 	MCFG_CPU_PROGRAM_MAP(wheelfir_main)
@@ -792,6 +776,7 @@ static MACHINE_CONFIG_START( wheelfir )
 	MCFG_SCREEN_PALETTE("palette")
 
 	MCFG_PALETTE_ADD("palette", NUM_COLORS)
+	MCFG_RAMDAC_ADD("ramdac", ramdac_map, "palette")
 
 	MCFG_EEPROM_SERIAL_93C46_ADD("eeprom")
 

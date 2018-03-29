@@ -2,7 +2,7 @@
 // copyright-holders:R. Belmont
 /***************************************************************************
 
-    tk2000.c - Microdigital TK2000
+    tk2000.cpp - Microdigital TK2000
 
     Driver by R. Belmont
 
@@ -22,6 +22,7 @@
 #include "imagedev/flopdrv.h"
 #include "machine/bankdev.h"
 #include "machine/ram.h"
+#include "machine/timer.h"
 #include "sound/spkrdev.h"
 
 #include "screen.h"
@@ -44,6 +45,7 @@ public:
 		: driver_device(mconfig, type, tag),
 		m_maincpu(*this, A2_CPU_TAG),
 		m_ram(*this, RAM_TAG),
+		m_screen(*this, "screen"),
 		m_video(*this, A2_VIDEO_TAG),
 		m_row0(*this, "ROW0"),
 		m_row1(*this, "ROW1"),
@@ -58,10 +60,18 @@ public:
 		m_speaker(*this, A2_SPEAKER_TAG),
 		m_cassette(*this, A2_CASSETTE_TAG),
 		m_upperbank(*this, A2_UPPERBANK_TAG)
-	{ }
+		{ }
 
+	void tk2000(machine_config &config);
+
+protected:
+	virtual void machine_start() override;
+	virtual void machine_reset() override;
+
+private:
 	required_device<cpu_device> m_maincpu;
 	required_device<ram_device> m_ram;
+	required_device<screen_device> m_screen;
 	required_device<a2_video_device> m_video;
 	required_ioport m_row0, m_row1, m_row2, m_row3, m_row4, m_row5, m_row6, m_row7;
 	required_ioport m_kbspecial;
@@ -70,10 +80,17 @@ public:
 	required_device<cassette_image_device> m_cassette;
 	required_device<address_map_bank_device> m_upperbank;
 
-	TIMER_DEVICE_CALLBACK_MEMBER(apple2_interrupt);
+	int m_speaker_state;
+	int m_cassette_state;
 
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
+	uint8_t m_strobe;
+
+	bool m_page2;
+
+	uint8_t *m_ram_ptr;
+	int m_ram_size;
+
+	TIMER_DEVICE_CALLBACK_MEMBER(apple2_interrupt);
 
 	DECLARE_PALETTE_INIT(tk2000);
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
@@ -87,16 +104,8 @@ public:
 	DECLARE_READ8_MEMBER(c100_r);
 	DECLARE_WRITE8_MEMBER(c100_w);
 
-private:
-	int m_speaker_state;
-	int m_cassette_state;
-
-	uint8_t m_strobe;
-
-	bool m_page2;
-
-	uint8_t *m_ram_ptr;
-	int m_ram_size;
+	void apple2_map(address_map &map);
+	void inhbank_map(address_map &map);
 
 	void do_io(address_space &space, int offset);
 	uint8_t read_floatingbus();
@@ -144,7 +153,7 @@ TIMER_DEVICE_CALLBACK_MEMBER(tk2000_state::apple2_interrupt)
 	int scanline = param;
 
 	if((scanline % 8) == 0)
-		machine().first_screen()->update_partial(machine().first_screen()->vpos());
+		m_screen->update_partial(m_screen->vpos());
 
 	// update the video system's shadow copy of the system config at the end of the frame
 	if (scanline == 192)
@@ -170,7 +179,7 @@ uint32_t tk2000_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap
 // most softswitches don't care about read vs write, so handle them here
 void tk2000_state::do_io(address_space &space, int offset)
 {
-	if(machine().side_effect_disabled())
+	if(machine().side_effects_disabled())
 	{
 		return;
 	}
@@ -444,17 +453,19 @@ WRITE8_MEMBER(tk2000_state::ram_w)
 	}
 }
 
-static ADDRESS_MAP_START( apple2_map, AS_PROGRAM, 8, tk2000_state )
-	AM_RANGE(0x0000, 0xbfff) AM_READWRITE(ram_r, ram_w)
-	AM_RANGE(0xc000, 0xc07f) AM_READWRITE(c000_r, c000_w)
-	AM_RANGE(0xc080, 0xc0ff) AM_READWRITE(c080_r, c080_w)
-	AM_RANGE(0xc100, 0xffff) AM_DEVICE(A2_UPPERBANK_TAG, address_map_bank_device, amap8)
-ADDRESS_MAP_END
+void tk2000_state::apple2_map(address_map &map)
+{
+	map(0x0000, 0xbfff).rw(this, FUNC(tk2000_state::ram_r), FUNC(tk2000_state::ram_w));
+	map(0xc000, 0xc07f).rw(this, FUNC(tk2000_state::c000_r), FUNC(tk2000_state::c000_w));
+	map(0xc080, 0xc0ff).rw(this, FUNC(tk2000_state::c080_r), FUNC(tk2000_state::c080_w));
+	map(0xc100, 0xffff).m(m_upperbank, FUNC(address_map_bank_device::amap8));
+}
 
-static ADDRESS_MAP_START( inhbank_map, AS_PROGRAM, 8, tk2000_state )
-	AM_RANGE(0x0000, 0x3eff) AM_ROM AM_REGION("maincpu", 0x100)
-	AM_RANGE(0x4000, 0x7eff) AM_READWRITE(c100_r, c100_w)
-ADDRESS_MAP_END
+void tk2000_state::inhbank_map(address_map &map)
+{
+	map(0x0000, 0x3eff).rom().region("maincpu", 0x100);
+	map(0x4000, 0x7eff).rw(this, FUNC(tk2000_state::c100_r), FUNC(tk2000_state::c100_w));
+}
 
 /***************************************************************************
     INPUT PORTS
@@ -561,14 +572,14 @@ static INPUT_PORTS_START( tk2000 )
 	PORT_CONFSETTING(0x03, "Amber")
 INPUT_PORTS_END
 
-static MACHINE_CONFIG_START( tk2000 )
+MACHINE_CONFIG_START(tk2000_state::tk2000)
 	/* basic machine hardware */
 	MCFG_CPU_ADD(A2_CPU_TAG, M6502, 1021800)     /* close to actual CPU frequency of 1.020484 MHz */
 	MCFG_CPU_PROGRAM_MAP(apple2_map)
 	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", tk2000_state, apple2_interrupt, "screen", 0, 1)
 	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
-	MCFG_DEVICE_ADD(A2_VIDEO_TAG, APPLE2_VIDEO, XTAL_14_31818MHz)
+	MCFG_DEVICE_ADD(A2_VIDEO_TAG, APPLE2_VIDEO, XTAL(14'318'181))
 
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
@@ -590,7 +601,7 @@ static MACHINE_CONFIG_START( tk2000 )
 	MCFG_DEVICE_ADD(A2_UPPERBANK_TAG, ADDRESS_MAP_BANK, 0)
 	MCFG_DEVICE_PROGRAM_MAP(inhbank_map)
 	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_LITTLE)
-	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(8)
+	MCFG_ADDRESS_MAP_BANK_DATA_WIDTH(8)
 	MCFG_ADDRESS_MAP_BANK_STRIDE(0x4000)
 
 	MCFG_RAM_ADD(RAM_TAG)

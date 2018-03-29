@@ -63,6 +63,7 @@
 
 #include "cpu/tms9900/tms9980a.h"
 #include "imagedev/cassette.h"
+#include "machine/timer.h"
 #include "machine/tms9901.h"
 #include "machine/tms9902.h"
 #include "sound/spkrdev.h"
@@ -87,8 +88,6 @@ public:
 		, m_speaker(*this, "speaker")
 		, m_cass(*this, "cassette")
 		, m_tms9918(*this, "tms9918")
-		, m_maincpu(*this, "maincpu")
-		, m_cassette(*this, "cassette")
 		, m_tms9901_usr(*this, TMS9901_0_TAG)
 		, m_tms9901_sys(*this, TMS9901_1_TAG)
 	{ }
@@ -159,13 +158,16 @@ public:
 	TIMER_DEVICE_CALLBACK_MEMBER(display_callback);
 	TIMER_CALLBACK_MEMBER(clear_load);
 	void hold_load();
+	void tm990_189_v(machine_config &config);
+	void tm990_189(machine_config &config);
+	void tm990_189_cru_map(address_map &map);
+	void tm990_189_memmap(address_map &map);
+	void tm990_189_v_memmap(address_map &map);
 private:
 	void draw_digit(void);
 	void led_set(int number, bool state);
 	void segment_set(int offset, bool state);
 	void digitsel(int offset, bool state);
-	required_device<cpu_device> m_maincpu;
-	required_device<cassette_image_device> m_cassette;
 	required_device<tms9901_device>     m_tms9901_usr;
 	required_device<tms9901_device>     m_tms9901_sys;
 };
@@ -427,7 +429,7 @@ WRITE_LINE_MEMBER( tm990189_state::sys9901_spkrdrive_w )
 
 WRITE_LINE_MEMBER( tm990189_state::sys9901_tapewdata_w )
 {
-	m_cassette->output(state ? +1.0 : -1.0);
+	m_cass->output(state ? +1.0 : -1.0);
 }
 
 class tm990_189_rs232_image_device :    public device_t,
@@ -718,24 +720,26 @@ static const tms9901_interface sys9901reset_param =
     0x3000-0x3fff: 4kb onboard ROM
 */
 
-static ADDRESS_MAP_START( tm990_189_memmap, AS_PROGRAM, 8, tm990189_state )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM                                 /* RAM */
-	AM_RANGE(0x0800, 0x0fff) AM_ROM                                 /* extra ROM - application programs with unibug, remaining 2kb of program for university basic */
-	AM_RANGE(0x1000, 0x2fff) AM_NOP                                 /* reserved for expansion (RAM and/or tms9918 video controller) */
-	AM_RANGE(0x3000, 0x3fff) AM_ROM                                 /* main ROM - unibug or university basic */
-ADDRESS_MAP_END
+void tm990189_state::tm990_189_memmap(address_map &map)
+{
+	map(0x0000, 0x07ff).ram();                                 /* RAM */
+	map(0x0800, 0x0fff).rom();                                 /* extra ROM - application programs with unibug, remaining 2kb of program for university basic */
+	map(0x1000, 0x2fff).noprw();                                 /* reserved for expansion (RAM and/or tms9918 video controller) */
+	map(0x3000, 0x3fff).rom();                                 /* main ROM - unibug or university basic */
+}
 
-static ADDRESS_MAP_START( tm990_189_v_memmap, AS_PROGRAM, 8, tm990189_state )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM                                 /* RAM */
-	AM_RANGE(0x0800, 0x0fff) AM_ROM                                 /* extra ROM - application programs with unibug, remaining 2kb of program for university basic */
+void tm990189_state::tm990_189_v_memmap(address_map &map)
+{
+	map(0x0000, 0x07ff).ram();                                 /* RAM */
+	map(0x0800, 0x0fff).rom();                                 /* extra ROM - application programs with unibug, remaining 2kb of program for university basic */
 
-	AM_RANGE(0x1000, 0x17ff) AM_ROM AM_WRITENOP     /* video board ROM 1 */
-	AM_RANGE(0x1800, 0x1fff) AM_ROM AM_WRITE(video_joy_w)   /* video board ROM 2 and joystick write port*/
-	AM_RANGE(0x2000, 0x27ff) AM_READ(video_vdp_r) AM_WRITENOP   /* video board tms9918 read ports (bogus) */
-	AM_RANGE(0x2800, 0x2fff) AM_READWRITE(video_joy_r, video_vdp_w) /* video board joystick read port and tms9918 write ports */
+	map(0x1000, 0x17ff).rom().nopw();     /* video board ROM 1 */
+	map(0x1800, 0x1fff).rom().w(this, FUNC(tm990189_state::video_joy_w));   /* video board ROM 2 and joystick write port*/
+	map(0x2000, 0x27ff).r(this, FUNC(tm990189_state::video_vdp_r)).nopw();   /* video board tms9918 read ports (bogus) */
+	map(0x2800, 0x2fff).rw(this, FUNC(tm990189_state::video_joy_r), FUNC(tm990189_state::video_vdp_w)); /* video board joystick read port and tms9918 write ports */
 
-	AM_RANGE(0x3000, 0x3fff) AM_ROM                                 /* main ROM - unibug or university basic */
-ADDRESS_MAP_END
+	map(0x3000, 0x3fff).rom();                                 /* main ROM - unibug or university basic */
+}
 
 /*
     CRU map
@@ -793,17 +797,18 @@ ADDRESS_MAP_END
            d
 */
 
-static ADDRESS_MAP_START( tm990_189_cru_map, AS_IO, 8, tm990189_state )
-	AM_RANGE(0x0000, 0x003f) AM_DEVREAD(TMS9901_0_TAG, tms9901_device, read)      /* user I/O tms9901 */
-	AM_RANGE(0x0040, 0x006f) AM_DEVREAD(TMS9901_1_TAG, tms9901_device, read)      /* system I/O tms9901 */
-	AM_RANGE(0x0080, 0x00cf) AM_DEVREAD("tms9902", tms9902_device, cruread)     /* optional tms9902 */
+void tm990189_state::tm990_189_cru_map(address_map &map)
+{
+	map(0x0000, 0x003f).r(m_tms9901_usr, FUNC(tms9901_device::read));      /* user I/O tms9901 */
+	map(0x0040, 0x006f).r(m_tms9901_sys, FUNC(tms9901_device::read));      /* system I/O tms9901 */
+	map(0x0080, 0x00cf).r("tms9902", FUNC(tms9902_device::cruread));     /* optional tms9902 */
 
-	AM_RANGE(0x0000, 0x01ff) AM_DEVWRITE(TMS9901_0_TAG, tms9901_device, write)    /* user I/O tms9901 */
-	AM_RANGE(0x0200, 0x03ff) AM_DEVWRITE(TMS9901_1_TAG, tms9901_device, write)    /* system I/O tms9901 */
-	AM_RANGE(0x0400, 0x05ff) AM_DEVWRITE("tms9902", tms9902_device, cruwrite)   /* optional tms9902 */
-ADDRESS_MAP_END
+	map(0x0000, 0x01ff).w(m_tms9901_usr, FUNC(tms9901_device::write));    /* user I/O tms9901 */
+	map(0x0200, 0x03ff).w(m_tms9901_sys, FUNC(tms9901_device::write));    /* system I/O tms9901 */
+	map(0x0400, 0x05ff).w("tms9902", FUNC(tms9902_device::cruwrite));   /* optional tms9902 */
+}
 
-static MACHINE_CONFIG_START( tm990_189 )
+MACHINE_CONFIG_START(tm990189_state::tm990_189)
 	/* basic machine hardware */
 	MCFG_TMS99xx_ADD("maincpu", TMS9980A, 2000000, tm990_189_memmap, tm990_189_cru_map)
 	MCFG_TMS99xx_EXTOP_HANDLER( WRITE8(tm990189_state, external_operation) )
@@ -860,7 +865,7 @@ static MACHINE_CONFIG_START( tm990_189 )
 	MCFG_TIMER_START_DELAY(attotime::from_msec(150))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( tm990_189_v )
+MACHINE_CONFIG_START(tm990189_state::tm990_189_v)
 	/* basic machine hardware */
 	MCFG_TMS99xx_ADD("maincpu", TMS9980A, 2000000, tm990_189_v_memmap, tm990_189_cru_map)
 	MCFG_TMS99xx_EXTOP_HANDLER( WRITE8(tm990189_state, external_operation) )
@@ -869,7 +874,7 @@ static MACHINE_CONFIG_START( tm990_189_v )
 	MCFG_MACHINE_RESET_OVERRIDE(tm990189_state, tm990_189_v )
 
 	/* video hardware */
-	MCFG_DEVICE_ADD( "tms9918", TMS9918, XTAL_10_738635MHz / 2 )
+	MCFG_DEVICE_ADD( "tms9918", TMS9918, XTAL(10'738'635) / 2 )
 	MCFG_TMS9928A_VRAM_SIZE(0x4000)
 	MCFG_TMS9928A_SCREEN_ADD_NTSC( "screen" )
 	MCFG_SCREEN_UPDATE_DEVICE( "tms9918", tms9918_device, screen_update )

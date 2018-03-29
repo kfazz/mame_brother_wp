@@ -133,6 +133,15 @@ public:
 
 	void kbd_put(u16 data);
 
+	void grid1129(machine_config &config);
+	void grid1131(machine_config &config);
+	void grid1121(machine_config &config);
+	void grid1139(machine_config &config);
+	void grid1109(machine_config &config);
+	void grid1101(machine_config &config);
+	void grid1101_io(address_map &map);
+	void grid1101_map(address_map &map);
+	void grid1121_map(address_map &map);
 private:
 	bool m_kbd_ready;
 	uint16_t m_kbd_data;
@@ -306,36 +315,39 @@ IRQ_CALLBACK_MEMBER(gridcomp_state::irq_callback)
 }
 
 
-static ADDRESS_MAP_START( grid1101_map, AS_PROGRAM, 16, gridcomp_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0xdfe80, 0xdfe83) AM_DEVREADWRITE8("i7220", i7220_device, read, write, 0x00ff)
-	AM_RANGE(0xdfea0, 0xdfeaf) AM_UNMAP // ??
-	AM_RANGE(0xdfec0, 0xdfecf) AM_DEVREADWRITE8("modem", i8255_device, read, write, 0x00ff) // incl. DTMF generator
-	AM_RANGE(0xdff40, 0xdff5f) AM_NOP   // ?? machine ID EAROM, RTC
-	AM_RANGE(0xdff80, 0xdff8f) AM_READWRITE(grid_gpib_r, grid_gpib_w) // TMS9914
-	AM_RANGE(0xdffc0, 0xdffcf) AM_READWRITE(grid_keyb_r, grid_keyb_w) // Intel 8741 MCU
-	AM_RANGE(0xfc000, 0xfffff) AM_ROM AM_REGION("user1", 0)
-ADDRESS_MAP_END
+void gridcomp_state::grid1101_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0xdfe80, 0xdfe83).rw("i7220", FUNC(i7220_device::read), FUNC(i7220_device::write)).umask16(0x00ff);
+	map(0xdfea0, 0xdfeaf).unmaprw(); // ??
+	map(0xdfec0, 0xdfecf).rw(m_modem, FUNC(i8255_device::read), FUNC(i8255_device::write)).umask16(0x00ff); // incl. DTMF generator
+	map(0xdff40, 0xdff5f).noprw();   // ?? machine ID EAROM, RTC
+	map(0xdff80, 0xdff8f).rw(this, FUNC(gridcomp_state::grid_gpib_r), FUNC(gridcomp_state::grid_gpib_w)); // TMS9914
+	map(0xdffc0, 0xdffcf).rw(this, FUNC(gridcomp_state::grid_keyb_r), FUNC(gridcomp_state::grid_keyb_w)); // Intel 8741 MCU
+	map(0xfc000, 0xfffff).rom().region("user1", 0);
+}
 
-static ADDRESS_MAP_START( grid1121_map, AS_PROGRAM, 16, gridcomp_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x90000, 0x97fff) AM_UNMAP // ?? ROM slot
-	AM_RANGE(0x9ff00, 0x9ff0f) AM_UNMAP // AM_READ(grid_9ff0_r) // ?? ROM?
-	AM_RANGE(0xc0000, 0xcffff) AM_UNMAP // ?? ROM slot -- signature expected: 0x4554, 0x5048
-	AM_RANGE(0xdfe00, 0xdfe1f) AM_UNMAP // AM_DEVREADWRITE8("uart8274", i8274_new_device, ba_cd_r, ba_cd_w, 0x00ff)
-	AM_RANGE(0xdfe40, 0xdfe4f) AM_UNMAP // ?? diagnostic 8274
-	AM_RANGE(0xdfe80, 0xdfe83) AM_DEVREADWRITE8("i7220", i7220_device, read, write, 0x00ff)
-	AM_RANGE(0xdfea0, 0xdfeaf) AM_UNMAP // ??
-	AM_RANGE(0xdfec0, 0xdfecf) AM_DEVREADWRITE8("modem", i8255_device, read, write, 0x00ff) // incl. DTMF generator
-	AM_RANGE(0xdff40, 0xdff5f) AM_NOP   // ?? machine ID EAROM, RTC
-	AM_RANGE(0xdff80, 0xdff8f) AM_READWRITE(grid_gpib_r, grid_gpib_w) // TMS9914
-	AM_RANGE(0xdffc0, 0xdffcf) AM_READWRITE(grid_keyb_r, grid_keyb_w) // Intel 8741 MCU
-	AM_RANGE(0xfc000, 0xfffff) AM_ROM AM_REGION("user1", 0)
-ADDRESS_MAP_END
+void gridcomp_state::grid1121_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x90000, 0x97fff).unmaprw(); // ?? ROM slot
+	map(0x9ff00, 0x9ff0f).unmaprw(); // AM_READ(grid_9ff0_r) // ?? ROM?
+	map(0xc0000, 0xcffff).unmaprw(); // ?? ROM slot -- signature expected: 0x4554, 0x5048
+	map(0xdfe00, 0xdfe1f).unmaprw(); // AM_DEVREADWRITE8("uart8274", i8274_new_device, ba_cd_r, ba_cd_w, 0x00ff)
+	map(0xdfe40, 0xdfe4f).unmaprw(); // ?? diagnostic 8274
+	map(0xdfe80, 0xdfe83).rw("i7220", FUNC(i7220_device::read), FUNC(i7220_device::write)).umask16(0x00ff);
+	map(0xdfea0, 0xdfeaf).unmaprw(); // ??
+	map(0xdfec0, 0xdfecf).rw(m_modem, FUNC(i8255_device::read), FUNC(i8255_device::write)).umask16(0x00ff); // incl. DTMF generator
+	map(0xdff40, 0xdff5f).noprw();   // ?? machine ID EAROM, RTC
+	map(0xdff80, 0xdff8f).rw(this, FUNC(gridcomp_state::grid_gpib_r), FUNC(gridcomp_state::grid_gpib_w)); // TMS9914
+	map(0xdffc0, 0xdffcf).rw(this, FUNC(gridcomp_state::grid_keyb_r), FUNC(gridcomp_state::grid_keyb_w)); // Intel 8741 MCU
+	map(0xfc000, 0xfffff).rom().region("user1", 0);
+}
 
-static ADDRESS_MAP_START( grid1101_io, AS_IO, 16, gridcomp_state )
-	AM_RANGE(0x0000, 0x000f) AM_DEVICE(I80130_TAG, i80130_device, io_map)
-ADDRESS_MAP_END
+void gridcomp_state::grid1101_io(address_map &map)
+{
+	map(0x0000, 0x000f).m(m_osp, FUNC(i80130_device::io_map));
+}
 
 static INPUT_PORTS_START( gridcomp )
 INPUT_PORTS_END
@@ -350,8 +362,8 @@ INPUT_PORTS_END
  * IRQ6 8087
  * IRQ7 ring
  */
-static MACHINE_CONFIG_START( grid1101 )
-	MCFG_CPU_ADD("maincpu", I8086, XTAL_15MHz / 3)
+MACHINE_CONFIG_START(gridcomp_state::grid1101)
+	MCFG_CPU_ADD("maincpu", I8086, XTAL(15'000'000) / 3)
 	MCFG_CPU_PROGRAM_MAP(grid1101_map)
 	MCFG_CPU_IO_MAP(grid1101_io)
 	MCFG_CPU_IRQ_ACKNOWLEDGE_DRIVER(gridcomp_state, irq_callback)
@@ -359,7 +371,7 @@ static MACHINE_CONFIG_START( grid1101 )
 	MCFG_MACHINE_START_OVERRIDE(gridcomp_state, gridcomp)
 	MCFG_MACHINE_RESET_OVERRIDE(gridcomp_state, gridcomp)
 
-	MCFG_DEVICE_ADD(I80130_TAG, I80130, XTAL_15MHz/3)
+	MCFG_DEVICE_ADD(I80130_TAG, I80130, XTAL(15'000'000)/3)
 	MCFG_I80130_IRQ_CALLBACK(INPUTLINE("maincpu", 0))
 
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -368,7 +380,7 @@ static MACHINE_CONFIG_START( grid1101 )
 
 	MCFG_SCREEN_ADD_MONOCHROME("screen", RASTER, rgb_t::amber())
 	MCFG_SCREEN_UPDATE_DRIVER(gridcomp_state, screen_update_110x)
-	MCFG_SCREEN_RAW_PARAMS(XTAL_15MHz/2, 424, 0, 320, 262, 0, 240) // XXX 66 Hz refresh
+	MCFG_SCREEN_RAW_PARAMS(XTAL(15'000'000)/2, 424, 0, 320, 262, 0, 240) // XXX 66 Hz refresh
 	MCFG_SCREEN_VBLANK_CALLBACK(DEVWRITELINE(I80130_TAG, i80130_device, ir3_w))
 	MCFG_DEFAULT_LAYOUT(layout_lcd)
 
@@ -378,12 +390,12 @@ static MACHINE_CONFIG_START( grid1101 )
 	MCFG_DEVICE_ADD("keyboard", GRID_KEYBOARD, 0)
 	MCFG_GRID_KEYBOARD_CB(PUT(gridcomp_state, kbd_put))
 
-	MCFG_DEVICE_ADD("i7220", I7220, XTAL_4MHz)
+	MCFG_DEVICE_ADD("i7220", I7220, XTAL(4'000'000))
 	MCFG_I7220_DATA_SIZE(3) // 3 1-Mbit MBM's
 	MCFG_I7220_IRQ_CALLBACK(DEVWRITELINE(I80130_TAG, i80130_device, ir1_w))
 	MCFG_I7220_DRQ_CALLBACK(DEVWRITELINE(I80130_TAG, i80130_device, ir1_w))
 
-	MCFG_I8274_ADD("uart8274", XTAL_4_032MHz, 0, 0, 0, 0)
+	MCFG_DEVICE_ADD("uart8274", I8274_NEW, XTAL(4'032'000))
 
 	MCFG_DEVICE_ADD("modem", I8255, 0)
 
@@ -392,29 +404,34 @@ static MACHINE_CONFIG_START( grid1101 )
 	MCFG_RAM_DEFAULT_VALUE(0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( grid1109, grid1101 )
+MACHINE_CONFIG_START(gridcomp_state::grid1109)
+	grid1101(config);
 	MCFG_DEVICE_MODIFY(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("512K")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( grid1121, grid1101 )
+MACHINE_CONFIG_START(gridcomp_state::grid1121)
+	grid1101(config);
 	MCFG_CPU_MODIFY("maincpu")
-	MCFG_CPU_CLOCK(XTAL_24MHz / 3) // XXX
+	MCFG_CPU_CLOCK(XTAL(24'000'000) / 3) // XXX
 	MCFG_CPU_PROGRAM_MAP(grid1121_map)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( grid1129, grid1121 )
+MACHINE_CONFIG_START(gridcomp_state::grid1129)
+	grid1121(config);
 	MCFG_DEVICE_MODIFY(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("512K")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( grid1131, grid1121 )
+MACHINE_CONFIG_START(gridcomp_state::grid1131)
+	grid1121(config);
 	MCFG_SCREEN_MODIFY("screen")
 	MCFG_SCREEN_UPDATE_DRIVER(gridcomp_state, screen_update_113x)
-	MCFG_SCREEN_RAW_PARAMS(XTAL_15MHz/2, 720, 0, 512, 262, 0, 240) // XXX
+	MCFG_SCREEN_RAW_PARAMS(XTAL(15'000'000)/2, 720, 0, 512, 262, 0, 240) // XXX
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( grid1139, grid1131 )
+MACHINE_CONFIG_START(gridcomp_state::grid1139)
+	grid1131(config);
 	MCFG_DEVICE_MODIFY(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("512K")
 MACHINE_CONFIG_END
@@ -424,24 +441,24 @@ ROM_START( grid1101 )
 	ROM_REGION16_LE(0x10000, "user1", 0)
 
 	ROM_SYSTEM_BIOS(0, "ccos", "ccos bios")
-	ROMX_LOAD("1101EVEN.BIN", 0x0000, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
-	ROMX_LOAD("1101ODD.BIN",  0x0001, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
+	ROMX_LOAD("1101even.bin", 0x0000, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
+	ROMX_LOAD("1101odd.bin",  0x0001, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
 ROM_END
 
 ROM_START( grid1109 )
 	ROM_REGION16_LE(0x10000, "user1", 0)
 
 	ROM_SYSTEM_BIOS(0, "ccos", "ccos bios")
-	ROMX_LOAD("1109EVEN.BIN", 0x0000, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
-	ROMX_LOAD("1109ODD.BIN",  0x0001, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
+	ROMX_LOAD("1109even.bin", 0x0000, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
+	ROMX_LOAD("1109odd.bin",  0x0001, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
 ROM_END
 
 ROM_START( grid1121 )
 	ROM_REGION16_LE(0x10000, "user1", 0)
 
 	ROM_SYSTEM_BIOS(0, "ccos", "ccos bios")
-	ROMX_LOAD("1121EVEN.BIN", 0x0000, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
-	ROMX_LOAD("1121ODD.BIN",  0x0001, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
+	ROMX_LOAD("1121even.bin", 0x0000, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
+	ROMX_LOAD("1121odd.bin",  0x0001, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
 ROM_END
 
 ROM_START( grid1129 )
@@ -449,12 +466,12 @@ ROM_START( grid1129 )
 	ROM_DEFAULT_BIOS("patched")
 
 	ROM_SYSTEM_BIOS(0, "ccos", "ccos bios")
-	ROMX_LOAD("1129EVEN.BIN", 0x0000, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
-	ROMX_LOAD("1129ODD.BIN",  0x0001, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
+	ROMX_LOAD("1129even.bin", 0x0000, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
+	ROMX_LOAD("1129odd.bin",  0x0001, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
 
 	ROM_SYSTEM_BIOS(1, "patched", "patched 1139 bios")
-	ROMX_LOAD("1139EVEN.BIN", 0x0000, 0x2000, CRC(67071849) SHA1(782239c155fa5821f8dbd2607cee9152d175e90e),ROM_SKIP(1)|ROM_BIOS(2))
-	ROMX_LOAD("1139ODD.BIN",  0x0001, 0x2000, CRC(13ed4bf0) SHA1(f7087f86dbbc911bee985125bccd2417e0374e8e),ROM_SKIP(1)|ROM_BIOS(2))
+	ROMX_LOAD("1139even.bin", 0x0000, 0x2000, CRC(67071849) SHA1(782239c155fa5821f8dbd2607cee9152d175e90e),ROM_SKIP(1)|ROM_BIOS(2))
+	ROMX_LOAD("1139odd.bin",  0x0001, 0x2000, CRC(13ed4bf0) SHA1(f7087f86dbbc911bee985125bccd2417e0374e8e),ROM_SKIP(1)|ROM_BIOS(2))
 
 	// change bubble driver setup to read floppy images with 512-byte sectors
 	ROM_FILL(0x3114,1,0x00)
@@ -557,16 +574,16 @@ ROM_START( grid1131 )
 	ROM_REGION16_LE(0x10000, "user1", 0)
 
 	ROM_SYSTEM_BIOS(0, "ccos", "ccos bios")
-	ROMX_LOAD("1131EVEN.BIN", 0x0000, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
-	ROMX_LOAD("1131ODD.BIN",  0x0001, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
+	ROMX_LOAD("1131even.bin", 0x0000, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
+	ROMX_LOAD("1131odd.bin",  0x0001, 0x2000, NO_DUMP, ROM_SKIP(1)|ROM_BIOS(1))
 ROM_END
 
 ROM_START( grid1139 )
 	ROM_REGION16_LE(0x10000, "user1", 0)
 
 	ROM_SYSTEM_BIOS(0, "normal", "normal bios")
-	ROMX_LOAD("1139EVEN.BIN", 0x0000, 0x2000, CRC(67071849) SHA1(782239c155fa5821f8dbd2607cee9152d175e90e),ROM_SKIP(1)|ROM_BIOS(1))
-	ROMX_LOAD("1139ODD.BIN",  0x0001, 0x2000, CRC(13ed4bf0) SHA1(f7087f86dbbc911bee985125bccd2417e0374e8e),ROM_SKIP(1)|ROM_BIOS(1))
+	ROMX_LOAD("1139even.bin", 0x0000, 0x2000, CRC(67071849) SHA1(782239c155fa5821f8dbd2607cee9152d175e90e),ROM_SKIP(1)|ROM_BIOS(1))
+	ROMX_LOAD("1139odd.bin",  0x0001, 0x2000, CRC(13ed4bf0) SHA1(f7087f86dbbc911bee985125bccd2417e0374e8e),ROM_SKIP(1)|ROM_BIOS(1))
 ROM_END
 
 

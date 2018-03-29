@@ -13,6 +13,7 @@
 
 #include "emu.h"
 #include "cpu/z80/z80.h"
+#include "machine/timer.h"
 #include "machine/z80ctc.h"
 #include "machine/z80dma.h"
 #include "machine/z80pio.h"
@@ -29,6 +30,7 @@
 #include "screen.h"
 #include "speaker.h"
 #include "softlist.h"
+#include "kdt6.lh"
 
 
 //**************************************************************************
@@ -92,6 +94,8 @@ public:
 
 	DECLARE_WRITE8_MEMBER(fdc_tc_w);
 	DECLARE_WRITE_LINE_MEMBER(fdc_drq_w);
+	void drive0_led_cb(floppy_image_device *floppy, int state);
+	void drive1_led_cb(floppy_image_device *floppy, int state);
 
 	MC6845_UPDATE_ROW(crtc_update_row);
 	uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
@@ -101,6 +105,9 @@ public:
 	DECLARE_WRITE_LINE_MEMBER(rs232b_rx_w);
 	DECLARE_WRITE_LINE_MEMBER(siob_tx_w);
 
+	void psi98(machine_config &config);
+	void psi98_io(address_map &map);
+	void psi98_mem(address_map &map);
 protected:
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
@@ -143,58 +150,60 @@ private:
 //  ADDRESS MAPS
 //**************************************************************************
 
-static ADDRESS_MAP_START( psi98_mem, AS_PROGRAM, 8, kdt6_state )
-	AM_RANGE(0x0000, 0x0fff) AM_READ_BANK("page0_r") AM_WRITE_BANK("page0_w")
-	AM_RANGE(0x1000, 0x1fff) AM_READ_BANK("page1_r") AM_WRITE_BANK("page1_w")
-	AM_RANGE(0x2000, 0x2fff) AM_READ_BANK("page2_r") AM_WRITE_BANK("page2_w")
-	AM_RANGE(0x3000, 0x3fff) AM_READ_BANK("page3_r") AM_WRITE_BANK("page3_w")
-	AM_RANGE(0x4000, 0x4fff) AM_READ_BANK("page4_r") AM_WRITE_BANK("page4_w")
-	AM_RANGE(0x5000, 0x5fff) AM_READ_BANK("page5_r") AM_WRITE_BANK("page5_w")
-	AM_RANGE(0x6000, 0x6fff) AM_READ_BANK("page6_r") AM_WRITE_BANK("page6_w")
-	AM_RANGE(0x7000, 0x7fff) AM_READ_BANK("page7_r") AM_WRITE_BANK("page7_w")
-	AM_RANGE(0x8000, 0x8fff) AM_READ_BANK("page8_r") AM_WRITE_BANK("page8_w")
-	AM_RANGE(0x9000, 0x9fff) AM_READ_BANK("page9_r") AM_WRITE_BANK("page9_w")
-	AM_RANGE(0xa000, 0xafff) AM_READ_BANK("pagea_r") AM_WRITE_BANK("pagea_w")
-	AM_RANGE(0xb000, 0xbfff) AM_READ_BANK("pageb_r") AM_WRITE_BANK("pageb_w")
-	AM_RANGE(0xc000, 0xcfff) AM_READ_BANK("pagec_r") AM_WRITE_BANK("pagec_w")
-	AM_RANGE(0xd000, 0xdfff) AM_READ_BANK("paged_r") AM_WRITE_BANK("paged_w")
-	AM_RANGE(0xe000, 0xefff) AM_READ_BANK("pagee_r") AM_WRITE_BANK("pagee_w")
-	AM_RANGE(0xf000, 0xffff) AM_READ_BANK("pagef_r") AM_WRITE_BANK("pagef_w")
-ADDRESS_MAP_END
+void kdt6_state::psi98_mem(address_map &map)
+{
+	map(0x0000, 0x0fff).bankr("page0_r").bankw("page0_w");
+	map(0x1000, 0x1fff).bankr("page1_r").bankw("page1_w");
+	map(0x2000, 0x2fff).bankr("page2_r").bankw("page2_w");
+	map(0x3000, 0x3fff).bankr("page3_r").bankw("page3_w");
+	map(0x4000, 0x4fff).bankr("page4_r").bankw("page4_w");
+	map(0x5000, 0x5fff).bankr("page5_r").bankw("page5_w");
+	map(0x6000, 0x6fff).bankr("page6_r").bankw("page6_w");
+	map(0x7000, 0x7fff).bankr("page7_r").bankw("page7_w");
+	map(0x8000, 0x8fff).bankr("page8_r").bankw("page8_w");
+	map(0x9000, 0x9fff).bankr("page9_r").bankw("page9_w");
+	map(0xa000, 0xafff).bankr("pagea_r").bankw("pagea_w");
+	map(0xb000, 0xbfff).bankr("pageb_r").bankw("pageb_w");
+	map(0xc000, 0xcfff).bankr("pagec_r").bankw("pagec_w");
+	map(0xd000, 0xdfff).bankr("paged_r").bankw("paged_w");
+	map(0xe000, 0xefff).bankr("pagee_r").bankw("pagee_w");
+	map(0xf000, 0xffff).bankr("pagef_r").bankw("pagef_w");
+}
 
-static ADDRESS_MAP_START( psi98_io, AS_IO, 8, kdt6_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_DEVREADWRITE("dma", z80dma_device, read, write)
-	AM_RANGE(0x04, 0x07) AM_DEVREADWRITE("sio", z80sio_device, cd_ba_r, cd_ba_w)
-	AM_RANGE(0x08, 0x0b) AM_DEVREADWRITE("ctc1", z80ctc_device, read, write)
-	AM_RANGE(0x0c, 0x0f) AM_DEVREADWRITE("pio", z80pio_device, read, write)
-	AM_RANGE(0x10, 0x13) AM_DEVREADWRITE("ctc2", z80ctc_device, read, write)
-	AM_RANGE(0x14, 0x14) AM_DEVREAD("fdc", upd765a_device, msr_r)
-	AM_RANGE(0x15, 0x15) AM_DEVREADWRITE("fdc", upd765a_device, fifo_r, fifo_w)
-	AM_RANGE(0x18, 0x18) AM_DEVWRITE("crtc", mc6845_device, address_w)
-	AM_RANGE(0x19, 0x19) AM_DEVREADWRITE("crtc", mc6845_device, register_r, register_w)
-	AM_RANGE(0x1c, 0x1c) AM_WRITE(status0_w)
-	AM_RANGE(0x1d, 0x1d) AM_DEVREAD("kbd", psi_keyboard_bus_device, key_data_r)
-	AM_RANGE(0x1e, 0x1e) AM_DEVREADWRITE("fdc", upd765a_device, mdma_r, mdma_w)
-	AM_RANGE(0x1f, 0x1f) AM_WRITE(fdc_tc_w)
-	AM_RANGE(0x20, 0x2f) AM_READWRITE(mapper_r, mapper_w)
-	AM_RANGE(0x30, 0x30) AM_READWRITE(video_data_r, video_data_w)
-	AM_RANGE(0x31, 0x31) AM_WRITE(video_data_inc_w)
-	AM_RANGE(0x36, 0x36) AM_WRITE(video_data_dec_w)
-	AM_RANGE(0x37, 0x37) AM_WRITE(video_data_inc_w)
-	AM_RANGE(0x38, 0x38) AM_WRITE(status1_w)
-	AM_RANGE(0x39, 0x39) AM_READ(status1_r)
-	AM_RANGE(0x3a, 0x3a) AM_WRITE(status2_w)
-	AM_RANGE(0x3b, 0x3b) AM_READWRITE(sasi_ctrl_r, sasi_ctrl_w)
-	AM_RANGE(0x3c, 0x3c) AM_WRITE(dma_map_w)
+void kdt6_state::psi98_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).rw(m_dma, FUNC(z80dma_device::read), FUNC(z80dma_device::write));
+	map(0x04, 0x07).rw(m_sio, FUNC(z80sio_device::cd_ba_r), FUNC(z80sio_device::cd_ba_w));
+	map(0x08, 0x0b).rw("ctc1", FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+	map(0x0c, 0x0f).rw("pio", FUNC(z80pio_device::read), FUNC(z80pio_device::write));
+	map(0x10, 0x13).rw("ctc2", FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+	map(0x14, 0x14).r(m_fdc, FUNC(upd765a_device::msr_r));
+	map(0x15, 0x15).rw(m_fdc, FUNC(upd765a_device::fifo_r), FUNC(upd765a_device::fifo_w));
+	map(0x18, 0x18).w(m_crtc, FUNC(mc6845_device::address_w));
+	map(0x19, 0x19).rw(m_crtc, FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
+	map(0x1c, 0x1c).w(this, FUNC(kdt6_state::status0_w));
+	map(0x1d, 0x1d).r(m_keyboard, FUNC(psi_keyboard_bus_device::key_data_r));
+	map(0x1e, 0x1e).rw(m_fdc, FUNC(upd765a_device::mdma_r), FUNC(upd765a_device::mdma_w));
+	map(0x1f, 0x1f).w(this, FUNC(kdt6_state::fdc_tc_w));
+	map(0x20, 0x2f).rw(this, FUNC(kdt6_state::mapper_r), FUNC(kdt6_state::mapper_w));
+	map(0x30, 0x30).rw(this, FUNC(kdt6_state::video_data_r), FUNC(kdt6_state::video_data_w));
+	map(0x31, 0x31).w(this, FUNC(kdt6_state::video_data_inc_w));
+	map(0x36, 0x36).w(this, FUNC(kdt6_state::video_data_dec_w));
+	map(0x37, 0x37).w(this, FUNC(kdt6_state::video_data_inc_w));
+	map(0x38, 0x38).w(this, FUNC(kdt6_state::status1_w));
+	map(0x39, 0x39).r(this, FUNC(kdt6_state::status1_r));
+	map(0x3a, 0x3a).w(this, FUNC(kdt6_state::status2_w));
+	map(0x3b, 0x3b).rw(this, FUNC(kdt6_state::sasi_ctrl_r), FUNC(kdt6_state::sasi_ctrl_w));
+	map(0x3c, 0x3c).w(this, FUNC(kdt6_state::dma_map_w));
 #if 0
 	AM_RANGE(0x3d, 0x3d) WATCHDOG
 	AM_RANGE(0x3e, 0x3e) WATCHDOG TRIGGER
 	AM_RANGE(0x3f, 0x3f) SASI DATA
 #endif
-	AM_RANGE(0x40, 0x40) AM_WRITE(video_address_latch_high_w)
-	AM_RANGE(0x41, 0x41) AM_WRITE(video_address_latch_low_w)
-ADDRESS_MAP_END
+	map(0x40, 0x40).w(this, FUNC(kdt6_state::video_address_latch_high_w));
+	map(0x41, 0x41).w(this, FUNC(kdt6_state::video_address_latch_low_w));
+}
 
 
 //**************************************************************************
@@ -214,7 +223,7 @@ INPUT_PORTS_END
 //**************************************************************************
 
 static SLOT_INTERFACE_START( kdt6_floppies )
-	SLOT_INTERFACE("525qd", FLOPPY_525_QD)
+	SLOT_INTERFACE("fd55f", TEAC_FD_55F)
 SLOT_INTERFACE_END
 
 WRITE8_MEMBER( kdt6_state::fdc_tc_w )
@@ -227,6 +236,16 @@ WRITE_LINE_MEMBER( kdt6_state::fdc_drq_w )
 {
 	if (!m_sasi_dma && BIT(m_status0, 4) == 0)
 		m_dma->rdy_w(state);
+}
+
+void kdt6_state::drive0_led_cb(floppy_image_device *floppy, int state)
+{
+	machine().output().set_value("drive0_led", state);
+}
+
+void kdt6_state::drive1_led_cb(floppy_image_device *floppy, int state)
+{
+	machine().output().set_value("drive1_led", state);
 }
 
 
@@ -467,7 +486,7 @@ WRITE8_MEMBER( kdt6_state::status0_w )
 	// ------1-  system frequency (0 = half)
 	// -------0  watchdog enable
 
-	m_cpu->set_unscaled_clock((XTAL_16MHz / 4) * (BIT(data, 1) ? 1 : 0.5));
+	m_cpu->set_unscaled_clock((XTAL(16'000'000) / 4) * (BIT(data, 1) ? 1 : 0.5));
 
 	if ((BIT(m_status0, 2) ^ BIT(data, 2)) && BIT(data, 2))
 	{
@@ -556,6 +575,11 @@ void kdt6_state::machine_start()
 
 	m_fdc->set_rate(250000);
 
+	if (m_floppy0->get_device())
+		m_floppy0->get_device()->setup_led_cb(floppy_image_device::led_cb(&kdt6_state::drive0_led_cb, this));
+	if (m_floppy1->get_device())
+		m_floppy1->get_device()->setup_led_cb(floppy_image_device::led_cb(&kdt6_state::drive1_led_cb, this));
+
 	// register for save states
 	save_pointer(NAME(m_ram.get()), 0x40000);
 	save_pointer(NAME(m_vram.get()), 0x10000);
@@ -589,20 +613,21 @@ static const z80_daisy_config daisy_chain_intf[] =
 	{ nullptr }
 };
 
-static MACHINE_CONFIG_START( psi98 )
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_16MHz / 4)
+MACHINE_CONFIG_START(kdt6_state::psi98)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(16'000'000) / 4)
 	MCFG_CPU_PROGRAM_MAP(psi98_mem)
 	MCFG_CPU_IO_MAP(psi98_io)
 	MCFG_Z80_DAISY_CHAIN(daisy_chain_intf)
 
 	// video hardware
 	MCFG_SCREEN_ADD_MONOCHROME("screen", RASTER, rgb_t::green())
-	MCFG_SCREEN_RAW_PARAMS(XTAL_13_5168MHz, 824, 48, 688, 274, 0, 250)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(13'516'800), 824, 48, 688, 274, 0, 250)
 	MCFG_SCREEN_UPDATE_DRIVER(kdt6_state, screen_update)
 
 	MCFG_PALETTE_ADD_MONOCHROME("palette")
+	MCFG_DEFAULT_LAYOUT(layout_kdt6)
 
-	MCFG_MC6845_ADD("crtc", MC6845, "screen", XTAL_13_5168MHz / 8)
+	MCFG_MC6845_ADD("crtc", MC6845, "screen", XTAL(13'516'800) / 8)
 	MCFG_MC6845_SHOW_BORDER_AREA(false)
 	MCFG_MC6845_CHAR_WIDTH(8)
 	MCFG_MC6845_UPDATE_ROW_CB(kdt6_state, crtc_update_row)
@@ -617,7 +642,7 @@ static MACHINE_CONFIG_START( psi98 )
 
 	MCFG_TIMER_DRIVER_ADD("beep_timer", kdt6_state, beeper_off)
 
-	MCFG_DEVICE_ADD("dma", Z80DMA, XTAL_16MHz / 4)
+	MCFG_DEVICE_ADD("dma", Z80DMA, XTAL(16'000'000) / 4)
 	MCFG_Z80DMA_OUT_BUSREQ_CB(WRITELINE(kdt6_state, busreq_w))
 	MCFG_Z80DMA_OUT_INT_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 	MCFG_Z80DMA_IN_MREQ_CB(READ8(kdt6_state, memory_r))
@@ -626,22 +651,22 @@ static MACHINE_CONFIG_START( psi98 )
 	MCFG_Z80DMA_OUT_IORQ_CB(WRITE8(kdt6_state, io_w))
 
 	// jumper J3 allows selection of 16MHz / 8 instead
-	MCFG_CLOCK_ADD("uart_clk", XTAL_9_8304MHz / 8)
+	MCFG_CLOCK_ADD("uart_clk", XTAL(9'830'400) / 8)
 	MCFG_CLOCK_SIGNAL_HANDLER(DEVWRITELINE("ctc1", z80ctc_device, trg1))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("ctc1", z80ctc_device, trg2))
 
-	MCFG_DEVICE_ADD("ctc1", Z80CTC, XTAL_16MHz / 4)
+	MCFG_DEVICE_ADD("ctc1", Z80CTC, XTAL(16'000'000) / 4)
 	MCFG_Z80CTC_INTR_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 	MCFG_Z80CTC_ZC1_CB(DEVWRITELINE("sio", z80sio_device, rxtxcb_w))
 	MCFG_Z80CTC_ZC2_CB(DEVWRITELINE("sio", z80sio_device, rxca_w))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("sio", z80sio_device, txca_w))
 
-	MCFG_DEVICE_ADD("ctc2", Z80CTC, XTAL_16MHz / 4)
+	MCFG_DEVICE_ADD("ctc2", Z80CTC, XTAL(16'000'000) / 4)
 	MCFG_Z80CTC_INTR_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 	MCFG_Z80CTC_ZC0_CB(DEVWRITELINE("speaker", speaker_sound_device, level_w))
 	MCFG_Z80CTC_ZC2_CB(DEVWRITELINE("ctc2", z80ctc_device, trg3))
 
-	MCFG_Z80SIO_ADD("sio", XTAL_16MHz / 4, 0, 0, 0, 0)
+	MCFG_DEVICE_ADD("sio", Z80SIO, XTAL(16'000'000) / 4)
 	MCFG_Z80SIO_OUT_INT_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 	MCFG_Z80SIO_OUT_TXDA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_txd))
 	MCFG_Z80SIO_OUT_DTRA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_dtr))
@@ -662,7 +687,7 @@ static MACHINE_CONFIG_START( psi98 )
 	MCFG_RS232_DSR_HANDLER(DEVWRITELINE("sio", z80sio_device, syncb_w))
 	MCFG_RS232_CTS_HANDLER(DEVWRITELINE("sio", z80sio_device, ctsb_w))  MCFG_DEVCB_XOR(1)
 
-	MCFG_DEVICE_ADD("pio", Z80PIO, XTAL_16MHz / 4)
+	MCFG_DEVICE_ADD("pio", Z80PIO, XTAL(16'000'000) / 4)
 	MCFG_Z80PIO_OUT_INT_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 	MCFG_Z80PIO_OUT_PA_CB(WRITE8(kdt6_state, pio_porta_w))
 	MCFG_Z80PIO_IN_PB_CB(DEVREAD8("cent_data_in", input_buffer_device, read))
@@ -678,13 +703,13 @@ static MACHINE_CONFIG_START( psi98 )
 	MCFG_DEVICE_ADD("cent_data_in", INPUT_BUFFER, 0)
 	MCFG_CENTRONICS_OUTPUT_LATCH_ADD("cent_data_out", "centronics")
 
-	MCFG_UPD1990A_ADD("rtc", XTAL_32_768kHz, NOOP, NOOP)
+	MCFG_UPD1990A_ADD("rtc", XTAL(32'768), NOOP, NOOP)
 
 	MCFG_UPD765A_ADD("fdc", true, true)
 	MCFG_UPD765_INTRQ_CALLBACK(DEVWRITELINE("ctc1", z80ctc_device, trg0))
 	MCFG_UPD765_DRQ_CALLBACK(WRITELINE(kdt6_state, fdc_drq_w))
-	MCFG_FLOPPY_DRIVE_ADD("fdc:0", kdt6_floppies, "525qd", floppy_image_device::default_floppy_formats)
-	MCFG_FLOPPY_DRIVE_ADD("fdc:1", kdt6_floppies, "525qd", floppy_image_device::default_floppy_formats)
+	MCFG_FLOPPY_DRIVE_ADD("fdc:0", kdt6_floppies, "fd55f", floppy_image_device::default_floppy_formats)
+	MCFG_FLOPPY_DRIVE_ADD("fdc:1", kdt6_floppies, "fd55f", floppy_image_device::default_floppy_formats)
 
 	MCFG_SOFTWARE_LIST_ADD("floppy_list", "psi98")
 

@@ -53,6 +53,7 @@ enter  show next address
 #include "cpu/m6809/m6809.h"
 #include "machine/6522via.h"
 #include "machine/keyboard.h"
+#include "machine/timer.h"
 #include "video/saa5050.h"
 #include "video/mc6845.h"
 #include "imagedev/cassette.h"
@@ -73,6 +74,9 @@ public:
 		, m_crtc(*this, "mc6845")
 	{ }
 
+	void a6809(machine_config &config);
+
+protected:
 	void kbd_put(u8 data);
 	DECLARE_READ8_MEMBER(videoram_r);
 	DECLARE_WRITE8_MEMBER(a6809_address_w);
@@ -81,10 +85,13 @@ public:
 	DECLARE_MACHINE_RESET(a6809);
 	TIMER_DEVICE_CALLBACK_MEMBER(a6809_c);
 	TIMER_DEVICE_CALLBACK_MEMBER(a6809_p);
+
+	void a6809_mem(address_map &map);
+
+private:
 	required_shared_ptr<uint8_t> m_p_videoram;
 	uint16_t m_start_address;
 	uint16_t m_cursor_address;
-private:
 	uint8_t m_cass_data[4];
 	bool m_cass_state;
 	bool m_cassold;
@@ -96,20 +103,17 @@ private:
 };
 
 
-static ADDRESS_MAP_START(a6809_mem, AS_PROGRAM, 8, a6809_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000,0x03ff) AM_RAM
-	AM_RANGE(0x0400,0x07ff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x0800,0x0800) AM_DEVREAD("mc6845", mc6845_device, status_r) AM_WRITE(a6809_address_w)
-	AM_RANGE(0x0801,0x0801) AM_DEVREAD("mc6845", mc6845_device, register_r) AM_WRITE(a6809_register_w)
-	AM_RANGE(0x0900,0x090f) AM_MIRROR(0xf0) AM_DEVREADWRITE("via", via6522_device, read, write)
-	AM_RANGE(0xf000,0xf7ff) // optional ROM
-	AM_RANGE(0xf800,0xffff) AM_ROM AM_REGION("maincpu", 0)
-ADDRESS_MAP_END
-
-static ADDRESS_MAP_START( a6809_io, AS_IO, 8, a6809_state)
-	ADDRESS_MAP_UNMAP_HIGH
-ADDRESS_MAP_END
+void a6809_state::a6809_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x03ff).ram();
+	map(0x0400, 0x07ff).ram().share("videoram");
+	map(0x0800, 0x0800).r(m_crtc, FUNC(mc6845_device::status_r)).w(this, FUNC(a6809_state::a6809_address_w));
+	map(0x0801, 0x0801).r(m_crtc, FUNC(mc6845_device::register_r)).w(this, FUNC(a6809_state::a6809_register_w));
+	map(0x0900, 0x090f).mirror(0xf0).rw(m_via, FUNC(via6522_device::read), FUNC(via6522_device::write));
+	map(0xf000, 0xf7ff); // optional ROM
+	map(0xf800, 0xffff).rom().region("maincpu", 0);
+}
 
 /* Input ports */
 static INPUT_PORTS_START( a6809 )
@@ -219,11 +223,10 @@ void a6809_state::kbd_put(u8 data)
 	m_via->write_cb1(0);
 }
 
-static MACHINE_CONFIG_START( a6809 )
+MACHINE_CONFIG_START(a6809_state::a6809)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",M6809E, XTAL_4MHz)
+	MCFG_CPU_ADD("maincpu", MC6809, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(a6809_mem)
-	MCFG_CPU_IO_MAP(a6809_io)
 	MCFG_MACHINE_RESET_OVERRIDE(a6809_state, a6809)
 
 	/* video hardware */
@@ -241,11 +244,11 @@ static MACHINE_CONFIG_START( a6809 )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
 	/* Devices */
-	MCFG_DEVICE_ADD("via", VIA6522, XTAL_4MHz / 4)
+	MCFG_DEVICE_ADD("via", VIA6522, XTAL(4'000'000) / 4)
 	MCFG_VIA6522_CB2_HANDLER(WRITELINE(a6809_state, cass_w))
 	MCFG_VIA6522_IRQ_HANDLER(INPUTLINE("maincpu", M6809_IRQ_LINE))
 
-	MCFG_MC6845_ADD("mc6845", HD6845, "screen", XTAL_4MHz / 2)
+	MCFG_MC6845_ADD("mc6845", HD6845, "screen", XTAL(4'000'000) / 2)
 	MCFG_MC6845_SHOW_BORDER_AREA(false)
 	MCFG_MC6845_CHAR_WIDTH(12)
 

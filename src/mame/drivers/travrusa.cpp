@@ -58,21 +58,22 @@ and 2764 eprom (swapped D3/D4 and D5/D6 data lines)
 #include "screen.h"
 
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 8, travrusa_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x8fff) AM_RAM_WRITE(travrusa_videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x9000, 0x9000) AM_WRITE(travrusa_scroll_x_low_w)
-	AM_RANGE(0xa000, 0xa000) AM_WRITE(travrusa_scroll_x_high_w)
-	AM_RANGE(0xc800, 0xc9ff) AM_WRITEONLY AM_SHARE("spriteram")
-	AM_RANGE(0xd000, 0xd000) AM_DEVWRITE("irem_audio", irem_audio_device, cmd_w)
-	AM_RANGE(0xd001, 0xd001) AM_WRITE(travrusa_flipscreen_w)    /* + coin counters - not written by shtrider */
-	AM_RANGE(0xd000, 0xd000) AM_READ_PORT("SYSTEM")     /* IN0 */
-	AM_RANGE(0xd001, 0xd001) AM_READ_PORT("P1")         /* IN1 */
-	AM_RANGE(0xd002, 0xd002) AM_READ_PORT("P2")         /* IN2 */
-	AM_RANGE(0xd003, 0xd003) AM_READ_PORT("DSW1")       /* DSW1 */
-	AM_RANGE(0xd004, 0xd004) AM_READ_PORT("DSW2")       /* DSW2 */
-	AM_RANGE(0xe000, 0xefff) AM_RAM
-ADDRESS_MAP_END
+void travrusa_state::main_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x8fff).ram().w(this, FUNC(travrusa_state::travrusa_videoram_w)).share("videoram");
+	map(0x9000, 0x9000).w(this, FUNC(travrusa_state::travrusa_scroll_x_low_w));
+	map(0xa000, 0xa000).w(this, FUNC(travrusa_state::travrusa_scroll_x_high_w));
+	map(0xc800, 0xc9ff).writeonly().share("spriteram");
+	map(0xd000, 0xd000).w("irem_audio", FUNC(irem_audio_device::cmd_w));
+	map(0xd001, 0xd001).w(this, FUNC(travrusa_state::travrusa_flipscreen_w));    /* + coin counters - not written by shtrider */
+	map(0xd000, 0xd000).portr("SYSTEM");     /* IN0 */
+	map(0xd001, 0xd001).portr("P1");         /* IN1 */
+	map(0xd002, 0xd002).portr("P2");         /* IN2 */
+	map(0xd003, 0xd003).portr("DSW1");       /* DSW1 */
+	map(0xd004, 0xd004).portr("DSW2");       /* DSW2 */
+	map(0xe000, 0xefff).ram();
+}
 
 static INPUT_PORTS_START( travrusa )
 	PORT_START("SYSTEM")
@@ -303,7 +304,7 @@ void travrusa_state::machine_reset()
 	m_scrollx[1] = 0;
 }
 
-static MACHINE_CONFIG_START( travrusa )
+MACHINE_CONFIG_START(travrusa_state::travrusa)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 4000000)   /* 4 MHz (?) */
@@ -329,12 +330,13 @@ static MACHINE_CONFIG_START( travrusa )
 	MCFG_PALETTE_INIT_OWNER(travrusa_state, travrusa)
 
 	/* sound hardware */
-	//MCFG_FRAGMENT_ADD(m52_sound_c_audio)
+	//m52_sound_c_audio(config);
 	MCFG_DEVICE_ADD("irem_audio", IREM_M52_SOUNDC_AUDIO, 0)
 
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( shtrider, travrusa )
+MACHINE_CONFIG_START(travrusa_state::shtrider)
+	travrusa(config);
 
 	/* video hardware */
 	MCFG_GFXDECODE_MODIFY("gfxdecode", shtrider)
@@ -342,7 +344,8 @@ static MACHINE_CONFIG_DERIVED( shtrider, travrusa )
 	MCFG_PALETTE_INIT_OWNER(travrusa_state,shtrider)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( shtriderb, travrusa )
+MACHINE_CONFIG_START(travrusa_state::shtriderb)
+	travrusa(config);
 
 	/* video hardware */
 	MCFG_GFXDECODE_MODIFY("gfxdecode", shtrider)
@@ -587,8 +590,8 @@ DRIVER_INIT_MEMBER(travrusa_state,motorace)
 	/* The first CPU ROM has the address and data lines scrambled */
 	for (A = 0; A < 0x2000; A++)
 	{
-		j = BITSWAP16(A,15,14,13,9,7,5,3,1,12,10,8,6,4,2,0,11);
-		rom[j] = BITSWAP8(buffer[A],2,7,4,1,6,3,0,5);
+		j = bitswap<16>(A,15,14,13,9,7,5,3,1,12,10,8,6,4,2,0,11);
+		rom[j] = bitswap<8>(buffer[A],2,7,4,1,6,3,0,5);
 	}
 }
 
@@ -599,12 +602,12 @@ DRIVER_INIT_MEMBER(travrusa_state,shtridra)
 
 	/* D3/D4  and  D5/D6 swapped */
 	for (A = 0; A < 0x2000; A++)
-		rom[A] = BITSWAP8(rom[A],7,5,6,3,4,2,1,0);
+		rom[A] = bitswap<8>(rom[A],7,5,6,3,4,2,1,0);
 }
 
 READ8_MEMBER(travrusa_state::shtridrb_port11_r)
 {
-	printf("shtridrb_port11_r %04x\n", space.device().safe_pc());
+	printf("shtridrb_port11_r %04x\n", m_maincpu->pc());
 	// reads, masks with 0xa8, checks for 0x88, resets game if not happy with value?
 	return 0x88;
 }

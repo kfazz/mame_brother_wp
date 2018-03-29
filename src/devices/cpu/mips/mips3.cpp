@@ -12,6 +12,7 @@
 #include "debugger.h"
 #include "mips3.h"
 #include "mips3com.h"
+#include "mips3dsm.h"
 
 
 #define ENABLE_OVERFLOWS    0
@@ -98,26 +99,26 @@ static const uint8_t fpmode_source[4] =
 #define ROPCODE(pc)     direct->read_dword(pc)
 
 
-DEFINE_DEVICE_TYPE(VR4300BE,  vr4300be_device,  "vr4300be",  "VR4300 (big)")
-DEFINE_DEVICE_TYPE(VR4300LE,  vr4300le_device,  "vr4300le",  "VR4300 (little)")
-DEFINE_DEVICE_TYPE(VR4310BE,  vr4310be_device,  "vr4310be",  "VR4310 (big)")
-DEFINE_DEVICE_TYPE(VR4310LE,  vr4310le_device,  "vr4310le",  "VR4310 (little)")
-DEFINE_DEVICE_TYPE(R4600BE,   r4600be_device,   "r4600be",   "R4600 (big)")
-DEFINE_DEVICE_TYPE(R4600LE,   r4600le_device,   "r4600le",   "R4600 (little)")
-DEFINE_DEVICE_TYPE(R4650BE,   r4650be_device,   "r4650be",   "IDT R4650 (big)")
-DEFINE_DEVICE_TYPE(R4650LE,   r4650le_device,   "r4650le",   "IDT R4650 (little)")
-DEFINE_DEVICE_TYPE(R4700BE,   r4700be_device,   "r4700be",   "R4700 (big)")
-DEFINE_DEVICE_TYPE(R4700LE,   r4700le_device,   "r4700le",   "R4700 (little)")
-DEFINE_DEVICE_TYPE(TX4925BE,  tx4925be_device,  "tx4925be",  "TX4925 (big)")
-DEFINE_DEVICE_TYPE(TX4925LE,  tx4925le_device,  "tx4925le",  "TX4925 (little)")
-DEFINE_DEVICE_TYPE(R5000BE,   r5000be_device,   "r5000be",   "R5000 (big)")
-DEFINE_DEVICE_TYPE(R5000LE,   r5000le_device,   "r5000le",   "R5000 (little)")
-DEFINE_DEVICE_TYPE(VR5500BE,  vr5500be_device,  "vr5500be",  "VR5500 (big)")
-DEFINE_DEVICE_TYPE(VR5500LE,  vr5500le_device,  "vr5500le",  "VR5500 (little)")
-DEFINE_DEVICE_TYPE(QED5271BE, qed5271be_device, "qed5271be", "QED5271 (big)")
-DEFINE_DEVICE_TYPE(QED5271LE, qed5271le_device, "qed5271le", "QED5271 (little)")
-DEFINE_DEVICE_TYPE(RM7000BE,  rm7000be_device,  "rm7000be",  "RM7000 (big)")
-DEFINE_DEVICE_TYPE(RM7000LE,  rm7000le_device,  "rm7000le",  "RM7000 (little)")
+DEFINE_DEVICE_TYPE(VR4300BE,  vr4300be_device,  "vr4300be",  "NEC VR4300 (big)")
+DEFINE_DEVICE_TYPE(VR4300LE,  vr4300le_device,  "vr4300le",  "NEC VR4300 (little)")
+DEFINE_DEVICE_TYPE(VR4310BE,  vr4310be_device,  "vr4310be",  "NEC VR4310 (big)")
+DEFINE_DEVICE_TYPE(VR4310LE,  vr4310le_device,  "vr4310le",  "NEC VR4310 (little)")
+DEFINE_DEVICE_TYPE(R4600BE,   r4600be_device,   "r4600be",   "MIPS R4600 (big)")
+DEFINE_DEVICE_TYPE(R4600LE,   r4600le_device,   "r4600le",   "MIPS R4600 (little)")
+DEFINE_DEVICE_TYPE(R4650BE,   r4650be_device,   "r4650be",   "MIPS IDT R4650 (big)")
+DEFINE_DEVICE_TYPE(R4650LE,   r4650le_device,   "r4650le",   "MIPS IDT R4650 (little)")
+DEFINE_DEVICE_TYPE(R4700BE,   r4700be_device,   "r4700be",   "MIPS R4700 (big)")
+DEFINE_DEVICE_TYPE(R4700LE,   r4700le_device,   "r4700le",   "MIPS R4700 (little)")
+DEFINE_DEVICE_TYPE(TX4925BE,  tx4925be_device,  "tx4925be",  "Toshiba TX4925 (big)")
+DEFINE_DEVICE_TYPE(TX4925LE,  tx4925le_device,  "tx4925le",  "Toshiba TX4925 (little)")
+DEFINE_DEVICE_TYPE(R5000BE,   r5000be_device,   "r5000be",   "MIPS R5000 (big)")
+DEFINE_DEVICE_TYPE(R5000LE,   r5000le_device,   "r5000le",   "MIPS R5000 (little)")
+DEFINE_DEVICE_TYPE(VR5500BE,  vr5500be_device,  "vr5500be",  "NEC VR5500 (big)")
+DEFINE_DEVICE_TYPE(VR5500LE,  vr5500le_device,  "vr5500le",  "NEC VR5500 (little)")
+DEFINE_DEVICE_TYPE(QED5271BE, qed5271be_device, "qed5271be", "MIPS QED5271 (big)")
+DEFINE_DEVICE_TYPE(QED5271LE, qed5271le_device, "qed5271le", "MIPS QED5271 (little)")
+DEFINE_DEVICE_TYPE(RM7000BE,  rm7000be_device,  "rm7000be",  "MIPS RM7000 (big)")
+DEFINE_DEVICE_TYPE(RM7000LE,  rm7000le_device,  "rm7000le",  "MIPS RM7000 (little)")
 
 
 // VR4300 and VR5432 have 4 fewer PFN bits, and only 32 TLB entries
@@ -192,7 +193,10 @@ mips3_device::mips3_device(const machine_config &mconfig, device_type type, cons
 	memset(m_hotspot, 0, sizeof(m_hotspot));
 
 	// configure the virtual TLB
-	set_vtlb_fixed_entries(2 * m_tlbentries + 2);
+	if (m_flavor == MIPS3_TYPE_TX4925)
+		set_vtlb_fixed_entries(2 * m_tlbentries + 3);
+	else
+		set_vtlb_fixed_entries(2 * m_tlbentries + 2);
 }
 
 device_memory_interface::space_config_vector mips3_device::memory_space_config() const
@@ -333,7 +337,7 @@ void mips3_device::device_start()
 
 	m_cpu_clock = clock();
 	m_program = &space(AS_PROGRAM);
-	m_direct = &m_program->direct();
+	m_direct = m_program->direct<0>();
 
 	/* set up the endianness */
 	m_program->accessors(m_memory);
@@ -940,11 +944,16 @@ void mips3_device::device_reset()
 		entry->entry_lo[1] = 0xfffffff8;
 		vtlb_load(2 * tlbindex + 0, 0, 0, 0);
 		vtlb_load(2 * tlbindex + 1, 0, 0, 0);
+		if (m_flavor == MIPS3_TYPE_TX4925)
+			vtlb_load(2 * tlbindex + 2, 0, 0, 0);
 	}
 
 	/* load the fixed TLB range */
 	vtlb_load(2 * m_tlbentries + 0, (0xa0000000 - 0x80000000) >> MIPS3_MIN_PAGE_SHIFT, 0x80000000, 0x00000000 | VTLB_READ_ALLOWED | VTLB_WRITE_ALLOWED | VTLB_FETCH_ALLOWED | VTLB_FLAG_VALID);
 	vtlb_load(2 * m_tlbentries + 1, (0xc0000000 - 0xa0000000) >> MIPS3_MIN_PAGE_SHIFT, 0xa0000000, 0x00000000 | VTLB_READ_ALLOWED | VTLB_WRITE_ALLOWED | VTLB_FETCH_ALLOWED | VTLB_FLAG_VALID);
+	// TX4925 on-board peripherals pass-through
+	if (m_flavor == MIPS3_TYPE_TX4925)
+		vtlb_load(2 * m_tlbentries + 2, (0xff200000 - 0xff1f0000) >> MIPS3_MIN_PAGE_SHIFT, 0xff1f0000, 0xff1f0000 | VTLB_READ_ALLOWED | VTLB_WRITE_ALLOWED | VTLB_FETCH_ALLOWED | VTLB_FLAG_VALID);
 
 	m_core->mode = (MODE_KERNEL << 1) | 0;
 	m_cache_dirty = true;
@@ -967,14 +976,9 @@ bool mips3_device::memory_translate(int spacenum, int intention, offs_t &address
 }
 
 
-offs_t mips3_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> mips3_device::create_disassembler()
 {
-	uint32_t op = *(uint32_t *)oprom;
-	if (m_bigendian)
-		op = big_endianize_int32(op);
-	else
-		op = little_endianize_int32(op);
-	return dasmmips3(stream, pc, op);
+	return std::make_unique<mips3_disassembler>();
 }
 
 
@@ -985,12 +989,6 @@ offs_t mips3_device::disasm_disassemble(std::ostream &stream, offs_t pc, const u
 
 inline bool mips3_device::RBYTE(offs_t address, uint32_t *result)
 {
-	if ((m_flavor == MIPS3_TYPE_TX4925) && ((address & 0xffff0000) == 0xff1f0000))
-	{
-		*result = (*m_memory.read_byte)(*m_program, address);
-		return true;
-	}
-
 	const uint32_t tlbval = vtlb_table()[address >> 12];
 	if (tlbval & VTLB_READ_ALLOWED)
 	{
@@ -1024,12 +1022,6 @@ inline bool mips3_device::RBYTE(offs_t address, uint32_t *result)
 
 inline bool mips3_device::RHALF(offs_t address, uint32_t *result)
 {
-	if ((m_flavor == MIPS3_TYPE_TX4925) && ((address & 0xffff0000) == 0xff1f0000))
-	{
-		*result = (*m_memory.read_word)(*m_program, address);
-		return true;
-	}
-
 	const uint32_t tlbval = vtlb_table()[address >> 12];
 	if (tlbval & VTLB_READ_ALLOWED)
 	{
@@ -1063,12 +1055,6 @@ inline bool mips3_device::RHALF(offs_t address, uint32_t *result)
 
 inline bool mips3_device::RWORD(offs_t address, uint32_t *result)
 {
-	if ((m_flavor == MIPS3_TYPE_TX4925) && ((address & 0xffff0000) == 0xff1f0000))
-	{
-		*result = (*m_memory.read_dword)(*m_program, address);
-		return true;
-	}
-
 	const uint32_t tlbval = vtlb_table()[address >> 12];
 	if (tlbval & VTLB_READ_ALLOWED)
 	{
@@ -1102,12 +1088,6 @@ inline bool mips3_device::RWORD(offs_t address, uint32_t *result)
 
 inline bool mips3_device::RWORD_MASKED(offs_t address, uint32_t *result, uint32_t mem_mask)
 {
-	if ((m_flavor == MIPS3_TYPE_TX4925) && ((address & 0xffff0000) == 0xff1f0000))
-	{
-		*result = (*m_memory.read_dword_masked)(*m_program, address, mem_mask);
-		return true;
-	}
-
 	const uint32_t tlbval = vtlb_table()[address >> 12];
 	if (tlbval & VTLB_READ_ALLOWED)
 	{
@@ -1131,11 +1111,6 @@ inline bool mips3_device::RWORD_MASKED(offs_t address, uint32_t *result, uint32_
 
 inline bool mips3_device::RDOUBLE(offs_t address, uint64_t *result)
 {
-	if ((m_flavor == MIPS3_TYPE_TX4925) && ((address & 0xffff0000) == 0xff1f0000))
-	{
-		*result = (*m_memory.read_qword)(*m_program, address);
-		return true;
-	}
 	const uint32_t tlbval = vtlb_table()[address >> 12];
 	if (tlbval & VTLB_READ_ALLOWED)
 	{
@@ -1159,12 +1134,6 @@ inline bool mips3_device::RDOUBLE(offs_t address, uint64_t *result)
 
 inline bool mips3_device::RDOUBLE_MASKED(offs_t address, uint64_t *result, uint64_t mem_mask)
 {
-	if ((m_flavor == MIPS3_TYPE_TX4925) && ((address & 0xffff0000) == 0xff1f0000))
-	{
-		*result = (*m_memory.read_qword_masked)(*m_program, address, mem_mask);
-		return true;
-	}
-
 	const uint32_t tlbval = vtlb_table()[address >> 12];
 	if (tlbval & VTLB_READ_ALLOWED)
 	{
@@ -1188,12 +1157,6 @@ inline bool mips3_device::RDOUBLE_MASKED(offs_t address, uint64_t *result, uint6
 
 inline void mips3_device::WBYTE(offs_t address, uint8_t data)
 {
-	if ((m_flavor == MIPS3_TYPE_TX4925) && ((address & 0xffff0000) == 0xff1f0000))
-	{
-		(*m_memory.write_byte)(*m_program, address, data);
-		return;
-	}
-
 	const uint32_t tlbval = vtlb_table()[address >> 12];
 	if (tlbval & VTLB_WRITE_ALLOWED)
 	{
@@ -1228,11 +1191,6 @@ inline void mips3_device::WBYTE(offs_t address, uint8_t data)
 
 inline void mips3_device::WHALF(offs_t address, uint16_t data)
 {
-	if ((m_flavor == MIPS3_TYPE_TX4925) && ((address & 0xffff0000) == 0xff1f0000))
-	{
-		(*m_memory.write_word)(*m_program, address, data);
-		return;
-	}
 	const uint32_t tlbval = vtlb_table()[address >> 12];
 	if (tlbval & VTLB_WRITE_ALLOWED)
 	{
@@ -1267,12 +1225,6 @@ inline void mips3_device::WHALF(offs_t address, uint16_t data)
 
 inline void mips3_device::WWORD(offs_t address, uint32_t data)
 {
-	if ((m_flavor == MIPS3_TYPE_TX4925) && ((address & 0xffff0000) == 0xff1f0000))
-	{
-		(*m_memory.write_dword)(*m_program, address, data);
-		return;
-	}
-
 	const uint32_t tlbval = vtlb_table()[address >> 12];
 	if (tlbval & VTLB_WRITE_ALLOWED)
 	{
@@ -1307,12 +1259,6 @@ inline void mips3_device::WWORD(offs_t address, uint32_t data)
 
 inline void mips3_device::WWORD_MASKED(offs_t address, uint32_t data, uint32_t mem_mask)
 {
-	if ((m_flavor == MIPS3_TYPE_TX4925) && ((address & 0xffff0000) == 0xff1f0000))
-	{
-		(*m_memory.write_dword_masked)(*m_program, address, data, mem_mask);
-		return;
-	}
-
 	const uint32_t tlbval = vtlb_table()[address >> 12];
 	if (tlbval & VTLB_WRITE_ALLOWED)
 	{
@@ -1337,12 +1283,6 @@ inline void mips3_device::WWORD_MASKED(offs_t address, uint32_t data, uint32_t m
 
 inline void mips3_device::WDOUBLE(offs_t address, uint64_t data)
 {
-	if ((m_flavor == MIPS3_TYPE_TX4925) && ((address & 0xffff0000) == 0xff1f0000))
-	{
-		(*m_memory.write_qword)(*m_program, address, data);
-		return;
-	}
-
 	const uint32_t tlbval = vtlb_table()[address >> 12];
 	if (tlbval & VTLB_WRITE_ALLOWED)
 	{
@@ -1367,12 +1307,6 @@ inline void mips3_device::WDOUBLE(offs_t address, uint64_t data)
 
 inline void mips3_device::WDOUBLE_MASKED(offs_t address, uint64_t data, uint64_t mem_mask)
 {
-	if ((m_flavor == MIPS3_TYPE_TX4925) && ((address & 0xffff0000) == 0xff1f0000))
-	{
-		(*m_memory.write_qword_masked)(*m_program, address, data, mem_mask);
-		return;
-	}
-
 	const uint32_t tlbval = vtlb_table()[address >> 12];
 	if (tlbval & VTLB_WRITE_ALLOWED)
 	{

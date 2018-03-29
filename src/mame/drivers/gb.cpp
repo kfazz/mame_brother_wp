@@ -403,76 +403,80 @@ WRITE8_MEMBER(megaduck_state::bank2_w)
 }
 
 
-static ADDRESS_MAP_START(gameboy_map, AS_PROGRAM, 8, gb_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x7fff) AM_READWRITE(gb_cart_r, gb_bank_w)
-	AM_RANGE(0x8000, 0x9fff) AM_DEVREADWRITE("ppu", dmg_ppu_device, vram_r, vram_w)          /* 8k VRAM */
-	AM_RANGE(0xa000, 0xbfff) AM_READWRITE(gb_ram_r, gb_ram_w)                                /* 8k switched RAM bank (cartridge) */
-	AM_RANGE(0xc000, 0xdfff) AM_RAM                                                          /* 8k low RAM */
-	AM_RANGE(0xe000, 0xfdff) AM_READWRITE(gb_echo_r, gb_echo_w)
-	AM_RANGE(0xfe00, 0xfeff) AM_DEVREADWRITE("ppu", dmg_ppu_device, oam_r, oam_w)            /* OAM RAM */
-	AM_RANGE(0xff00, 0xff0f) AM_READWRITE(gb_io_r, gb_io_w)                                  /* I/O */
-	AM_RANGE(0xff10, 0xff26) AM_DEVREADWRITE("apu", gameboy_sound_device, sound_r, sound_w)  /* sound registers */
-	AM_RANGE(0xff27, 0xff2f) AM_NOP                                                          /* unused */
-	AM_RANGE(0xff30, 0xff3f) AM_DEVREADWRITE("apu", gameboy_sound_device, wave_r, wave_w)    /* Wave ram */
-	AM_RANGE(0xff40, 0xff7f) AM_DEVREAD("ppu", dmg_ppu_device, video_r) AM_WRITE(gb_io2_w)   /* Video controller & BIOS flip-flop */
-	AM_RANGE(0xff80, 0xfffe) AM_RAM                                                          /* High RAM */
-	AM_RANGE(0xffff, 0xffff) AM_READWRITE(gb_ie_r, gb_ie_w)                                  /* Interrupt enable register */
-ADDRESS_MAP_END
+void gb_state::gameboy_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x7fff).rw(this, FUNC(gb_state::gb_cart_r), FUNC(gb_state::gb_bank_w));
+	map(0x8000, 0x9fff).rw(m_ppu, FUNC(dmg_ppu_device::vram_r), FUNC(dmg_ppu_device::vram_w));          /* 8k VRAM */
+	map(0xa000, 0xbfff).rw(this, FUNC(gb_state::gb_ram_r), FUNC(gb_state::gb_ram_w));                                /* 8k switched RAM bank (cartridge) */
+	map(0xc000, 0xdfff).ram();                                                          /* 8k low RAM */
+	map(0xe000, 0xfdff).rw(this, FUNC(gb_state::gb_echo_r), FUNC(gb_state::gb_echo_w));
+	map(0xfe00, 0xfeff).rw(m_ppu, FUNC(dmg_ppu_device::oam_r), FUNC(dmg_ppu_device::oam_w));            /* OAM RAM */
+	map(0xff00, 0xff0f).rw(this, FUNC(gb_state::gb_io_r), FUNC(gb_state::gb_io_w));                                  /* I/O */
+	map(0xff10, 0xff26).rw(m_apu, FUNC(gameboy_sound_device::sound_r), FUNC(gameboy_sound_device::sound_w));  /* sound registers */
+	map(0xff27, 0xff2f).noprw();                                                          /* unused */
+	map(0xff30, 0xff3f).rw(m_apu, FUNC(gameboy_sound_device::wave_r), FUNC(gameboy_sound_device::wave_w));    /* Wave ram */
+	map(0xff40, 0xff7f).r(m_ppu, FUNC(dmg_ppu_device::video_r)).w(this, FUNC(gb_state::gb_io2_w));   /* Video controller & BIOS flip-flop */
+	map(0xff80, 0xfffe).ram();                                                          /* High RAM */
+	map(0xffff, 0xffff).rw(this, FUNC(gb_state::gb_ie_r), FUNC(gb_state::gb_ie_w));                                  /* Interrupt enable register */
+}
 
-static ADDRESS_MAP_START(sgb_map, AS_PROGRAM, 8, gb_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x7fff) AM_READWRITE(gb_cart_r, gb_bank_w)
-	AM_RANGE(0x8000, 0x9fff) AM_DEVREADWRITE("ppu", sgb_ppu_device, vram_r, vram_w)          /* 8k VRAM */
-	AM_RANGE(0xa000, 0xbfff) AM_READWRITE(gb_ram_r, gb_ram_w)                                /* 8k switched RAM bank (cartridge) */
-	AM_RANGE(0xc000, 0xdfff) AM_RAM                                                          /* 8k low RAM */
-	AM_RANGE(0xe000, 0xfdff) AM_READWRITE(gb_echo_r, gb_echo_w)
-	AM_RANGE(0xfe00, 0xfeff) AM_DEVREADWRITE("ppu", sgb_ppu_device, oam_r, oam_w)            /* OAM RAM */
-	AM_RANGE(0xff00, 0xff0f) AM_READWRITE(gb_io_r, sgb_io_w)                                 /* I/O */
-	AM_RANGE(0xff10, 0xff26) AM_DEVREADWRITE("apu", gameboy_sound_device, sound_r, sound_w)  /* sound registers */
-	AM_RANGE(0xff27, 0xff2f) AM_NOP                                                          /* unused */
-	AM_RANGE(0xff30, 0xff3f) AM_DEVREADWRITE("apu", gameboy_sound_device, wave_r, wave_w)    /* Wave RAM */
-	AM_RANGE(0xff40, 0xff7f) AM_DEVREAD("ppu", sgb_ppu_device, video_r) AM_WRITE(gb_io2_w)   /* Video controller & BIOS flip-flop */
-	AM_RANGE(0xff80, 0xfffe) AM_RAM                                                          /* High RAM */
-	AM_RANGE(0xffff, 0xffff) AM_READWRITE(gb_ie_r, gb_ie_w)                                  /* Interrupt enable register */
-ADDRESS_MAP_END
+void gb_state::sgb_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x7fff).rw(this, FUNC(gb_state::gb_cart_r), FUNC(gb_state::gb_bank_w));
+	map(0x8000, 0x9fff).rw(m_ppu, FUNC(sgb_ppu_device::vram_r), FUNC(sgb_ppu_device::vram_w));          /* 8k VRAM */
+	map(0xa000, 0xbfff).rw(this, FUNC(gb_state::gb_ram_r), FUNC(gb_state::gb_ram_w));                                /* 8k switched RAM bank (cartridge) */
+	map(0xc000, 0xdfff).ram();                                                          /* 8k low RAM */
+	map(0xe000, 0xfdff).rw(this, FUNC(gb_state::gb_echo_r), FUNC(gb_state::gb_echo_w));
+	map(0xfe00, 0xfeff).rw(m_ppu, FUNC(sgb_ppu_device::oam_r), FUNC(sgb_ppu_device::oam_w));            /* OAM RAM */
+	map(0xff00, 0xff0f).rw(this, FUNC(gb_state::gb_io_r), FUNC(gb_state::sgb_io_w));                                 /* I/O */
+	map(0xff10, 0xff26).rw(m_apu, FUNC(gameboy_sound_device::sound_r), FUNC(gameboy_sound_device::sound_w));  /* sound registers */
+	map(0xff27, 0xff2f).noprw();                                                          /* unused */
+	map(0xff30, 0xff3f).rw(m_apu, FUNC(gameboy_sound_device::wave_r), FUNC(gameboy_sound_device::wave_w));    /* Wave RAM */
+	map(0xff40, 0xff7f).r(m_ppu, FUNC(sgb_ppu_device::video_r)).w(this, FUNC(gb_state::gb_io2_w));   /* Video controller & BIOS flip-flop */
+	map(0xff80, 0xfffe).ram();                                                          /* High RAM */
+	map(0xffff, 0xffff).rw(this, FUNC(gb_state::gb_ie_r), FUNC(gb_state::gb_ie_w));                                  /* Interrupt enable register */
+}
 
-static ADDRESS_MAP_START(gbc_map, AS_PROGRAM, 8, gb_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x7fff) AM_READWRITE(gbc_cart_r, gb_bank_w)
-	AM_RANGE(0x8000, 0x9fff) AM_DEVREADWRITE("ppu", cgb_ppu_device, vram_r, vram_w)          /* 8k banked VRAM */
-	AM_RANGE(0xa000, 0xbfff) AM_READWRITE(gb_ram_r, gb_ram_w)                                /* 8k switched RAM bank (cartridge) */
-	AM_RANGE(0xc000, 0xcfff) AM_RAM                                                          /* 4k fixed RAM bank */
-	AM_RANGE(0xd000, 0xdfff) AM_RAMBANK("cgb_ram")                                           /* 4k switched RAM bank */
-	AM_RANGE(0xe000, 0xfdff) AM_READWRITE(gb_echo_r, gb_echo_w)
-	AM_RANGE(0xfe00, 0xfeff) AM_DEVREADWRITE("ppu", cgb_ppu_device, oam_r, oam_w)            /* OAM RAM */
-	AM_RANGE(0xff00, 0xff0f) AM_READWRITE(gb_io_r, gbc_io_w)                                 /* I/O */
-	AM_RANGE(0xff10, 0xff26) AM_DEVREADWRITE("apu", gameboy_sound_device, sound_r, sound_w)  /* sound controller */
-	AM_RANGE(0xff27, 0xff2f) AM_NOP                                                          /* unused */
-	AM_RANGE(0xff30, 0xff3f) AM_DEVREADWRITE("apu", gameboy_sound_device, wave_r, wave_w)    /* Wave RAM */
-	AM_RANGE(0xff40, 0xff7f) AM_READWRITE(gbc_io2_r, gbc_io2_w)                              /* Other I/O and video controller */
-	AM_RANGE(0xff80, 0xfffe) AM_RAM                                                          /* high RAM */
-	AM_RANGE(0xffff, 0xffff) AM_READWRITE(gb_ie_r, gb_ie_w)                                  /* Interrupt enable register */
-ADDRESS_MAP_END
+void gb_state::gbc_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x7fff).rw(this, FUNC(gb_state::gbc_cart_r), FUNC(gb_state::gb_bank_w));
+	map(0x8000, 0x9fff).rw(m_ppu, FUNC(cgb_ppu_device::vram_r), FUNC(cgb_ppu_device::vram_w));          /* 8k banked VRAM */
+	map(0xa000, 0xbfff).rw(this, FUNC(gb_state::gb_ram_r), FUNC(gb_state::gb_ram_w));                                /* 8k switched RAM bank (cartridge) */
+	map(0xc000, 0xcfff).ram();                                                          /* 4k fixed RAM bank */
+	map(0xd000, 0xdfff).bankrw("cgb_ram");                                           /* 4k switched RAM bank */
+	map(0xe000, 0xfdff).rw(this, FUNC(gb_state::gb_echo_r), FUNC(gb_state::gb_echo_w));
+	map(0xfe00, 0xfeff).rw(m_ppu, FUNC(cgb_ppu_device::oam_r), FUNC(cgb_ppu_device::oam_w));            /* OAM RAM */
+	map(0xff00, 0xff0f).rw(this, FUNC(gb_state::gb_io_r), FUNC(gb_state::gbc_io_w));                                 /* I/O */
+	map(0xff10, 0xff26).rw(m_apu, FUNC(gameboy_sound_device::sound_r), FUNC(gameboy_sound_device::sound_w));  /* sound controller */
+	map(0xff27, 0xff2f).noprw();                                                          /* unused */
+	map(0xff30, 0xff3f).rw(m_apu, FUNC(gameboy_sound_device::wave_r), FUNC(gameboy_sound_device::wave_w));    /* Wave RAM */
+	map(0xff40, 0xff7f).rw(this, FUNC(gb_state::gbc_io2_r), FUNC(gb_state::gbc_io2_w));                              /* Other I/O and video controller */
+	map(0xff80, 0xfffe).ram();                                                          /* high RAM */
+	map(0xffff, 0xffff).rw(this, FUNC(gb_state::gb_ie_r), FUNC(gb_state::gb_ie_w));                                  /* Interrupt enable register */
+}
 
-static ADDRESS_MAP_START(megaduck_map, AS_PROGRAM, 8, megaduck_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x7fff) AM_READWRITE(cart_r, bank1_w)
-	AM_RANGE(0x8000, 0x9fff) AM_DEVREADWRITE("ppu", dmg_ppu_device, vram_r, vram_w)          /* 8k VRAM */
-	AM_RANGE(0xa000, 0xafff) AM_NOP                                                          /* unused? */
-	AM_RANGE(0xb000, 0xb000) AM_WRITE(bank2_w)
-	AM_RANGE(0xb001, 0xbfff) AM_NOP                                                          /* unused? */
-	AM_RANGE(0xc000, 0xfe9f) AM_RAM                                                          /* 8k/16k? RAM */
-	AM_RANGE(0xfe00, 0xfeff) AM_DEVREADWRITE("ppu", dmg_ppu_device, oam_r, oam_w)            /* OAM RAM */
-	AM_RANGE(0xff00, 0xff0f) AM_READWRITE(gb_io_r, gb_io_w)                                  /* I/O */
-	AM_RANGE(0xff10, 0xff1f) AM_READWRITE(megaduck_video_r, megaduck_video_w)                /* video controller */
-	AM_RANGE(0xff20, 0xff2f) AM_READWRITE(megaduck_sound_r1, megaduck_sound_w1)              /* sound controller pt1 */
-	AM_RANGE(0xff30, 0xff3f) AM_DEVREADWRITE("apu", gameboy_sound_device, wave_r, wave_w)    /* wave ram */
-	AM_RANGE(0xff40, 0xff46) AM_READWRITE(megaduck_sound_r2, megaduck_sound_w2)              /* sound controller pt2 */
-	AM_RANGE(0xff47, 0xff7f) AM_NOP                                                          /* unused */
-	AM_RANGE(0xff80, 0xfffe) AM_RAM                                                          /* high RAM */
-	AM_RANGE(0xffff, 0xffff) AM_READWRITE(gb_ie_r, gb_ie_w)                                  /* interrupt enable register */
-ADDRESS_MAP_END
+void megaduck_state::megaduck_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x7fff).rw(this, FUNC(megaduck_state::cart_r), FUNC(megaduck_state::bank1_w));
+	map(0x8000, 0x9fff).rw(m_ppu, FUNC(dmg_ppu_device::vram_r), FUNC(dmg_ppu_device::vram_w));          /* 8k VRAM */
+	map(0xa000, 0xafff).noprw();                                                          /* unused? */
+	map(0xb000, 0xb000).w(this, FUNC(megaduck_state::bank2_w));
+	map(0xb001, 0xbfff).noprw();                                                          /* unused? */
+	map(0xc000, 0xfdff).ram();                                                          /* 8k/16k? RAM */
+	map(0xfe00, 0xfeff).rw(m_ppu, FUNC(dmg_ppu_device::oam_r), FUNC(dmg_ppu_device::oam_w));            /* OAM RAM */
+	map(0xff00, 0xff0f).rw(this, FUNC(megaduck_state::gb_io_r), FUNC(megaduck_state::gb_io_w));                                  /* I/O */
+	map(0xff10, 0xff1f).rw(this, FUNC(megaduck_state::megaduck_video_r), FUNC(megaduck_state::megaduck_video_w));                /* video controller */
+	map(0xff20, 0xff2f).rw(this, FUNC(megaduck_state::megaduck_sound_r1), FUNC(megaduck_state::megaduck_sound_w1));              /* sound controller pt1 */
+	map(0xff30, 0xff3f).rw(m_apu, FUNC(gameboy_sound_device::wave_r), FUNC(gameboy_sound_device::wave_w));    /* wave ram */
+	map(0xff40, 0xff46).rw(this, FUNC(megaduck_state::megaduck_sound_r2), FUNC(megaduck_state::megaduck_sound_w2));              /* sound controller pt2 */
+	map(0xff47, 0xff7f).noprw();                                                          /* unused */
+	map(0xff80, 0xfffe).ram();                                                          /* high RAM */
+	map(0xffff, 0xffff).rw(this, FUNC(megaduck_state::gb_ie_r), FUNC(megaduck_state::gb_ie_w));                                  /* interrupt enable register */
+}
 
 static GFXDECODE_START( gb )
 GFXDECODE_END
@@ -604,10 +608,10 @@ PALETTE_INIT_MEMBER(megaduck_state, megaduck)
 }
 
 
-static MACHINE_CONFIG_START( gameboy )
+MACHINE_CONFIG_START(gb_state::gameboy)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", LR35902, XTAL_4_194304Mhz)
+	MCFG_CPU_ADD("maincpu", LR35902, XTAL(4'194'304))
 	MCFG_CPU_PROGRAM_MAP(gameboy_map)
 	MCFG_LR35902_TIMER_CB( WRITE8( gb_state, gb_timer_callback ) )
 	MCFG_LR35902_HALT_BUG
@@ -632,7 +636,7 @@ static MACHINE_CONFIG_START( gameboy )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MCFG_SOUND_ADD("apu", DMG_APU, XTAL_4_194304Mhz)
+	MCFG_SOUND_ADD("apu", DMG_APU, XTAL(4'194'304))
 	MCFG_SOUND_ROUTE(0, "lspeaker", 0.50)
 	MCFG_SOUND_ROUTE(1, "rspeaker", 0.50)
 
@@ -644,7 +648,7 @@ static MACHINE_CONFIG_START( gameboy )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( supergb )
+MACHINE_CONFIG_START(gb_state::supergb)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", LR35902, 4295454) /* 4.295454 MHz, derived from SNES xtal */
 	MCFG_CPU_PROGRAM_MAP(sgb_map)
@@ -685,7 +689,8 @@ static MACHINE_CONFIG_START( supergb )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( supergb2, gameboy )
+MACHINE_CONFIG_START(gb_state::supergb2)
+	gameboy(config);
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(sgb_map)
@@ -709,7 +714,8 @@ static MACHINE_CONFIG_DERIVED( supergb2, gameboy )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( gbpocket, gameboy )
+MACHINE_CONFIG_START(gb_state::gbpocket)
+	gameboy(config);
 
 	/* video hardware */
 	MCFG_PALETTE_MODIFY("palette")
@@ -719,10 +725,10 @@ static MACHINE_CONFIG_DERIVED( gbpocket, gameboy )
 	MCFG_MGB_PPU_ADD("ppu", "maincpu")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( gbcolor )
+MACHINE_CONFIG_START(gb_state::gbcolor)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", LR35902, XTAL_4_194304Mhz) // todo XTAL_8_388MHz
+	MCFG_CPU_ADD("maincpu", LR35902, XTAL(4'194'304)) // todo XTAL(8'388'000)
 	MCFG_CPU_PROGRAM_MAP(gbc_map)
 	MCFG_LR35902_TIMER_CB( WRITE8(gb_state, gb_timer_callback ) )
 
@@ -750,7 +756,7 @@ static MACHINE_CONFIG_START( gbcolor )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MCFG_SOUND_ADD("apu", CGB04_APU, XTAL_4_194304Mhz)
+	MCFG_SOUND_ADD("apu", CGB04_APU, XTAL(4'194'304))
 	MCFG_SOUND_ROUTE(0, "lspeaker", 0.50)
 	MCFG_SOUND_ROUTE(1, "rspeaker", 0.50)
 
@@ -765,10 +771,10 @@ static MACHINE_CONFIG_START( gbcolor )
 	MCFG_SOFTWARE_LIST_COMPATIBLE_ADD("gb_list","gameboy")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( megaduck )
+MACHINE_CONFIG_START(megaduck_state::megaduck)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", LR35902, XTAL_4_194304Mhz) /* 4.194304 MHz */
+	MCFG_CPU_ADD("maincpu", LR35902, XTAL(4'194'304)) /* 4.194304 MHz */
 	MCFG_CPU_PROGRAM_MAP(megaduck_map)
 	MCFG_LR35902_TIMER_CB( WRITE8(gb_state, gb_timer_callback ) )
 	MCFG_LR35902_HALT_BUG
@@ -796,7 +802,7 @@ static MACHINE_CONFIG_START( megaduck )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MCFG_SOUND_ADD("apu", DMG_APU, XTAL_4_194304Mhz)
+	MCFG_SOUND_ADD("apu", DMG_APU, XTAL(4'194'304))
 	MCFG_SOUND_ROUTE(0, "lspeaker", 0.50)
 	MCFG_SOUND_ROUTE(1, "rspeaker", 0.50)
 
@@ -845,6 +851,11 @@ ROM_START(megaduck)
 	ROM_REGION(0x10000, "maincpu", ROMREGION_ERASEFF)
 ROM_END
 
+ROM_START(gamefgtr)
+	ROM_REGION(0x0100, "maincpu", 0)
+	ROM_LOAD("gamefgtr.bin", 0x0000, 0x0100, CRC(908ba8de) SHA1(a4a36f71bf1b3b587df620d48ae940af93a982a5))
+ROM_END
+
 /*   YEAR  NAME       PARENT   COMPAT   MACHINE   INPUT    STATE           INIT  COMPANY     FULLNAME */
 CONS(1990, gameboy,   0,       0,       gameboy,  gameboy, gb_state,       0,    "Nintendo", "Game Boy", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE)
 CONS(1994, supergb,   gameboy, 0,       supergb,  gameboy, gb_state,       0,    "Nintendo", "Super Game Boy", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE)
@@ -853,4 +864,7 @@ CONS(1996, gbpocket,  gameboy, 0,       gbpocket, gameboy, gb_state,       0,   
 CONS(1998, gbcolor,   0,       0,       gbcolor,  gameboy, gb_state,       0,    "Nintendo", "Game Boy Color", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)
 
 // Sound is not 100% yet, it generates some sounds which could be ok. Since we're lacking a real system there's no way to verify.
-CONS( 1993, megaduck, 0,       0,       megaduck, gameboy, megaduck_state, 0,    "Welback Holdings (Timlex International) / Creatronic / Videojet / Cougar USA", "Mega Duck / Cougar Boy", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
+CONS(1993, megaduck,  0,       0,       megaduck, gameboy, megaduck_state, 0,    "Welback Holdings (Timlex International) / Creatronic / Videojet / Cougar USA", "Mega Duck / Cougar Boy", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
+
+// http://blog.gg8.se/wordpress/2012/11/11/gameboy-clone-game-fighter-teardown/
+CONS(1993, gamefgtr,  gameboy, 0,       gameboy,  gameboy, gb_state,       0,    "bootleg", "Game Fighter (bootleg)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE)

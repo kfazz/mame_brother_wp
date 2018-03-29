@@ -238,6 +238,19 @@ public:
 
 	int m_user_pa2;
 	int m_user_pb;
+	void pal(machine_config &config);
+	void ntsc(machine_config &config);
+	void c128pal(machine_config &config);
+	void c128(machine_config &config);
+	void c128dcr(machine_config &config);
+	void c128dcrp(machine_config &config);
+	void c128d81(machine_config &config);
+	void m8502_mem(address_map &map);
+	void vdc_videoram_map(address_map &map);
+	void vic_colorram_map(address_map &map);
+	void vic_videoram_map(address_map &map);
+	void z80_io(address_map &map);
+	void z80_mem(address_map &map);
 };
 
 
@@ -657,54 +670,60 @@ READ8_MEMBER( c128_state::vic_colorram_r )
 //  ADDRESS_MAP( z80_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( z80_mem, AS_PROGRAM, 8, c128_state )
-	AM_RANGE(0x0000, 0xffff) AM_READWRITE(z80_r, z80_w)
-ADDRESS_MAP_END
+void c128_state::z80_mem(address_map &map)
+{
+	map(0x0000, 0xffff).rw(this, FUNC(c128_state::z80_r), FUNC(c128_state::z80_w));
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( z80_io )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( z80_io, AS_IO, 8, c128_state )
-	AM_RANGE(0x0000, 0xffff) AM_READWRITE(z80_io_r, z80_io_w)
-ADDRESS_MAP_END
+void c128_state::z80_io(address_map &map)
+{
+	map(0x0000, 0xffff).rw(this, FUNC(c128_state::z80_io_r), FUNC(c128_state::z80_io_w));
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( m8502_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( m8502_mem, AS_PROGRAM, 8, c128_state )
-	AM_RANGE(0x0000, 0xffff) AM_READWRITE(read, write)
-ADDRESS_MAP_END
+void c128_state::m8502_mem(address_map &map)
+{
+	map(0x0000, 0xffff).rw(this, FUNC(c128_state::read), FUNC(c128_state::write));
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( vic_videoram_map )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( vic_videoram_map, 0, 8, c128_state )
-	AM_RANGE(0x0000, 0x3fff) AM_READ(vic_videoram_r)
-ADDRESS_MAP_END
+void c128_state::vic_videoram_map(address_map &map)
+{
+	map(0x0000, 0x3fff).r(this, FUNC(c128_state::vic_videoram_r));
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( vic_colorram_map )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( vic_colorram_map, 1, 8, c128_state )
-	AM_RANGE(0x000, 0x3ff) AM_READ(vic_colorram_r)
-ADDRESS_MAP_END
+void c128_state::vic_colorram_map(address_map &map)
+{
+	map(0x000, 0x3ff).r(this, FUNC(c128_state::vic_colorram_r));
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( vdc_videoram_map )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( vdc_videoram_map, 0, 8, c128_state )
-	AM_RANGE(0x0000, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void c128_state::vdc_videoram_map(address_map &map)
+{
+	map(0x0000, 0xffff).ram();
+}
 
 
 
@@ -797,7 +816,7 @@ static INPUT_PORTS_START( c128 )
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("CLR HOME") PORT_CODE(KEYCODE_INSERT)      PORT_CHAR(UCHAR_MAMEKEY(HOME))
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_QUOTE)                             PORT_CHAR(';') PORT_CHAR(']')
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_CLOSEBRACE)                        PORT_CHAR('*')
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_BACKSLASH2)                        PORT_CHAR('\xA3')
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_BACKSLASH2)                        PORT_CHAR(0xA3)
 
 	PORT_START( "ROW7" )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("RUN STOP") PORT_CODE(KEYCODE_HOME)
@@ -929,7 +948,7 @@ static INPUT_PORTS_START( c128_fr )
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("@  \xc3\xbb  { ^  \xc2\xa8 }") PORT_CODE(KEYCODE_OPENBRACE)   PORT_CHAR('@') PORT_CHAR(0x00FB)
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(":  [  { \xc3\xb9  % }") PORT_CODE(KEYCODE_COLON)              PORT_CHAR(':') PORT_CHAR('[')
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(".  >  { :  / }") PORT_CODE(KEYCODE_STOP)                      PORT_CHAR('.') PORT_CHAR('>')
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("-  \xc2\xb0  { -  _ }") PORT_CODE(KEYCODE_EQUALS)             PORT_CHAR('-') PORT_CHAR('\xB0')
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("-  \xc2\xb0  { -  _ }") PORT_CODE(KEYCODE_EQUALS)             PORT_CHAR('-') PORT_CHAR(0xB0)
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("+  \xc3\xab  { )  \xc2\xb0 }") PORT_CODE(KEYCODE_MINUS)       PORT_CHAR('+') PORT_CHAR(0x00EB)
 
 	PORT_MODIFY( "ROW6" )
@@ -982,7 +1001,7 @@ static INPUT_PORTS_START( c128_it )
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("@  \xc3\xbb  { \xc3\xac  = }") PORT_CODE(KEYCODE_OPENBRACE) PORT_CHAR('@') PORT_CHAR(0x00FB)
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(":  [  { \xc3\xb9  % }") PORT_CODE(KEYCODE_COLON)      PORT_CHAR(':') PORT_CHAR('[')
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(".  >  { :  / }") PORT_CODE(KEYCODE_STOP)              PORT_CHAR('.') PORT_CHAR('>')
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("-  \xc2\xb0  { -  + }") PORT_CODE(KEYCODE_EQUALS)     PORT_CHAR('-') PORT_CHAR('\xb0')
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("-  \xc2\xb0  { -  + }") PORT_CODE(KEYCODE_EQUALS)     PORT_CHAR('-') PORT_CHAR(0xB0)
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("+  \xc3\xab  { )  \xc2\xb0 }") PORT_CODE(KEYCODE_MINUS) PORT_CHAR('+') PORT_CHAR(0x00EB)
 
 	PORT_MODIFY( "ROW6" )
@@ -1021,7 +1040,7 @@ static INPUT_PORTS_START( c128_se )
 
 	PORT_MODIFY( "ROW6" )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(";  +") PORT_CODE(KEYCODE_BACKSLASH)               PORT_CHAR(';') PORT_CHAR('+')
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xc2\xa3  { \xc3\xb6 }") PORT_CODE(KEYCODE_QUOTE) PORT_CHAR('\xA3')
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xc2\xa3  { \xc3\xb6 }") PORT_CODE(KEYCODE_QUOTE) PORT_CHAR(0xA3)
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("@") PORT_CODE(KEYCODE_CLOSEBRACE)                 PORT_CHAR('@')
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(":  *") PORT_CODE(KEYCODE_BACKSLASH2)              PORT_CHAR(':') PORT_CHAR('*')
 
@@ -1672,14 +1691,14 @@ void c128_state::machine_reset()
 //  MACHINE_CONFIG( ntsc )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_START( ntsc )
+MACHINE_CONFIG_START(c128_state::ntsc)
 	// basic hardware
-	MCFG_CPU_ADD(Z80A_TAG, Z80, XTAL_14_31818MHz*2/3.5/2)
+	MCFG_CPU_ADD(Z80A_TAG, Z80, XTAL(14'318'181)*2/3.5/2)
 	MCFG_CPU_PROGRAM_MAP(z80_mem)
 	MCFG_CPU_IO_MAP(z80_io)
 	MCFG_QUANTUM_PERFECT_CPU(Z80A_TAG)
 
-	MCFG_CPU_ADD(M8502_TAG, M8502, XTAL_14_31818MHz*2/3.5/8)
+	MCFG_CPU_ADD(M8502_TAG, M8502, XTAL(14'318'181)*2/3.5/8)
 	MCFG_M6502_DISABLE_DIRECT() // address decoding is 100% dynamic, no RAM/ROM banks
 	MCFG_M8502_PORT_CALLBACKS(READ8(c128_state, cpu_r), WRITE8(c128_state, cpu_w))
 	MCFG_M8502_PORT_PULLS(0x07, 0x20)
@@ -1687,7 +1706,7 @@ static MACHINE_CONFIG_START( ntsc )
 	MCFG_QUANTUM_PERFECT_CPU(M8502_TAG)
 
 	// video hardware
-	MCFG_MOS8563_ADD(MOS8563_TAG, SCREEN_VDC_TAG, XTAL_16MHz, vdc_videoram_map)
+	MCFG_MOS8563_ADD(MOS8563_TAG, SCREEN_VDC_TAG, XTAL(16'000'000), vdc_videoram_map)
 	MCFG_MC6845_SHOW_BORDER_AREA(true)
 	MCFG_MC6845_CHAR_WIDTH(8)
 	MCFG_SCREEN_ADD(SCREEN_VDC_TAG, RASTER)
@@ -1696,7 +1715,7 @@ static MACHINE_CONFIG_START( ntsc )
 	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 200-1)
 	MCFG_SCREEN_UPDATE_DEVICE(MOS8563_TAG, mos8563_device, screen_update)
 
-	MCFG_DEVICE_ADD(MOS8564_TAG, MOS8564, XTAL_14_31818MHz*2/3.5)
+	MCFG_DEVICE_ADD(MOS8564_TAG, MOS8564, XTAL(14'318'181)*2/3.5)
 	MCFG_MOS6566_CPU(M8502_TAG)
 	MCFG_MOS6566_IRQ_CALLBACK(WRITELINE(c128_state, vic_irq_w))
 	MCFG_MOS8564_K_CALLBACK(WRITE8(c128_state, vic_k_w))
@@ -1713,20 +1732,20 @@ static MACHINE_CONFIG_START( ntsc )
 
 	// sound hardware
 	MCFG_SPEAKER_STANDARD_MONO("speaker")
-	MCFG_SOUND_ADD(MOS6581_TAG, MOS6581, XTAL_14_31818MHz*2/3.5/8)
+	MCFG_SOUND_ADD(MOS6581_TAG, MOS6581, XTAL(14'318'181)*2/3.5/8)
 	MCFG_MOS6581_POTX_CALLBACK(READ8(c128_state, sid_potx_r))
 	MCFG_MOS6581_POTY_CALLBACK(READ8(c128_state, sid_poty_r))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.5)
 
 	// devices
-	MCFG_DEVICE_ADD(MOS8722_TAG, MOS8722, XTAL_14_31818MHz*2/3.5/8)
+	MCFG_DEVICE_ADD(MOS8722_TAG, MOS8722, XTAL(14'318'181)*2/3.5/8)
 	MCFG_MOS8722_Z80EN_CALLBACK(WRITELINE(c128_state, mmu_z80en_w))
 	MCFG_MOS8722_FSDIR_CALLBACK(WRITELINE(c128_state, mmu_fsdir_w))
 	MCFG_MOS8722_GAME_CALLBACK(READLINE(c128_state, mmu_game_r))
 	MCFG_MOS8722_EXROM_CALLBACK(READLINE(c128_state, mmu_exrom_r))
 	MCFG_MOS8722_SENSE40_CALLBACK(READLINE(c128_state, mmu_sense40_r))
 	MCFG_MOS8721_ADD(MOS8721_TAG)
-	MCFG_DEVICE_ADD(MOS6526_1_TAG, MOS6526, XTAL_14_31818MHz*2/3.5/8)
+	MCFG_DEVICE_ADD(MOS6526_1_TAG, MOS6526, XTAL(14'318'181)*2/3.5/8)
 	MCFG_MOS6526_TOD(60)
 	MCFG_MOS6526_IRQ_CALLBACK(WRITELINE(c128_state, cia1_irq_w))
 	MCFG_MOS6526_CNT_CALLBACK(WRITELINE(c128_state, cia1_cnt_w))
@@ -1735,7 +1754,7 @@ static MACHINE_CONFIG_START( ntsc )
 	MCFG_MOS6526_PA_OUTPUT_CALLBACK(WRITE8(c128_state, cia1_pa_w))
 	MCFG_MOS6526_PB_INPUT_CALLBACK(READ8(c128_state, cia1_pb_r))
 	MCFG_MOS6526_PB_OUTPUT_CALLBACK(WRITE8(c128_state, cia1_pb_w))
-	MCFG_DEVICE_ADD(MOS6526_2_TAG, MOS6526, XTAL_14_31818MHz*2/3.5/8)
+	MCFG_DEVICE_ADD(MOS6526_2_TAG, MOS6526, XTAL(14'318'181)*2/3.5/8)
 	MCFG_MOS6526_TOD(60)
 	MCFG_MOS6526_IRQ_CALLBACK(WRITELINE(c128_state, cia2_irq_w))
 	MCFG_MOS6526_CNT_CALLBACK(DEVWRITELINE(PET_USER_PORT_TAG, pet_user_port_device, write_6))
@@ -1749,7 +1768,7 @@ static MACHINE_CONFIG_START( ntsc )
 	MCFG_VCS_CONTROL_PORT_ADD(CONTROL1_TAG, vcs_control_port_devices, nullptr)
 	MCFG_VCS_CONTROL_PORT_TRIGGER_CALLBACK(DEVWRITELINE(MOS8564_TAG, mos8564_device, lp_w))
 	MCFG_VCS_CONTROL_PORT_ADD(CONTROL2_TAG, vcs_control_port_devices, "joy")
-	MCFG_C64_EXPANSION_SLOT_ADD(C64_EXPANSION_SLOT_TAG, XTAL_14_31818MHz*2/3.5/8, c64_expansion_cards, nullptr)
+	MCFG_C64_EXPANSION_SLOT_ADD(C64_EXPANSION_SLOT_TAG, XTAL(14'318'181)*2/3.5/8, c64_expansion_cards, nullptr)
 	MCFG_C64_EXPANSION_SLOT_IRQ_CALLBACK(WRITELINE(c128_state, exp_irq_w))
 	MCFG_C64_EXPANSION_SLOT_NMI_CALLBACK(WRITELINE(c128_state, exp_nmi_w))
 	MCFG_C64_EXPANSION_SLOT_RESET_CALLBACK(WRITELINE(c128_state, exp_reset_w))
@@ -1807,7 +1826,8 @@ MACHINE_CONFIG_END
 //  MACHINE_CONFIG( c128 )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_DERIVED( c128, ntsc )
+MACHINE_CONFIG_START(c128_state::c128)
+	ntsc(config);
 	MCFG_CBM_IEC_ADD("c1571")
 	MCFG_CBM_IEC_BUS_SRQ_CALLBACK(WRITELINE(c128_state, iec_srq_w))
 	MCFG_CBM_IEC_BUS_DATA_CALLBACK(WRITELINE(c128_state, iec_data_w))
@@ -1818,7 +1838,8 @@ MACHINE_CONFIG_END
 //  MACHINE_CONFIG( c128dcr )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_DERIVED( c128dcr, ntsc )
+MACHINE_CONFIG_START(c128_state::c128dcr)
+	ntsc(config);
 	MCFG_CBM_IEC_ADD("c1571") // TODO c1571cr
 	MCFG_CBM_IEC_BUS_SRQ_CALLBACK(WRITELINE(c128_state, iec_srq_w))
 	MCFG_CBM_IEC_BUS_DATA_CALLBACK(WRITELINE(c128_state, iec_data_w))
@@ -1829,7 +1850,8 @@ MACHINE_CONFIG_END
 //  MACHINE_CONFIG( c128d81 )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_DERIVED( c128d81, ntsc )
+MACHINE_CONFIG_START(c128_state::c128d81)
+	ntsc(config);
 	MCFG_CBM_IEC_ADD(nullptr)
 	MCFG_CBM_IEC_BUS_SRQ_CALLBACK(WRITELINE(c128_state, iec_srq_w))
 	MCFG_CBM_IEC_BUS_DATA_CALLBACK(WRITELINE(c128_state, iec_data_w))
@@ -1843,14 +1865,14 @@ MACHINE_CONFIG_END
 //  MACHINE_CONFIG( pal )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_START( pal )
+MACHINE_CONFIG_START(c128_state::pal)
 	// basic hardware
-	MCFG_CPU_ADD(Z80A_TAG, Z80, XTAL_17_734472MHz*2/4.5/2)
+	MCFG_CPU_ADD(Z80A_TAG, Z80, XTAL(17'734'472)*2/4.5/2)
 	MCFG_CPU_PROGRAM_MAP(z80_mem)
 	MCFG_CPU_IO_MAP(z80_io)
 	MCFG_QUANTUM_PERFECT_CPU(Z80A_TAG)
 
-	MCFG_CPU_ADD(M8502_TAG, M8502, XTAL_17_734472MHz*2/4.5/8)
+	MCFG_CPU_ADD(M8502_TAG, M8502, XTAL(17'734'472)*2/4.5/8)
 	MCFG_M6502_DISABLE_DIRECT() // address decoding is 100% dynamic, no RAM/ROM banks
 	MCFG_M8502_PORT_CALLBACKS(READ8(c128_state, cpu_r), WRITE8(c128_state, cpu_w))
 	MCFG_M8502_PORT_PULLS(0x07, 0x20)
@@ -1858,7 +1880,7 @@ static MACHINE_CONFIG_START( pal )
 	MCFG_QUANTUM_PERFECT_CPU(M8502_TAG)
 
 	// video hardware
-	MCFG_MOS8563_ADD(MOS8563_TAG, SCREEN_VDC_TAG, XTAL_16MHz, vdc_videoram_map)
+	MCFG_MOS8563_ADD(MOS8563_TAG, SCREEN_VDC_TAG, XTAL(16'000'000), vdc_videoram_map)
 	MCFG_MC6845_SHOW_BORDER_AREA(true)
 	MCFG_MC6845_CHAR_WIDTH(8)
 	MCFG_SCREEN_ADD(SCREEN_VDC_TAG, RASTER)
@@ -1867,7 +1889,7 @@ static MACHINE_CONFIG_START( pal )
 	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 200-1)
 	MCFG_SCREEN_UPDATE_DEVICE(MOS8563_TAG, mos8563_device, screen_update)
 
-	MCFG_DEVICE_ADD(MOS8566_TAG, MOS8566, XTAL_17_734472MHz*2/4.5)
+	MCFG_DEVICE_ADD(MOS8566_TAG, MOS8566, XTAL(17'734'472)*2/4.5)
 	MCFG_MOS6566_CPU(M8502_TAG)
 	MCFG_MOS6566_IRQ_CALLBACK(WRITELINE(c128_state, vic_irq_w))
 	MCFG_MOS8564_K_CALLBACK(WRITE8(c128_state, vic_k_w))
@@ -1884,20 +1906,20 @@ static MACHINE_CONFIG_START( pal )
 
 	// sound hardware
 	MCFG_SPEAKER_STANDARD_MONO("speaker")
-	MCFG_SOUND_ADD(MOS6581_TAG, MOS6581, XTAL_17_734472MHz*2/4.5/8)
+	MCFG_SOUND_ADD(MOS6581_TAG, MOS6581, XTAL(17'734'472)*2/4.5/8)
 	MCFG_MOS6581_POTX_CALLBACK(READ8(c128_state, sid_potx_r))
 	MCFG_MOS6581_POTY_CALLBACK(READ8(c128_state, sid_poty_r))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.5)
 
 	// devices
-	MCFG_DEVICE_ADD(MOS8722_TAG, MOS8722, XTAL_17_734472MHz*2/4.5/8)
+	MCFG_DEVICE_ADD(MOS8722_TAG, MOS8722, XTAL(17'734'472)*2/4.5/8)
 	MCFG_MOS8722_Z80EN_CALLBACK(WRITELINE(c128_state, mmu_z80en_w))
 	MCFG_MOS8722_FSDIR_CALLBACK(WRITELINE(c128_state, mmu_fsdir_w))
 	MCFG_MOS8722_GAME_CALLBACK(READLINE(c128_state, mmu_game_r))
 	MCFG_MOS8722_EXROM_CALLBACK(READLINE(c128_state, mmu_exrom_r))
 	MCFG_MOS8722_SENSE40_CALLBACK(READLINE(c128_state, mmu_sense40_r))
 	MCFG_MOS8721_ADD(MOS8721_TAG)
-	MCFG_DEVICE_ADD(MOS6526_1_TAG, MOS6526, XTAL_17_734472MHz*2/4.5/8)
+	MCFG_DEVICE_ADD(MOS6526_1_TAG, MOS6526, XTAL(17'734'472)*2/4.5/8)
 	MCFG_MOS6526_TOD(50)
 	MCFG_MOS6526_IRQ_CALLBACK(WRITELINE(c128_state, cia1_irq_w))
 	MCFG_MOS6526_CNT_CALLBACK(WRITELINE(c128_state, cia1_cnt_w))
@@ -1906,7 +1928,7 @@ static MACHINE_CONFIG_START( pal )
 	MCFG_MOS6526_PA_OUTPUT_CALLBACK(WRITE8(c128_state, cia1_pa_w))
 	MCFG_MOS6526_PB_INPUT_CALLBACK(READ8(c128_state, cia1_pb_r))
 	MCFG_MOS6526_PB_OUTPUT_CALLBACK(WRITE8(c128_state, cia1_pb_w))
-	MCFG_DEVICE_ADD(MOS6526_2_TAG, MOS6526, XTAL_17_734472MHz*2/4.5/8)
+	MCFG_DEVICE_ADD(MOS6526_2_TAG, MOS6526, XTAL(17'734'472)*2/4.5/8)
 	MCFG_MOS6526_TOD(50)
 	MCFG_MOS6526_IRQ_CALLBACK(WRITELINE(c128_state, cia2_irq_w))
 	MCFG_MOS6526_CNT_CALLBACK(DEVWRITELINE(PET_USER_PORT_TAG, pet_user_port_device, write_6))
@@ -1920,7 +1942,7 @@ static MACHINE_CONFIG_START( pal )
 	MCFG_VCS_CONTROL_PORT_ADD(CONTROL1_TAG, vcs_control_port_devices, nullptr)
 	MCFG_VCS_CONTROL_PORT_TRIGGER_CALLBACK(DEVWRITELINE(MOS8566_TAG, mos8566_device, lp_w))
 	MCFG_VCS_CONTROL_PORT_ADD(CONTROL2_TAG, vcs_control_port_devices, "joy")
-	MCFG_C64_EXPANSION_SLOT_ADD(C64_EXPANSION_SLOT_TAG, XTAL_17_734472MHz*2/4.5/8, c64_expansion_cards, nullptr)
+	MCFG_C64_EXPANSION_SLOT_ADD(C64_EXPANSION_SLOT_TAG, XTAL(17'734'472)*2/4.5/8, c64_expansion_cards, nullptr)
 	MCFG_C64_EXPANSION_SLOT_IRQ_CALLBACK(WRITELINE(c128_state, exp_irq_w))
 	MCFG_C64_EXPANSION_SLOT_NMI_CALLBACK(WRITELINE(c128_state, exp_nmi_w))
 	MCFG_C64_EXPANSION_SLOT_RESET_CALLBACK(WRITELINE(c128_state, exp_reset_w))
@@ -1978,7 +2000,8 @@ MACHINE_CONFIG_END
 //  MACHINE_CONFIG( c128pal )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_DERIVED( c128pal, pal )
+MACHINE_CONFIG_START(c128_state::c128pal)
+	pal(config);
 	MCFG_CBM_IEC_ADD("c1571")
 	MCFG_CBM_IEC_BUS_SRQ_CALLBACK(WRITELINE(c128_state, iec_srq_w))
 	MCFG_CBM_IEC_BUS_DATA_CALLBACK(WRITELINE(c128_state, iec_data_w))
@@ -1989,7 +2012,8 @@ MACHINE_CONFIG_END
 //  MACHINE_CONFIG( c128dcrp )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_DERIVED( c128dcrp, pal )
+MACHINE_CONFIG_START(c128_state::c128dcrp)
+	pal(config);
 	MCFG_CBM_IEC_ADD("c1571") // TODO c1571cr
 	MCFG_CBM_IEC_BUS_SRQ_CALLBACK(WRITELINE(c128_state, iec_srq_w))
 	MCFG_CBM_IEC_BUS_DATA_CALLBACK(WRITELINE(c128_state, iec_data_w))

@@ -30,8 +30,8 @@ There's a chance that certain bootlegs might have the different 8/20 MHz XTALS.
 #include "speaker.h"
 
 
-#define MAIN_CLOCK      XTAL_8_2MHz
-#define VIDEO_CLOCK     XTAL_19_6MHz
+#define MAIN_CLOCK      XTAL(8'200'000)
+#define VIDEO_CLOCK     XTAL(19'600'000)
 
 
 
@@ -41,28 +41,29 @@ READ8_MEMBER(mrdo_state::mrdo_SECRE_r)
 {
 	uint8_t *RAM = memregion("maincpu")->base();
 
-	return RAM[space.device().state().state_int(Z80_HL)];
+	return RAM[m_maincpu->state_int(Z80_HL)];
 }
 
 
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 8, mrdo_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM_WRITE(mrdo_bgvideoram_w) AM_SHARE("bgvideoram")
-	AM_RANGE(0x8800, 0x8fff) AM_RAM_WRITE(mrdo_fgvideoram_w) AM_SHARE("fgvideoram")
-	AM_RANGE(0x9000, 0x90ff) AM_WRITEONLY AM_SHARE("spriteram")
-	AM_RANGE(0x9800, 0x9800) AM_WRITE(mrdo_flipscreen_w)    /* screen flip + playfield priority */
-	AM_RANGE(0x9801, 0x9801) AM_DEVWRITE("u8106_1", u8106_device, write)
-	AM_RANGE(0x9802, 0x9802) AM_DEVWRITE("u8106_2", u8106_device, write)
-	AM_RANGE(0x9803, 0x9803) AM_READ(mrdo_SECRE_r)
-	AM_RANGE(0xa000, 0xa000) AM_READ_PORT("P1")
-	AM_RANGE(0xa001, 0xa001) AM_READ_PORT("P2")
-	AM_RANGE(0xa002, 0xa002) AM_READ_PORT("DSW1")
-	AM_RANGE(0xa003, 0xa003) AM_READ_PORT("DSW2")
-	AM_RANGE(0xe000, 0xefff) AM_RAM
-	AM_RANGE(0xf000, 0xf7ff) AM_WRITE(mrdo_scrollx_w)
-	AM_RANGE(0xf800, 0xffff) AM_WRITE(mrdo_scrolly_w)
-ADDRESS_MAP_END
+void mrdo_state::main_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x87ff).ram().w(this, FUNC(mrdo_state::mrdo_bgvideoram_w)).share("bgvideoram");
+	map(0x8800, 0x8fff).ram().w(this, FUNC(mrdo_state::mrdo_fgvideoram_w)).share("fgvideoram");
+	map(0x9000, 0x90ff).writeonly().share("spriteram");
+	map(0x9800, 0x9800).w(this, FUNC(mrdo_state::mrdo_flipscreen_w));    /* screen flip + playfield priority */
+	map(0x9801, 0x9801).w("u8106_1", FUNC(u8106_device::write));
+	map(0x9802, 0x9802).w("u8106_2", FUNC(u8106_device::write));
+	map(0x9803, 0x9803).r(this, FUNC(mrdo_state::mrdo_SECRE_r));
+	map(0xa000, 0xa000).portr("P1");
+	map(0xa001, 0xa001).portr("P2");
+	map(0xa002, 0xa002).portr("DSW1");
+	map(0xa003, 0xa003).portr("DSW2");
+	map(0xe000, 0xefff).ram();
+	map(0xf000, 0xf7ff).w(this, FUNC(mrdo_state::mrdo_scrollx_w));
+	map(0xf800, 0xffff).w(this, FUNC(mrdo_state::mrdo_scrolly_w));
+}
 
 
 static INPUT_PORTS_START( mrdo )
@@ -170,7 +171,7 @@ static GFXDECODE_START( mrdo )
 GFXDECODE_END
 
 
-static MACHINE_CONFIG_START( mrdo )
+MACHINE_CONFIG_START(mrdo_state::mrdo)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MAIN_CLOCK/2)  /* Verified */
@@ -198,7 +199,8 @@ static MACHINE_CONFIG_START( mrdo )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( mrlo, mrdo )
+MACHINE_CONFIG_START(mrdo_state::mrlo)
+	mrdo(config);
 	//MCFG_DEVICE_REMOVE("pal16r6")
 MACHINE_CONFIG_END
 

@@ -44,13 +44,6 @@ hp_hil_slot_device::hp_hil_slot_device(const machine_config &mconfig, const char
 }
 
 
-void hp_hil_slot_device::static_set_hp_hil_slot(device_t &device, device_t *owner, const char *mlc_tag)
-{
-	hp_hil_slot_device &hp_hil = dynamic_cast<hp_hil_slot_device &>(device);
-	hp_hil.m_owner = owner;
-	hp_hil.m_mlc_tag = mlc_tag;
-}
-
 //-------------------------------------------------
 //  device_start - device-specific startup
 //-------------------------------------------------
@@ -59,7 +52,7 @@ void hp_hil_slot_device::device_start()
 {
 	device_hp_hil_interface *dev = dynamic_cast<device_hp_hil_interface *>(get_card_device());
 
-	if (dev) device_hp_hil_interface::static_set_hp_hil_mlc(*dev,m_owner->subdevice(m_mlc_tag));
+	if (dev) dev->set_hp_hil_mlc(m_owner->subdevice(m_mlc_tag));
 }
 
 
@@ -78,6 +71,7 @@ hp_hil_mlc_device::hp_hil_mlc_device(const machine_config &mconfig, const char *
 	, int_cb(*this)
 	, nmi_cb(*this)
 {
+	m_loop = 1;
 }
 
 void hp_hil_mlc_device::add_hp_hil_device( device_hp_hil_interface *device )
@@ -112,13 +106,16 @@ void hp_hil_mlc_device::device_reset()
 WRITE8_MEMBER(hp_hil_mlc_device::write)
 {
 	device_hp_hil_interface *entry = m_device_list.first();
-
+	uint16_t tmp = data | (m_w1 << 8);
 	DBG_LOG(2,"Write", ("%d <- %02x\n", offset, data));
 
 	switch (offset)
 	{
 	case 0:
 		DBG_LOG(1,"Transmit", ("%scommand 0x%02x to device %d\n", !m_loop?"loopback ":"", data, m_w1 & 7));
+
+		m_fifo.clear();
+
 		if (m_loop & 2) // no devices on 2nd link loop
 			return;
 		if (m_loop == 0)
@@ -130,21 +127,13 @@ WRITE8_MEMBER(hp_hil_mlc_device::write)
 			}
 			return;
 		}
-		if ((m_w1 & 7) == 0) // broadcast
+
+
+		while (entry)
 		{
-			while (entry)
-			{
-				entry->hil_write(data | (m_w1 << 8));
-				entry = entry->next();
-			}
-		} else
-		{
-			while (entry)
-			{
-				if (entry->device_id() == (m_w1 & 7))
-					entry->hil_write(data | (m_w1 << 8));
-				entry = entry->next();
-			}
+			if (!entry->hil_write(&tmp))
+				break;
+			entry = entry->next();
 		}
 		break;
 
@@ -228,13 +217,15 @@ void hp_hil_mlc_device::hil_write(uint16_t data)
 
 WRITE_LINE_MEMBER(hp_hil_mlc_device::ap_w)
 {
+	uint16_t data = HPMLC_W1_C | HPHIL_POL;
 	if (state && (m_w3 & HPMLC_W3_APE))
 	{
 		device_hp_hil_interface *entry = m_device_list.first();
 
 		while (entry)
 		{
-			entry->hil_write(HPMLC_W1_C | HPHIL_POL);
+			if (!(entry->hil_write(&data)))
+				break;
 			entry = entry->next();
 		}
 	}
@@ -267,16 +258,8 @@ device_hp_hil_interface::~device_hp_hil_interface()
 }
 
 
-void device_hp_hil_interface::static_set_hp_hil_mlc(device_t &device, device_t *mlc_device)
-{
-	device_hp_hil_interface &hp_hil = dynamic_cast<device_hp_hil_interface &>(device);
-	hp_hil.m_hp_hil_mlc_dev = mlc_device;
-}
-
-
 void device_hp_hil_interface::set_hp_hil_mlc_device()
 {
 	m_hp_hil_mlc = dynamic_cast<hp_hil_mlc_device *>(m_hp_hil_mlc_dev);
 	m_hp_hil_mlc->add_hp_hil_device(this);
 }
-

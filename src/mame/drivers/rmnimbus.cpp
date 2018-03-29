@@ -36,31 +36,33 @@ static SLOT_INTERFACE_START(keyboard)
 	SLOT_INTERFACE("rmnkbd", RMNIMBUS_KEYBOARD)
 SLOT_INTERFACE_END
 
-static ADDRESS_MAP_START(nimbus_mem, AS_PROGRAM, 16, rmnimbus_state )
-	AM_RANGE( 0x00000, 0x1FFFF ) AM_RAMBANK(RAM_BANK00_TAG)
-	AM_RANGE( 0x20000, 0x3FFFF ) AM_RAMBANK(RAM_BANK01_TAG)
-	AM_RANGE( 0x40000, 0x5FFFF ) AM_RAMBANK(RAM_BANK02_TAG)
-	AM_RANGE( 0x60000, 0x7FFFF ) AM_RAMBANK(RAM_BANK03_TAG)
-	AM_RANGE( 0x80000, 0x9FFFF ) AM_RAMBANK(RAM_BANK04_TAG)
-	AM_RANGE( 0xA0000, 0xBFFFF ) AM_RAMBANK(RAM_BANK05_TAG)
-	AM_RANGE( 0xC0000, 0xDFFFF ) AM_RAMBANK(RAM_BANK06_TAG)
-	AM_RANGE( 0xE0000, 0xEFFFF ) AM_RAMBANK(RAM_BANK07_TAG)
-	AM_RANGE( 0xF0000, 0xFFFFF ) AM_ROM AM_REGION(MAINCPU_TAG, 0x0f0000)
-ADDRESS_MAP_END
+void rmnimbus_state::nimbus_mem(address_map &map)
+{
+	map(0x00000, 0x1FFFF).bankrw(RAM_BANK00_TAG);
+	map(0x20000, 0x3FFFF).bankrw(RAM_BANK01_TAG);
+	map(0x40000, 0x5FFFF).bankrw(RAM_BANK02_TAG);
+	map(0x60000, 0x7FFFF).bankrw(RAM_BANK03_TAG);
+	map(0x80000, 0x9FFFF).bankrw(RAM_BANK04_TAG);
+	map(0xA0000, 0xBFFFF).bankrw(RAM_BANK05_TAG);
+	map(0xC0000, 0xDFFFF).bankrw(RAM_BANK06_TAG);
+	map(0xE0000, 0xEFFFF).bankrw(RAM_BANK07_TAG);
+	map(0xF0000, 0xFFFFF).rom().region(MAINCPU_TAG, 0x0f0000);
+}
 
-static ADDRESS_MAP_START(nimbus_io, AS_IO, 16, rmnimbus_state )
-	AM_RANGE( 0x0000, 0x0031) AM_READWRITE(nimbus_video_io_r, nimbus_video_io_w)
-	AM_RANGE( 0x0080, 0x0081) AM_READWRITE8(nimbus_mcu_r, nimbus_mcu_w, 0x00FF)
-	AM_RANGE( 0x0092, 0x0093) AM_READWRITE8(nimbus_iou_r, nimbus_iou_w, 0x00FF)
-	AM_RANGE( 0x00A4, 0x00A5) AM_READWRITE8(nimbus_mouse_js_r, nimbus_mouse_js_w, 0x00FF)
-	AM_RANGE( 0x00c0, 0x00cf) AM_READWRITE8(nimbus_pc8031_r, nimbus_pc8031_w, 0x00FF)
-	AM_RANGE( 0x00e0, 0x00ef) AM_DEVREADWRITE8(AY8910_TAG, ay8910_device, data_r, address_data_w, 0x00FF)
-	AM_RANGE( 0x00f0, 0x00f7) AM_DEVREADWRITE8(Z80SIO_TAG, z80sio2_device, cd_ba_r, cd_ba_w, 0x00ff)
-	AM_RANGE( 0x0400, 0x0401) AM_WRITE8(fdc_ctl_w, 0x00ff)
-	AM_RANGE( 0x0408, 0x040f) AM_DEVREADWRITE8(FDC_TAG, wd2793_device, read, write, 0x00ff)
-	AM_RANGE( 0x0410, 0x041f) AM_READWRITE8(scsi_r, scsi_w, 0x00ff)
-	AM_RANGE( 0x0480, 0x049f) AM_DEVREADWRITE8(VIA_TAG, via6522_device, read, write, 0x00FF)
-ADDRESS_MAP_END
+void rmnimbus_state::nimbus_io(address_map &map)
+{
+	map(0x0000, 0x0031).rw(this, FUNC(rmnimbus_state::nimbus_video_io_r), FUNC(rmnimbus_state::nimbus_video_io_w));
+	map(0x0080, 0x0080).rw(this, FUNC(rmnimbus_state::nimbus_mcu_r), FUNC(rmnimbus_state::nimbus_mcu_w));
+	map(0x0092, 0x0092).rw(this, FUNC(rmnimbus_state::nimbus_iou_r), FUNC(rmnimbus_state::nimbus_iou_w));
+	map(0x00a4, 0x00a4).rw(this, FUNC(rmnimbus_state::nimbus_mouse_js_r), FUNC(rmnimbus_state::nimbus_mouse_js_w));
+	map(0x00c0, 0x00cf).rw(this, FUNC(rmnimbus_state::nimbus_pc8031_r), FUNC(rmnimbus_state::nimbus_pc8031_w)).umask16(0x00ff);
+	map(0x00e0, 0x00ef).rw(AY8910_TAG, FUNC(ay8910_device::data_r), FUNC(ay8910_device::address_data_w)).umask16(0x00ff);
+	map(0x00f0, 0x00f7).rw(m_z80sio, FUNC(z80sio2_device::cd_ba_r), FUNC(z80sio2_device::cd_ba_w)).umask16(0x00ff);
+	map(0x0400, 0x0400).w(this, FUNC(rmnimbus_state::fdc_ctl_w));
+	map(0x0408, 0x040f).rw(m_fdc, FUNC(wd2793_device::read), FUNC(wd2793_device::write)).umask16(0x00ff);
+	map(0x0410, 0x041f).rw(this, FUNC(rmnimbus_state::scsi_r), FUNC(rmnimbus_state::scsi_w)).umask16(0x00ff);
+	map(0x0480, 0x049f).rw(m_via, FUNC(via6522_device::read), FUNC(via6522_device::write)).umask16(0x00ff);
+}
 
 
 static INPUT_PORTS_START( nimbus )
@@ -89,26 +91,19 @@ static INPUT_PORTS_START( nimbus )
 
 INPUT_PORTS_END
 
-static ADDRESS_MAP_START(nimbus_iocpu_mem, AS_PROGRAM, 8, rmnimbus_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-ADDRESS_MAP_END
-
-static ADDRESS_MAP_START( nimbus_iocpu_io , AS_IO, 8, rmnimbus_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000, 0x000FF) AM_READWRITE(nimbus_pc8031_iou_r, nimbus_pc8031_iou_w)
-	AM_RANGE(0x20000, 0x20004) AM_READWRITE(nimbus_pc8031_port_r, nimbus_pc8031_port_w)
-ADDRESS_MAP_END
-
-static const uint16_t def_config[16] =
+void rmnimbus_state::nimbus_iocpu_mem(address_map &map)
 {
-	0x0280, 0x017F, 0xE824, 0x8129,
-	0x0329, 0x0000, 0x0000, 0x0000,
-	0x0000, 0x0000, 0x0000, 0x0000,
-	0x0000, 0x8893, 0x2025, 0xB9E6
-};
+	map.unmap_value_high();
+	map(0x0000, 0x1fff).rom();
+}
 
-static MACHINE_CONFIG_START( nimbus )
+void rmnimbus_state::nimbus_iocpu_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000, 0x000FF).rw(this, FUNC(rmnimbus_state::nimbus_pc8031_iou_r), FUNC(rmnimbus_state::nimbus_pc8031_iou_w));
+}
+
+MACHINE_CONFIG_START(rmnimbus_state::nimbus)
 	/* basic machine hardware */
 	MCFG_CPU_ADD(MAINCPU_TAG, I80186, 16000000) // the cpu is a 10Mhz part but the serial clocks are wrong unless it runs at 8Mhz
 	MCFG_CPU_PROGRAM_MAP(nimbus_mem)
@@ -120,10 +115,14 @@ static MACHINE_CONFIG_START( nimbus )
 	MCFG_CPU_ADD(IOCPU_TAG, I8031, 11059200)
 	MCFG_CPU_PROGRAM_MAP(nimbus_iocpu_mem)
 	MCFG_CPU_IO_MAP(nimbus_iocpu_io)
+	MCFG_MCS51_PORT_P1_IN_CB(READ8(rmnimbus_state, nimbus_pc8031_port1_r))
+	MCFG_MCS51_PORT_P1_OUT_CB(WRITE8(rmnimbus_state, nimbus_pc8031_port1_w))
+	MCFG_MCS51_PORT_P3_IN_CB(READ8(rmnimbus_state, nimbus_pc8031_port3_r))
+	MCFG_MCS51_PORT_P3_OUT_CB(WRITE8(rmnimbus_state, nimbus_pc8031_port3_w))
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_RAW_PARAMS( XTAL_4_433619MHz*2,650,0,640,260,0,250)
+	MCFG_SCREEN_RAW_PARAMS( XTAL(4'433'619)*2,650,0,640,260,0,250)
 	MCFG_SCREEN_UPDATE_DRIVER(rmnimbus_state, screen_update_nimbus)
 	//MCFG_SCREEN_VIDEO_ATTRIBUTES(VIDEO_UPDATE_SCANLINE)
 	MCFG_SCREEN_PALETTE("palette")
@@ -164,7 +163,7 @@ static MACHINE_CONFIG_START( nimbus )
 	MCFG_RAM_EXTRA_OPTIONS("128K,256K,384K,512K,640K,1024K")
 
 	/* Peripheral chips */
-	MCFG_Z80SIO2_ADD(Z80SIO_TAG, 4000000, 0, 0, 0, 0)
+	MCFG_DEVICE_ADD(Z80SIO_TAG, Z80SIO2, 4000000)
 	MCFG_Z80DART_OUT_TXDB_CB(DEVWRITELINE("rs232b", rs232_port_device, write_txd))
 	MCFG_Z80DART_OUT_DTRB_CB(DEVWRITELINE("rs232b", rs232_port_device, write_dtr))
 	MCFG_Z80DART_OUT_RTSB_CB(DEVWRITELINE("rs232b", rs232_port_device, write_rts))
@@ -180,7 +179,6 @@ static MACHINE_CONFIG_START( nimbus )
 	MCFG_RS232_CTS_HANDLER(DEVWRITELINE(Z80SIO_TAG, z80dart_device, ctsb_w))
 
 	MCFG_EEPROM_SERIAL_93C06_ADD(ER59256_TAG)
-	MCFG_EEPROM_DATA(def_config,sizeof(def_config))
 
 	MCFG_DEVICE_ADD(VIA_TAG, VIA6522, 1000000)
 	MCFG_VIA6522_WRITEPA_HANDLER(DEVWRITE8("cent_data_out", output_latch_device, write))
@@ -227,6 +225,9 @@ ROM_START( nimbus )
 
 	ROM_REGION( 0x4000, IOCPU_TAG, 0 )
 	ROM_LOAD("hexec-v1.02u-13488-1985-10-29.rom", 0x0000, 0x1000, CRC(75c6adfd) SHA1(0f11e0b7386c6368d20e1fc7a6196d670f924825))
+
+	ROM_REGION16_LE( 0x20, ER59256_TAG, 0 ) // default eeprom data
+	ROM_LOAD("er59256", 0x00, 0x20, CRC(1a39de76) SHA1(0b6607f008dd92d6ab9af62b0b042fc3f5f4461c))
 ROM_END
 
 //    YEAR  NAME        PARENT  COMPAT  MACHINE  INPUT   STATE           INIT  COMPANY              FULLNAME  FLAGS

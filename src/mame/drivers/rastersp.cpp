@@ -22,6 +22,7 @@
 #include "machine/mc146818.h"
 #include "machine/nscsi_hd.h"
 #include "machine/nvram.h"
+#include "machine/timer.h"
 #include "sound/dac.h"
 #include "sound/volt_reg.h"
 #include "screen.h"
@@ -33,8 +34,8 @@
  *
  *************************************/
 
-#define SOUND_CLOCK             XTAL_12_288MHz
-#define PLL_CLOCK               XTAL_14_31818MHz
+#define SOUND_CLOCK             XTAL(12'288'000)
+#define PLL_CLOCK               XTAL(14'318'181)
 #define NVRAM_SIZE              0x8000
 
 #define USE_SPEEDUP_HACK        1
@@ -143,6 +144,11 @@ public:
 	void    update_irq(uint32_t which, uint32_t state);
 	void    upload_palette(uint32_t word1, uint32_t word2);
 	IRQ_CALLBACK_MEMBER(irq_callback);
+	static void ncr53c700(device_t *device);
+	void rastersp(machine_config &config);
+	void cpu_map(address_map &map);
+	void dsp_map(address_map &map);
+	void io_map(address_map &map);
 protected:
 	// driver_device overrides
 	virtual void machine_reset() override;
@@ -644,11 +650,11 @@ WRITE32_MEMBER( rastersp_state::dsp_ctrl_w )
 WRITE32_MEMBER( rastersp_state::dsp_speedup_w )
 {
 	// 809e90  48fd, 48d5
-	if (space.device().safe_pc() == 0x809c23)
+	if (m_dsp->pc() == 0x809c23)
 	{
-		int32_t cycles_left = space.device().execute().cycles_remaining();
+		int32_t cycles_left = m_dsp->cycles_remaining();
 		data += cycles_left / 6;
-		space.device().execute().spin();
+		m_dsp->spin();
 	}
 
 	m_speedup_count = data;
@@ -667,40 +673,43 @@ READ32_MEMBER( rastersp_state::dsp_speedup_r )
  *
  *************************************/
 
-static ADDRESS_MAP_START( cpu_map, AS_PROGRAM, 32, rastersp_state )
-	AM_RANGE(0x00000000, 0x003fffff) AM_RAM AM_SHARE("dram")
-	AM_RANGE(0x01000000, 0x010bffff) AM_NOP // External ROM
-	AM_RANGE(0x010c0000, 0x010cffff) AM_ROM AM_REGION("bios", 0)
-	AM_RANGE(0x02200800, 0x02200803) AM_WRITENOP // ?
-	AM_RANGE(0x02208000, 0x02208fff) AM_DEVREADWRITE("scsibus:7:ncr53c700", ncr53c7xx_device, read, write)
-	AM_RANGE(0x0220e000, 0x0220e003) AM_WRITE(dpylist_w)
-	AM_RANGE(0x02200000, 0x022fffff) AM_READWRITE8(nvram_r, nvram_w, 0x000000ff)
-	AM_RANGE(0xfff00000, 0xffffffff) AM_RAMBANK("bank3")
-ADDRESS_MAP_END
+void rastersp_state::cpu_map(address_map &map)
+{
+	map(0x00000000, 0x003fffff).ram().share("dram");
+	map(0x01000000, 0x010bffff).noprw(); // External ROM
+	map(0x010c0000, 0x010cffff).rom().region("bios", 0);
+	map(0x02200000, 0x022fffff).rw(this, FUNC(rastersp_state::nvram_r), FUNC(rastersp_state::nvram_w)).umask32(0x000000ff);
+	map(0x02200800, 0x02200803).nopw(); // ?
+	map(0x02208000, 0x02208fff).rw("scsibus:7:ncr53c700", FUNC(ncr53c7xx_device::read), FUNC(ncr53c7xx_device::write));
+	map(0x0220e000, 0x0220e003).w(this, FUNC(rastersp_state::dpylist_w));
+	map(0xfff00000, 0xffffffff).bankrw("bank3");
+}
 
-static ADDRESS_MAP_START( io_map, AS_IO, 32, rastersp_state )
-	AM_RANGE(0x0020, 0x0023) AM_WRITE(cyrix_cache_w)
-	AM_RANGE(0x1000, 0x1003) AM_READ_PORT("P1") AM_WRITE(port1_w)
-	AM_RANGE(0x1004, 0x1007) AM_READ_PORT("P2") AM_WRITE(port2_w)
-	AM_RANGE(0x1008, 0x100b) AM_READ_PORT("COMMON") AM_WRITE(port3_w)
-	AM_RANGE(0x100c, 0x100f) AM_READ_PORT("DSW2")
-	AM_RANGE(0x1010, 0x1013) AM_READ_PORT("DSW1")
-	AM_RANGE(0x1014, 0x1017) AM_READ_PORT("EXTRA")
-	AM_RANGE(0x4000, 0x4007) AM_DEVREADWRITE8("rtc", mc146818_device, read, write, 0x000000ff)
-	AM_RANGE(0x6008, 0x600b) AM_READNOP AM_WRITENOP // RS232
-ADDRESS_MAP_END
+void rastersp_state::io_map(address_map &map)
+{
+	map(0x0020, 0x0023).w(this, FUNC(rastersp_state::cyrix_cache_w));
+	map(0x1000, 0x1003).portr("P1").w(this, FUNC(rastersp_state::port1_w));
+	map(0x1004, 0x1007).portr("P2").w(this, FUNC(rastersp_state::port2_w));
+	map(0x1008, 0x100b).portr("COMMON").w(this, FUNC(rastersp_state::port3_w));
+	map(0x100c, 0x100f).portr("DSW2");
+	map(0x1010, 0x1013).portr("DSW1");
+	map(0x1014, 0x1017).portr("EXTRA");
+	map(0x4000, 0x4007).rw("rtc", FUNC(mc146818_device::read), FUNC(mc146818_device::write)).umask32(0x000000ff);
+	map(0x6008, 0x600b).nopr().nopw(); // RS232
+}
 
 
-static ADDRESS_MAP_START( dsp_map, AS_PROGRAM, 32, rastersp_state )
-	AM_RANGE(0x000000, 0x0fffff) AM_RAMBANK("bank1")
-	AM_RANGE(0x400000, 0x40ffff) AM_ROM AM_REGION("dspboot", 0)
-	AM_RANGE(0x808000, 0x80807f) AM_READWRITE(tms32031_control_r, tms32031_control_w)
-	AM_RANGE(0x880402, 0x880402) AM_WRITE(dsp_unk_w)
-	AM_RANGE(0x883c00, 0x883c00) AM_WRITE(dsp_486_int_w)
-	AM_RANGE(0xc00000, 0xc03fff) AM_RAMBANK("bank2")
-	AM_RANGE(0xc80000, 0xc80000) AM_WRITE(dsp_ctrl_w)
-	AM_RANGE(0xfc0000, 0xffffff) AM_RAMBANK("bank3")
-ADDRESS_MAP_END
+void rastersp_state::dsp_map(address_map &map)
+{
+	map(0x000000, 0x0fffff).bankrw("bank1");
+	map(0x400000, 0x40ffff).rom().region("dspboot", 0);
+	map(0x808000, 0x80807f).rw(this, FUNC(rastersp_state::tms32031_control_r), FUNC(rastersp_state::tms32031_control_w));
+	map(0x880402, 0x880402).w(this, FUNC(rastersp_state::dsp_unk_w));
+	map(0x883c00, 0x883c00).w(this, FUNC(rastersp_state::dsp_486_int_w));
+	map(0xc00000, 0xc03fff).bankrw("bank2");
+	map(0xc80000, 0xc80000).w(this, FUNC(rastersp_state::dsp_ctrl_w));
+	map(0xfc0000, 0xffffff).bankrw("bank3");
+}
 
 
 
@@ -828,12 +837,15 @@ WRITE32_MEMBER(rastersp_state::ncr53c700_write)
 	m_maincpu->space(AS_PROGRAM).write_dword(offset, data, mem_mask);
 }
 
-static MACHINE_CONFIG_START( ncr53c700 )
+void rastersp_state::ncr53c700(device_t *device)
+{
+	devcb_base *devcb;
+	(void)devcb;
 	MCFG_DEVICE_CLOCK(66000000)
 	MCFG_NCR53C7XX_IRQ_HANDLER(DEVWRITELINE(":", rastersp_state, scsi_irq))
 	MCFG_NCR53C7XX_HOST_READ(DEVREAD32(":", rastersp_state, ncr53c700_read))
 	MCFG_NCR53C7XX_HOST_WRITE(DEVWRITE32(":", rastersp_state, ncr53c700_write))
-MACHINE_CONFIG_END
+}
 
 static SLOT_INTERFACE_START( rastersp_scsi_devices )
 	SLOT_INTERFACE("harddisk", NSCSI_HARDDISK)
@@ -847,7 +859,7 @@ SLOT_INTERFACE_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( rastersp )
+MACHINE_CONFIG_START(rastersp_state::rastersp)
 	MCFG_CPU_ADD("maincpu", I486, 33330000)
 	MCFG_CPU_PROGRAM_MAP(cpu_map)
 	MCFG_CPU_IO_MAP(io_map)
@@ -861,7 +873,7 @@ static MACHINE_CONFIG_START( rastersp )
 	/* Devices */
 	MCFG_TIMER_DRIVER_ADD("tms_timer1", rastersp_state, tms_timer1)
 	MCFG_TIMER_DRIVER_ADD("tms_tx_timer", rastersp_state, tms_tx_timer)
-	MCFG_MC146818_ADD( "rtc", XTAL_32_768kHz )
+	MCFG_MC146818_ADD( "rtc", XTAL(32'768) )
 	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	MCFG_NSCSI_BUS_ADD("scsibus")

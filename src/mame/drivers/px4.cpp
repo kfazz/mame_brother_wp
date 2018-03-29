@@ -20,7 +20,7 @@
 #include "imagedev/cassette.h"
 #include "machine/nvram.h"
 #include "machine/ram.h"
-#include "machine/ram.h"
+#include "machine/timer.h"
 #include "sound/spkrdev.h"
 
 #include "screen.h"
@@ -74,7 +74,7 @@ public:
 		m_frc_value(0), m_frc_latch(0),
 		m_vadr(0), m_yoff(0),
 		m_artdir(0xff), m_artdor(0xff), m_artsr(0), m_artcr(0),
-		m_one_sec_int_enabled(true),
+		m_one_sec_int_enabled(true), m_key_int_enabled(true),
 		m_key_status(0), m_interrupt_status(0),
 		m_time(), m_clock_state(0),
 		m_ear_last_state(0),
@@ -133,6 +133,9 @@ public:
 	DECLARE_WRITE_LINE_MEMBER( centronics_busy_w ) { m_centronics_busy = state; }
 	DECLARE_WRITE_LINE_MEMBER( centronics_perror_w ) { m_centronics_perror = state; }
 
+	void px4(machine_config &config);
+	void px4_io(address_map &map);
+	void px4_mem(address_map &map);
 protected:
 	// driver_device overrides
 	virtual void machine_start() override;
@@ -266,6 +269,8 @@ public:
 	DECLARE_WRITE8_MEMBER( ramdisk_data_w );
 	DECLARE_READ8_MEMBER( ramdisk_control_r );
 
+	void px4p(machine_config &config);
+	void px4p_io(address_map &map);
 protected:
 	// driver_device overrides
 	virtual void machine_start() override;
@@ -594,16 +599,22 @@ WRITE8_MEMBER( px4_state::sior_w )
 		{
 		case 1:
 			{
-				int year = dec_2_bcd(m_time.local_time.year);
-				year = (year & 0xff0f) | ((data & 0xf) << 4);
-				t->tm_year = bcd_2_dec(year) - 1900;
+				if (data < 10)
+				{
+					int year = dec_2_bcd(m_time.local_time.year);
+					year = (year & 0xff0f) | ((data & 0xf) << 4);
+					t->tm_year = bcd_2_dec(year) - 1900;
+				}
 			}
 			break;
 		case 2:
 			{
-				int year = dec_2_bcd(m_time.local_time.year);
-				year = (year & 0xfff0) | (data & 0xf);
-				t->tm_year = bcd_2_dec(year) - 1900;
+				if (data < 10)
+				{
+					int year = dec_2_bcd(m_time.local_time.year);
+					year = (year & 0xfff0) | (data & 0xf);
+					t->tm_year = bcd_2_dec(year) - 1900;
+				}
 			}
 			break;
 		case 3: t->tm_mon = bcd_2_dec(data & 0x7f) - 1; break;
@@ -1248,46 +1259,49 @@ void px4p_state::machine_start()
 //  ADDRESS MAPS
 //**************************************************************************
 
-static ADDRESS_MAP_START( px4_mem, AS_PROGRAM, 8, px4_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROMBANK("bank1")
-	AM_RANGE(0x8000, 0xffff) AM_RAMBANK("bank2")
-ADDRESS_MAP_END
+void px4_state::px4_mem(address_map &map)
+{
+	map(0x0000, 0x7fff).bankr("bank1");
+	map(0x8000, 0xffff).bankrw("bank2");
+}
 
-static ADDRESS_MAP_START( px4_io, AS_IO, 8, px4_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
+void px4_state::px4_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
 	// gapnit, 0x00-0x07
-	AM_RANGE(0x00, 0x00) AM_READWRITE( icrlc_r, ctrl1_w )
-	AM_RANGE(0x01, 0x01) AM_READWRITE( icrhc_r, cmdr_w )
-	AM_RANGE(0x02, 0x02) AM_READWRITE( icrlb_r, ctrl2_w )
-	AM_RANGE(0x03, 0x03) AM_READ( icrhb_r )
-	AM_RANGE(0x04, 0x04) AM_READWRITE( isr_r, ier_w )
-	AM_RANGE(0x05, 0x05) AM_READWRITE( str_r, bankr_w )
-	AM_RANGE(0x06, 0x06) AM_READWRITE( sior_r, sior_w )
-	AM_RANGE(0x07, 0x07) AM_NOP
+	map(0x00, 0x00).rw(this, FUNC(px4_state::icrlc_r), FUNC(px4_state::ctrl1_w));
+	map(0x01, 0x01).rw(this, FUNC(px4_state::icrhc_r), FUNC(px4_state::cmdr_w));
+	map(0x02, 0x02).rw(this, FUNC(px4_state::icrlb_r), FUNC(px4_state::ctrl2_w));
+	map(0x03, 0x03).r(this, FUNC(px4_state::icrhb_r));
+	map(0x04, 0x04).rw(this, FUNC(px4_state::isr_r), FUNC(px4_state::ier_w));
+	map(0x05, 0x05).rw(this, FUNC(px4_state::str_r), FUNC(px4_state::bankr_w));
+	map(0x06, 0x06).rw(this, FUNC(px4_state::sior_r), FUNC(px4_state::sior_w));
+	map(0x07, 0x07).noprw();
 	// gapndl, 0x08-0x0f
-	AM_RANGE(0x08, 0x08) AM_WRITE( vadr_w )
-	AM_RANGE(0x09, 0x09) AM_WRITE( yoff_w )
-	AM_RANGE(0x0a, 0x0a) AM_WRITE( fr_w )
-	AM_RANGE(0x0b, 0x0b) AM_WRITE( spur_w )
-	AM_RANGE(0x0c, 0x0f) AM_NOP
+	map(0x08, 0x08).w(this, FUNC(px4_state::vadr_w));
+	map(0x09, 0x09).w(this, FUNC(px4_state::yoff_w));
+	map(0x0a, 0x0a).w(this, FUNC(px4_state::fr_w));
+	map(0x0b, 0x0b).w(this, FUNC(px4_state::spur_w));
+	map(0x0c, 0x0f).noprw();
 	// gapnio, 0x10-0x1f
-	AM_RANGE(0x10, 0x13) AM_READWRITE( ctgif_r, ctgif_w )
-	AM_RANGE(0x14, 0x14) AM_READWRITE( artdir_r, artdor_w )
-	AM_RANGE(0x15, 0x15) AM_READWRITE( artsr_r, artmr_w )
-	AM_RANGE(0x16, 0x16) AM_READWRITE( iostr_r, artcr_w )
-	AM_RANGE(0x17, 0x17) AM_DEVWRITE("cent_data_out", output_latch_device, write)
-	AM_RANGE(0x18, 0x18) AM_WRITE( swr_w )
-	AM_RANGE(0x19, 0x19) AM_WRITE( ioctlr_w )
-	AM_RANGE(0x1a, 0x1f) AM_NOP
-ADDRESS_MAP_END
+	map(0x10, 0x13).rw(this, FUNC(px4_state::ctgif_r), FUNC(px4_state::ctgif_w));
+	map(0x14, 0x14).rw(this, FUNC(px4_state::artdir_r), FUNC(px4_state::artdor_w));
+	map(0x15, 0x15).rw(this, FUNC(px4_state::artsr_r), FUNC(px4_state::artmr_w));
+	map(0x16, 0x16).rw(this, FUNC(px4_state::iostr_r), FUNC(px4_state::artcr_w));
+	map(0x17, 0x17).w("cent_data_out", FUNC(output_latch_device::write));
+	map(0x18, 0x18).w(this, FUNC(px4_state::swr_w));
+	map(0x19, 0x19).w(this, FUNC(px4_state::ioctlr_w));
+	map(0x1a, 0x1f).noprw();
+}
 
-static ADDRESS_MAP_START( px4p_io, AS_IO, 8, px4p_state )
-	AM_IMPORT_FROM(px4_io)
-	AM_RANGE(0x90, 0x92) AM_WRITE(ramdisk_address_w )
-	AM_RANGE(0x93, 0x93) AM_READWRITE(ramdisk_data_r, ramdisk_data_w )
-	AM_RANGE(0x94, 0x94) AM_READ(ramdisk_control_r)
-ADDRESS_MAP_END
+void px4p_state::px4p_io(address_map &map)
+{
+	px4_io(map);
+	map(0x90, 0x92).w(this, FUNC(px4p_state::ramdisk_address_w));
+	map(0x93, 0x93).rw(this, FUNC(px4p_state::ramdisk_data_r), FUNC(px4p_state::ramdisk_data_w));
+	map(0x94, 0x94).r(this, FUNC(px4p_state::ramdisk_control_r));
+}
 
 
 //**************************************************************************
@@ -1466,9 +1480,9 @@ PALETTE_INIT_MEMBER( px4p_state, px4p )
 //  MACHINE DRIVERS
 //**************************************************************************
 
-static MACHINE_CONFIG_START( px4 )
+MACHINE_CONFIG_START(px4_state::px4)
 	// basic machine hardware
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_7_3728MHz / 2)    // uPD70008
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(7'372'800) / 2)    // uPD70008
 	MCFG_CPU_PROGRAM_MAP(px4_mem)
 	MCFG_CPU_IO_MAP(px4_io)
 
@@ -1491,7 +1505,7 @@ static MACHINE_CONFIG_START( px4 )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("one_sec", px4_state, upd7508_1sec_callback, attotime::from_seconds(1))
-	MCFG_TIMER_DRIVER_ADD_PERIODIC("frc", px4_state, frc_tick, attotime::from_hz(XTAL_7_3728MHz / 2 / 6))
+	MCFG_TIMER_DRIVER_ADD_PERIODIC("frc", px4_state, frc_tick, attotime::from_hz(XTAL(7'372'800) / 2 / 6))
 
 	// internal ram
 	MCFG_RAM_ADD(RAM_TAG)
@@ -1532,7 +1546,8 @@ static MACHINE_CONFIG_START( px4 )
 	MCFG_SOFTWARE_LIST_ADD("epson_cpm_list", "epson_cpm")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( px4p, px4 )
+MACHINE_CONFIG_START(px4p_state::px4p)
+	px4(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_IO_MAP(px4p_io)
 

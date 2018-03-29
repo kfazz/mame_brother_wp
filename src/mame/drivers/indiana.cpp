@@ -38,21 +38,24 @@ public:
 	DECLARE_DRIVER_INIT(indiana);
 	virtual void machine_reset() override;
 	required_device<cpu_device> m_maincpu;
+	void indiana(machine_config &config);
+	void indiana_mem(address_map &map);
 };
 
 
-static ADDRESS_MAP_START(indiana_mem, AS_PROGRAM, 32, indiana_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000000, 0x0000ffff) AM_MIRROR(0x7f800000) AM_ROM AM_REGION("user1", 0) // 64Kb of EPROM
-	AM_RANGE(0x00100000, 0x00107fff) AM_MIRROR(0x7f8f8000) AM_RAM // SRAM 32Kb of SRAM
-	AM_RANGE(0x00200000, 0x002fffff) AM_DEVREADWRITE8(MFP_TAG, mc68901_device, read, write, 0xffffffff) AM_MIRROR(0x7f800000) // MFP
-	AM_RANGE(0x00400000, 0x004fffff) AM_DEVREADWRITE16(ISABUS_TAG, isa16_device, io16_swap_r, io16_swap_w, 0xffffffff) AM_MIRROR(0x7f800000) // 16 bit PC IO
-	AM_RANGE(0x00500000, 0x005fffff) AM_DEVREADWRITE16(ISABUS_TAG, isa16_device, mem16_swap_r, mem16_swap_w, 0xffffffff) AM_MIRROR(0x7f800000) // 16 bit PC MEM
-	AM_RANGE(0x00600000, 0x006fffff) AM_DEVREADWRITE8(ISABUS_TAG, isa16_device, io_r, io_w, 0xffffffff) AM_MIRROR(0x7f800000) // 8 bit PC IO
-	AM_RANGE(0x00700000, 0x007fffff) AM_DEVREADWRITE8(ISABUS_TAG, isa16_device, mem_r, mem_w, 0xffffffff) AM_MIRROR(0x7f800000) // 8 bit PC MEM
-	AM_RANGE(0x80000000, 0x803fffff) AM_RAM // 4 MB RAM
-	AM_RANGE(0xfffe0000, 0xfffe7fff) AM_RAM // SRAM mirror?
-ADDRESS_MAP_END
+void indiana_state::indiana_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000000, 0x0000ffff).mirror(0x7f800000).rom().region("user1", 0); // 64Kb of EPROM
+	map(0x00100000, 0x00107fff).mirror(0x7f8f8000).ram(); // SRAM 32Kb of SRAM
+	map(0x00200000, 0x002fffff).rw(MFP_TAG, FUNC(mc68901_device::read), FUNC(mc68901_device::write)).mirror(0x7f800000); // MFP
+	map(0x00400000, 0x004fffff).rw(ISABUS_TAG, FUNC(isa16_device::io16_swap_r), FUNC(isa16_device::io16_swap_w)).mirror(0x7f800000); // 16 bit PC IO
+	map(0x00500000, 0x005fffff).rw(ISABUS_TAG, FUNC(isa16_device::mem16_swap_r), FUNC(isa16_device::mem16_swap_w)).mirror(0x7f800000); // 16 bit PC MEM
+	map(0x00600000, 0x006fffff).rw(ISABUS_TAG, FUNC(isa16_device::io_r), FUNC(isa16_device::io_w)).mirror(0x7f800000); // 8 bit PC IO
+	map(0x00700000, 0x007fffff).rw(ISABUS_TAG, FUNC(isa16_device::mem_r), FUNC(isa16_device::mem_w)).mirror(0x7f800000); // 8 bit PC MEM
+	map(0x80000000, 0x803fffff).ram(); // 4 MB RAM
+	map(0xfffe0000, 0xfffe7fff).ram(); // SRAM mirror?
+}
 
 
 /* Input ports */
@@ -86,9 +89,9 @@ static DEVICE_INPUT_DEFAULTS_START( keyboard )
 	DEVICE_INPUT_DEFAULTS( "RS232_STOPBITS", 0xff, RS232_STOPBITS_1 )
 DEVICE_INPUT_DEFAULTS_END
 
-static MACHINE_CONFIG_START( indiana )
+MACHINE_CONFIG_START(indiana_state::indiana)
 	/* basic machine hardware */
-	MCFG_CPU_ADD(M68K_TAG, M68030, XTAL_16MHz)
+	MCFG_CPU_ADD(M68K_TAG, M68030, XTAL(16'000'000))
 	MCFG_CPU_PROGRAM_MAP(indiana_mem)
 
 	MCFG_DEVICE_ADD(ISABUS_TAG, ISA16, 0)
@@ -99,8 +102,8 @@ static MACHINE_CONFIG_START( indiana )
 	MCFG_ISA16_SLOT_ADD(ISABUS_TAG, "isa3", indiana_isa_cards, "comat", false)
 	MCFG_ISA16_SLOT_ADD(ISABUS_TAG, "isa4", indiana_isa_cards, "ide", false)
 
-	MCFG_DEVICE_ADD(MFP_TAG, MC68901, XTAL_16MHz/4)
-	MCFG_MC68901_TIMER_CLOCK(XTAL_16MHz/4)
+	MCFG_DEVICE_ADD(MFP_TAG, MC68901, XTAL(16'000'000)/4)
+	MCFG_MC68901_TIMER_CLOCK(XTAL(16'000'000)/4)
 	MCFG_MC68901_RX_CLOCK(0)
 	MCFG_MC68901_TX_CLOCK(0)
 	MCFG_MC68901_OUT_SO_CB(DEVWRITELINE("keyboard", rs232_port_device, write_txd))

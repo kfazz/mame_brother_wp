@@ -452,7 +452,7 @@
 #include "speaker.h"
 
 
-#define MASTER_CLOCK    XTAL_10MHz
+#define MASTER_CLOCK    XTAL(10'000'000)
 
 
 class _5clown_state : public driver_device
@@ -506,6 +506,9 @@ public:
 	virtual void video_start() override;
 	DECLARE_PALETTE_INIT(_5clown);
 	uint32_t screen_update_fclown(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
+	void fclown(machine_config &config);
+	void fcaudio_map(address_map &map);
+	void fclown_map(address_map &map);
 };
 
 void _5clown_state::machine_start()
@@ -753,25 +756,26 @@ WRITE8_MEMBER(_5clown_state::snd_a02_w)
 * Memory map information *
 *************************/
 
-static ADDRESS_MAP_START( fclown_map, AS_PROGRAM, 8, _5clown_state )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x0800, 0x0800) AM_DEVWRITE("crtc", mc6845_device, address_w)
-	AM_RANGE(0x0801, 0x0801) AM_DEVREADWRITE("crtc", mc6845_device, register_r, register_w)
-	AM_RANGE(0x0844, 0x0847) AM_DEVREADWRITE("pia0", pia6821_device, read, write)
-	AM_RANGE(0x0848, 0x084b) AM_DEVREADWRITE("pia1", pia6821_device, read, write)
-	AM_RANGE(0x1000, 0x13ff) AM_RAM_WRITE(fclown_videoram_w) AM_SHARE("videoram")   /* Init'ed at $2042 */
-	AM_RANGE(0x1800, 0x1bff) AM_RAM_WRITE(fclown_colorram_w) AM_SHARE("colorram")   /* Init'ed at $2054 */
-	AM_RANGE(0x2000, 0x7fff) AM_ROM                 /* ROM space */
+void _5clown_state::fclown_map(address_map &map)
+{
+	map(0x0000, 0x07ff).ram().share("nvram");
+	map(0x0800, 0x0800).w("crtc", FUNC(mc6845_device::address_w));
+	map(0x0801, 0x0801).rw("crtc", FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
+	map(0x0844, 0x0847).rw("pia0", FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x0848, 0x084b).rw("pia1", FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x1000, 0x13ff).ram().w(this, FUNC(_5clown_state::fclown_videoram_w)).share("videoram");   /* Init'ed at $2042 */
+	map(0x1800, 0x1bff).ram().w(this, FUNC(_5clown_state::fclown_colorram_w)).share("colorram");   /* Init'ed at $2054 */
+	map(0x2000, 0x7fff).rom();                 /* ROM space */
 
-	AM_RANGE(0xc048, 0xc048) AM_WRITE(cpu_c048_w )
-	AM_RANGE(0xd800, 0xd800) AM_WRITE(cpu_d800_w )
+	map(0xc048, 0xc048).w(this, FUNC(_5clown_state::cpu_c048_w));
+	map(0xd800, 0xd800).w(this, FUNC(_5clown_state::cpu_d800_w));
 
-	AM_RANGE(0xc400, 0xc400) AM_READ_PORT("SW1")    /* DIP Switches bank */
-	AM_RANGE(0xcc00, 0xcc00) AM_READ_PORT("SW2")    /* DIP Switches bank */
-	AM_RANGE(0xd400, 0xd400) AM_READ_PORT("SW3")    /* Second DIP Switches bank */
+	map(0xc400, 0xc400).portr("SW1");    /* DIP Switches bank */
+	map(0xcc00, 0xcc00).portr("SW2");    /* DIP Switches bank */
+	map(0xd400, 0xd400).portr("SW3");    /* Second DIP Switches bank */
 
-	AM_RANGE(0xe000, 0xffff) AM_ROM                 /* ROM space */
-ADDRESS_MAP_END
+	map(0xe000, 0xffff).rom();                 /* ROM space */
+}
 
 /*
 
@@ -828,15 +832,16 @@ ADDRESS_MAP_END
 
 */
 
-static ADDRESS_MAP_START( fcaudio_map, AS_PROGRAM, 8, _5clown_state )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM
-	AM_RANGE(0x0800, 0x0800) AM_WRITE(snd_800_w)
-	AM_RANGE(0x0a02, 0x0a02) AM_WRITE(snd_a02_w)
-	AM_RANGE(0x0c04, 0x0c04) AM_DEVWRITE("oki6295", okim6295_device, write)
-	AM_RANGE(0x0c06, 0x0c06) AM_DEVREAD("oki6295", okim6295_device, read)
-	AM_RANGE(0x0e06, 0x0e06) AM_READ(snd_e06_r)
-	AM_RANGE(0xe000, 0xffff) AM_ROM                 /* ROM space */
-ADDRESS_MAP_END
+void _5clown_state::fcaudio_map(address_map &map)
+{
+	map(0x0000, 0x07ff).ram();
+	map(0x0800, 0x0800).w(this, FUNC(_5clown_state::snd_800_w));
+	map(0x0a02, 0x0a02).w(this, FUNC(_5clown_state::snd_a02_w));
+	map(0x0c04, 0x0c04).w("oki6295", FUNC(okim6295_device::write));
+	map(0x0c06, 0x0c06).r("oki6295", FUNC(okim6295_device::read));
+	map(0x0e06, 0x0e06).r(this, FUNC(_5clown_state::snd_e06_r));
+	map(0xe000, 0xffff).rom();                 /* ROM space */
+}
 
 
 /*************************
@@ -1014,7 +1019,7 @@ GFXDECODE_END
 *    Machine Drivers     *
 *************************/
 
-static MACHINE_CONFIG_START( fclown )
+MACHINE_CONFIG_START(_5clown_state::fclown)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M6502, MASTER_CLOCK/8)  /* guess, seems ok */

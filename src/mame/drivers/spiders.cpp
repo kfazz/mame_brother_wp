@@ -276,10 +276,10 @@ INTERRUPT_GEN_MEMBER(spiders_state::update_pia_1)
  *
  *************************************/
 
-WRITE8_MEMBER(spiders_state::ic60_74123_output_changed)
+WRITE_LINE_MEMBER(spiders_state::ic60_74123_output_changed)
 {
 	pia6821_device *pia2 = machine().device<pia6821_device>("pia2");
-	pia2->ca1_w(data);
+	pia2->ca1_w(state);
 }
 
 /*************************************
@@ -368,11 +368,6 @@ MC6845_UPDATE_ROW( spiders_state::crtc_update_row )
 }
 
 
-WRITE_LINE_MEMBER(spiders_state::display_enable_changed)
-{
-	machine().device<ttl74123_device>("ic60")->a_w(generic_space(), 0, state);
-}
-
 
 /*************************************
  *
@@ -420,26 +415,28 @@ READ8_MEMBER(spiders_state::gfx_rom_r)
  *
  *************************************/
 
-static ADDRESS_MAP_START( spiders_main_map, AS_PROGRAM, 8, spiders_state )
-	AM_RANGE(0x0000, 0xbfff) AM_RAM AM_SHARE("ram")
-	AM_RANGE(0xc000, 0xc000) AM_DEVWRITE("crtc", mc6845_device, address_w)
-	AM_RANGE(0xc001, 0xc001) AM_DEVREADWRITE("crtc", mc6845_device, register_r, register_w)
-	AM_RANGE(0xc020, 0xc027) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0xc044, 0xc047) AM_DEVREADWRITE("pia1", pia6821_device, read, write)
-	AM_RANGE(0xc048, 0xc04b) AM_DEVREADWRITE("pia2", pia6821_device, read_alt, write_alt)
-	AM_RANGE(0xc050, 0xc053) AM_DEVREADWRITE("pia3", pia6821_device, read, write)
-	AM_RANGE(0xc060, 0xc060) AM_READ_PORT("DSW1")
-	AM_RANGE(0xc080, 0xc080) AM_READ_PORT("DSW2")
-	AM_RANGE(0xc0a0, 0xc0a0) AM_READ_PORT("DSW3")
-	AM_RANGE(0xc100, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void spiders_state::spiders_main_map(address_map &map)
+{
+	map(0x0000, 0xbfff).ram().share("ram");
+	map(0xc000, 0xc000).w("crtc", FUNC(mc6845_device::address_w));
+	map(0xc001, 0xc001).rw("crtc", FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
+	map(0xc020, 0xc027).ram().share("nvram");
+	map(0xc044, 0xc047).rw("pia1", FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0xc048, 0xc04b).rw("pia2", FUNC(pia6821_device::read_alt), FUNC(pia6821_device::write_alt));
+	map(0xc050, 0xc053).rw("pia3", FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0xc060, 0xc060).portr("DSW1");
+	map(0xc080, 0xc080).portr("DSW2");
+	map(0xc0a0, 0xc0a0).portr("DSW3");
+	map(0xc100, 0xffff).rom();
+}
 
 
-static ADDRESS_MAP_START( spiders_audio_map, AS_PROGRAM, 8, spiders_state )
-	AM_RANGE(0x0000, 0x007f) AM_RAM
-	AM_RANGE(0x0080, 0x0083) AM_DEVREADWRITE("pia4", pia6821_device, read, write)
-	AM_RANGE(0xf800, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void spiders_state::spiders_audio_map(address_map &map)
+{
+	map(0x0000, 0x007f).ram();
+	map(0x0080, 0x0083).rw("pia4", FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0xf800, 0xffff).rom();
+}
 
 
 
@@ -541,10 +538,10 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( spiders )
+MACHINE_CONFIG_START(spiders_state::spiders)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809, 2800000)
+	MCFG_CPU_ADD("maincpu", MC6809, 2800000)
 	MCFG_CPU_PROGRAM_MAP(spiders_main_map)
 	MCFG_CPU_PERIODIC_INT_DRIVER(spiders_state, update_pia_1,  25)
 
@@ -564,7 +561,7 @@ static MACHINE_CONFIG_START( spiders )
 	MCFG_MC6845_SHOW_BORDER_AREA(false)
 	MCFG_MC6845_CHAR_WIDTH(8)
 	MCFG_MC6845_UPDATE_ROW_CB(spiders_state, crtc_update_row)
-	MCFG_MC6845_OUT_DE_CB(WRITELINE(spiders_state, display_enable_changed))
+	MCFG_MC6845_OUT_DE_CB(DEVWRITELINE("ic60", ttl74123_device, a_w))
 
 	/* 74LS123 */
 
@@ -599,10 +596,10 @@ static MACHINE_CONFIG_START( spiders )
 	MCFG_TTL74123_A_PIN_VALUE(1)                  /* A pin - driven by the CRTC */
 	MCFG_TTL74123_B_PIN_VALUE(1)                  /* B pin - pulled high */
 	MCFG_TTL74123_CLEAR_PIN_VALUE(1)                  /* Clear pin - pulled high */
-	MCFG_TTL74123_OUTPUT_CHANGED_CB(WRITE8(spiders_state, ic60_74123_output_changed))
+	MCFG_TTL74123_OUTPUT_CHANGED_CB(WRITELINE(spiders_state, ic60_74123_output_changed))
 
 	/* audio hardware */
-	MCFG_FRAGMENT_ADD(spiders_audio)
+	spiders_audio(config);
 
 MACHINE_CONFIG_END
 

@@ -18,6 +18,7 @@
 
 #include "emuopts.h"
 #include "speaker.h"
+#include "screen.h"
 
 #include "chd.h"
 
@@ -31,12 +32,15 @@ class ldplayer_state : public driver_device
 public:
 	// construction/destruction
 	ldplayer_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
-			m_last_controls(0),
-			m_playing(false) { }
+		: driver_device(mconfig, type, tag)
+		, m_screen(*this, "screen")
+		, m_last_controls(0)
+		, m_playing(false) { }
 
 	// callback hook
 	static chd_file *get_disc_static(device_t *dummy, laserdisc_device &device) { return device.machine().driver_data<ldplayer_state>()->get_disc(); }
+
+	void ldplayer_ntsc(machine_config &config);
 
 protected:
 	// device overrides
@@ -89,6 +93,7 @@ protected:
 	};
 
 	// internal state
+	required_device<screen_device> m_screen;
 	std::string m_filename;
 	ioport_value m_last_controls;
 	bool m_playing;
@@ -105,6 +110,7 @@ public:
 			m_command_buffer_in(0),
 			m_command_buffer_out(0) { }
 
+			void pr8210(machine_config &config);
 protected:
 	// device overrides
 	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
@@ -142,6 +148,7 @@ public:
 		: ldplayer_state(mconfig, type, tag),
 			m_laserdisc(*this, "laserdisc") { }
 
+			void ldv1000(machine_config &config);
 protected:
 	required_device<pioneer_ldv1000_device> m_laserdisc;
 
@@ -297,8 +304,8 @@ void ldplayer_state::device_timer(emu_timer &timer, device_timer_id id, int para
 				process_commands();
 
 			// set a timer to go off on the next VBLANK
-			int vblank_scanline = machine().first_screen()->visible_area().max_y + 1;
-			attotime target = machine().first_screen()->time_until_pos(vblank_scanline);
+			int vblank_scanline = m_screen->visible_area().max_y + 1;
+			attotime target = m_screen->time_until_pos(vblank_scanline);
 			timer_set(target, TIMER_ID_VSYNC_UPDATE);
 			break;
 		}
@@ -620,11 +627,12 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( ldplayer_ntsc )
+MACHINE_CONFIG_START(ldplayer_state::ldplayer_ntsc)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( ldv1000, ldplayer_ntsc )
+MACHINE_CONFIG_START(ldv1000_state::ldv1000)
+	ldplayer_ntsc(config);
 	MCFG_LASERDISC_LDV1000_ADD("laserdisc")
 	MCFG_LASERDISC_GET_DISC(laserdisc_device::get_disc_delegate(&ldplayer_state::get_disc_static, device))
 	MCFG_LASERDISC_SCREEN_ADD_NTSC("screen", "laserdisc")
@@ -636,7 +644,8 @@ static MACHINE_CONFIG_DERIVED( ldv1000, ldplayer_ntsc )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( pr8210, ldplayer_ntsc )
+MACHINE_CONFIG_START(pr8210_state::pr8210)
+	ldplayer_ntsc(config);
 	MCFG_LASERDISC_PR8210_ADD("laserdisc")
 	MCFG_LASERDISC_GET_DISC(laserdisc_device::get_disc_delegate(&ldplayer_state::get_disc_static, device))
 	MCFG_LASERDISC_SCREEN_ADD_NTSC("screen", "laserdisc")

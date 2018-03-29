@@ -16,6 +16,10 @@
 #include "emu.h"
 #include "machine/pcshare.h"
 #include "cpu/i86/i286.h"
+#include "bus/isa/trident.h"
+#include "video/pc_vga.h"
+#include "video/clgd542x.h"
+#include "screen.h"
 
 /******************
 DMA8237 Controller
@@ -124,21 +128,76 @@ WRITE_LINE_MEMBER( pcat_base_state::at_pit8254_out2_changed )
 }
 
 
-ADDRESS_MAP_START( pcat32_io_common, AS_IO, 32, pcat_base_state )
-	AM_RANGE(0x0000, 0x001f) AM_DEVREADWRITE8("dma8237_1", am9517a_device, read, write, 0xffffffff)
-	AM_RANGE(0x0020, 0x003f) AM_DEVREADWRITE8("pic8259_1", pic8259_device, read, write, 0xffffffff)
-	AM_RANGE(0x0040, 0x005f) AM_DEVREADWRITE8("pit8254", pit8254_device, read, write, 0xffffffff)
-	AM_RANGE(0x0060, 0x006f) AM_DEVREADWRITE8("kbdc", kbdc8042_device, data_r, data_w, 0xffffffff)
-	AM_RANGE(0x0070, 0x007f) AM_DEVREADWRITE8("rtc", mc146818_device, read, write, 0xffffffff)
-	AM_RANGE(0x0080, 0x009f) AM_READWRITE8(dma_page_select_r,dma_page_select_w, 0xffffffff)//TODO
-	AM_RANGE(0x00a0, 0x00bf) AM_DEVREADWRITE8("pic8259_2", pic8259_device, read, write, 0xffffffff)
-	AM_RANGE(0x00c0, 0x00df) AM_DEVREADWRITE8("dma8237_2", am9517a_device, read, write, 0x00ff00ff)
-ADDRESS_MAP_END
+void pcat_base_state::pcat32_io_common(address_map &map)
+{
+	map(0x0000, 0x001f).rw(m_dma8237_1, FUNC(am9517a_device::read), FUNC(am9517a_device::write));
+	map(0x0020, 0x003f).rw(m_pic8259_1, FUNC(pic8259_device::read), FUNC(pic8259_device::write));
+	map(0x0040, 0x005f).rw(m_pit8254, FUNC(pit8254_device::read), FUNC(pit8254_device::write));
+	map(0x0060, 0x006f).rw(m_kbdc, FUNC(kbdc8042_device::data_r), FUNC(kbdc8042_device::data_w));
+	map(0x0070, 0x007f).rw(m_mc146818, FUNC(mc146818_device::read), FUNC(mc146818_device::write));
+	map(0x0080, 0x009f).rw(this, FUNC(pcat_base_state::dma_page_select_r), FUNC(pcat_base_state::dma_page_select_w));//TODO
+	map(0x00a0, 0x00bf).rw(m_pic8259_2, FUNC(pic8259_device::read), FUNC(pic8259_device::write));
+	map(0x00c0, 0x00df).rw(m_dma8237_2, FUNC(am9517a_device::read), FUNC(am9517a_device::write)).umask32(0x00ff00ff);
+}
 
-MACHINE_CONFIG_START(pcat_common)
-	MCFG_PIC8259_ADD( "pic8259_1", INPUTLINE("maincpu", 0), VCC, READ8(pcat_base_state, get_slave_ack) )
-	MCFG_PIC8259_ADD( "pic8259_2", DEVWRITELINE("pic8259_1", pic8259_device, ir2_w), GND, NOOP)
-	MCFG_DEVICE_ADD( "dma8237_1", AM9517A, XTAL_14_31818MHz/3 )
+
+MACHINE_CONFIG_START(pcat_base_state::pcvideo_vga)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(25'174'800),900,0,640,526,0,480)
+	MCFG_SCREEN_UPDATE_DEVICE("vga", vga_device, screen_update)
+
+	MCFG_DEVICE_ADD("vga", VGA, 0)
+	MCFG_VIDEO_SET_SCREEN("screen")
+MACHINE_CONFIG_END
+
+MACHINE_CONFIG_START(pcat_base_state::pcvideo_trident_vga)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(25'174'800),900,0,640,526,0,480)
+	MCFG_SCREEN_UPDATE_DEVICE("vga", trident_vga_device, screen_update)
+
+	MCFG_DEVICE_ADD("vga", TRIDENT_VGA, 0)
+	MCFG_VIDEO_SET_SCREEN("screen")
+MACHINE_CONFIG_END
+
+MACHINE_CONFIG_START(pcat_base_state::pcvideo_s3_vga)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(25'174'800),900,0,640,526,0,480)
+	MCFG_SCREEN_UPDATE_DEVICE("vga", s3_vga_device, screen_update)
+
+	MCFG_DEVICE_ADD("vga", S3_VGA, 0)
+	MCFG_VIDEO_SET_SCREEN("screen")
+MACHINE_CONFIG_END
+
+
+MACHINE_CONFIG_START(pcat_base_state::pcvideo_cirrus_gd5428)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(25'174'800),900,0,640,526,0,480)
+	MCFG_SCREEN_UPDATE_DEVICE("vga", cirrus_gd5428_device, screen_update)
+
+	MCFG_DEVICE_ADD("vga", CIRRUS_GD5428, 0)
+	MCFG_VIDEO_SET_SCREEN("screen")
+MACHINE_CONFIG_END
+
+MACHINE_CONFIG_START(pcat_base_state::pcvideo_cirrus_gd5430)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(25'174'800),900,0,640,526,0,480)
+	MCFG_SCREEN_UPDATE_DEVICE("vga", cirrus_gd5430_device, screen_update)
+
+	MCFG_DEVICE_ADD("vga", CIRRUS_GD5430, 0)
+	MCFG_VIDEO_SET_SCREEN("screen")
+MACHINE_CONFIG_END
+
+MACHINE_CONFIG_START(pcat_base_state::pcat_common)
+	MCFG_DEVICE_ADD("pic8259_1", PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(INPUTLINE("maincpu", 0))
+	MCFG_PIC8259_IN_SP_CB(VCC)
+	MCFG_PIC8259_CASCADE_ACK_CB(READ8(pcat_base_state, get_slave_ack))
+
+	MCFG_DEVICE_ADD("pic8259_2", PIC8259, 0)
+	MCFG_PIC8259_OUT_INT_CB(DEVWRITELINE("pic8259_1", pic8259_device, ir2_w))
+	MCFG_PIC8259_IN_SP_CB(GND)
+
+	MCFG_DEVICE_ADD( "dma8237_1", AM9517A, XTAL(14'318'181)/3 )
 	MCFG_I8237_OUT_HREQ_CB(WRITELINE(pcat_base_state, pc_dma_hrq_changed))
 	MCFG_I8237_IN_MEMR_CB(READ8(pcat_base_state, pc_dma_read_byte))
 	MCFG_I8237_OUT_MEMW_CB(WRITE8(pcat_base_state, pc_dma_write_byte))
@@ -146,7 +205,7 @@ MACHINE_CONFIG_START(pcat_common)
 	MCFG_I8237_OUT_DACK_1_CB(WRITELINE(pcat_base_state, pc_dack1_w))
 	MCFG_I8237_OUT_DACK_2_CB(WRITELINE(pcat_base_state, pc_dack2_w))
 	MCFG_I8237_OUT_DACK_3_CB(WRITELINE(pcat_base_state, pc_dack3_w))
-	MCFG_DEVICE_ADD( "dma8237_2", AM9517A, XTAL_14_31818MHz/3 )
+	MCFG_DEVICE_ADD( "dma8237_2", AM9517A, XTAL(14'318'181)/3 )
 
 	MCFG_DEVICE_ADD("pit8254", PIT8254, 0)
 	MCFG_PIT8253_CLK0(4772720/4) /* heartbeat IRQ */
@@ -155,7 +214,7 @@ MACHINE_CONFIG_START(pcat_common)
 	MCFG_PIT8253_CLK2(4772720/4) /* pio port c pin 4, and speaker polling enough */
 	MCFG_PIT8253_OUT2_HANDLER(WRITELINE(pcat_base_state, at_pit8254_out2_changed))
 
-	MCFG_MC146818_ADD("rtc", XTAL_32_768kHz)
+	MCFG_MC146818_ADD("rtc", XTAL(32'768))
 	MCFG_MC146818_IRQ_HANDLER(DEVWRITELINE("pic8259_2", pic8259_device, ir0_w))
 	MCFG_MC146818_CENTURY_INDEX(0x32)
 

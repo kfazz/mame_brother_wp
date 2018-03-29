@@ -141,61 +141,69 @@ WRITE8_MEMBER( draco_state::out1_w )
 
 // Destroyer
 
-static ADDRESS_MAP_START( destryer_map, AS_PROGRAM, 8, cidelsa_state )
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x2000, 0x20ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0xf400, 0xf7ff) AM_DEVICE(CDP1869_TAG, cdp1869_device, char_map)
-	AM_RANGE(0xf800, 0xffff) AM_DEVICE(CDP1869_TAG, cdp1869_device, page_map)
-ADDRESS_MAP_END
+void cidelsa_state::destryer_map(address_map &map)
+{
+	map(0x0000, 0x1fff).rom();
+	map(0x2000, 0x20ff).ram().share("nvram");
+	map(0xf400, 0xf7ff).m(m_vis, FUNC(cdp1869_device::char_map));
+	map(0xf800, 0xffff).m(m_vis, FUNC(cdp1869_device::page_map));
+}
 
-static ADDRESS_MAP_START( destryera_map, AS_PROGRAM, 8, cidelsa_state )
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x3000, 0x30ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0xf400, 0xf7ff) AM_DEVICE(CDP1869_TAG, cdp1869_device, char_map)
-	AM_RANGE(0xf800, 0xffff) AM_DEVICE(CDP1869_TAG, cdp1869_device, page_map)
-ADDRESS_MAP_END
+void cidelsa_state::destryera_map(address_map &map)
+{
+	map(0x0000, 0x1fff).rom();
+	map(0x3000, 0x30ff).ram().share("nvram");
+	map(0xf400, 0xf7ff).m(m_vis, FUNC(cdp1869_device::char_map));
+	map(0xf800, 0xffff).m(m_vis, FUNC(cdp1869_device::page_map));
+}
 
-static ADDRESS_MAP_START( destryer_io_map, AS_IO, 8, cidelsa_state )
-	AM_RANGE(0x01, 0x01) AM_READ_PORT("IN0") AM_WRITE(destryer_out1_w)
-	AM_RANGE(0x02, 0x02) AM_READ_PORT("IN1")
-	AM_RANGE(0x03, 0x07) AM_WRITE(cdp1869_w)
-ADDRESS_MAP_END
+void cidelsa_state::destryer_io_map(address_map &map)
+{
+	map(0x01, 0x01).portr("IN0").w(this, FUNC(cidelsa_state::destryer_out1_w));
+	map(0x02, 0x02).portr("IN1");
+	map(0x03, 0x07).w(this, FUNC(cidelsa_state::cdp1869_w));
+}
 
 // Altair
 
-static ADDRESS_MAP_START( altair_map, AS_PROGRAM, 8, cidelsa_state )
-	AM_RANGE(0x0000, 0x2fff) AM_ROM
-	AM_RANGE(0x3000, 0x30ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0xf400, 0xf7ff) AM_DEVICE(CDP1869_TAG, cdp1869_device, char_map)
-	AM_RANGE(0xf800, 0xffff) AM_DEVICE(CDP1869_TAG, cdp1869_device, page_map)
-ADDRESS_MAP_END
+void cidelsa_state::altair_map(address_map &map)
+{
+	map(0x0000, 0x2fff).rom();
+	map(0x3000, 0x30ff).ram().share("nvram");
+	map(0xf400, 0xf7ff).m(m_vis, FUNC(cdp1869_device::char_map));
+	map(0xf800, 0xffff).m(m_vis, FUNC(cdp1869_device::page_map));
+}
 
-static ADDRESS_MAP_START( altair_io_map, AS_IO, 8, cidelsa_state )
-	AM_RANGE(0x01, 0x01) AM_DEVREAD("ic23", cdp1852_device, read) AM_DEVWRITE("ic26", cdp1852_device, write)
-	AM_RANGE(0x02, 0x02) AM_DEVREAD("ic24", cdp1852_device, read)
-	AM_RANGE(0x04, 0x04) AM_DEVREAD("ic25", cdp1852_device, read)
-	AM_RANGE(0x03, 0x07) AM_WRITE(cdp1869_w)
-ADDRESS_MAP_END
+void cidelsa_state::altair_io_map(address_map &map)
+{
+	map(0x01, 0x01).r("ic23", FUNC(cdp1852_device::read)).w("ic26", FUNC(cdp1852_device::write));
+	map(0x02, 0x02).r("ic24", FUNC(cdp1852_device::read));
+	map(0x04, 0x04).r("ic25", FUNC(cdp1852_device::read));
+	map(0x03, 0x07).w(this, FUNC(cidelsa_state::cdp1869_w));
+}
 
 // Draco
 
-static ADDRESS_MAP_START( draco_map, AS_PROGRAM, 8, draco_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x8000, 0x83ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0xf400, 0xf7ff) AM_DEVICE(CDP1869_TAG, cdp1869_device, char_map)
-	AM_RANGE(0xf800, 0xffff) AM_DEVICE(CDP1869_TAG, cdp1869_device, page_map)
-ADDRESS_MAP_END
+void draco_state::draco_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x8000, 0x83ff).ram().share("nvram");
+	map(0xf400, 0xf7ff).m(m_vis, FUNC(cdp1869_device::char_map));
+	map(0xf800, 0xffff).m(m_vis, FUNC(cdp1869_device::page_map));
+}
 
-static ADDRESS_MAP_START( draco_io_map, AS_IO, 8, draco_state )
-	AM_RANGE(0x01, 0x01) AM_DEVREAD("ic29", cdp1852_device, read) AM_DEVWRITE("ic32", cdp1852_device, write)
-	AM_RANGE(0x02, 0x02) AM_DEVREAD("ic30", cdp1852_device, read)
-	AM_RANGE(0x04, 0x04) AM_DEVREAD("ic31", cdp1852_device, read)
-	AM_RANGE(0x03, 0x07) AM_WRITE(cdp1869_w)
-ADDRESS_MAP_END
+void draco_state::draco_io_map(address_map &map)
+{
+	map(0x01, 0x01).r("ic29", FUNC(cdp1852_device::read)).w("ic32", FUNC(cdp1852_device::write));
+	map(0x02, 0x02).r("ic30", FUNC(cdp1852_device::read));
+	map(0x04, 0x04).r("ic31", FUNC(cdp1852_device::read));
+	map(0x03, 0x07).w(this, FUNC(draco_state::cdp1869_w));
+}
 
-static ADDRESS_MAP_START( draco_sound_map, AS_PROGRAM, 8, draco_state )
-	AM_RANGE(0x000, 0x3ff) AM_ROMBANK("bank1")
-ADDRESS_MAP_END
+void draco_state::draco_sound_map(address_map &map)
+{
+	map(0x000, 0x3ff).bankr("bank1");
+}
 
 /* Input Ports */
 
@@ -389,7 +397,7 @@ void cidelsa_state::machine_reset()
 
 /* Machine Drivers */
 
-static MACHINE_CONFIG_START( destryer )
+MACHINE_CONFIG_START(cidelsa_state::destryer)
 	/* basic system hardware */
 	MCFG_CPU_ADD(CDP1802_TAG, CDP1802, DESTRYER_CHR1)
 	MCFG_CPU_PROGRAM_MAP(destryer_map)
@@ -401,10 +409,10 @@ static MACHINE_CONFIG_START( destryer )
 	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* sound and video hardware */
-	MCFG_FRAGMENT_ADD(destryer_video)
+	destryer_video(config);
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( destryera )
+MACHINE_CONFIG_START(cidelsa_state::destryera)
 	/* basic system hardware */
 	MCFG_CPU_ADD(CDP1802_TAG, CDP1802, DESTRYER_CHR1)
 	MCFG_CPU_PROGRAM_MAP(destryera_map)
@@ -416,10 +424,10 @@ static MACHINE_CONFIG_START( destryera )
 	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* sound and video hardware */
-	MCFG_FRAGMENT_ADD(destryer_video)
+	destryer_video(config);
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( altair )
+MACHINE_CONFIG_START(cidelsa_state::altair)
 	/* basic system hardware */
 	MCFG_CPU_ADD(CDP1802_TAG, CDP1802, ALTAIR_CHR1)
 	MCFG_CPU_PROGRAM_MAP(altair_map)
@@ -445,10 +453,10 @@ static MACHINE_CONFIG_START( altair )
 	MCFG_CDP1852_DO_CALLBACK(WRITE8(cidelsa_state, altair_out1_w))
 
 	/* sound and video hardware */
-	MCFG_FRAGMENT_ADD(altair_video)
+	altair_video(config);
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( draco )
+MACHINE_CONFIG_START(draco_state::draco)
 	/* basic system hardware */
 	MCFG_CPU_ADD(CDP1802_TAG, CDP1802, DRACO_CHR1)
 	MCFG_CPU_PROGRAM_MAP(draco_map)
@@ -483,7 +491,7 @@ static MACHINE_CONFIG_START( draco )
 	MCFG_CDP1852_DO_CALLBACK(WRITE8(draco_state, out1_w))
 
 	/* sound and video hardware */
-	MCFG_FRAGMENT_ADD(draco_video)
+	draco_video(config);
 MACHINE_CONFIG_END
 
 /* ROMs */

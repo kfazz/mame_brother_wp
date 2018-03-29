@@ -62,6 +62,7 @@
 #include "machine/pic8259.h"
 #include "machine/pit8253.h"
 #include "machine/ram.h"
+#include "machine/timer.h"
 #include "machine/z80dart.h"
 
 #define I80186_TAG      "ic1"
@@ -155,6 +156,11 @@ public:
 	DECLARE_WRITE_LINE_MEMBER(write_centronics_select);
 
 	int m_tmr0;
+	void compis(machine_config &config);
+	void compis2(machine_config &config);
+	void compis2_mem(address_map &map);
+	void compis_io(address_map &map);
+	void compis_mem(address_map &map);
 };
 
 
@@ -387,46 +393,49 @@ WRITE16_MEMBER( compis_state::pcs6_14_15_w )
 //  ADDRESS_MAP( compis_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( compis_mem, AS_PROGRAM, 16, compis_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000, 0x1ffff) AM_RAM
-	AM_RANGE(0x60000, 0x63fff) AM_MIRROR(0x1c000) AM_DEVICE(I80130_TAG, i80130_device, rom_map)
-	AM_RANGE(0xe0000, 0xeffff) AM_MIRROR(0x10000) AM_ROM AM_REGION(I80186_TAG, 0)
-ADDRESS_MAP_END
+void compis_state::compis_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000, 0x1ffff).ram();
+	map(0x60000, 0x63fff).mirror(0x1c000).m(m_osp, FUNC(i80130_device::rom_map));
+	map(0xe0000, 0xeffff).mirror(0x10000).rom().region(I80186_TAG, 0);
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( compis2_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( compis2_mem, AS_PROGRAM, 16, compis_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000, 0x3ffff) AM_RAM
-	AM_RANGE(0xe0000, 0xeffff) AM_MIRROR(0x10000) AM_ROM AM_REGION(I80186_TAG, 0)
-ADDRESS_MAP_END
+void compis_state::compis2_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000, 0x3ffff).ram();
+	map(0xe0000, 0xeffff).mirror(0x10000).rom().region(I80186_TAG, 0);
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( compis_io )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( compis_io, AS_IO, 16, compis_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x0007) /* PCS0 */ AM_MIRROR(0x78) AM_DEVREADWRITE8(I8255_TAG, i8255_device, read, write, 0xff00)
-	AM_RANGE(0x0080, 0x0087) /* PCS1 */ AM_MIRROR(0x78) AM_DEVREADWRITE8(I8253_TAG, pit8253_device, read, write, 0x00ff)
-	AM_RANGE(0x0100, 0x011f) /* PCS2 */ AM_MIRROR(0x60) AM_DEVREADWRITE8(MM58174A_TAG, mm58274c_device, read, write, 0x00ff)
-	AM_RANGE(0x0180, 0x01ff) /* PCS3 */ AM_DEVREADWRITE(GRAPHICS_TAG, compis_graphics_slot_device, pcs3_r, pcs3_w)
-	//AM_RANGE(0x0200, 0x0201) /* PCS4 */ AM_MIRROR(0x7e)
-	AM_RANGE(0x0280, 0x028f) /* PCS5 */ AM_MIRROR(0x70) AM_DEVICE(I80130_TAG, i80130_device, io_map)
-	AM_RANGE(0x0300, 0x030f) AM_READWRITE(pcs6_0_1_r, pcs6_0_1_w)
-	AM_RANGE(0x0310, 0x031f) AM_READWRITE(pcs6_2_3_r, pcs6_2_3_w)
-	AM_RANGE(0x0320, 0x032f) AM_READWRITE(pcs6_4_5_r, pcs6_4_5_w)
-	AM_RANGE(0x0330, 0x033f) AM_READWRITE(pcs6_6_7_r, pcs6_6_7_w)
-	AM_RANGE(0x0340, 0x034f) AM_READWRITE(pcs6_8_9_r, pcs6_8_9_w)
-	AM_RANGE(0x0350, 0x035f) AM_READWRITE(pcs6_10_11_r, pcs6_10_11_w)
-	AM_RANGE(0x0360, 0x036f) AM_READWRITE(pcs6_12_13_r, pcs6_12_13_w)
-	AM_RANGE(0x0370, 0x037f) AM_READWRITE(pcs6_14_15_r, pcs6_14_15_w)
-ADDRESS_MAP_END
+void compis_state::compis_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x0007) /* PCS0 */ .mirror(0x78).rw(I8255_TAG, FUNC(i8255_device::read), FUNC(i8255_device::write)).umask16(0xff00);
+	map(0x0080, 0x0087) /* PCS1 */ .mirror(0x78).rw(I8253_TAG, FUNC(pit8253_device::read), FUNC(pit8253_device::write)).umask16(0x00ff);
+	map(0x0100, 0x011f) /* PCS2 */ .mirror(0x60).rw(MM58174A_TAG, FUNC(mm58274c_device::read), FUNC(mm58274c_device::write)).umask16(0x00ff);
+	map(0x0180, 0x01ff) /* PCS3 */ .rw(GRAPHICS_TAG, FUNC(compis_graphics_slot_device::pcs3_r), FUNC(compis_graphics_slot_device::pcs3_w));
+	//map(0x0200, 0x0201) /* PCS4 */ .mirror(0x7e);
+	map(0x0280, 0x028f) /* PCS5 */ .mirror(0x70).m(I80130_TAG, FUNC(i80130_device::io_map));
+	map(0x0300, 0x030f).rw(this, FUNC(compis_state::pcs6_0_1_r), FUNC(compis_state::pcs6_0_1_w));
+	map(0x0310, 0x031f).rw(this, FUNC(compis_state::pcs6_2_3_r), FUNC(compis_state::pcs6_2_3_w));
+	map(0x0320, 0x032f).rw(this, FUNC(compis_state::pcs6_4_5_r), FUNC(compis_state::pcs6_4_5_w));
+	map(0x0330, 0x033f).rw(this, FUNC(compis_state::pcs6_6_7_r), FUNC(compis_state::pcs6_6_7_w));
+	map(0x0340, 0x034f).rw(this, FUNC(compis_state::pcs6_8_9_r), FUNC(compis_state::pcs6_8_9_w));
+	map(0x0350, 0x035f).rw(this, FUNC(compis_state::pcs6_10_11_r), FUNC(compis_state::pcs6_10_11_w));
+	map(0x0360, 0x036f).rw(this, FUNC(compis_state::pcs6_12_13_r), FUNC(compis_state::pcs6_12_13_w));
+	map(0x0370, 0x037f).rw(this, FUNC(compis_state::pcs6_14_15_r), FUNC(compis_state::pcs6_14_15_w));
+}
 
 
 
@@ -742,9 +751,9 @@ void compis_state::machine_reset()
 //  MACHINE_CONFIG( compis )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_START( compis )
+MACHINE_CONFIG_START(compis_state::compis)
 	// basic machine hardware
-	MCFG_CPU_ADD(I80186_TAG, I80186, XTAL_15_36MHz)
+	MCFG_CPU_ADD(I80186_TAG, I80186, 15.36_MHz_XTAL)
 	MCFG_CPU_PROGRAM_MAP(compis_mem)
 	MCFG_CPU_IO_MAP(compis_io)
 	MCFG_80186_IRQ_SLAVE_ACK(DEVREAD8(DEVICE_SELF, compis_state, compis_irq_callback))
@@ -752,17 +761,17 @@ static MACHINE_CONFIG_START( compis )
 	MCFG_80186_TMROUT1_HANDLER(DEVWRITELINE(DEVICE_SELF, compis_state, tmr1_w))
 
 	// devices
-	MCFG_DEVICE_ADD(I80130_TAG, I80130, XTAL_15_36MHz/2)
+	MCFG_DEVICE_ADD(I80130_TAG, I80130, 15.36_MHz_XTAL/2)
 	MCFG_I80130_IRQ_CALLBACK(DEVWRITELINE(I80186_TAG, i80186_cpu_device, int0_w))
 	MCFG_I80130_SYSTICK_CALLBACK(DEVWRITELINE(I80130_TAG, i80130_device, ir3_w))
 	MCFG_I80130_DELAY_CALLBACK(DEVWRITELINE(I80130_TAG, i80130_device, ir7_w))
 	MCFG_I80130_BAUD_CALLBACK(WRITELINE(compis_state, tmr2_w))
 
 	MCFG_DEVICE_ADD(I8253_TAG, PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_15_36MHz/8)
+	MCFG_PIT8253_CLK0(15.36_MHz_XTAL/8)
 	MCFG_PIT8253_OUT0_HANDLER(DEVWRITELINE(I8274_TAG, i8274_device, rxtxcb_w))
-	MCFG_PIT8253_CLK1(XTAL_15_36MHz/8)
-	MCFG_PIT8253_CLK2(XTAL_15_36MHz/8)
+	MCFG_PIT8253_CLK1(15.36_MHz_XTAL/8)
+	MCFG_PIT8253_CLK2(15.36_MHz_XTAL/8)
 	MCFG_PIT8253_OUT2_HANDLER(WRITELINE(compis_state, tmr5_w))
 
 	MCFG_DEVICE_ADD(I8255_TAG, I8255, 0)
@@ -778,7 +787,7 @@ static MACHINE_CONFIG_START( compis )
 	MCFG_DEVICE_ADD(COMPIS_KEYBOARD_TAG, COMPIS_KEYBOARD, 0)
 	MCFG_COMPIS_KEYBOARD_OUT_TX_HANDLER(DEVWRITELINE(I8251A_TAG, i8251_device, write_rxd))
 
-	MCFG_I8274_ADD(I8274_TAG, XTAL_15_36MHz/4, 0, 0, 0, 0)
+	MCFG_DEVICE_ADD(I8274_TAG, I8274, 15.36_MHz_XTAL/4)
 	MCFG_Z80DART_OUT_TXDA_CB(DEVWRITELINE(RS232_A_TAG, rs232_port_device, write_txd))
 	MCFG_Z80DART_OUT_DTRA_CB(DEVWRITELINE(RS232_A_TAG, rs232_port_device, write_dtr))
 	MCFG_Z80DART_OUT_RTSA_CB(DEVWRITELINE(RS232_A_TAG, rs232_port_device, write_rts))
@@ -787,7 +796,7 @@ static MACHINE_CONFIG_START( compis )
 	MCFG_Z80DART_OUT_RTSB_CB(DEVWRITELINE(RS232_B_TAG, rs232_port_device, write_rts))
 	MCFG_Z80DART_OUT_INT_CB(DEVWRITELINE(I80186_TAG, i80186_cpu_device, int3_w))
 
-	MCFG_DEVICE_ADD(MM58174A_TAG, MM58274C, XTAL_32_768kHz)
+	MCFG_DEVICE_ADD(MM58174A_TAG, MM58274C, 32.768_kHz_XTAL)
 	MCFG_MM58274C_MODE24(1) // 24 hour
 	MCFG_MM58274C_DAY1(1)   // monday
 
@@ -811,7 +820,7 @@ static MACHINE_CONFIG_START( compis )
 	MCFG_CENTRONICS_SELECT_HANDLER(WRITELINE(compis_state, write_centronics_select))
 	MCFG_CENTRONICS_OUTPUT_LATCH_ADD("cent_data_out", CENTRONICS_TAG)
 
-	MCFG_COMPIS_GRAPHICS_SLOT_ADD(GRAPHICS_TAG, XTAL_15_36MHz/2, compis_graphics_cards, "hrg")
+	MCFG_COMPIS_GRAPHICS_SLOT_ADD(GRAPHICS_TAG, 15.36_MHz_XTAL/2, compis_graphics_cards, "hrg")
 
 	MCFG_ISBX_SLOT_ADD(ISBX_0_TAG, 0, isbx_cards, "fdc")
 	MCFG_ISBX_SLOT_MINTR0_CALLBACK(DEVWRITELINE(I80130_TAG, i80130_device, ir1_w))
@@ -836,7 +845,8 @@ MACHINE_CONFIG_END
 //  MACHINE_CONFIG( compis2 )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_DERIVED( compis2, compis )
+MACHINE_CONFIG_START(compis_state::compis2)
+	compis(config);
 	// basic machine hardware
 	MCFG_CPU_MODIFY(I80186_TAG)
 	MCFG_CPU_PROGRAM_MAP(compis2_mem)

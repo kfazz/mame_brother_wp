@@ -107,6 +107,11 @@ public:
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	void draw_sprites( bitmap_ind16 &bitmap, const rectangle &cliprect );
 	DECLARE_WRITE_LINE_MEMBER(yunsung8_adpcm_int);
+	void discoboy(machine_config &config);
+	void discoboy_map(address_map &map);
+	void io_map(address_map &map);
+	void rambank1_map(address_map &map);
+	void sound_map(address_map &map);
 };
 
 void discoboy_state::draw_sprites( bitmap_ind16 &bitmap, const rectangle &cliprect )
@@ -268,20 +273,22 @@ WRITE8_MEMBER(discoboy_state::rambank2_w)
 		printf("unk rb2_w\n");
 }
 
-static ADDRESS_MAP_START( discoboy_map, AS_PROGRAM, 8, discoboy_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK("mainbank")
-	AM_RANGE(0xc000, 0xc7ff) AM_DEVICE("rambank1", address_map_bank_device, amap8)
-	AM_RANGE(0xc800, 0xcfff) AM_RAM AM_SHARE("att_ram")
-	AM_RANGE(0xd000, 0xdfff) AM_READWRITE(rambank2_r, rambank2_w)
-	AM_RANGE(0xe000, 0xefff) AM_RAM
-	AM_RANGE(0xf000, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void discoboy_state::discoboy_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0xbfff).bankr("mainbank");
+	map(0xc000, 0xc7ff).m(m_rambank1, FUNC(address_map_bank_device::amap8));
+	map(0xc800, 0xcfff).ram().share("att_ram");
+	map(0xd000, 0xdfff).rw(this, FUNC(discoboy_state::rambank2_r), FUNC(discoboy_state::rambank2_w));
+	map(0xe000, 0xefff).ram();
+	map(0xf000, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START( rambank1_map, AS_PROGRAM, 8, discoboy_state )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM AM_SHARE("ram_1")
-	AM_RANGE(0x0800, 0x0fff) AM_RAM AM_SHARE("ram_2")
-ADDRESS_MAP_END
+void discoboy_state::rambank1_map(address_map &map)
+{
+	map(0x0000, 0x07ff).ram().share("ram_1");
+	map(0x0800, 0x0fff).ram().share("ram_2");
+}
 
 
 READ8_MEMBER(discoboy_state::port_06_r)
@@ -289,16 +296,17 @@ READ8_MEMBER(discoboy_state::port_06_r)
 	return 0x00;
 }
 
-static ADDRESS_MAP_START( io_map, AS_IO, 8, discoboy_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_READ_PORT("DSWA") AM_WRITE(port_00_w)
-	AM_RANGE(0x01, 0x01) AM_READ_PORT("SYSTEM") AM_WRITE(port_01_w)
-	AM_RANGE(0x02, 0x02) AM_READ_PORT("P1")
-	AM_RANGE(0x03, 0x03) AM_READ_PORT("P2") AM_DEVWRITE("soundlatch", generic_latch_8_device, write)
-	AM_RANGE(0x04, 0x04) AM_READ_PORT("DSWB")
-	AM_RANGE(0x06, 0x06) AM_READWRITE(port_06_r, port_06_w) // ???
-	AM_RANGE(0x07, 0x07) AM_WRITE(rambank_select_w) // 0x20 is palette bank bit.. others?
-ADDRESS_MAP_END
+void discoboy_state::io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).portr("DSWA").w(this, FUNC(discoboy_state::port_00_w));
+	map(0x01, 0x01).portr("SYSTEM").w(this, FUNC(discoboy_state::port_01_w));
+	map(0x02, 0x02).portr("P1");
+	map(0x03, 0x03).portr("P2").w(m_soundlatch, FUNC(generic_latch_8_device::write));
+	map(0x04, 0x04).portr("DSWB");
+	map(0x06, 0x06).rw(this, FUNC(discoboy_state::port_06_r), FUNC(discoboy_state::port_06_w)); // ???
+	map(0x07, 0x07).w(this, FUNC(discoboy_state::rambank_select_w)); // 0x20 is palette bank bit.. others?
+}
 
 /* Sound */
 
@@ -313,15 +321,16 @@ WRITE8_MEMBER(discoboy_state::yunsung8_sound_bankswitch_w)
 		logerror("%s: Bank %02X\n", machine().describe_context(), data);
 }
 
-static ADDRESS_MAP_START( sound_map, AS_PROGRAM, 8, discoboy_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK("sndbank")
-	AM_RANGE(0xe000, 0xe000) AM_WRITE(yunsung8_sound_bankswitch_w)
-	AM_RANGE(0xe400, 0xe400) AM_DEVWRITE("adpcm_select", ls157_device, ba_w)
-	AM_RANGE(0xec00, 0xec01) AM_DEVWRITE("ymsnd", ym3812_device, write)
-	AM_RANGE(0xf000, 0xf7ff) AM_RAM
-	AM_RANGE(0xf800, 0xf800) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+void discoboy_state::sound_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0xbfff).bankr("sndbank");
+	map(0xe000, 0xe000).w(this, FUNC(discoboy_state::yunsung8_sound_bankswitch_w));
+	map(0xe400, 0xe400).w(m_adpcm_select, FUNC(ls157_device::ba_w));
+	map(0xec00, 0xec01).w("ymsnd", FUNC(ym3812_device::write));
+	map(0xf000, 0xf7ff).ram();
+	map(0xf800, 0xf800).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
 
 static INPUT_PORTS_START( discoboy )
@@ -443,22 +452,22 @@ WRITE_LINE_MEMBER(discoboy_state::yunsung8_adpcm_int)
 	m_audiocpu->set_input_line(INPUT_LINE_NMI, m_toggle);
 }
 
-static MACHINE_CONFIG_START( discoboy )
+MACHINE_CONFIG_START(discoboy_state::discoboy)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_12MHz/2)  /* 6 MHz? */
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(12'000'000)/2)  /* 6 MHz? */
 	MCFG_CPU_PROGRAM_MAP(discoboy_map)
 	MCFG_CPU_IO_MAP(io_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", discoboy_state,  irq0_line_hold)
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_10MHz/2) /* 5 MHz? */
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(10'000'000)/2) /* 5 MHz? */
 	MCFG_CPU_PROGRAM_MAP(sound_map)
 
 	MCFG_DEVICE_ADD("rambank1", ADDRESS_MAP_BANK, 0)
 	MCFG_DEVICE_PROGRAM_MAP(rambank1_map)
 	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_BIG)
-	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(8)
-	MCFG_ADDRESS_MAP_BANK_ADDRBUS_WIDTH(13)
+	MCFG_ADDRESS_MAP_BANK_DATA_WIDTH(8)
+	MCFG_ADDRESS_MAP_BANK_ADDR_WIDTH(13)
 	MCFG_ADDRESS_MAP_BANK_STRIDE(0x800)
 
 	/* video hardware */
@@ -480,14 +489,14 @@ static MACHINE_CONFIG_START( discoboy )
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
 	MCFG_GENERIC_LATCH_DATA_PENDING_CB(INPUTLINE("audiocpu", 0))
 
-	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_10MHz/4)   /* 2.5 MHz? */
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL(10'000'000)/4)   /* 2.5 MHz? */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.6)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.6)
 
 	MCFG_DEVICE_ADD("adpcm_select", LS157, 0)
 	MCFG_74157_OUT_CB(DEVWRITE8("msm", msm5205_device, data_w))
 
-	MCFG_SOUND_ADD("msm", MSM5205, XTAL_400kHz)
+	MCFG_SOUND_ADD("msm", MSM5205, XTAL(400'000))
 	MCFG_MSM5205_VCLK_CB(WRITELINE(discoboy_state, yunsung8_adpcm_int)) /* interrupt function */
 	MCFG_MSM5205_PRESCALER_SELECTOR(S96_4B)      /* 4KHz, 4 Bits */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.80)

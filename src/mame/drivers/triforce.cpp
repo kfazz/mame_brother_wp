@@ -75,7 +75,6 @@ Games on this system include....
 | | 2004 | The Key Of Avalon 2: Eutaxy Commandment (client) (Rev A)        | Sega / Hitmaker                     | GDROM | GDT-0017A      | 317-0403-JPN | 253-5508-0403J|
 |*| 2004 | The Key Of Avalon 2: Eutaxy Commandment (client) (Rev B)        | Sega / Hitmaker                     | GDROM | GDT-0017B      | 317-0403-JPN | 253-5508-0403J|
 | | 2004 | F-Zero AX - Monster Ride Cycraft Edition                        | Sega / Amusement Vision / Nintendo  | GDROM |                |              |               |
-| | 2005 | Donkey Kong Jungle Fever                                        | Namco / Nintendo                    | Cart  |                |              |               |
 |*| 2005 | Mario Kart Arcade GP (Japan, MKA1 Ver.A1)                       | Namco / Nintendo                    | Cart  | 837-14343-4T1  | 317-5109-COM | 253-5509-5109 |
 | | 2005 | The Key Of Avalon 2.5: War of the Key (server)                  | Sega / Hitmaker                     | GDROM | GDT-0018       | 317-0403-JPN | 253-5508-0403J|
 | | 2005 | The Key Of Avalon 2.5: War of the Key (server) (Rev A)          | Sega / Hitmaker                     | GDROM | GDT-0018A      | 317-0403-JPN | 253-5508-0403J|
@@ -92,7 +91,6 @@ Games on this system include....
 | | 2006 | Virtua Striker 4 Ver.2006 (Export)                              | Sega                                | CF    | MDA-G00??      | 317-0433-EXP | 253-5508-0433E|
 | | 2006 | Triforce Firmware Update for Compact Flash Box                  | Sega                                | GDROM | GDT-0022       | 317-0567-COM |               |
 |*| 2006 | Triforce Firmware Update for Compact Flash Box (Rev A)          | Sega                                | GDROM | GDT-0022A      | 317-0567-COM |               |
-| | 2006 | Donkey Kong : Banana Kingdom                                    | Namco / Nintendo                    | Cart? |                |              |               |
 |*| 2007 | Mario Kart Arcade GP 2 (Japan, MK21 Ver.A)                      | Namco / Nintendo                    | Cart  | 837-14343-R4S0 | 317-5128-COM | 253-5509-5128 |
 |*| 2007 | Mario Kart Arcade GP 2 (Japan, MK21 Ver.A, alt dump)            | Namco / Nintendo                    | Cart  | 837-14343-R4S0 | 317-5128-COM | 253-5509-5128 |
 +-+------+-----------------------------------------------------------------+-------------------------------------+-------|----------------+--------------+---------------|
@@ -463,6 +461,9 @@ public:
 	virtual void video_start() override;
 	uint32_t screen_update_triforce(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	required_device<ppc_device> m_maincpu;
+	void triforcegd(machine_config &config);
+	void triforce_base(machine_config &config);
+	void gc_map(address_map &map);
 };
 
 READ64_MEMBER(triforce_state::gc_pi_r)
@@ -483,12 +484,13 @@ WRITE64_MEMBER(triforce_state::gc_exi_w)
 {
 }
 
-static ADDRESS_MAP_START( gc_map, AS_PROGRAM, 64, triforce_state )
-	AM_RANGE(0x00000000, 0x017fffff) AM_RAM
-	AM_RANGE(0x0c003000, 0x0c003fff) AM_READWRITE(gc_pi_r, gc_pi_w)
-	AM_RANGE(0x0c006800, 0x0c0068ff) AM_READWRITE(gc_exi_r, gc_exi_w)
-	AM_RANGE(0xfff00000, 0xffffffff) AM_ROM AM_REGION("maincpu", 0) AM_SHARE("share2")  /* Program ROM */
-ADDRESS_MAP_END
+void triforce_state::gc_map(address_map &map)
+{
+	map(0x00000000, 0x017fffff).ram();
+	map(0x0c003000, 0x0c003fff).rw(this, FUNC(triforce_state::gc_pi_r), FUNC(triforce_state::gc_pi_w));
+	map(0x0c006800, 0x0c0068ff).rw(this, FUNC(triforce_state::gc_exi_r), FUNC(triforce_state::gc_exi_w));
+	map(0xfff00000, 0xffffffff).rom().region("maincpu", 0).share("share2");  /* Program ROM */
+}
 
 
 void triforce_state::video_start()
@@ -566,7 +568,7 @@ void triforce_state::machine_start()
 	descrambler(&rom[0x100], 0x1afe00);
 }
 
-static MACHINE_CONFIG_START( triforce_base )
+MACHINE_CONFIG_START(triforce_state::triforce_base)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", PPC603, 64000000) /* Correct CPU is a PowerPC 750 (what Apple called "G3") with paired-single vector instructions added */
@@ -586,7 +588,8 @@ static MACHINE_CONFIG_START( triforce_base )
 
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( triforcegd, triforce_base )
+MACHINE_CONFIG_START(triforce_state::triforcegd)
+	triforce_base(config);
 	MCFG_NAOMI_GDROM_BOARD_ADD("rom_board", ":gdrom", ":pic", nullptr, NOOP)
 MACHINE_CONFIG_END
 

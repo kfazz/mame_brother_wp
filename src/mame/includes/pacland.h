@@ -1,5 +1,6 @@
 // license:BSD-3-Clause
 // copyright-holders:Ernesto Corvi
+#include "cpu/m6800/m6801.h"
 #include "sound/namco.h"
 #include "screen.h"
 
@@ -19,7 +20,7 @@ public:
 		m_spriteram(*this, "spriteram") { }
 
 	required_device<cpu_device> m_maincpu;
-	required_device<cpu_device> m_mcu;
+	required_device<hd63701_cpu_device> m_mcu;
 	required_device<namco_cus30_device> m_cus30;
 	required_device<gfxdecode_device> m_gfxdecode;
 	required_device<screen_device> m_screen;
@@ -34,6 +35,7 @@ public:
 	tilemap_t *m_bg_tilemap;
 	tilemap_t *m_fg_tilemap;
 	bitmap_ind16 m_fg_bitmap;
+	bitmap_ind16 m_sprite_bitmap;
 	std::unique_ptr<uint32_t[]> m_transmask[3];
 	uint16_t m_scroll0;
 	uint16_t m_scroll1;
@@ -68,4 +70,8 @@ public:
 	void switch_palette();
 	void draw_sprites(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect, int flip, int whichmask);
 	void draw_fg(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect, int priority );
+	void pacland(machine_config &config);
+	void main_map(address_map &map);
+	void mcu_map(address_map &map);
+	void mcu_port_map(address_map &map);
 };

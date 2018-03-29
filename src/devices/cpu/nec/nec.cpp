@@ -106,6 +106,7 @@
 
 #include "emu.h"
 #include "nec.h"
+#include "necdasm.h"
 #include "debugger.h"
 
 typedef uint8_t BOOLEAN;
@@ -115,10 +116,10 @@ typedef uint32_t DWORD;
 
 #include "necpriv.h"
 
-DEFINE_DEVICE_TYPE(V20,  v20_device,  "v20",  "V20")
-DEFINE_DEVICE_TYPE(V30,  v30_device,  "v30",  "V30")
-DEFINE_DEVICE_TYPE(V33,  v33_device,  "v33",  "V33")
-DEFINE_DEVICE_TYPE(V33A, v33a_device, "v33a", "V33A")
+DEFINE_DEVICE_TYPE(V20,  v20_device,  "v20",  "NEC V20")
+DEFINE_DEVICE_TYPE(V30,  v30_device,  "v30",  "NEC V30")
+DEFINE_DEVICE_TYPE(V33,  v33_device,  "v33",  "NEC V33")
+DEFINE_DEVICE_TYPE(V33A, v33a_device, "v33a", "NEC V33A")
 
 
 
@@ -169,10 +170,9 @@ v33a_device::v33a_device(const machine_config &mconfig, const char *tag, device_
 }
 
 
-offs_t nec_common_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> nec_common_device::create_disassembler()
 {
-	extern CPU_DISASSEMBLE( nec );
-	return CPU_DISASSEMBLE_NAME(nec)(this, stream, pc, oprom, opram, options);
+	return std::make_unique<nec_disassembler>();
 }
 
 
@@ -223,8 +223,8 @@ uint8_t nec_common_device::fetch()
 
 uint16_t nec_common_device::fetchword()
 {
-	uint16_t r = FETCH();
-	r |= (FETCH()<<8);
+	uint16_t r = fetch();
+	r |= (fetch()<<8);
 	return r;
 }
 
@@ -419,7 +419,7 @@ void nec_common_device::device_start()
 	save_item(NAME(m_prefetch_reset));
 
 	m_program = &space(AS_PROGRAM);
-	m_direct = &m_program->direct();
+	m_direct = m_program->direct<0>();
 	m_io = &space(AS_IO);
 
 	state_add( NEC_PC,    "PC", m_debugger_temp).callimport().callexport().formatstr("%05X");

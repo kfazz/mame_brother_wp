@@ -106,6 +106,9 @@ public:
 	required_device<cpu_device> m_maincpu;
 	uint16_t m_intlines;
 	int m_ckon_state;
+	void ti990_10(machine_config &config);
+	void ti990_10_io(address_map &map);
+	void ti990_10_memmap(address_map &map);
 };
 
 
@@ -274,34 +277,36 @@ WRITE_LINE_MEMBER(ti990_10_state::key_interrupt)
   Memory map - see description above
 */
 
-static ADDRESS_MAP_START(ti990_10_memmap, AS_PROGRAM, 16, ti990_10_state )
+void ti990_10_state::ti990_10_memmap(address_map &map)
+{
 
-	AM_RANGE(0x000000, 0x0fffff) AM_RAM     /* let's say we have 1MB of RAM */
-	AM_RANGE(0x100000, 0x1ff7ff) AM_NOP     /* free TILINE space */
-	AM_RANGE(0x1ff800, 0x1ff81f) AM_DEVREADWRITE("hdc", ti990_hdc_device, read, write)  /* disk controller TPCS */
-	AM_RANGE(0x1ff820, 0x1ff87f) AM_NOP     /* free TPCS */
-	AM_RANGE(0x1ff880, 0x1ff89f) AM_DEVREADWRITE("tpc", tap_990_device, read, write) /* tape controller TPCS */
-	AM_RANGE(0x1ff8a0, 0x1ffbff) AM_NOP     /* free TPCS */
-	AM_RANGE(0x1ffc00, 0x1fffff) AM_ROM     /* LOAD ROM */
+	map(0x000000, 0x0fffff).ram();     /* let's say we have 1MB of RAM */
+	map(0x100000, 0x1ff7ff).noprw();     /* free TILINE space */
+	map(0x1ff800, 0x1ff81f).rw("hdc", FUNC(ti990_hdc_device::read), FUNC(ti990_hdc_device::write));  /* disk controller TPCS */
+	map(0x1ff820, 0x1ff87f).noprw();     /* free TPCS */
+	map(0x1ff880, 0x1ff89f).rw("tpc", FUNC(tap_990_device::read), FUNC(tap_990_device::write)); /* tape controller TPCS */
+	map(0x1ff8a0, 0x1ffbff).noprw();     /* free TPCS */
+	map(0x1ffc00, 0x1fffff).rom();     /* LOAD ROM */
 
-ADDRESS_MAP_END
+}
 
 
 /*
   CRU map
 */
 
-static ADDRESS_MAP_START(ti990_10_io, AS_IO, 8, ti990_10_state )
-	AM_RANGE(0x10, 0x11) AM_DEVREAD("vdt911", vdt911_device, cru_r)
-	AM_RANGE(0x80, 0x8f) AM_DEVWRITE("vdt911", vdt911_device, cru_w)
-	AM_RANGE(0x1fa, 0x1fb) AM_NOP // AM_READ(ti990_10_mapper_cru_r)
-	AM_RANGE(0x1fc, 0x1fd) AM_NOP // AM_READ(ti990_10_eir_cru_r)
-	AM_RANGE(0x1fe, 0x1ff) AM_READ(ti990_panel_read)
-	AM_RANGE(0xfd0, 0xfdf) AM_NOP // AM_WRITE(ti990_10_mapper_cru_w)
-	AM_RANGE(0xfe0, 0xfef) AM_NOP // AM_WRITE(ti990_10_eir_cru_w)
-	AM_RANGE(0xff0, 0xfff) AM_WRITE(ti990_panel_write)
+void ti990_10_state::ti990_10_io(address_map &map)
+{
+	map(0x10, 0x11).r("vdt911", FUNC(vdt911_device::cru_r));
+	map(0x80, 0x8f).w("vdt911", FUNC(vdt911_device::cru_w));
+	map(0x1fa, 0x1fb).noprw(); // AM_READ(ti990_10_mapper_cru_r)
+	map(0x1fc, 0x1fd).noprw(); // AM_READ(ti990_10_eir_cru_r)
+	map(0x1fe, 0x1ff).r(this, FUNC(ti990_10_state::ti990_panel_read));
+	map(0xfd0, 0xfdf).noprw(); // AM_WRITE(ti990_10_mapper_cru_w)
+	map(0xfe0, 0xfef).noprw(); // AM_WRITE(ti990_10_eir_cru_w)
+	map(0xff0, 0xfff).w(this, FUNC(ti990_10_state::ti990_panel_write));
 
-ADDRESS_MAP_END
+}
 
 /*
     Callback from the tape controller.
@@ -311,7 +316,7 @@ WRITE_LINE_MEMBER(ti990_10_state::tape_interrupt)
 	// set_int9(state);
 }
 
-static MACHINE_CONFIG_START( ti990_10 )
+MACHINE_CONFIG_START(ti990_10_state::ti990_10)
 	/* basic machine hardware */
 	/* TI990/10 CPU @ 4.0(???) MHz */
 	MCFG_TMS99xx_ADD("maincpu", TI990_10, 4000000, ti990_10_memmap, ti990_10_io )

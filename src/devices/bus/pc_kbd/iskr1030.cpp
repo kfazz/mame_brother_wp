@@ -61,17 +61,18 @@ const tiny_rom_entry *iskr_1030_keyboard_device::device_rom_region() const
 //  ADDRESS_MAP( kb_io )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( iskr_1030_keyboard_io, AS_IO, 8, iskr_1030_keyboard_device )
-	AM_RANGE(0x00, 0xff) AM_READWRITE(ram_r, ram_w)
-ADDRESS_MAP_END
+void iskr_1030_keyboard_device::iskr_1030_keyboard_io(address_map &map)
+{
+	map(0x00, 0xff).rw(this, FUNC(iskr_1030_keyboard_device::ram_r), FUNC(iskr_1030_keyboard_device::ram_w));
+}
 
 
 //-------------------------------------------------
 //  device_add_mconfig - add device configuration
 //-------------------------------------------------
 
-MACHINE_CONFIG_MEMBER( iskr_1030_keyboard_device::device_add_mconfig )
-	MCFG_CPU_ADD(I8048_TAG, I8048, XTAL_5MHz)
+MACHINE_CONFIG_START(iskr_1030_keyboard_device::device_add_mconfig)
+	MCFG_CPU_ADD(I8048_TAG, I8048, XTAL(5'000'000))
 	MCFG_CPU_IO_MAP(iskr_1030_keyboard_io)
 	MCFG_MCS48_PORT_P1_IN_CB(READ8(iskr_1030_keyboard_device, p1_r))
 	MCFG_MCS48_PORT_P1_OUT_CB(WRITE8(iskr_1030_keyboard_device, p1_w))

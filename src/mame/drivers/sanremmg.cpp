@@ -26,6 +26,8 @@ public:
 	virtual void video_start() override;
 	uint32_t screen_update_sanremmg(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
+	void sanremmg(machine_config &config);
+	void sanremmg_map(address_map &map);
 };
 
 
@@ -40,17 +42,18 @@ uint32_t sanremmg_state::screen_update_sanremmg(screen_device &screen, bitmap_in
 
 
 
-static ADDRESS_MAP_START( sanremmg_map, AS_PROGRAM, 32, sanremmg_state )
-	AM_RANGE(0x00000000, 0x003fffff) AM_ROM
+void sanremmg_state::sanremmg_map(address_map &map)
+{
+	map(0x00000000, 0x003fffff).rom();
 
-ADDRESS_MAP_END
+}
 
 
 static INPUT_PORTS_START( sanremmg )
 INPUT_PORTS_END
 
 
-static MACHINE_CONFIG_START( sanremmg )
+MACHINE_CONFIG_START(sanremmg_state::sanremmg)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", ARM7, 50000000) // ??? doesn't seem to be ARM, but what is it?

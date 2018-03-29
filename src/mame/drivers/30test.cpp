@@ -50,7 +50,7 @@ http://blogs.yahoo.co.jp/nadegatayosoyuki/59285865.html
 
 #include "30test.lh"
 
-#define MAIN_CLOCK XTAL_16MHz
+#define MAIN_CLOCK XTAL(16'000'000)
 
 class namco_30test_state : public driver_device
 {
@@ -74,6 +74,9 @@ public:
 	virtual void machine_reset() override;
 	required_device<cpu_device> m_maincpu;
 	required_device<okim6295_device> m_oki;
+	void _30test(machine_config &config);
+	void namco_30test_io(address_map &map);
+	void namco_30test_map(address_map &map);
 };
 
 
@@ -136,31 +139,33 @@ WRITE8_MEMBER(namco_30test_state::hc11_okibank_w)
 }
 
 
-static ADDRESS_MAP_START( namco_30test_map, AS_PROGRAM, 8, namco_30test_state )
-	AM_RANGE(0x0000, 0x003f) AM_RAM // internal I/O
-	AM_RANGE(0x007c, 0x007c) AM_READWRITE(hc11_mux_r,hc11_mux_w)
-	AM_RANGE(0x007e, 0x007e) AM_READWRITE(hc11_okibank_r,hc11_okibank_w)
-	AM_RANGE(0x0040, 0x007f) AM_RAM // more internal I/O, HC11 change pending
-	AM_RANGE(0x0080, 0x037f) AM_RAM // internal RAM
-	AM_RANGE(0x0d80, 0x0dbf) AM_RAM // EEPROM read-back data goes there
-	AM_RANGE(0x2000, 0x2000) AM_DEVREADWRITE("oki", okim6295_device, read, write)
+void namco_30test_state::namco_30test_map(address_map &map)
+{
+	map(0x0000, 0x003f).ram(); // internal I/O
+	map(0x0040, 0x007f).ram(); // more internal I/O, HC11 change pending
+	map(0x007c, 0x007c).rw(this, FUNC(namco_30test_state::hc11_mux_r), FUNC(namco_30test_state::hc11_mux_w));
+	map(0x007e, 0x007e).rw(this, FUNC(namco_30test_state::hc11_okibank_r), FUNC(namco_30test_state::hc11_okibank_w));
+	map(0x0080, 0x037f).ram(); // internal RAM
+	map(0x0d80, 0x0dbf).ram(); // EEPROM read-back data goes there
+	map(0x2000, 0x2000).rw(m_oki, FUNC(okim6295_device::read), FUNC(okim6295_device::write));
 	/* 0x401e-0x401f: time */
-	AM_RANGE(0x4000, 0x401f) AM_WRITE(namco_30test_led_w) // 7-seg leds
+	map(0x4000, 0x401f).w(this, FUNC(namco_30test_state::namco_30test_led_w)); // 7-seg leds
 	/* 0x6000: 1st place 7-seg led */
 	/* 0x6001: 2nd place 7-seg led */
 	/* 0x6002: 3rd place 7-seg led */
 	/* 0x6003: current / last play score */
 	/* 0x6004: lamps */
-	AM_RANGE(0x6000, 0x6003) AM_WRITE(namco_30test_led_rank_w)
-	AM_RANGE(0x6004, 0x6004) AM_WRITE(namco_30test_lamps_w)
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+	map(0x6000, 0x6003).w(this, FUNC(namco_30test_state::namco_30test_led_rank_w));
+	map(0x6004, 0x6004).w(this, FUNC(namco_30test_state::namco_30test_lamps_w));
+	map(0x8000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START( namco_30test_io, AS_IO, 8, namco_30test_state )
-	AM_RANGE(MC68HC11_IO_PORTA,MC68HC11_IO_PORTA) AM_READ(namco_30test_mux_r)
+void namco_30test_state::namco_30test_io(address_map &map)
+{
+	map(MC68HC11_IO_PORTA, MC68HC11_IO_PORTA).r(this, FUNC(namco_30test_state::namco_30test_mux_r));
 //  AM_RANGE(MC68HC11_IO_PORTD,MC68HC11_IO_PORTD) AM_RAM
-	AM_RANGE(MC68HC11_IO_PORTE,MC68HC11_IO_PORTE) AM_READ_PORT("SYSTEM")
-ADDRESS_MAP_END
+	map(MC68HC11_IO_PORTE, MC68HC11_IO_PORTE).portr("SYSTEM");
+}
 
 
 static INPUT_PORTS_START( 30test )
@@ -237,7 +242,7 @@ void namco_30test_state::machine_reset()
 }
 
 
-static MACHINE_CONFIG_START( 30test )
+MACHINE_CONFIG_START(namco_30test_state::_30test)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", MC68HC11,MAIN_CLOCK/4)
@@ -269,4 +274,4 @@ ROM_START( 30test )
 	ROM_LOAD( "tt1-voi0.7p",   0x0000, 0x80000, CRC(b4fc5921) SHA1(92a88d5adb50dae48715847f12e88a35e37ef78c) )
 ROM_END
 
-GAMEL( 1997, 30test,  0,   30test,  30test, namco_30test_state,  0, ROT0, "Namco", "30 Test (Remake)", MACHINE_SUPPORTS_SAVE | MACHINE_CLICKABLE_ARTWORK, layout_30test )
+GAMEL( 1997, 30test,  0,   _30test,  30test, namco_30test_state,  0, ROT0, "Namco", "30 Test (Remake)", MACHINE_SUPPORTS_SAVE | MACHINE_CLICKABLE_ARTWORK, layout_30test )

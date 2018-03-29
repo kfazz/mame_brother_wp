@@ -24,7 +24,7 @@
 #include "machine/bankdev.h"
 #include "sound/dac.h"
 #include "sound/wave.h"
-
+#include "screen.h"
 
 
 //**************************************************************************
@@ -75,10 +75,6 @@ SLOT_INTERFACE_EXTERN( coco_cart );
 #define DIECOM_LIGHTGUN_LX_TAG      "dclg_lx"
 #define DIECOM_LIGHTGUN_LY_TAG      "dclg_ly"
 #define DIECOM_LIGHTGUN_BUTTONS_TAG "dclg_triggers"
-
-MACHINE_CONFIG_EXTERN( coco_sound );
-MACHINE_CONFIG_EXTERN( coco_floating );
-
 
 
 //**************************************************************************
@@ -132,9 +128,14 @@ public:
 	virtual address_space &cartridge_space() override;
 
 	// disassembly override
-	static offs_t os9_dasm_override(device_t &device, std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, int options);
-	offs_t dasm_override(device_t &device, std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, int options);
+	static offs_t os9_dasm_override(std::ostream &stream, offs_t pc, const util::disasm_interface::data_buffer &opcodes, const util::disasm_interface::data_buffer &params);
+	offs_t dasm_override(std::ostream &stream, offs_t pc, const util::disasm_interface::data_buffer &opcodes, const util::disasm_interface::data_buffer &params);
 
+	void coco_sound(machine_config &config);
+	void coco_floating(machine_config &config);
+
+	void coco_floating_map(address_map &map);
+	void coco_mem(address_map &map);
 protected:
 	// device-level overrides
 	virtual void device_start() override;
@@ -238,6 +239,7 @@ private:
 	required_device<dac_byte_interface> m_dac;
 	required_device<dac_1bit_device> m_sbs;
 	required_device<wave_device> m_wave;
+	optional_device<screen_device> m_screen;
 	required_device<cococart_slot_device> m_cococart;
 	required_device<ram_device> m_ram;
 	required_device<cassette_image_device> m_cassette;

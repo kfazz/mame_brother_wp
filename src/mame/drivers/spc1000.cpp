@@ -18,7 +18,7 @@ NOTE: 2014-09-13: added code from someone's modified MESS driver for floppy
                   author is Miso Kim.
 
                   Hardware details of the fdc: Intelligent device, Z80 CPU,
-                  XTAL_8MHz, PPI 8255, FDC uPD765C, 2 RAM chips, 28 other
+                  XTAL(8'000'000), PPI 8255, FDC uPD765C, 2 RAM chips, 28 other
                   small ics. And of course, no schematic.
 
 
@@ -26,7 +26,7 @@ NOTE: 2014-09-13: added code from someone's modified MESS driver for floppy
 
 2015-06-19: Added code for the centronics printer port
 
-2016-01-14: Casstte tape motor fixed for working perperly and ROM file changed for CP/M disk loading
+2016-01-14: Cassette tape motor fixed to work properly and ROM file changed for CP/M disk loading
 
 ****************************************************************************/
 /*
@@ -178,6 +178,9 @@ public:
 		return m_p_videoram[0x1000 + (ch & 0x7f) * 16 + line];
 	}
 
+	void spc1000(machine_config &config);
+	void spc1000_io(address_map &map);
+	void spc1000_mem(address_map &map);
 private:
 	uint8_t m_IPLK;
 	uint8_t m_GMODE;
@@ -197,11 +200,12 @@ private:
 	required_device<centronics_device> m_centronics;
 };
 
-static ADDRESS_MAP_START(spc1000_mem, AS_PROGRAM, 8, spc1000_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x7fff) AM_READ_BANK("bank1") AM_WRITE_BANK("bank2")
-	AM_RANGE(0x8000, 0xffff) AM_READ_BANK("bank3") AM_WRITE_BANK("bank4")
-ADDRESS_MAP_END
+void spc1000_state::spc1000_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x7fff).bankr("bank1").bankw("bank2");
+	map(0x8000, 0xffff).bankr("bank3").bankw("bank4");
+}
 
 WRITE8_MEMBER(spc1000_state::iplk_w)
 {
@@ -261,17 +265,18 @@ READ8_MEMBER( spc1000_state::keyboard_r )
 }
 
 
-static ADDRESS_MAP_START( spc1000_io , AS_IO, 8, spc1000_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x1fff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x2000, 0x3fff) AM_READWRITE(gmode_r, gmode_w)
-	AM_RANGE(0x4000, 0x4000) AM_DEVWRITE("ay8910", ay8910_device, address_w)
-	AM_RANGE(0x4001, 0x4001) AM_DEVREADWRITE("ay8910", ay8910_device, data_r, data_w)
-	AM_RANGE(0x6000, 0x6000) AM_WRITE(cass_w)
-	AM_RANGE(0x8000, 0x9fff) AM_READ(keyboard_r)
-	AM_RANGE(0xa000, 0xa000) AM_READWRITE(iplk_r, iplk_w)
-	AM_RANGE(0xc000, 0xdfff) AM_DEVREADWRITE("ext1", spc1000_exp_device, read, write)
-ADDRESS_MAP_END
+void spc1000_state::spc1000_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x1fff).ram().share("videoram");
+	map(0x2000, 0x3fff).rw(this, FUNC(spc1000_state::gmode_r), FUNC(spc1000_state::gmode_w));
+	map(0x4000, 0x4000).w("ay8910", FUNC(ay8910_device::address_w));
+	map(0x4001, 0x4001).rw("ay8910", FUNC(ay8910_device::data_r), FUNC(ay8910_device::data_w));
+	map(0x6000, 0x6000).w(this, FUNC(spc1000_state::cass_w));
+	map(0x8000, 0x9fff).r(this, FUNC(spc1000_state::keyboard_r));
+	map(0xa000, 0xa000).rw(this, FUNC(spc1000_state::iplk_r), FUNC(spc1000_state::iplk_w));
+	map(0xc000, 0xdfff).rw("ext1", FUNC(spc1000_exp_device::read), FUNC(spc1000_exp_device::write));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( spc1000 )
@@ -458,16 +463,16 @@ extern SLOT_INTERFACE_START(spc1000_exp)
 	SLOT_INTERFACE("vdp", SPC1000_VDP_EXP)
 SLOT_INTERFACE_END
 
-static MACHINE_CONFIG_START( spc1000 )
+MACHINE_CONFIG_START(spc1000_state::spc1000)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",Z80, XTAL_4MHz)
+	MCFG_CPU_ADD("maincpu",Z80, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(spc1000_mem)
 	MCFG_CPU_IO_MAP(spc1000_io)
 
 	/* video hardware */
 	MCFG_SCREEN_MC6847_NTSC_ADD("screen", "mc6847")
 
-	MCFG_DEVICE_ADD("mc6847", MC6847_NTSC, XTAL_3_579545MHz)
+	MCFG_DEVICE_ADD("mc6847", MC6847_NTSC, XTAL(3'579'545))
 	MCFG_MC6847_FSYNC_CALLBACK(WRITELINE(spc1000_state, irq_w))
 	MCFG_MC6847_INPUT_CALLBACK(READ8(spc1000_state, mc6847_videoram_r))
 	MCFG_MC6847_CHARROM_CALLBACK(spc1000_state, get_char_rom)
@@ -476,7 +481,7 @@ static MACHINE_CONFIG_START( spc1000 )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("ay8910", AY8910, XTAL_4MHz / 1)
+	MCFG_SOUND_ADD("ay8910", AY8910, XTAL(4'000'000) / 1)
 	MCFG_AY8910_PORT_A_READ_CB(READ8(spc1000_state, porta_r))
 	MCFG_AY8910_PORT_B_WRITE_CB(DEVWRITE8("cent_data_out", output_latch_device, write))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)

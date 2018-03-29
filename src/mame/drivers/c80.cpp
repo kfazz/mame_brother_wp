@@ -63,17 +63,19 @@ data of next byte, and so on.
 
 /* Memory Maps */
 
-static ADDRESS_MAP_START( c80_mem, AS_PROGRAM, 8, c80_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x07ff) AM_ROM
-	AM_RANGE(0x0800, 0x0bff) AM_MIRROR(0x400) AM_RAM
-ADDRESS_MAP_END
+void c80_state::c80_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x07ff).rom();
+	map(0x0800, 0x0bff).mirror(0x400).ram();
+}
 
-static ADDRESS_MAP_START( c80_io, AS_IO, 8, c80_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x7c, 0x7f) AM_DEVREADWRITE(Z80PIO2_TAG, z80pio_device, read, write)
-	AM_RANGE(0xbc, 0xbf) AM_DEVREADWRITE(Z80PIO1_TAG, z80pio_device, read, write)
-ADDRESS_MAP_END
+void c80_state::c80_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x7c, 0x7f).rw(Z80PIO2_TAG, FUNC(z80pio_device::read), FUNC(z80pio_device::write));
+	map(0xbc, 0xbf).rw(m_pio1, FUNC(z80pio_device::read), FUNC(z80pio_device::write));
+}
 
 /* Input Ports */
 
@@ -251,7 +253,7 @@ void c80_state::machine_start()
 
 /* Machine Driver */
 
-static MACHINE_CONFIG_START( c80 )
+MACHINE_CONFIG_START(c80_state::c80)
 	/* basic machine hardware */
 	MCFG_CPU_ADD(Z80_TAG, Z80, 2500000) /* U880D */
 	MCFG_CPU_PROGRAM_MAP(c80_mem)

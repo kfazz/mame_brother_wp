@@ -83,12 +83,12 @@
 #include "speaker.h"
 
 
-#define MAIN_CPU_MASTER_CLOCK       XTAL_11_2MHz
+#define MAIN_CPU_MASTER_CLOCK       XTAL(11'200'000)
 #define PIXEL_CLOCK                 (MAIN_CPU_MASTER_CLOCK / 2)
 #define CRTC_CLOCK                  (MAIN_CPU_MASTER_CLOCK / 16)
-#define AUDIO_1_MASTER_CLOCK        XTAL_4MHz
+#define AUDIO_1_MASTER_CLOCK        XTAL(4'000'000)
 #define AUDIO_CPU_1_CLOCK           AUDIO_1_MASTER_CLOCK
-#define AUDIO_2_MASTER_CLOCK        XTAL_4MHz
+#define AUDIO_2_MASTER_CLOCK        XTAL(4'000'000)
 #define AUDIO_CPU_2_CLOCK           AUDIO_2_MASTER_CLOCK
 
 
@@ -148,16 +148,19 @@ public:
 	DECLARE_WRITE8_MEMBER(pia_2_port_a_w);
 	DECLARE_WRITE8_MEMBER(pia_2_port_b_w);
 	DECLARE_WRITE_LINE_MEMBER(flipscreen_w);
-	DECLARE_WRITE_LINE_MEMBER(display_enable_changed);
 	DECLARE_WRITE8_MEMBER(nyny_ay8910_37_port_a_w);
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
 	INTERRUPT_GEN_MEMBER(update_pia_1);
-	DECLARE_WRITE8_MEMBER(ic48_1_74123_output_changed);
+	DECLARE_WRITE_LINE_MEMBER(ic48_1_74123_output_changed);
 	inline void shift_star_generator(  );
 
 	MC6845_UPDATE_ROW(crtc_update_row);
 	MC6845_END_UPDATE(crtc_end_update);
+	void nyny(machine_config &config);
+	void nyny_audio_1_map(address_map &map);
+	void nyny_audio_2_map(address_map &map);
+	void nyny_main_map(address_map &map);
 };
 
 
@@ -242,9 +245,9 @@ WRITE8_MEMBER(nyny_state::pia_2_port_b_w)
  *
  *************************************/
 
-WRITE8_MEMBER(nyny_state::ic48_1_74123_output_changed)
+WRITE_LINE_MEMBER(nyny_state::ic48_1_74123_output_changed)
 {
-	m_pia2->ca1_w(data);
+	m_pia2->ca1_w(state);
 }
 
 /*************************************
@@ -355,11 +358,6 @@ MC6845_END_UPDATE( nyny_state::crtc_end_update )
 }
 
 
-WRITE_LINE_MEMBER(nyny_state::display_enable_changed)
-{
-	m_ic48_1->a_w(generic_space(), 0, state);
-}
-
 
 /*************************************
  *
@@ -428,51 +426,54 @@ WRITE8_MEMBER(nyny_state::nyny_pia_1_2_w)
 }
 
 
-static ADDRESS_MAP_START( nyny_main_map, AS_PROGRAM, 8, nyny_state )
-	AM_RANGE(0x0000, 0x1fff) AM_RAM AM_SHARE("videoram1")
-	AM_RANGE(0x2000, 0x3fff) AM_RAM AM_SHARE("colorram1")
-	AM_RANGE(0x4000, 0x5fff) AM_RAM AM_SHARE("videoram2")
-	AM_RANGE(0x6000, 0x7fff) AM_RAM AM_SHARE("colorram2")
-	AM_RANGE(0x8000, 0x9fff) AM_RAM
-	AM_RANGE(0xa000, 0xa0ff) AM_RAM AM_SHARE("nvram") /* SRAM (coin counter, shown when holding F2) */
-	AM_RANGE(0xa100, 0xa100) AM_MIRROR(0x00fe) AM_DEVWRITE("crtc", mc6845_device, address_w)
-	AM_RANGE(0xa101, 0xa101) AM_MIRROR(0x00fe) AM_DEVWRITE("crtc", mc6845_device, register_w)
-	AM_RANGE(0xa200, 0xa20f) AM_MIRROR(0x00f0) AM_READWRITE(nyny_pia_1_2_r, nyny_pia_1_2_w)
-	AM_RANGE(0xa300, 0xa300) AM_MIRROR(0x00ff) AM_DEVREAD("soundlatch3", generic_latch_8_device, read) AM_WRITE(audio_1_command_w)
-	AM_RANGE(0xa400, 0xa7ff) AM_NOP
-	AM_RANGE(0xa800, 0xbfff) AM_ROM
-	AM_RANGE(0xc000, 0xdfff) AM_RAM
-	AM_RANGE(0xe000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void nyny_state::nyny_main_map(address_map &map)
+{
+	map(0x0000, 0x1fff).ram().share("videoram1");
+	map(0x2000, 0x3fff).ram().share("colorram1");
+	map(0x4000, 0x5fff).ram().share("videoram2");
+	map(0x6000, 0x7fff).ram().share("colorram2");
+	map(0x8000, 0x9fff).ram();
+	map(0xa000, 0xa0ff).ram().share("nvram"); /* SRAM (coin counter, shown when holding F2) */
+	map(0xa100, 0xa100).mirror(0x00fe).w(m_mc6845, FUNC(mc6845_device::address_w));
+	map(0xa101, 0xa101).mirror(0x00fe).w(m_mc6845, FUNC(mc6845_device::register_w));
+	map(0xa200, 0xa20f).mirror(0x00f0).rw(this, FUNC(nyny_state::nyny_pia_1_2_r), FUNC(nyny_state::nyny_pia_1_2_w));
+	map(0xa300, 0xa300).mirror(0x00ff).r(m_soundlatch3, FUNC(generic_latch_8_device::read)).w(this, FUNC(nyny_state::audio_1_command_w));
+	map(0xa400, 0xa7ff).noprw();
+	map(0xa800, 0xbfff).rom();
+	map(0xc000, 0xdfff).ram();
+	map(0xe000, 0xffff).rom();
+}
 
 
-static ADDRESS_MAP_START( nyny_audio_1_map, AS_PROGRAM, 8, nyny_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
-	AM_RANGE(0x0000, 0x007f) AM_RAM     /* internal RAM */
-	AM_RANGE(0x0080, 0x0fff) AM_NOP
-	AM_RANGE(0x1000, 0x1000) AM_MIRROR(0x0fff) AM_DEVREAD("soundlatch", generic_latch_8_device, read) AM_WRITE(audio_1_answer_w)
-	AM_RANGE(0x2000, 0x2000) AM_MIRROR(0x0fff) AM_READ_PORT("SW3")
-	AM_RANGE(0x3000, 0x3000) AM_MIRROR(0x0ffc) AM_DEVREAD("ay1", ay8910_device, data_r)
-	AM_RANGE(0x3000, 0x3001) AM_MIRROR(0x0ffc) AM_DEVWRITE("ay1", ay8910_device, data_address_w)
-	AM_RANGE(0x3002, 0x3002) AM_MIRROR(0x0ffc) AM_DEVREAD("ay2", ay8910_device, data_r)
-	AM_RANGE(0x3002, 0x3003) AM_MIRROR(0x0ffc) AM_DEVWRITE("ay2", ay8910_device, data_address_w)
-	AM_RANGE(0x4000, 0x4fff) AM_NOP
-	AM_RANGE(0x5000, 0x57ff) AM_MIRROR(0x0800) AM_ROM
-	AM_RANGE(0x6000, 0x67ff) AM_MIRROR(0x0800) AM_ROM
-	AM_RANGE(0x7000, 0x77ff) AM_MIRROR(0x0800) AM_ROM
-ADDRESS_MAP_END
+void nyny_state::nyny_audio_1_map(address_map &map)
+{
+	map.global_mask(0x7fff);
+	map(0x0000, 0x007f).ram();     /* internal RAM */
+	map(0x0080, 0x0fff).noprw();
+	map(0x1000, 0x1000).mirror(0x0fff).r(m_soundlatch, FUNC(generic_latch_8_device::read)).w(this, FUNC(nyny_state::audio_1_answer_w));
+	map(0x2000, 0x2000).mirror(0x0fff).portr("SW3");
+	map(0x3000, 0x3000).mirror(0x0ffc).r("ay1", FUNC(ay8910_device::data_r));
+	map(0x3000, 0x3001).mirror(0x0ffc).w("ay1", FUNC(ay8910_device::data_address_w));
+	map(0x3002, 0x3002).mirror(0x0ffc).r("ay2", FUNC(ay8910_device::data_r));
+	map(0x3002, 0x3003).mirror(0x0ffc).w("ay2", FUNC(ay8910_device::data_address_w));
+	map(0x4000, 0x4fff).noprw();
+	map(0x5000, 0x57ff).mirror(0x0800).rom();
+	map(0x6000, 0x67ff).mirror(0x0800).rom();
+	map(0x7000, 0x77ff).mirror(0x0800).rom();
+}
 
 
-static ADDRESS_MAP_START( nyny_audio_2_map, AS_PROGRAM, 8, nyny_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
-	AM_RANGE(0x0000, 0x007f) AM_RAM     /* internal RAM */
-	AM_RANGE(0x0080, 0x0fff) AM_NOP
-	AM_RANGE(0x1000, 0x1000) AM_MIRROR(0x0fff) AM_DEVREAD("soundlatch2", generic_latch_8_device, read)
-	AM_RANGE(0x2000, 0x2000) AM_MIRROR(0x0ffe) AM_DEVREAD("ay3", ay8910_device, data_r)
-	AM_RANGE(0x2000, 0x2001) AM_MIRROR(0x0ffe) AM_DEVWRITE("ay3", ay8910_device, data_address_w)
-	AM_RANGE(0x3000, 0x6fff) AM_NOP
-	AM_RANGE(0x7000, 0x77ff) AM_MIRROR(0x0800) AM_ROM
-ADDRESS_MAP_END
+void nyny_state::nyny_audio_2_map(address_map &map)
+{
+	map.global_mask(0x7fff);
+	map(0x0000, 0x007f).ram();     /* internal RAM */
+	map(0x0080, 0x0fff).noprw();
+	map(0x1000, 0x1000).mirror(0x0fff).r(m_soundlatch2, FUNC(generic_latch_8_device::read));
+	map(0x2000, 0x2000).mirror(0x0ffe).r("ay3", FUNC(ay8910_device::data_r));
+	map(0x2000, 0x2001).mirror(0x0ffe).w("ay3", FUNC(ay8910_device::data_address_w));
+	map(0x3000, 0x6fff).noprw();
+	map(0x7000, 0x77ff).mirror(0x0800).rom();
+}
 
 
 
@@ -591,10 +592,10 @@ void nyny_state::machine_reset()
  *
  *************************************/
 
-static MACHINE_CONFIG_START( nyny )
+MACHINE_CONFIG_START(nyny_state::nyny)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809, 1400000) /* 1.40 MHz? The clock signal is generated by analog chips */
+	MCFG_CPU_ADD("maincpu", MC6809, 5600000) /* 1.40 MHz? The clock signal is generated by analog chips */
 	MCFG_CPU_PROGRAM_MAP(nyny_main_map)
 	MCFG_CPU_PERIODIC_INT_DRIVER(nyny_state, update_pia_1,  25)
 
@@ -618,7 +619,7 @@ static MACHINE_CONFIG_START( nyny )
 	MCFG_MC6845_CHAR_WIDTH(8)
 	MCFG_MC6845_UPDATE_ROW_CB(nyny_state, crtc_update_row)
 	MCFG_MC6845_END_UPDATE_CB(nyny_state, crtc_end_update)
-	MCFG_MC6845_OUT_DE_CB(WRITELINE(nyny_state, display_enable_changed))
+	MCFG_MC6845_OUT_DE_CB(DEVWRITELINE("ic48_1", ttl74123_device, a_w))
 
 	/* 74LS123 */
 	MCFG_DEVICE_ADD("ic48_1", TTL74123, 0)
@@ -628,7 +629,7 @@ static MACHINE_CONFIG_START( nyny )
 	MCFG_TTL74123_A_PIN_VALUE(1)                  /* A pin - driven by the CRTC */
 	MCFG_TTL74123_B_PIN_VALUE(1)                  /* B pin - pulled high */
 	MCFG_TTL74123_CLEAR_PIN_VALUE(1)                  /* Clear pin - pulled high */
-	MCFG_TTL74123_OUTPUT_CHANGED_CB(WRITE8(nyny_state, ic48_1_74123_output_changed))
+	MCFG_TTL74123_OUTPUT_CHANGED_CB(WRITELINE(nyny_state, ic48_1_74123_output_changed))
 
 	MCFG_DEVICE_ADD("pia1", PIA6821, 0)
 	MCFG_PIA_READPA_HANDLER(IOPORT("IN0"))

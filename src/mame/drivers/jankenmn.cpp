@@ -156,7 +156,7 @@
 
 #include "jankenmn.lh"
 
-#define MASTER_CLOCK        XTAL_2_5MHz
+#define MASTER_CLOCK        XTAL(2'500'000)
 
 
 class jankenmn_state : public driver_device
@@ -173,6 +173,9 @@ public:
 	DECLARE_WRITE8_MEMBER(lamps3_w);
 
 	DECLARE_CUSTOM_INPUT_MEMBER(hopper_status_r);
+	void jankenmn(machine_config &config);
+	void jankenmn_map(address_map &map);
+	void jankenmn_port_map(address_map &map);
 };
 
 
@@ -249,19 +252,21 @@ CUSTOM_INPUT_MEMBER(jankenmn_state::hopper_status_r)
 *           Memory Map Definition            *
 *********************************************/
 
-static ADDRESS_MAP_START( jankenmn_map, AS_PROGRAM, 8, jankenmn_state )
-	AM_RANGE(0x0000, 0xbfff) AM_ROM
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM
-	AM_RANGE(0xe000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void jankenmn_state::jankenmn_map(address_map &map)
+{
+	map(0x0000, 0xbfff).rom();
+	map(0xc000, 0xc7ff).ram();
+	map(0xe000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START( jankenmn_port_map, AS_IO, 8, jankenmn_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x03) AM_DEVREADWRITE("ctc", z80ctc_device, read, write)
-	AM_RANGE(0x10, 0x13) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)
-	AM_RANGE(0x20, 0x23) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)
-	AM_RANGE(0x30, 0x30) AM_WRITENOP // ???
-ADDRESS_MAP_END
+void jankenmn_state::jankenmn_port_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x03).rw("ctc", FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+	map(0x10, 0x13).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x20, 0x23).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x30, 0x30).nopw(); // ???
+}
 
 /*
   Writes to port 30h....
@@ -362,7 +367,7 @@ static const z80_daisy_config daisy_chain[] =
 *               Machine Config               *
 *********************************************/
 
-static MACHINE_CONFIG_START( jankenmn )
+MACHINE_CONFIG_START(jankenmn_state::jankenmn)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK)  /* 2.5 MHz */
 	MCFG_Z80_DAISY_CHAIN(daisy_chain)

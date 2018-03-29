@@ -17,22 +17,24 @@ cedar_magnet_plane_device::cedar_magnet_plane_device(const machine_config &mconf
 
 
 
-static ADDRESS_MAP_START( cedar_magnet_plane_map, AS_PROGRAM, 8, cedar_magnet_plane_device )
-	AM_RANGE(0x0000, 0xffff) AM_RAM AM_SHARE("ram")
-ADDRESS_MAP_END
+void cedar_magnet_plane_device::cedar_magnet_plane_map(address_map &map)
+{
+	map(0x0000, 0xffff).ram().share("ram");
+}
 
-static ADDRESS_MAP_START( cedar_magnet_plane_io, AS_IO, 8, cedar_magnet_plane_device )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
+void cedar_magnet_plane_device::cedar_magnet_plane_io(address_map &map)
+{
+	map.global_mask(0xff);
 
-	AM_RANGE(0xc0, 0xc3) AM_DEVREADWRITE("z80pio0", z80pio_device, read_alt, write_alt)
-	AM_RANGE(0xc4, 0xc7) AM_DEVREADWRITE("z80pio1", z80pio_device, read_alt, write_alt)
+	map(0xc0, 0xc3).rw("z80pio0", FUNC(z80pio_device::read_alt), FUNC(z80pio_device::write_alt));
+	map(0xc4, 0xc7).rw("z80pio1", FUNC(z80pio_device::read_alt), FUNC(z80pio_device::write_alt));
 
-	AM_RANGE(0xcc, 0xcc) AM_WRITE(plane_portcc_w)
-	AM_RANGE(0xcd, 0xcd) AM_WRITE(plane_portcd_w)
-	AM_RANGE(0xce, 0xce) AM_WRITE(plane_portce_w)
-	AM_RANGE(0xcf, 0xcf) AM_WRITE(plane_portcf_w)
+	map(0xcc, 0xcc).w(this, FUNC(cedar_magnet_plane_device::plane_portcc_w));
+	map(0xcd, 0xcd).w(this, FUNC(cedar_magnet_plane_device::plane_portcd_w));
+	map(0xce, 0xce).w(this, FUNC(cedar_magnet_plane_device::plane_portce_w));
+	map(0xcf, 0xcf).w(this, FUNC(cedar_magnet_plane_device::plane_portcf_w));
 
-ADDRESS_MAP_END
+}
 
 
 
@@ -69,7 +71,7 @@ WRITE8_MEMBER(cedar_magnet_plane_device::plane_portcf_w)
 	m_cf_data = data;
 }
 
-MACHINE_CONFIG_MEMBER( cedar_magnet_plane_device::device_add_mconfig )
+MACHINE_CONFIG_START(cedar_magnet_plane_device::device_add_mconfig)
 	MCFG_CPU_ADD("planecpu", Z80,4000000)
 	MCFG_CPU_PROGRAM_MAP(cedar_magnet_plane_map)
 	MCFG_CPU_IO_MAP(cedar_magnet_plane_io)

@@ -62,72 +62,78 @@ READ8_MEMBER(galivan_state::IO_port_c0_r)
 
 
 
-static ADDRESS_MAP_START( galivan_map, AS_PROGRAM, 8, galivan_state )
-	AM_RANGE(0x0000, 0xbfff) AM_ROM
+void galivan_state::galivan_map(address_map &map)
+{
+	map(0x0000, 0xbfff).rom();
 
-	AM_RANGE(0xc000, 0xdfff) AM_ROMBANK("bank1")
-	AM_RANGE(0xd800, 0xdfff) AM_WRITE(galivan_videoram_w) AM_SHARE("videoram")
+	map(0xc000, 0xdfff).bankr("bank1");
+	map(0xd800, 0xdfff).w(this, FUNC(galivan_state::galivan_videoram_w)).share("videoram");
 
-	AM_RANGE(0xe000, 0xe0ff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0xe100, 0xffff) AM_RAM
-ADDRESS_MAP_END
+	map(0xe000, 0xe0ff).ram().share("spriteram");
+	map(0xe100, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START( ninjemak_map, AS_PROGRAM, 8, galivan_state )
-	AM_RANGE(0x0000, 0xbfff) AM_ROM
+void galivan_state::ninjemak_map(address_map &map)
+{
+	map(0x0000, 0xbfff).rom();
 
-	AM_RANGE(0xc000, 0xdfff) AM_ROMBANK("bank1")
-	AM_RANGE(0xd800, 0xdfff) AM_WRITE(galivan_videoram_w) AM_SHARE("videoram")
+	map(0xc000, 0xdfff).bankr("bank1");
+	map(0xd800, 0xdfff).w(this, FUNC(galivan_state::galivan_videoram_w)).share("videoram");
 
-	AM_RANGE(0xe000, 0xe1ff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0xe200, 0xffff) AM_RAM
-ADDRESS_MAP_END
+	map(0xe000, 0xe1ff).ram().share("spriteram");
+	map(0xe200, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START( io_map, AS_IO, 8, galivan_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_READ_PORT("P1")
-	AM_RANGE(0x01, 0x01) AM_READ_PORT("P2")
-	AM_RANGE(0x02, 0x02) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0x03, 0x03) AM_READ_PORT("DSW1")
-	AM_RANGE(0x04, 0x04) AM_READ_PORT("DSW2")
-	AM_RANGE(0x40, 0x40) AM_WRITE(galivan_gfxbank_w)
-	AM_RANGE(0x41, 0x42) AM_WRITE(galivan_scrollx_w)
-	AM_RANGE(0x43, 0x44) AM_WRITE(galivan_scrolly_w)
-	AM_RANGE(0x45, 0x45) AM_WRITE(galivan_sound_command_w)
+void galivan_state::io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).portr("P1");
+	map(0x01, 0x01).portr("P2");
+	map(0x02, 0x02).portr("SYSTEM");
+	map(0x03, 0x03).portr("DSW1");
+	map(0x04, 0x04).portr("DSW2");
+	map(0x40, 0x40).w(this, FUNC(galivan_state::galivan_gfxbank_w));
+	map(0x41, 0x42).w(this, FUNC(galivan_state::galivan_scrollx_w));
+	map(0x43, 0x44).w(this, FUNC(galivan_state::galivan_scrolly_w));
+	map(0x45, 0x45).w(this, FUNC(galivan_state::galivan_sound_command_w));
 //  AM_RANGE(0x46, 0x46) AM_WRITENOP
 //  AM_RANGE(0x47, 0x47) AM_WRITENOP
-	AM_RANGE(0xc0, 0xc0) AM_READ(IO_port_c0_r) /* dangar needs to return 0x58 */
-ADDRESS_MAP_END
+	map(0xc0, 0xc0).r(this, FUNC(galivan_state::IO_port_c0_r)); /* dangar needs to return 0x58 */
+}
 
 WRITE8_MEMBER(galivan_state::blit_trigger_w)
 {
 	m_nb1414m4->exec((m_videoram[0] << 8) | (m_videoram[1] & 0xff),m_videoram,m_scrollx,m_scrolly,m_tx_tilemap);
 }
 
-static ADDRESS_MAP_START( ninjemak_io_map, AS_IO, 8, galivan_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x80, 0x80) AM_READ_PORT("P1") AM_WRITE(ninjemak_gfxbank_w)
-	AM_RANGE(0x81, 0x81) AM_READ_PORT("P2")
-	AM_RANGE(0x82, 0x82) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0x83, 0x83) AM_READ_PORT("SERVICE")
-	AM_RANGE(0x84, 0x84) AM_READ_PORT("DSW1")
-	AM_RANGE(0x85, 0x85) AM_READ_PORT("DSW2") AM_WRITE(galivan_sound_command_w)
-	AM_RANGE(0x86, 0x86) AM_WRITE(blit_trigger_w)         // ??
+void galivan_state::ninjemak_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x80, 0x80).portr("P1").w(this, FUNC(galivan_state::ninjemak_gfxbank_w));
+	map(0x81, 0x81).portr("P2");
+	map(0x82, 0x82).portr("SYSTEM");
+	map(0x83, 0x83).portr("SERVICE");
+	map(0x84, 0x84).portr("DSW1");
+	map(0x85, 0x85).portr("DSW2").w(this, FUNC(galivan_state::galivan_sound_command_w));
+	map(0x86, 0x86).w(this, FUNC(galivan_state::blit_trigger_w));         // ??
 //  AM_RANGE(0x87, 0x87) AM_WRITENOP         // ??
-ADDRESS_MAP_END
+}
 
-static ADDRESS_MAP_START( sound_map, AS_PROGRAM, 8, galivan_state )
-	AM_RANGE(0x0000, 0xbfff) AM_ROM
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM
-ADDRESS_MAP_END
+void galivan_state::sound_map(address_map &map)
+{
+	map(0x0000, 0xbfff).rom();
+	map(0xc000, 0xc7ff).ram();
+}
 
-static ADDRESS_MAP_START( sound_io_map, AS_IO, 8, galivan_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x01) AM_DEVWRITE("ymsnd", ym3526_device, write)
-	AM_RANGE(0x02, 0x02) AM_DEVWRITE("dac1", dac_byte_interface, write)
-	AM_RANGE(0x03, 0x03) AM_DEVWRITE("dac2", dac_byte_interface, write)
-	AM_RANGE(0x04, 0x04) AM_READ(soundlatch_clear_r)
-	AM_RANGE(0x06, 0x06) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+void galivan_state::sound_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x01).w("ymsnd", FUNC(ym3526_device::write));
+	map(0x02, 0x02).w("dac1", FUNC(dac_byte_interface::write));
+	map(0x03, 0x03).w("dac2", FUNC(dac_byte_interface::write));
+	map(0x04, 0x04).r(this, FUNC(galivan_state::soundlatch_clear_r));
+	map(0x06, 0x06).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
 
 /***************
@@ -418,18 +424,18 @@ MACHINE_RESET_MEMBER(galivan_state,ninjemak)
 	m_ninjemak_dispdisable = 0;
 }
 
-static MACHINE_CONFIG_START( galivan )
+MACHINE_CONFIG_START(galivan_state::galivan)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_12MHz/2)      /* 6 MHz? */
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(12'000'000)/2)      /* 6 MHz? */
 	MCFG_CPU_PROGRAM_MAP(galivan_map)
 	MCFG_CPU_IO_MAP(io_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", galivan_state,  irq0_line_hold)
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_8MHz/2)      /* 4 MHz? */
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(8'000'000)/2)      /* 4 MHz? */
 	MCFG_CPU_PROGRAM_MAP(sound_map)
 	MCFG_CPU_IO_MAP(sound_io_map)
-	MCFG_CPU_PERIODIC_INT_DRIVER(galivan_state, irq0_line_hold,  XTAL_8MHz/2/512)   // ?
+	MCFG_CPU_PERIODIC_INT_DRIVER(galivan_state, irq0_line_hold,  XTAL(8'000'000)/2/512)   // ?
 
 	MCFG_MACHINE_START_OVERRIDE(galivan_state,galivan)
 	MCFG_MACHINE_RESET_OVERRIDE(galivan_state,galivan)
@@ -458,7 +464,7 @@ static MACHINE_CONFIG_START( galivan )
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
 
-	MCFG_SOUND_ADD("ymsnd", YM3526, XTAL_8MHz/2)
+	MCFG_SOUND_ADD("ymsnd", YM3526, XTAL(8'000'000)/2)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 
 	MCFG_SOUND_ADD("dac1", DAC_8BIT_R2R, 0) MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.25) // unknown DAC
@@ -468,18 +474,18 @@ static MACHINE_CONFIG_START( galivan )
 	MCFG_SOUND_ROUTE_EX(0, "dac2", 1.0, DAC_VREF_POS_INPUT) MCFG_SOUND_ROUTE_EX(0, "dac2", -1.0, DAC_VREF_NEG_INPUT)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( ninjemak )
+MACHINE_CONFIG_START(galivan_state::ninjemak)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_12MHz/2)      /* 6 MHz? */
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(12'000'000)/2)      /* 6 MHz? */
 	MCFG_CPU_PROGRAM_MAP(ninjemak_map)
 	MCFG_CPU_IO_MAP(ninjemak_io_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", galivan_state,  irq0_line_hold)
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_8MHz/2)      /* 4 MHz? */
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(8'000'000)/2)      /* 4 MHz? */
 	MCFG_CPU_PROGRAM_MAP(sound_map)
 	MCFG_CPU_IO_MAP(sound_io_map)
-	MCFG_CPU_PERIODIC_INT_DRIVER(galivan_state, irq0_line_hold,  XTAL_8MHz/2/512)   // ?
+	MCFG_CPU_PERIODIC_INT_DRIVER(galivan_state, irq0_line_hold,  XTAL(8'000'000)/2/512)   // ?
 
 	MCFG_MACHINE_START_OVERRIDE(galivan_state,ninjemak)
 	MCFG_MACHINE_RESET_OVERRIDE(galivan_state,ninjemak)
@@ -510,7 +516,7 @@ static MACHINE_CONFIG_START( ninjemak )
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
 
-	MCFG_SOUND_ADD("ymsnd", YM3526, XTAL_8MHz/2)
+	MCFG_SOUND_ADD("ymsnd", YM3526, XTAL(8'000'000)/2)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 
 	MCFG_SOUND_ADD("dac1", DAC_8BIT_R2R, 0) MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.25) // unknown DAC
@@ -521,7 +527,8 @@ static MACHINE_CONFIG_START( ninjemak )
 MACHINE_CONFIG_END
 
 
-MACHINE_CONFIG_DERIVED(youmab, ninjemak)
+MACHINE_CONFIG_START(galivan_state::youmab)
+	ninjemak(config);
 
 	MCFG_DEVICE_REMOVE("nb1414m4")
 MACHINE_CONFIG_END

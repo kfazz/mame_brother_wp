@@ -51,7 +51,7 @@ INPUT_PORTS_END
 
 ROM_START(a1200kbd_revB)
 	ROM_REGION(0x2000, "mpu", 0)
-	ROM_LOAD("DFA_Rev_B_A1200_HC705.bin", 0x0000, 0x2000, CRC(2a77eec4) SHA1(301ec6a69404457d912c89e3fc54095eda9f0e93))
+	ROM_LOAD("dfa_rev_b_a1200_hc705.bin", 0x0000, 0x2000, CRC(2a77eec4) SHA1(301ec6a69404457d912c89e3fc54095eda9f0e93))
 ROM_END
 
 } // anonymous namespace
@@ -126,8 +126,8 @@ WRITE_LINE_MEMBER(a1200_kbd_device::mpu_tcmp)
 	m_host->krst_w(state);
 }
 
-MACHINE_CONFIG_MEMBER(a1200_kbd_device::device_add_mconfig)
-	MCFG_CPU_ADD("mpu", M68HC705C8A, XTAL_3MHz)
+MACHINE_CONFIG_START(a1200_kbd_device::device_add_mconfig)
+	MCFG_CPU_ADD("mpu", M68HC705C8A, XTAL(3'000'000))
 	MCFG_M68HC05_PORTB_R_CB(READ8(a1200_kbd_device, mpu_portb_r));
 	MCFG_M68HC05_PORTD_R_CB(IOPORT("MOD"));
 	MCFG_M68HC05_PORTA_W_CB(WRITE8(a1200_kbd_device, mpu_porta_w));

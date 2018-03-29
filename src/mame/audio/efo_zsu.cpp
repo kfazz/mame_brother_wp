@@ -12,8 +12,8 @@
    sound generators are 2 AY-3-8910As and 1 OKI MSM5205, and 2 MF10s and
    1 HC4066 are used to mix their outputs. The timing circuits are rather
    intricate, using Z80-CTCs, HC74s and HC393s and various other gates to
-   drive both the 5205 and the SGS HCF40105BE through which its samples
-   are funneled.
+   drive both the 5205 and the SGS HCF40105BE (equivalent to CD40105B)
+   through which its samples are funneled.
 
    There are no available schematics for the Cedar Magnet video game
    system (also designed by E.F.O.), but its sound board is believed to be
@@ -83,34 +83,37 @@ WRITE8_MEMBER(efo_zsu_device::sound_command_w)
 
 
 
-static ADDRESS_MAP_START( zsu_map, AS_PROGRAM, 8, efo_zsu_device )
-	AM_RANGE(0x0000, 0x6fff) AM_ROM
-	AM_RANGE(0x7000, 0x77ff) AM_MIRROR(0x0800) AM_RAM
-	AM_RANGE(0x8000, 0xffff) AM_ROMBANK("rombank")
-ADDRESS_MAP_END
+void efo_zsu_device::zsu_map(address_map &map)
+{
+	map(0x0000, 0x6fff).rom();
+	map(0x7000, 0x77ff).mirror(0x0800).ram();
+	map(0x8000, 0xffff).bankr("rombank");
+}
 
-static ADDRESS_MAP_START( cedar_magnet_sound_map, AS_PROGRAM, 8, cedar_magnet_sound_device )
-	AM_RANGE(0x0000, 0xffff) AM_RAM AM_SHARE("ram")
-ADDRESS_MAP_END
+void cedar_magnet_sound_device::cedar_magnet_sound_map(address_map &map)
+{
+	map(0x0000, 0xffff).ram().share("ram");
+}
 
-static ADDRESS_MAP_START( zsu_io, AS_IO, 8, efo_zsu_device )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	ADDRESS_MAP_UNMAP_HIGH
+void efo_zsu_device::zsu_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map.unmap_value_high();
 
-	AM_RANGE(0x00, 0x03) AM_DEVREADWRITE("ctc0", z80ctc_device, read, write)
-	AM_RANGE(0x04, 0x07) AM_DEVREADWRITE("ctc1", z80ctc_device, read, write)
+	map(0x00, 0x03).rw("ctc0", FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+	map(0x04, 0x07).rw("ctc1", FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
 
-	AM_RANGE(0x08, 0x08) AM_WRITE(adpcm_fifo_w)
+	map(0x08, 0x08).w(this, FUNC(efo_zsu_device::adpcm_fifo_w));
 
-	AM_RANGE(0x0c, 0x0c) AM_DEVWRITE("aysnd0", ay8910_device, address_w)
-	AM_RANGE(0x0d, 0x0d) AM_DEVWRITE("aysnd0", ay8910_device, data_w)
+	map(0x0c, 0x0c).w("aysnd0", FUNC(ay8910_device::address_w));
+	map(0x0d, 0x0d).w("aysnd0", FUNC(ay8910_device::data_w));
 
-	AM_RANGE(0x10, 0x10) AM_DEVWRITE("aysnd1", ay8910_device, address_w)
-	AM_RANGE(0x11, 0x11) AM_DEVWRITE("aysnd1", ay8910_device, data_w)
+	map(0x10, 0x10).w("aysnd1", FUNC(ay8910_device::address_w));
+	map(0x11, 0x11).w("aysnd1", FUNC(ay8910_device::data_w));
 
-	AM_RANGE(0x14, 0x14) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
+	map(0x14, 0x14).r("soundlatch", FUNC(generic_latch_8_device::read));
 
-ADDRESS_MAP_END
+}
 
 WRITE8_MEMBER(efo_zsu_device::adpcm_fifo_w)
 {
@@ -187,7 +190,7 @@ TIMER_CALLBACK_MEMBER(cedar_magnet_sound_device::reset_assert_callback)
 }
 
 
-MACHINE_CONFIG_MEMBER( efo_zsu_device::device_add_mconfig )
+MACHINE_CONFIG_START(efo_zsu_device::device_add_mconfig)
 	MCFG_CPU_ADD("soundcpu", Z80, 4000000)
 	MCFG_CPU_PROGRAM_MAP(zsu_map)
 	MCFG_CPU_IO_MAP(zsu_io)
@@ -228,7 +231,7 @@ MACHINE_CONFIG_MEMBER( efo_zsu_device::device_add_mconfig )
 	MCFG_AY8910_PORT_A_WRITE_CB(WRITE8(efo_zsu_device, ay1_porta_w))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
 
-	MCFG_DEVICE_ADD("fifo", HC40105, 0)
+	MCFG_DEVICE_ADD("fifo", CD40105, 0)
 	MCFG_40105_DATA_OUT_READY_CB(WRITELINE(efo_zsu_device, fifo_dor_w))
 	MCFG_40105_DATA_OUT_CB(DEVWRITELINE("adpcm", msm5205_device, data_w))
 
@@ -236,7 +239,7 @@ MACHINE_CONFIG_MEMBER( efo_zsu_device::device_add_mconfig )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 MACHINE_CONFIG_END
 
-MACHINE_CONFIG_MEMBER( cedar_magnet_sound_device::device_add_mconfig )
+MACHINE_CONFIG_START(cedar_magnet_sound_device::device_add_mconfig)
 	efo_zsu_device::device_add_mconfig(config);
 
 	MCFG_CPU_MODIFY("soundcpu")

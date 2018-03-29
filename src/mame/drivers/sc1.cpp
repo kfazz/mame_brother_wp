@@ -62,6 +62,9 @@ public:
 	DECLARE_READ8_MEMBER( pio_port_b_r );
 
 	uint8_t m_matrix;
+	void sc1(machine_config &config);
+	void sc1_io(address_map &map);
+	void sc1_mem(address_map &map);
 };
 
 /***************************************************************************
@@ -72,7 +75,7 @@ public:
 
 WRITE8_MEMBER( sc1_state::pio_port_a_w )
 {
-	uint8_t digit = BITSWAP8( data,3,4,6,0,1,2,7,5 );
+	uint8_t digit = bitswap<8>( data,3,4,6,0,1,2,7,5 );
 
 	if (m_matrix & 0x04)
 		output().set_digit_value(3, digit & 0x7f);
@@ -121,18 +124,20 @@ READ8_MEMBER( sc1_state::pio_port_b_r )
 }
 
 
-static ADDRESS_MAP_START(sc1_mem, AS_PROGRAM, 8, sc1_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x0000, 0x0fff ) AM_ROM
-	AM_RANGE( 0x4000, 0x43ff ) AM_RAM
-ADDRESS_MAP_END
+void sc1_state::sc1_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x0fff).rom();
+	map(0x4000, 0x43ff).ram();
+}
 
-static ADDRESS_MAP_START(sc1_io, AS_IO, 8, sc1_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x80, 0x83) AM_DEVREADWRITE("z80pio", z80pio_device, read_alt, write_alt)
-	AM_RANGE(0xfc, 0xfc) AM_WRITE(matrix_w)
-ADDRESS_MAP_END
+void sc1_state::sc1_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0x80, 0x83).rw("z80pio", FUNC(z80pio_device::read_alt), FUNC(z80pio_device::write_alt));
+	map(0xfc, 0xfc).w(this, FUNC(sc1_state::matrix_w));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( sc1 )
@@ -170,9 +175,9 @@ static INPUT_PORTS_START( sc1 )
 INPUT_PORTS_END
 
 
-static MACHINE_CONFIG_START( sc1 )
+MACHINE_CONFIG_START(sc1_state::sc1)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",Z80, XTAL_4MHz)
+	MCFG_CPU_ADD("maincpu",Z80, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(sc1_mem)
 	MCFG_CPU_IO_MAP(sc1_io)
 
@@ -180,7 +185,7 @@ static MACHINE_CONFIG_START( sc1 )
 	MCFG_DEFAULT_LAYOUT(layout_sc1)
 
 	/* devices */
-	MCFG_DEVICE_ADD("z80pio", Z80PIO, XTAL_4MHz)
+	MCFG_DEVICE_ADD("z80pio", Z80PIO, XTAL(4'000'000))
 	MCFG_Z80PIO_OUT_PA_CB(WRITE8(sc1_state, pio_port_a_w))
 	MCFG_Z80PIO_IN_PB_CB(READ8(sc1_state, pio_port_b_r))
 

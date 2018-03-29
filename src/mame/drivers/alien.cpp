@@ -6,22 +6,29 @@
 
     skeleton driver
 
-    - sh-4 clocked with 200MHz
-    - 2 x Panasonic MN677511DE chips (MPEG2 decoders)
+   Main board:
+    - Hitachi SH-4 HD6417750S at 200MHz
+    - 2 x Fujitsu MB86292 Graphics Controller
     - Altera ACEX 1K PLD
     - M48T35Y timekeeper device
-    - CF interface
     - YMZ770B-F
+   Upper board (game specific):
+    - CF interface
+    - 2 x Panasonic MN677511DE MPEG2 decoders (optional)
+
+   Known undumped games:
+    - Donkey Kong: Jungle Fever (c) 2005 Capcom / Nintendo / Namco
+    - Donkey Kong: Banana Kingdom (c) 2006 Capcom / Nintendo / Namco
 
 ***********************************************************************************/
 
 
 #include "emu.h"
-#include "cpu/sh4/sh4.h"
+#include "cpu/sh/sh4.h"
 #include "screen.h"
 #include "speaker.h"
 
-#define MASTER_CLOCK    XTAL_200MHz
+#define MASTER_CLOCK    XTAL(200'000'000)
 
 class alien_state : public driver_device
 {
@@ -35,6 +42,8 @@ public:
 
 	uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
+	void alien(machine_config &config);
+	void alien_map(address_map &map);
 protected:
 
 	// devices
@@ -59,13 +68,14 @@ READ64_MEMBER( alien_state::test_r )
 	return machine().rand();
 }
 
-static ADDRESS_MAP_START( alien_map, AS_PROGRAM, 64, alien_state )
-	AM_RANGE(0x00000000, 0x0003ffff) AM_ROM
-	AM_RANGE(0x08000000, 0x08000007) AM_READ(test_r) //hangs if zero
-	AM_RANGE(0x0cfe0000, 0x0cffffff) AM_RAM
-	AM_RANGE(0x10000000, 0x13ffffff) AM_RAM
-	AM_RANGE(0x18000000, 0x1800000f) AM_READ(test_r) AM_WRITENOP
-ADDRESS_MAP_END
+void alien_state::alien_map(address_map &map)
+{
+	map(0x00000000, 0x0003ffff).rom();
+	map(0x08000000, 0x08000007).r(this, FUNC(alien_state::test_r)); //hangs if zero
+	map(0x0cfe0000, 0x0cffffff).ram();
+	map(0x10000000, 0x13ffffff).ram();
+	map(0x18000000, 0x1800000f).r(this, FUNC(alien_state::test_r)).nopw();
+}
 
 
 
@@ -80,10 +90,11 @@ void alien_state::machine_reset()
 	//m_maincpu->set_input_line(INPUT_LINE_HALT, ASSERT_LINE);
 }
 
-static MACHINE_CONFIG_START( alien )
+MACHINE_CONFIG_START(alien_state::alien)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", SH4LE, MASTER_CLOCK)    /* 200MHz */
 	MCFG_CPU_PROGRAM_MAP(alien_map)
+	MCFG_CPU_FORCE_NO_DRC()
 
 	/* video hardware */
 

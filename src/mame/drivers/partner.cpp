@@ -25,26 +25,27 @@
 
 
 /* Address maps */
-static ADDRESS_MAP_START(partner_mem, AS_PROGRAM, 8, partner_state )
-	AM_RANGE( 0x0000, 0x07ff ) AM_RAMBANK("bank1")
-	AM_RANGE( 0x0800, 0x3fff ) AM_RAMBANK("bank2")
-	AM_RANGE( 0x4000, 0x5fff ) AM_RAMBANK("bank3")
-	AM_RANGE( 0x6000, 0x7fff ) AM_RAMBANK("bank4")
-	AM_RANGE( 0x8000, 0x9fff ) AM_RAMBANK("bank5")
-	AM_RANGE( 0xa000, 0xb7ff ) AM_RAMBANK("bank6")
-	AM_RANGE( 0xb800, 0xbfff ) AM_RAMBANK("bank7")
-	AM_RANGE( 0xc000, 0xc7ff ) AM_RAMBANK("bank8")
-	AM_RANGE( 0xc800, 0xcfff ) AM_RAMBANK("bank9")
-	AM_RANGE( 0xd000, 0xd7ff ) AM_RAMBANK("bank10")
-	AM_RANGE( 0xd800, 0xd8ff ) AM_DEVREADWRITE("i8275", i8275_device, read, write)  // video
-	AM_RANGE( 0xd900, 0xd9ff ) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)
-	AM_RANGE( 0xda00, 0xdaff ) AM_WRITE(partner_mem_page_w)
-	AM_RANGE( 0xdb00, 0xdbff ) AM_DEVWRITE("dma8257", i8257_device, write)    // DMA
-	AM_RANGE( 0xdc00, 0xddff ) AM_RAMBANK("bank11")
-	AM_RANGE( 0xde00, 0xdeff ) AM_WRITE(partner_win_memory_page_w)
-	AM_RANGE( 0xe000, 0xe7ff ) AM_RAMBANK("bank12")
-	AM_RANGE( 0xe800, 0xffff ) AM_RAMBANK("bank13")
-ADDRESS_MAP_END
+void partner_state::partner_mem(address_map &map)
+{
+	map(0x0000, 0x07ff).bankrw("bank1");
+	map(0x0800, 0x3fff).bankrw("bank2");
+	map(0x4000, 0x5fff).bankrw("bank3");
+	map(0x6000, 0x7fff).bankrw("bank4");
+	map(0x8000, 0x9fff).bankrw("bank5");
+	map(0xa000, 0xb7ff).bankrw("bank6");
+	map(0xb800, 0xbfff).bankrw("bank7");
+	map(0xc000, 0xc7ff).bankrw("bank8");
+	map(0xc800, 0xcfff).bankrw("bank9");
+	map(0xd000, 0xd7ff).bankrw("bank10");
+	map(0xd800, 0xd8ff).rw("i8275", FUNC(i8275_device::read), FUNC(i8275_device::write));  // video
+	map(0xd900, 0xd9ff).rw(m_ppi8255_1, FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0xda00, 0xdaff).w(this, FUNC(partner_state::partner_mem_page_w));
+	map(0xdb00, 0xdbff).w(m_dma8257, FUNC(i8257_device::write));    // DMA
+	map(0xdc00, 0xddff).bankrw("bank11");
+	map(0xde00, 0xdeff).w(this, FUNC(partner_state::partner_win_memory_page_w));
+	map(0xe000, 0xe7ff).bankrw("bank12");
+	map(0xe800, 0xffff).bankrw("bank13");
+}
 
 /* Input ports */
 static INPUT_PORTS_START( partner )
@@ -73,7 +74,7 @@ static INPUT_PORTS_START( partner )
 	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_1) PORT_CHAR('1') PORT_CHAR('!')
 	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_2) PORT_CHAR('2') PORT_CHAR('"')
 	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_3) PORT_CHAR('3') PORT_CHAR('#')
-	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_4) PORT_CHAR('4') PORT_CHAR('\xA4')
+	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_4) PORT_CHAR('4') PORT_CHAR(0xA4)
 	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_5) PORT_CHAR('5') PORT_CHAR('%')
 	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_6) PORT_CHAR('6') PORT_CHAR('&')
 	PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_7) PORT_CHAR('7') PORT_CHAR('\'')
@@ -167,9 +168,9 @@ static GFXDECODE_START( partner )
 GFXDECODE_END
 
 
-static MACHINE_CONFIG_START( partner )
+MACHINE_CONFIG_START(partner_state::partner)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", I8080, XTAL_16MHz / 9)
+	MCFG_CPU_ADD("maincpu", I8080, XTAL(16'000'000) / 9)
 	MCFG_CPU_PROGRAM_MAP(partner_mem)
 
 	MCFG_MACHINE_RESET_OVERRIDE(partner_state, partner )
@@ -180,7 +181,7 @@ static MACHINE_CONFIG_START( partner )
 	MCFG_I8255_IN_PORTC_CB(READ8(radio86_state, radio86_8255_portc_r2))
 	MCFG_I8255_OUT_PORTC_CB(WRITE8(radio86_state, radio86_8255_portc_w2))
 
-	MCFG_DEVICE_ADD("i8275", I8275, XTAL_16MHz / 12)
+	MCFG_DEVICE_ADD("i8275", I8275, XTAL(16'000'000) / 12)
 	MCFG_I8275_CHARACTER_WIDTH(6)
 	MCFG_I8275_DRAW_CHARACTER_CALLBACK_OWNER(partner_state, display_pixels)
 	MCFG_I8275_DRQ_CALLBACK(DEVWRITELINE("dma8257",i8257_device, dreq2_w))
@@ -200,7 +201,7 @@ static MACHINE_CONFIG_START( partner )
 	MCFG_SOUND_WAVE_ADD(WAVE_TAG, "cassette")
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MCFG_DEVICE_ADD("dma8257", I8257, XTAL_16MHz / 9)
+	MCFG_DEVICE_ADD("dma8257", I8257, XTAL(16'000'000) / 9)
 	MCFG_I8257_OUT_HRQ_CB(WRITELINE(partner_state, hrq_w))
 	MCFG_I8257_IN_MEMR_CB(READ8(radio86_state, memory_read_byte))
 	MCFG_I8257_OUT_MEMW_CB(WRITE8(radio86_state, memory_write_byte))
@@ -216,7 +217,7 @@ static MACHINE_CONFIG_START( partner )
 
 	MCFG_SOFTWARE_LIST_ADD("cass_list","partner_cass")
 
-	MCFG_FD1793_ADD("wd1793", XTAL_16MHz / 16)
+	MCFG_FD1793_ADD("wd1793", XTAL(16'000'000) / 16)
 	MCFG_WD_FDC_DRQ_CALLBACK(DEVWRITELINE("dma8257", i8257_device, dreq0_w))
 	MCFG_FLOPPY_DRIVE_ADD("wd1793:0", partner_floppies, "525qd", partner_state::floppy_formats)
 	MCFG_FLOPPY_DRIVE_ADD("wd1793:1", partner_floppies, "525qd", partner_state::floppy_formats)

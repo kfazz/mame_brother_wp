@@ -44,10 +44,10 @@ typedef uint32_t DWORD;
 
 #include "v25.h"
 #include "v25priv.h"
-#include "nec_common.h"
+#include "necdasm.h"
 
-DEFINE_DEVICE_TYPE(V25, v25_device, "v25", "V25")
-DEFINE_DEVICE_TYPE(V35, v35_device, "v35", "V35")
+DEFINE_DEVICE_TYPE(V25, v25_device, "v25", "NEC V25")
+DEFINE_DEVICE_TYPE(V35, v35_device, "v35", "NEC V35")
 
 
 v25_common_device::v25_common_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, bool is_16bit, offs_t fetch_xor, uint8_t prefetch_size, uint8_t prefetch_cycles, uint32_t chip_type)
@@ -142,8 +142,8 @@ uint8_t v25_common_device::fetch()
 
 uint16_t v25_common_device::fetchword()
 {
-	uint16_t r = FETCH();
-	r |= (FETCH()<<8);
+	uint16_t r = fetch();
+	r |= (fetch()<<8);
 	return r;
 }
 
@@ -419,9 +419,9 @@ void v25_common_device::execute_set_input(int irqline, int state)
 	}
 }
 
-offs_t v25_common_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> v25_common_device::create_disassembler()
 {
-	return necv_dasm_one(stream, pc, oprom, m_v25v35_decryptiontable);
+	return std::make_unique<nec_disassembler>(m_v25v35_decryptiontable);
 }
 
 void v25_common_device::device_start()
@@ -511,7 +511,7 @@ void v25_common_device::device_start()
 	save_item(NAME(m_prefetch_reset));
 
 	m_program = &space(AS_PROGRAM);
-	m_direct = &m_program->direct();
+	m_direct = m_program->direct<0>();
 	m_io = &space(AS_IO);
 
 	m_pt_in.resolve_safe(0xff);

@@ -240,7 +240,7 @@ Todo:
 #include "topracer.lh"
 
 
-#define MASTER_CLOCK    XTAL_24_576MHz
+#define MASTER_CLOCK    XTAL(24'576'000)
 #define POLEPOS_TOGGLE  PORT_TOGGLE
 
 
@@ -266,7 +266,7 @@ READ16_MEMBER(polepos_state::polepos2_ic25_r)
 		m_last_result = (int8_t)m_last_signed * (uint8_t)m_last_unsigned;
 	}
 
-//  logerror("%04X: read IC25 @ %04X = %02X\n", space.device().safe_pc(), offset, result);
+//  logerror("%s: read IC25 @ %04X = %02X\n", machine().describe_context(), offset, result);
 
 	return result | (result << 8);
 }
@@ -320,13 +320,13 @@ WRITE_LINE_MEMBER(polepos_state::chacl_w)
 	polepos_chacl_w(machine().dummy_space(), 0, state);
 }
 
-WRITE16_MEMBER(polepos_state::polepos_z8002_nvi_enable_w)
+template<bool sub1> WRITE16_MEMBER(polepos_state::polepos_z8002_nvi_enable_w)
 {
 	data &= 1;
 
 	m_sub_irq_mask = data;
 	if (!data)
-		space.device().execute().set_input_line(0, CLEAR_LINE);
+		(sub1 ? m_subcpu : m_subcpu2)->set_input_line(0, CLEAR_LINE);
 }
 
 CUSTOM_INPUT_MEMBER(polepos_state::auto_start_r)
@@ -422,44 +422,57 @@ MACHINE_RESET_MEMBER(polepos_state,polepos)
  * CPU memory structures
  *********************************************************************/
 
-static ADDRESS_MAP_START( z80_map, AS_PROGRAM, 8, polepos_state )
-	AM_RANGE(0x0000, 0x2fff) AM_ROM
-	AM_RANGE(0x3000, 0x37ff) AM_MIRROR(0x0800) AM_RAM AM_SHARE("nvram")                 /* Battery Backup */
-	AM_RANGE(0x4000, 0x47ff) AM_READWRITE(polepos_sprite_r, polepos_sprite_w)           /* Motion Object */
-	AM_RANGE(0x4800, 0x4bff) AM_READWRITE(polepos_road_r, polepos_road_w)               /* Road Memory */
-	AM_RANGE(0x4c00, 0x4fff) AM_READWRITE(polepos_alpha_r, polepos_alpha_w)             /* Alphanumeric (char ram) */
-	AM_RANGE(0x5000, 0x57ff) AM_READWRITE(polepos_view_r, polepos_view_w)               /* Background Memory */
+void polepos_state::z80_map(address_map &map)
+{
+	map(0x0000, 0x2fff).rom();
+	map(0x3000, 0x37ff).mirror(0x0800).ram().share("nvram");                 /* Battery Backup */
+	map(0x4000, 0x47ff).rw(this, FUNC(polepos_state::polepos_sprite_r), FUNC(polepos_state::polepos_sprite_w));           /* Motion Object */
+	map(0x4800, 0x4bff).rw(this, FUNC(polepos_state::polepos_road_r), FUNC(polepos_state::polepos_road_w));               /* Road Memory */
+	map(0x4c00, 0x4fff).rw(this, FUNC(polepos_state::polepos_alpha_r), FUNC(polepos_state::polepos_alpha_w));             /* Alphanumeric (char ram) */
+	map(0x5000, 0x57ff).rw(this, FUNC(polepos_state::polepos_view_r), FUNC(polepos_state::polepos_view_w));               /* Background Memory */
 
-	AM_RANGE(0x8000, 0x83bf) AM_MIRROR(0x0c00) AM_RAM                                   /* Sound Memory */
-	AM_RANGE(0x83c0, 0x83ff) AM_MIRROR(0x0c00) AM_DEVREADWRITE("namco", namco_device, polepos_sound_r, polepos_sound_w)    /* Sound data */
+	map(0x8000, 0x83bf).mirror(0x0c00).ram();                                   /* Sound Memory */
+	map(0x83c0, 0x83ff).mirror(0x0c00).rw(m_namco_sound, FUNC(namco_device::polepos_sound_r), FUNC(namco_device::polepos_sound_w));    /* Sound data */
 
-	AM_RANGE(0x9000, 0x9000) AM_MIRROR(0x0eff) AM_DEVREADWRITE("06xx", namco_06xx_device, data_r, data_w)
-	AM_RANGE(0x9100, 0x9100) AM_MIRROR(0x0eff) AM_DEVREADWRITE("06xx", namco_06xx_device, ctrl_r, ctrl_w)
-	AM_RANGE(0xa000, 0xa000) AM_MIRROR(0x0cff) AM_READ(polepos_ready_r)                 /* READY */
-	AM_RANGE(0xa000, 0xa007) AM_MIRROR(0x0cf8) AM_DEVWRITE("latch", ls259_device, write_d0)
-	AM_RANGE(0xa100, 0xa100) AM_MIRROR(0x0cff) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0xa200, 0xa200) AM_MIRROR(0x0cff) AM_DEVWRITE("polepos", polepos_sound_device, polepos_engine_sound_lsb_w)    /* Car Sound ( Lower Nibble ) */
-	AM_RANGE(0xa300, 0xa300) AM_MIRROR(0x0cff) AM_DEVWRITE("polepos", polepos_sound_device, polepos_engine_sound_msb_w)    /* Car Sound ( Upper Nibble ) */
-ADDRESS_MAP_END
+	map(0x9000, 0x9000).mirror(0x0eff).rw("06xx", FUNC(namco_06xx_device::data_r), FUNC(namco_06xx_device::data_w));
+	map(0x9100, 0x9100).mirror(0x0eff).rw("06xx", FUNC(namco_06xx_device::ctrl_r), FUNC(namco_06xx_device::ctrl_w));
+	map(0xa000, 0xa000).mirror(0x0cff).r(this, FUNC(polepos_state::polepos_ready_r));                 /* READY */
+	map(0xa000, 0xa007).mirror(0x0cf8).w(m_latch, FUNC(ls259_device::write_d0));
+	map(0xa100, 0xa100).mirror(0x0cff).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0xa200, 0xa200).mirror(0x0cff).w("polepos", FUNC(polepos_sound_device::polepos_engine_sound_lsb_w));    /* Car Sound ( Lower Nibble ) */
+	map(0xa300, 0xa300).mirror(0x0cff).w("polepos", FUNC(polepos_sound_device::polepos_engine_sound_msb_w));    /* Car Sound ( Upper Nibble ) */
+}
 
-static ADDRESS_MAP_START( z80_io, AS_IO, 8, polepos_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_READ(polepos_adc_r) AM_WRITENOP
-ADDRESS_MAP_END
+void polepos_state::z80_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).r(this, FUNC(polepos_state::polepos_adc_r)).nopw();
+}
 
 
 /* the same memory map is used by both Z8002 CPUs; all RAM areas are shared */
-static ADDRESS_MAP_START( z8002_map, AS_PROGRAM, 16, polepos_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x6000, 0x6001) AM_MIRROR(0x0ffe) AM_WRITE(polepos_z8002_nvi_enable_w) /* NVI enable - *NOT* shared by the two CPUs */
-	AM_RANGE(0x8000, 0x8fff) AM_READWRITE(polepos_sprite16_r, polepos_sprite16_w) AM_SHARE("sprite16_memory")   /* Motion Object */
-	AM_RANGE(0x9000, 0x97ff) AM_READWRITE(polepos_road16_r, polepos_road16_w) AM_SHARE("road16_memory")     /* Road Memory */
-	AM_RANGE(0x9800, 0x9fff) AM_READWRITE(polepos_alpha16_r, polepos_alpha16_w) AM_SHARE("alpha16_memory")  /* Alphanumeric (char ram) */
-	AM_RANGE(0xa000, 0xafff) AM_READWRITE(polepos_view16_r, polepos_view16_w) AM_SHARE("view16_memory")     /* Background memory */
-	AM_RANGE(0xc000, 0xc001) AM_MIRROR(0x38fe) AM_WRITE(polepos_view16_hscroll_w)                       /* Background horz scroll position */
-	AM_RANGE(0xc100, 0xc101) AM_MIRROR(0x38fe) AM_WRITE(polepos_road16_vscroll_w)                       /* Road vertical position */
-ADDRESS_MAP_END
+void polepos_state::z8002_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x8fff).rw(this, FUNC(polepos_state::polepos_sprite16_r), FUNC(polepos_state::polepos_sprite16_w)).share("sprite16_memory");   /* Motion Object */
+	map(0x9000, 0x97ff).rw(this, FUNC(polepos_state::polepos_road16_r), FUNC(polepos_state::polepos_road16_w)).share("road16_memory");     /* Road Memory */
+	map(0x9800, 0x9fff).rw(this, FUNC(polepos_state::polepos_alpha16_r), FUNC(polepos_state::polepos_alpha16_w)).share("alpha16_memory");  /* Alphanumeric (char ram) */
+	map(0xa000, 0xafff).rw(this, FUNC(polepos_state::polepos_view16_r), FUNC(polepos_state::polepos_view16_w)).share("view16_memory");     /* Background memory */
+	map(0xc000, 0xc001).mirror(0x38fe).w(this, FUNC(polepos_state::polepos_view16_hscroll_w));                       /* Background horz scroll position */
+	map(0xc100, 0xc101).mirror(0x38fe).w(this, FUNC(polepos_state::polepos_road16_vscroll_w));                       /* Road vertical position */
+}
 
+void polepos_state::z8002_map_1(address_map &map)
+{
+	z8002_map(map);
+	map(0x6000, 0x6001).mirror(0x0ffe).w(this, FUNC(polepos_state::polepos_z8002_nvi_enable_w<true>)); /* NVI enable - *NOT* shared by the two CPUs */
+}
+
+void polepos_state::z8002_map_2(address_map &map)
+{
+	z8002_map(map);
+	map(0x6000, 0x6001).mirror(0x0ffe).w(this, FUNC(polepos_state::polepos_z8002_nvi_enable_w<false>)); /* NVI enable - *NOT* shared by the two CPUs */
+}
 
 
 /*********************************************************************
@@ -840,7 +853,7 @@ GFXDECODE_END
  * Machine driver
  *********************************************************************/
 
-static MACHINE_CONFIG_START( polepos )
+MACHINE_CONFIG_START(polepos_state::polepos)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK/8)    /* 3.072 MHz */
@@ -848,12 +861,13 @@ static MACHINE_CONFIG_START( polepos )
 	MCFG_CPU_IO_MAP(z80_io)
 
 	MCFG_CPU_ADD("sub", Z8002, MASTER_CLOCK/8)  /* 3.072 MHz */
-	MCFG_CPU_PROGRAM_MAP(z8002_map)
+	MCFG_CPU_PROGRAM_MAP(z8002_map_1)
 
 	MCFG_CPU_ADD("sub2", Z8002, MASTER_CLOCK/8) /* 3.072 MHz */
-	MCFG_CPU_PROGRAM_MAP(z8002_map)
+	MCFG_CPU_PROGRAM_MAP(z8002_map_2)
 
 	MCFG_NAMCO_51XX_ADD("51xx", MASTER_CLOCK/8/2)      /* 1.536 MHz */
+	MCFG_NAMCO_51XX_SCREEN("screen")
 	MCFG_NAMCO_51XX_INPUT_0_CB(IOPORT("IN0")) MCFG_DEVCB_MASK(0x0f)
 	MCFG_NAMCO_51XX_INPUT_1_CB(IOPORT("IN0")) MCFG_DEVCB_RSHIFT(4)
 	MCFG_NAMCO_51XX_INPUT_2_CB(IOPORT("DSWB")) MCFG_DEVCB_MASK(0x0f)
@@ -949,29 +963,32 @@ WRITE8_MEMBER(polepos_state::bootleg_soundlatch_w)
 		m_soundlatch->write(space, 0, data | 0xfc);
 }
 
-static ADDRESS_MAP_START( topracern_io, AS_IO, 8, polepos_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_IMPORT_FROM(z80_io)
+void polepos_state::topracern_io(address_map &map)
+{
+	map.global_mask(0xff);
+	z80_io(map);
 	// extra direct mapped inputs read
-	AM_RANGE(0x02, 0x02) AM_READ_PORT("STEER") AM_WRITENOP
-	AM_RANGE(0x03, 0x03) AM_READ_PORT("IN0") AM_DEVWRITE("dac", dac_byte_interface, write)
-	AM_RANGE(0x04, 0x04) AM_READ_PORT("DSWA") AM_WRITENOP // explosion sound trigger
-	AM_RANGE(0x05, 0x05) AM_READ_PORT("DSWB") AM_WRITE(bootleg_soundlatch_w)
-ADDRESS_MAP_END
+	map(0x02, 0x02).portr("STEER").nopw();
+	map(0x03, 0x03).portr("IN0").w("dac", FUNC(dac_byte_interface::write));
+	map(0x04, 0x04).portr("DSWA").nopw(); // explosion sound trigger
+	map(0x05, 0x05).portr("DSWB").w(this, FUNC(polepos_state::bootleg_soundlatch_w));
+}
 
-static ADDRESS_MAP_START( sound_z80_bootleg_map, AS_PROGRAM, 8, polepos_state )
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x2700, 0x27ff) AM_RAM
-	AM_RANGE(0x4000, 0x4000) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-	AM_RANGE(0x6000, 0x6000) AM_DEVREAD("soundlatch", generic_latch_8_device, acknowledge_r)
-ADDRESS_MAP_END
+void polepos_state::sound_z80_bootleg_map(address_map &map)
+{
+	map(0x0000, 0x1fff).rom();
+	map(0x2700, 0x27ff).ram();
+	map(0x4000, 0x4000).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+	map(0x6000, 0x6000).r(m_soundlatch, FUNC(generic_latch_8_device::acknowledge_r));
+}
 
-static ADDRESS_MAP_START( sound_z80_bootleg_iomap, AS_IO, 8, polepos_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_DEVREADWRITE("tms", tms5220_device, status_r, data_w)
-ADDRESS_MAP_END
+void polepos_state::sound_z80_bootleg_iomap(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).rw("tms", FUNC(tms5220_device::status_r), FUNC(tms5220_device::data_w));
+}
 
-static MACHINE_CONFIG_START( topracern )
+MACHINE_CONFIG_START(polepos_state::topracern)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK/8)    /* 3.072 MHz */
@@ -979,15 +996,16 @@ static MACHINE_CONFIG_START( topracern )
 	MCFG_CPU_IO_MAP(topracern_io)
 
 	MCFG_CPU_ADD("sub", Z8002, MASTER_CLOCK/8)  /* 3.072 MHz */
-	MCFG_CPU_PROGRAM_MAP(z8002_map)
+	MCFG_CPU_PROGRAM_MAP(z8002_map_1)
 
 	MCFG_CPU_ADD("sub2", Z8002, MASTER_CLOCK/8) /* 3.072 MHz */
-	MCFG_CPU_PROGRAM_MAP(z8002_map)
+	MCFG_CPU_PROGRAM_MAP(z8002_map_2)
 
 	/* todo, remove these devices too, this bootleg doesn't have them, but the emulation doesn't boot without them.. */
 	/* doesn't exist on the bootleg, but required for now or the game only boots in test mode!
 	   they probably simulate some of the logic */
 	MCFG_NAMCO_51XX_ADD("51xx", MASTER_CLOCK/8/2)       /* 1.536 MHz */
+	MCFG_NAMCO_51XX_SCREEN("screen")
 	MCFG_NAMCO_51XX_INPUT_1_CB(IOPORT("IN0")) MCFG_DEVCB_RSHIFT(4)
 
 	MCFG_NAMCO_06XX_ADD("06xx", MASTER_CLOCK/8/64)
@@ -1050,7 +1068,8 @@ static MACHINE_CONFIG_START( topracern )
 	MCFG_SOUND_ROUTE_EX(0, "dac", 1.0, DAC_VREF_POS_INPUT) MCFG_SOUND_ROUTE_EX(0, "dac", -1.0, DAC_VREF_NEG_INPUT)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( polepos2bi, topracern )
+MACHINE_CONFIG_START(polepos_state::polepos2bi)
+	topracern(config);
 
 	MCFG_CPU_ADD("soundz80bl", Z80, MASTER_CLOCK/8) /*? MHz */
 	MCFG_CPU_PROGRAM_MAP(sound_z80_bootleg_map)

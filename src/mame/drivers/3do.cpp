@@ -104,20 +104,21 @@ Part list of Goldstar 3DO Interactive Multiplayer
 
 #define X2_CLOCK_PAL    59000000
 #define X2_CLOCK_NTSC   49090000
-#define X601_CLOCK      XTAL_16_9344MHz
+#define X601_CLOCK      XTAL(16'934'400)
 
 
-static ADDRESS_MAP_START( 3do_mem, AS_PROGRAM, 32, _3do_state )
-	AM_RANGE(0x00000000, 0x001FFFFF) AM_RAMBANK("bank1") AM_SHARE("dram")                       /* DRAM */
-	AM_RANGE(0x00200000, 0x003FFFFF) AM_RAM AM_SHARE("vram")                                    /* VRAM */
-	AM_RANGE(0x03000000, 0x030FFFFF) AM_ROMBANK("bank2")                                    /* BIOS */
-	AM_RANGE(0x03100000, 0x0313FFFF) AM_RAM                                                 /* Brooktree? */
-	AM_RANGE(0x03140000, 0x0315FFFF) AM_READWRITE8(_3do_nvarea_r, _3do_nvarea_w, 0x000000ff)                /* NVRAM */
-	AM_RANGE(0x03180000, 0x031BFFFF) AM_READWRITE(_3do_slow2_r, _3do_slow2_w)               /* Slow bus - additional expansion */
-	AM_RANGE(0x03200000, 0x0320FFFF) AM_READWRITE(_3do_svf_r, _3do_svf_w)                   /* special vram access1 */
-	AM_RANGE(0x03300000, 0x033FFFFF) AM_READWRITE(_3do_madam_r, _3do_madam_w)               /* address decoder */
-	AM_RANGE(0x03400000, 0x034FFFFF) AM_READWRITE(_3do_clio_r, _3do_clio_w)                 /* io controller */
-ADDRESS_MAP_END
+void _3do_state::_3do_mem(address_map &map)
+{
+	map(0x00000000, 0x001FFFFF).bankrw("bank1").share("dram");                       /* DRAM */
+	map(0x00200000, 0x003FFFFF).ram().share("vram");                                    /* VRAM */
+	map(0x03000000, 0x030FFFFF).bankr("bank2");                                    /* BIOS */
+	map(0x03100000, 0x0313FFFF).ram();                                                 /* Brooktree? */
+	map(0x03140000, 0x0315FFFF).rw(this, FUNC(_3do_state::_3do_nvarea_r), FUNC(_3do_state::_3do_nvarea_w)).umask32(0x000000ff);                /* NVRAM */
+	map(0x03180000, 0x031BFFFF).rw(this, FUNC(_3do_state::_3do_slow2_r), FUNC(_3do_state::_3do_slow2_w));               /* Slow bus - additional expansion */
+	map(0x03200000, 0x0320FFFF).rw(this, FUNC(_3do_state::_3do_svf_r), FUNC(_3do_state::_3do_svf_w));                   /* special vram access1 */
+	map(0x03300000, 0x033FFFFF).rw(this, FUNC(_3do_state::_3do_madam_r), FUNC(_3do_state::_3do_madam_w));               /* address decoder */
+	map(0x03400000, 0x034FFFFF).rw(this, FUNC(_3do_state::_3do_clio_r), FUNC(_3do_state::_3do_clio_w));                 /* io controller */
+}
 
 
 static INPUT_PORTS_START( 3do )
@@ -154,11 +155,11 @@ void _3do_state::machine_reset()
 	m_clio.cstatbits = 0x01; /* bit 0 = reset of clio caused by power on */
 }
 
-static MACHINE_CONFIG_START( 3do )
+MACHINE_CONFIG_START(_3do_state::_3do)
 
 	/* Basic machine hardware */
-	MCFG_CPU_ADD( "maincpu", ARM7_BE, XTAL_50MHz/4 )
-	MCFG_CPU_PROGRAM_MAP( 3do_mem)
+	MCFG_CPU_ADD( "maincpu", ARM7_BE, XTAL(50'000'000)/4 )
+	MCFG_CPU_PROGRAM_MAP( _3do_mem)
 
 	MCFG_NVRAM_ADD_1FILL("nvram")
 
@@ -174,11 +175,11 @@ static MACHINE_CONFIG_START( 3do )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( 3do_pal )
+MACHINE_CONFIG_START(_3do_state::_3do_pal)
 
 	/* Basic machine hardware */
-	MCFG_CPU_ADD("maincpu", ARM7_BE, XTAL_50MHz/4 )
-	MCFG_CPU_PROGRAM_MAP( 3do_mem)
+	MCFG_CPU_ADD("maincpu", ARM7_BE, XTAL(50'000'000)/4 )
+	MCFG_CPU_PROGRAM_MAP( _3do_mem)
 
 	MCFG_NVRAM_ADD_1FILL("nvram")
 
@@ -249,8 +250,8 @@ ROM_END
 ***************************************************************************/
 
 /*    YEAR  NAME        PARENT  COMPAT  MACHINE     INPUT   STATE       INIT    COMPANY             FULLNAME        FLAGS */
-CONS( 1991, 3do,        0,      0,      3do,        3do,    _3do_state, 0,      "The 3DO Company",  "3DO (NTSC)",   MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
-CONS( 1991, 3do_pal,    3do,    0,      3do_pal,    3do,    _3do_state, 0,      "The 3DO Company",  "3DO (PAL)",    MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+CONS( 1991, 3do,        0,      0,      _3do,        3do,    _3do_state, 0,      "The 3DO Company",  "3DO (NTSC)",   MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+CONS( 1991, 3do_pal,    3do,    0,      _3do_pal,    3do,    _3do_state, 0,      "The 3DO Company",  "3DO (PAL)",    MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
 
-GAME( 1991, 3dobios,    0,      3do,    3do, _3do_state, 0, ROT0,     "The 3DO Company",  "3DO Bios",            MACHINE_NOT_WORKING | MACHINE_NO_SOUND | MACHINE_IS_BIOS_ROOT )
-GAME( 199?, orbatak,    3dobios,3do,    3do, _3do_state, 0, ROT0,     "<unknown>",        "Orbatak (prototype)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+GAME( 1991, 3dobios,    0,      _3do,    3do, _3do_state, 0, ROT0,     "The 3DO Company",  "3DO Bios",            MACHINE_NOT_WORKING | MACHINE_NO_SOUND | MACHINE_IS_BIOS_ROOT )
+GAME( 199?, orbatak,    3dobios,_3do,    3do, _3do_state, 0, ROT0,     "<unknown>",        "Orbatak (prototype)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND )

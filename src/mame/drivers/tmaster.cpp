@@ -96,6 +96,7 @@ Chips:
 #include "machine/mc68681.h"
 #include "machine/microtch.h"
 #include "machine/nvram.h"
+#include "machine/timer.h"
 #include "machine/watchdog.h"
 #include "sound/okim6295.h"
 #include "video/cesblit.h"
@@ -137,6 +138,9 @@ public:
 
 	DECLARE_READ_LINE_MEMBER(read_rand);
 
+	void tm(machine_config &config);
+	void tmds1204(machine_config &config);
+	void tmaster_map(address_map &map);
 protected:
 	required_device<cpu_device> m_maincpu;
 	required_device<screen_device> m_screen;
@@ -253,31 +257,32 @@ READ_LINE_MEMBER(tmaster_state::read_rand)
 	return machine().rand() & 1;
 }
 
-static ADDRESS_MAP_START( tmaster_map, AS_PROGRAM, 16, tmaster_state )
-	AM_RANGE( 0x000000, 0x1fffff ) AM_ROM
-	AM_RANGE( 0x200000, 0x27ffff ) AM_RAM
-	AM_RANGE( 0x280000, 0x28ffef ) AM_RAM AM_SHARE("nvram")
-	AM_RANGE( 0x28fff0, 0x28ffff ) AM_READWRITE(rtc_r, rtc_w )
+void tmaster_state::tmaster_map(address_map &map)
+{
+	map(0x000000, 0x1fffff).rom();
+	map(0x200000, 0x27ffff).ram();
+	map(0x280000, 0x28ffef).ram().share("nvram");
+	map(0x28fff0, 0x28ffff).rw(this, FUNC(tmaster_state::rtc_r), FUNC(tmaster_state::rtc_w));
 
-	AM_RANGE( 0x300010, 0x300011 ) AM_READ_PORT("COIN")
+	map(0x300010, 0x300011).portr("COIN");
 
-	AM_RANGE( 0x300020, 0x30003f ) AM_DEVREADWRITE8("duart68681", mc68681_device, read, write, 0xff )
+	map(0x300020, 0x30003f).rw(m_duart, FUNC(mc68681_device::read), FUNC(mc68681_device::write)).umask16(0x00ff);
 
-	AM_RANGE( 0x300040, 0x300041 ) AM_WRITE_PORT("OUT")
+	map(0x300040, 0x300041).portw("OUT");
 
-	AM_RANGE( 0x300070, 0x300071 ) AM_DEVWRITE("blitter", cesblit_device, addr_hi_w )
+	map(0x300070, 0x300071).w(m_blitter, FUNC(cesblit_device::addr_hi_w));
 
-	AM_RANGE( 0x500000, 0x500011 ) AM_DEVWRITE("blitter", cesblit_device, regs_w )
-	AM_RANGE( 0x500010, 0x500011 ) AM_DEVREAD( "blitter", cesblit_device, status_r )
+	map(0x500000, 0x500011).w(m_blitter, FUNC(cesblit_device::regs_w));
+	map(0x500010, 0x500011).r(m_blitter, FUNC(cesblit_device::status_r));
 
-	AM_RANGE( 0x580000, 0x580001 ) AM_WRITENOP // often
+	map(0x580000, 0x580001).nopw(); // often
 
-	AM_RANGE( 0x600000, 0x601fff ) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
+	map(0x600000, 0x601fff).ram().w(m_palette, FUNC(palette_device::write16)).share("palette");
 
-	AM_RANGE( 0x800000, 0x800001 ) AM_DEVREADWRITE8("oki", okim6295_device, read, write, 0x00ff )
+	map(0x800001, 0x800001).rw(m_oki, FUNC(okim6295_device::read), FUNC(okim6295_device::write));
 
-	AM_RANGE( 0x800010, 0x800011 ) AM_DEVWRITE("blitter", cesblit_device, color_w )
-ADDRESS_MAP_END
+	map(0x800010, 0x800011).w(m_blitter, FUNC(cesblit_device::color_w));
+}
 
 /***************************************************************************
 
@@ -358,12 +363,12 @@ int tmaster_compute_addr(uint16_t reg_low, uint16_t reg_mid, uint16_t reg_high)
 	return (reg_low & 0xff) | ((reg_mid & 0x1ff) << 8) | (reg_high << 17);
 }
 
-static MACHINE_CONFIG_START( tm )
-	MCFG_CPU_ADD("maincpu", M68000, XTAL_24MHz / 2) /* 12MHz */
+MACHINE_CONFIG_START(tmaster_state::tm)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL(24'000'000) / 2) /* 12MHz */
 	MCFG_CPU_PROGRAM_MAP(tmaster_map)
 	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", tmaster_state, scanline_interrupt, "screen", 0, 1)
 
-	MCFG_MC68681_ADD( "duart68681", XTAL_8_664MHz / 2 /*??*/)
+	MCFG_DEVICE_ADD( "duart68681", MC68681, XTAL(8'664'000) / 2 /*??*/)
 	MCFG_MC68681_IRQ_CALLBACK(WRITELINE(tmaster_state, duart_irq_handler))
 	MCFG_MC68681_A_TX_CALLBACK(DEVWRITELINE("microtouch", microtouch_device, rx))
 
@@ -383,18 +388,19 @@ static MACHINE_CONFIG_START( tm )
 	MCFG_PALETTE_ADD("palette", 0x1000)
 	MCFG_PALETTE_FORMAT(xBBBBBGGGGGRRRRR)
 
-	MCFG_CESBLIT_ADD("blitter", "screen", XTAL_32MHz)
+	MCFG_CESBLIT_ADD("blitter", "screen", XTAL(32'000'000))
 	MCFG_CESBLIT_COMPUTE_ADDR(tmaster_compute_addr)
 	MCFG_CESBLIT_IRQ_CB(WRITELINE(tmaster_state, blitter_irq_callback))
 
 	// sound hardware
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_OKIM6295_ADD("oki", XTAL_24MHz / 16, PIN7_HIGH)  /* 1.5Mhz? clock frequency & pin 7 not verified */
+	MCFG_OKIM6295_ADD("oki", XTAL(24'000'000) / 16, PIN7_HIGH)  /* 1.5Mhz? clock frequency & pin 7 not verified */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( tmds1204, tm )
+MACHINE_CONFIG_START(tmaster_state::tmds1204)
+	tm(config);
 	MCFG_DS1204_ADD("ds1204")
 MACHINE_CONFIG_END
 
@@ -649,7 +655,7 @@ ROM_START( tm3keval ) /* FREEPLAY ONLY / NOT FOR RELEASE / FOR EVALUATION ONLY *
 	ROM_LOAD16_BYTE( "u38_touchmaster_10-21-97_0067.u38", 0x000000, 0x100000, CRC(cc2af2b0) SHA1(64de224599e038b98ffedd965ac83b077298097f) ) /* U38  TOUCHMASTER 10-21-97 0067 (date and checksum hand written) */
 	ROM_LOAD16_BYTE( "u36_touchmaster_10-21-97_ba57.u36", 0x000001, 0x100000, CRC(73e99b1c) SHA1(812d6958a8746cc8f5cba125486e1f72740a0840) ) /* U36  TOUCHMASTER 10-21-97 BA57 (date and checksum hand written) */
 	ROM_LOAD16_BYTE( "u39_touchmaster_10-21-97_4a76.u39", 0x200000, 0x100000, CRC(af92cf87) SHA1(cb6baf8b3afe1e61e440be69a90d5c001eb7b388) ) /* U39  TOUCHMASTER 10-21-97 4A76 (date and checksum hand written) */
-	ROM_LOAD16_BYTE( "u37_touchmaster_10-21-97_40F6.u37", 0x200001, 0x100000, CRC(b5e69eca) SHA1(c548e33a049d17381c9755499940ffc459c0cb48) ) /* U37  TOUCHMASTER 10-21-97 40F6 (date and checksum hand written) */
+	ROM_LOAD16_BYTE( "u37_touchmaster_10-21-97_40f6.u37", 0x200001, 0x100000, CRC(b5e69eca) SHA1(c548e33a049d17381c9755499940ffc459c0cb48) ) /* U37  TOUCHMASTER 10-21-97 40F6 (date and checksum hand written) */
 	ROM_LOAD16_BYTE( "u41_touchmaster_10-21-97_f986.u41", 0x400000, 0x100000, CRC(97bc5e19) SHA1(9a9786ec2a9a7b7008d9e2e8624df8301f737dbc) ) /* U41  TOUCHMASTER 10-21-97 F986 (date and checksum hand written) */
 	ROM_LOAD16_BYTE( "u40_touchmaster_10-21-97_7086.u40", 0x400001, 0x100000, CRC(e3ae6fa6) SHA1(02c98f59553f4343f0dd855794364ad95aa81063) ) /* U40  TOUCHMASTER 10-21-97 7086 (date and checksum hand written) */
 

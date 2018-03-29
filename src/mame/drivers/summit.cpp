@@ -42,6 +42,8 @@ public:
 	required_device<cpu_device> m_maincpu;
 	required_device<gfxdecode_device> m_gfxdecode;
 	required_device<palette_device> m_palette;
+	void summit(machine_config &config);
+	void mainmap(address_map &map);
 };
 
 
@@ -75,21 +77,22 @@ WRITE8_MEMBER(summit_state::out_w)
 }
 
 
-static ADDRESS_MAP_START( mainmap, AS_PROGRAM, 8, summit_state )
-	AM_RANGE(0x0000, 0x17ff) AM_ROM
+void summit_state::mainmap(address_map &map)
+{
+	map(0x0000, 0x17ff).rom();
 
-	AM_RANGE(0x2000, 0x23ff) AM_RAM AM_SHARE("attr")
-	AM_RANGE(0x2800, 0x2bff) AM_RAM AM_SHARE("vram")
+	map(0x2000, 0x23ff).ram().share("attr");
+	map(0x2800, 0x2bff).ram().share("vram");
 
-	AM_RANGE(0x3800, 0x3800) AM_READ_PORT("IN0")
+	map(0x3800, 0x3800).portr("IN0");
 //  AM_RANGE(0x3880, 0x3880) AM_WRITE(out_w)
-	AM_RANGE(0x3900, 0x3900) AM_READ_PORT("IN1") AM_WRITE(out_w) // lamps
+	map(0x3900, 0x3900).portr("IN1").w(this, FUNC(summit_state::out_w)); // lamps
 //  AM_RANGE(0x3980, 0x3980) AM_WRITE(out_w)
-	AM_RANGE(0x3a00, 0x3a00) AM_READ_PORT("IN2") //AM_WRITE(out_w)
-	AM_RANGE(0x3b00, 0x3b00) AM_READ_PORT("IN3")
+	map(0x3a00, 0x3a00).portr("IN2"); //AM_WRITE(out_w)
+	map(0x3b00, 0x3b00).portr("IN3");
 
-	AM_RANGE(0x7000, 0x71ff) AM_RAM
-ADDRESS_MAP_END
+	map(0x7000, 0x71ff).ram();
+}
 
 
 
@@ -304,7 +307,7 @@ PALETTE_INIT_MEMBER(summit_state, summit)
 {
 }
 
-static MACHINE_CONFIG_START( summit )
+MACHINE_CONFIG_START(summit_state::summit)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80,4000000)
 	MCFG_CPU_PROGRAM_MAP(mainmap)

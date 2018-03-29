@@ -12,9 +12,10 @@
 #include "emu.h"
 #include "debugger.h"
 #include "arc.h"
+#include "arcdasm.h"
 
 
-DEFINE_DEVICE_TYPE(ARC, arc_cpu_device, "arc_a4", "ARCtangent A4")
+DEFINE_DEVICE_TYPE(ARC, arc_cpu_device, "arc_a4", "Argonaut ARCtangent A4")
 
 
 arc_cpu_device::arc_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
@@ -26,12 +27,10 @@ arc_cpu_device::arc_cpu_device(const machine_config &mconfig, const char *tag, d
 }
 
 
-offs_t arc_cpu_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> arc_cpu_device::create_disassembler()
 {
-	extern CPU_DISASSEMBLE( arc );
-	return CPU_DISASSEMBLE_NAME(arc)(this, stream, pc, oprom, opram, options);
+	return std::make_unique<arc_disassembler>();
 }
-
 
 /*****************************************************************************/
 

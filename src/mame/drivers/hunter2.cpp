@@ -69,6 +69,10 @@ public:
 	DECLARE_WRITE_LINE_MEMBER(cts_w);
 	DECLARE_WRITE_LINE_MEMBER(rxd_w);
 
+	void hunter2(machine_config &config);
+	void hunter2_banked_mem(address_map &map);
+	void hunter2_io(address_map &map);
+	void hunter2_mem(address_map &map);
 private:
 	uint8_t m_keydata;
 	uint8_t m_irq_mask;
@@ -84,37 +88,40 @@ private:
 	required_device<address_map_bank_device> m_bank3;
 };
 
-static ADDRESS_MAP_START(hunter2_banked_mem, AS_PROGRAM, 8, hunter2_state)
-	AM_RANGE(0x00000, 0x2ffff) AM_ROM AM_REGION("roms", 0x0000)
-	AM_RANGE(0x30000, 0x3ffff) AM_NOP
-	AM_RANGE(0x40000, 0xfffff) AM_RAM AM_REGION("rams", 0x0000)
-ADDRESS_MAP_END
+void hunter2_state::hunter2_banked_mem(address_map &map)
+{
+	map(0x00000, 0x2ffff).rom().region("roms", 0x0000);
+	map(0x30000, 0x3ffff).noprw();
+	map(0x40000, 0xfffff).ram().region("rams", 0x0000);
+}
 
-static ADDRESS_MAP_START(hunter2_mem, AS_PROGRAM, 8, hunter2_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x3fff) AM_DEVREADWRITE("bank1", address_map_bank_device, read8, write8)
-	AM_RANGE(0x4000, 0x7fff) AM_DEVREADWRITE("bank2", address_map_bank_device, read8, write8)
-	AM_RANGE(0x8000, 0xbfff) AM_DEVREADWRITE("bank3", address_map_bank_device, read8, write8)
-	AM_RANGE(0xc000, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void hunter2_state::hunter2_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x3fff).rw(m_bank1, FUNC(address_map_bank_device::read8), FUNC(address_map_bank_device::write8));
+	map(0x4000, 0x7fff).rw(m_bank2, FUNC(address_map_bank_device::read8), FUNC(address_map_bank_device::write8));
+	map(0x8000, 0xbfff).rw(m_bank3, FUNC(address_map_bank_device::read8), FUNC(address_map_bank_device::write8));
+	map(0xc000, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START(hunter2_io, AS_IO, 8, hunter2_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x1f) AM_DEVREADWRITE("iotimer", nsc810_device, read, write)
-	AM_RANGE(0x20, 0x20) AM_DEVWRITE("lcdc", hd61830_device, data_w)
-	AM_RANGE(0x21, 0x21) AM_DEVREADWRITE("lcdc", hd61830_device, status_r, control_w)
-	AM_RANGE(0x3e, 0x3e) AM_DEVREAD("lcdc", hd61830_device, data_r)
-	AM_RANGE(0x40, 0x4f) AM_DEVREADWRITE("rtc", mm58274c_device, read, write)
-	AM_RANGE(0x60, 0x60) AM_WRITE(display_ctrl_w)
-	AM_RANGE(0x80, 0x80) AM_WRITE(port80_w)
-	AM_RANGE(0x81, 0x81) AM_WRITE(serial_tx_w)
-	AM_RANGE(0x82, 0x82) AM_WRITE(serial_dtr_w)
-	AM_RANGE(0x84, 0x84) AM_WRITE(serial_rts_w)
-	AM_RANGE(0x86, 0x86) AM_WRITE(speaker_w)
-	AM_RANGE(0xbb, 0xbb) AM_WRITE(irqctrl_w)
-	AM_RANGE(0xe0, 0xe0) AM_WRITE(memmap_w)
-ADDRESS_MAP_END
+void hunter2_state::hunter2_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0x00, 0x1f).rw("iotimer", FUNC(nsc810_device::read), FUNC(nsc810_device::write));
+	map(0x20, 0x20).w("lcdc", FUNC(hd61830_device::data_w));
+	map(0x21, 0x21).rw("lcdc", FUNC(hd61830_device::status_r), FUNC(hd61830_device::control_w));
+	map(0x3e, 0x3e).r("lcdc", FUNC(hd61830_device::data_r));
+	map(0x40, 0x4f).rw("rtc", FUNC(mm58274c_device::read), FUNC(mm58274c_device::write));
+	map(0x60, 0x60).w(this, FUNC(hunter2_state::display_ctrl_w));
+	map(0x80, 0x80).w(this, FUNC(hunter2_state::port80_w));
+	map(0x81, 0x81).w(this, FUNC(hunter2_state::serial_tx_w));
+	map(0x82, 0x82).w(this, FUNC(hunter2_state::serial_dtr_w));
+	map(0x84, 0x84).w(this, FUNC(hunter2_state::serial_rts_w));
+	map(0x86, 0x86).w(this, FUNC(hunter2_state::speaker_w));
+	map(0xbb, 0xbb).w(this, FUNC(hunter2_state::irqctrl_w));
+	map(0xe0, 0xe0).w(this, FUNC(hunter2_state::memmap_w));
+}
 
 
 /* Input ports */
@@ -365,9 +372,9 @@ WRITE_LINE_MEMBER(hunter2_state::rxd_w)
 		m_maincpu->set_input_line(NSC800_RSTB, ASSERT_LINE);
 }
 
-static MACHINE_CONFIG_START( hunter2 )
+MACHINE_CONFIG_START(hunter2_state::hunter2)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", NSC800, XTAL_4MHz)
+	MCFG_CPU_ADD("maincpu", NSC800, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(hunter2_mem)
 	MCFG_CPU_IO_MAP(hunter2_io)
 
@@ -382,7 +389,7 @@ static MACHINE_CONFIG_START( hunter2 )
 	MCFG_DEFAULT_LAYOUT(layout_lcd)
 	MCFG_PALETTE_ADD("palette", 2)
 	MCFG_PALETTE_INIT_OWNER(hunter2_state, hunter2)
-	MCFG_DEVICE_ADD("lcdc", HD61830, XTAL_4_9152MHz/2/2) // unknown clock
+	MCFG_DEVICE_ADD("lcdc", HD61830, XTAL(4'915'200)/2/2) // unknown clock
 	MCFG_VIDEO_SET_SCREEN("screen")
 
 	/* sound hardware */
@@ -396,7 +403,7 @@ static MACHINE_CONFIG_START( hunter2 )
 	MCFG_MM58274C_MODE24(0) // 12 hour
 	MCFG_MM58274C_DAY1(1)   // monday
 
-	MCFG_NSC810_ADD("iotimer",XTAL_4MHz,XTAL_4MHz)
+	MCFG_NSC810_ADD("iotimer",XTAL(4'000'000),XTAL(4'000'000))
 	MCFG_NSC810_PORTA_READ(READ8(hunter2_state,keyboard_r))
 	MCFG_NSC810_PORTB_READ(READ8(hunter2_state,serial_dsr_r))
 	MCFG_NSC810_PORTB_WRITE(WRITE8(hunter2_state,keyboard_w))
@@ -413,19 +420,19 @@ static MACHINE_CONFIG_START( hunter2 )
 	MCFG_DEVICE_ADD("bank1", ADDRESS_MAP_BANK, 0)
 	MCFG_DEVICE_PROGRAM_MAP(hunter2_banked_mem)
 	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_LITTLE)
-	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(8)
+	MCFG_ADDRESS_MAP_BANK_DATA_WIDTH(8)
 	MCFG_ADDRESS_MAP_BANK_STRIDE(0x4000)
 
 	MCFG_DEVICE_ADD("bank2", ADDRESS_MAP_BANK, 0)
 	MCFG_DEVICE_PROGRAM_MAP(hunter2_banked_mem)
 	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_LITTLE)
-	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(8)
+	MCFG_ADDRESS_MAP_BANK_DATA_WIDTH(8)
 	MCFG_ADDRESS_MAP_BANK_STRIDE(0x4000)
 
 	MCFG_DEVICE_ADD("bank3", ADDRESS_MAP_BANK, 0)
 	MCFG_DEVICE_PROGRAM_MAP(hunter2_banked_mem)
 	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_LITTLE)
-	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(8)
+	MCFG_ADDRESS_MAP_BANK_DATA_WIDTH(8)
 	MCFG_ADDRESS_MAP_BANK_STRIDE(0x4000)
 
 MACHINE_CONFIG_END

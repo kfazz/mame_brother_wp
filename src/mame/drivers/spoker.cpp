@@ -97,6 +97,11 @@ public:
 	TILE_GET_INFO_MEMBER(get_fg_tile_info);
 
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
+	void spoker(machine_config &config);
+	void _3super8(machine_config &config);
+	void _3super8_portmap(address_map &map);
+	void spoker_map(address_map &map);
+	void spoker_portmap(address_map &map);
 };
 
 
@@ -171,7 +176,7 @@ WRITE8_MEMBER(spoker_state::nmi_and_coins_w)
 {
 	if ((data) & (0x22))
 	{
-		logerror("PC %06X: nmi_and_coins = %02x\n",space.device().safe_pc(),data);
+		logerror("PC %06X: nmi_and_coins = %02x\n",m_maincpu->pc(),data);
 //      popmessage("%02x",data);
 	}
 
@@ -229,7 +234,7 @@ WRITE8_MEMBER(spoker_state::magic_w)
 
 		default:
 //          popmessage("magic %x <- %04x",igs_magic[0],data);
-			logerror("%06x: warning, writing to igs_magic %02x = %02x\n", space.device().safe_pc(), m_igs_magic[0], data);
+			logerror("%06x: warning, writing to igs_magic %02x = %02x\n", m_maincpu->pc(), m_igs_magic[0], data);
 	}
 }
 
@@ -243,11 +248,11 @@ READ8_MEMBER(spoker_state::magic_r)
 			if ( !(m_igs_magic[1] & 0x04) ) return ioport("DSW3")->read();
 			if ( !(m_igs_magic[1] & 0x08) ) return ioport("DSW4")->read();
 			if ( !(m_igs_magic[1] & 0x10) ) return ioport("DSW5")->read();
-			logerror("%06x: warning, reading dsw with igs_magic[1] = %02x\n", space.device().safe_pc(), m_igs_magic[1]);
+			logerror("%06x: warning, reading dsw with igs_magic[1] = %02x\n", m_maincpu->pc(), m_igs_magic[1]);
 			break;
 
 		default:
-			logerror("%06x: warning, reading with igs_magic = %02x\n", space.device().safe_pc(), m_igs_magic[0]);
+			logerror("%06x: warning, reading with igs_magic = %02x\n", m_maincpu->pc(), m_igs_magic[0]);
 	}
 
 	return 0;
@@ -258,52 +263,55 @@ READ8_MEMBER(spoker_state::magic_r)
                                 Memory Maps
 ***************************************************************************/
 
-static ADDRESS_MAP_START( spoker_map, AS_PROGRAM, 8, spoker_state )
-	AM_RANGE(0x00000, 0x0f3ff) AM_ROM
-	AM_RANGE(0x0f400, 0x0ffff) AM_RAM AM_SHARE("nvram")
-ADDRESS_MAP_END
+void spoker_state::spoker_map(address_map &map)
+{
+	map(0x00000, 0x0f3ff).rom();
+	map(0x0f400, 0x0ffff).ram().share("nvram");
+}
 
-static ADDRESS_MAP_START( spoker_portmap, AS_IO, 8, spoker_state )
-	AM_RANGE(0x0000, 0x003f) AM_RAM // Z180 internal regs
-	AM_RANGE(0x2000, 0x23ff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0x2400, 0x27ff) AM_RAM_DEVWRITE("palette", palette_device, write_ext) AM_SHARE("palette_ext")
-	AM_RANGE(0x3000, 0x33ff) AM_RAM_WRITE(bg_tile_w ) AM_SHARE("bg_tile_ram")
-	AM_RANGE(0x5000, 0x5fff) AM_RAM_WRITE(fg_tile_w )  AM_SHARE("fg_tile_ram")
-	AM_RANGE(0x6480, 0x6483) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)    /* NMI and coins (w), service (r), coins (r) */
-	AM_RANGE(0x6490, 0x6493) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)    /* buttons 1 (r), video and leds (w), leds (w) */
-	AM_RANGE(0x64a0, 0x64a0) AM_READ_PORT( "BUTTONS2" )
-	AM_RANGE(0x64b0, 0x64b1) AM_DEVWRITE("ymsnd", ym2413_device, write)
-	AM_RANGE(0x64c0, 0x64c0) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0x64d0, 0x64d1) AM_READWRITE(magic_r, magic_w )    // DSW1-5
-	AM_RANGE(0x7000, 0x7fff) AM_RAM_WRITE(fg_color_w ) AM_SHARE("fg_color_ram")
-ADDRESS_MAP_END
+void spoker_state::spoker_portmap(address_map &map)
+{
+	map(0x0000, 0x003f).ram(); // Z180 internal regs
+	map(0x2000, 0x23ff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+	map(0x2400, 0x27ff).ram().w(m_palette, FUNC(palette_device::write8_ext)).share("palette_ext");
+	map(0x3000, 0x33ff).ram().w(this, FUNC(spoker_state::bg_tile_w)).share("bg_tile_ram");
+	map(0x5000, 0x5fff).ram().w(this, FUNC(spoker_state::fg_tile_w)).share("fg_tile_ram");
+	map(0x6480, 0x6483).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* NMI and coins (w), service (r), coins (r) */
+	map(0x6490, 0x6493).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* buttons 1 (r), video and leds (w), leds (w) */
+	map(0x64a0, 0x64a0).portr("BUTTONS2");
+	map(0x64b0, 0x64b1).w("ymsnd", FUNC(ym2413_device::write));
+	map(0x64c0, 0x64c0).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0x64d0, 0x64d1).rw(this, FUNC(spoker_state::magic_r), FUNC(spoker_state::magic_w));    // DSW1-5
+	map(0x7000, 0x7fff).ram().w(this, FUNC(spoker_state::fg_color_w)).share("fg_color_ram");
+}
 
-static ADDRESS_MAP_START( 3super8_portmap, AS_IO, 8, spoker_state )
+void spoker_state::_3super8_portmap(address_map &map)
+{
 //  AM_RANGE(0x1000, 0x1fff) AM_WRITENOP
-	AM_RANGE(0x2000, 0x27ff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0x2800, 0x2fff) AM_RAM_DEVWRITE("palette", palette_device, write_ext) AM_SHARE("palette_ext")
-	AM_RANGE(0x3000, 0x33ff) AM_RAM_WRITE(bg_tile_w ) AM_SHARE("bg_tile_ram")
-	AM_RANGE(0x4000, 0x4000) AM_READ_PORT( "DSW1" )
-	AM_RANGE(0x4001, 0x4001) AM_READ_PORT( "DSW2" )
-	AM_RANGE(0x4002, 0x4002) AM_READ_PORT( "DSW3" )
-	AM_RANGE(0x4003, 0x4003) AM_READ_PORT( "DSW4" )
-	AM_RANGE(0x4004, 0x4004) AM_READ_PORT( "DSW5" )
+	map(0x2000, 0x27ff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+	map(0x2800, 0x2fff).ram().w(m_palette, FUNC(palette_device::write8_ext)).share("palette_ext");
+	map(0x3000, 0x33ff).ram().w(this, FUNC(spoker_state::bg_tile_w)).share("bg_tile_ram");
+	map(0x4000, 0x4000).portr("DSW1");
+	map(0x4001, 0x4001).portr("DSW2");
+	map(0x4002, 0x4002).portr("DSW3");
+	map(0x4003, 0x4003).portr("DSW4");
+	map(0x4004, 0x4004).portr("DSW5");
 //  AM_RANGE(0x4000, 0x40ff) AM_WRITENOP
-	AM_RANGE(0x5000, 0x5fff) AM_RAM_WRITE(fg_tile_w )  AM_SHARE("fg_tile_ram")
+	map(0x5000, 0x5fff).ram().w(this, FUNC(spoker_state::fg_tile_w)).share("fg_tile_ram");
 
 //  The following one (0x6480) should be output. At beginning of code, there is a PPI initialization
 //  setting O-I-I for ports ABC. Except these routines are just a leftover from the original game,
 //  and now the I/O is handled by a CPLD or FPGA (as seen in goldstar and gp98).
-	AM_RANGE(0x6480, 0x6480) AM_READ_PORT( "IN0" )
-	AM_RANGE(0x6490, 0x6490) AM_READ_PORT( "IN1" )
+	map(0x6480, 0x6480).portr("IN0");
+	map(0x6490, 0x6490).portr("IN1");
 
-	AM_RANGE(0x6491, 0x6491) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0x64a0, 0x64a0) AM_READ_PORT( "IN2" )
-	AM_RANGE(0x64b0, 0x64b0) AM_WRITE(leds_w )
-	AM_RANGE(0x64c0, 0x64c0) AM_READNOP //irq ack?
-	AM_RANGE(0x64f0, 0x64f0) AM_WRITE(nmi_and_coins_w )
-	AM_RANGE(0x7000, 0x7fff) AM_RAM_WRITE(fg_color_w ) AM_SHARE("fg_color_ram")
-ADDRESS_MAP_END
+	map(0x6491, 0x6491).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0x64a0, 0x64a0).portr("IN2");
+	map(0x64b0, 0x64b0).w(this, FUNC(spoker_state::leds_w));
+	map(0x64c0, 0x64c0).nopr(); //irq ack?
+	map(0x64f0, 0x64f0).w(this, FUNC(spoker_state::nmi_and_coins_w));
+	map(0x7000, 0x7fff).ram().w(this, FUNC(spoker_state::fg_color_w)).share("fg_color_ram");
+}
 
 
 /***************************************************************************
@@ -589,10 +597,10 @@ void spoker_state::machine_reset()
                               Machine Drivers
 ***************************************************************************/
 
-static MACHINE_CONFIG_START( spoker )
+MACHINE_CONFIG_START(spoker_state::spoker)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z180, XTAL_12MHz / 2)   /* HD64180RP8, 8 MHz? */
+	MCFG_CPU_ADD("maincpu", Z180, XTAL(12'000'000) / 2)   /* HD64180RP8, 8 MHz? */
 	MCFG_CPU_PROGRAM_MAP(spoker_map)
 	MCFG_CPU_IO_MAP(spoker_portmap)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", spoker_state, nmi_line_assert)
@@ -624,20 +632,21 @@ static MACHINE_CONFIG_START( spoker )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("ymsnd", YM2413, XTAL_3_579545MHz)
+	MCFG_SOUND_ADD("ymsnd", YM2413, XTAL(3'579'545))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.4)
 
-	MCFG_OKIM6295_ADD("oki", XTAL_12MHz / 12, PIN7_HIGH)
+	MCFG_OKIM6295_ADD("oki", XTAL(12'000'000) / 12, PIN7_HIGH)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( 3super8, spoker )
+MACHINE_CONFIG_START(spoker_state::_3super8)
+	spoker(config);
 
-	MCFG_CPU_REPLACE("maincpu", Z80, XTAL_24MHz / 4)    /* z840006, 24/4 MHz? */
+	MCFG_CPU_REPLACE("maincpu", Z80, XTAL(24'000'000) / 4)    /* z840006, 24/4 MHz? */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(spoker_map)
-	MCFG_CPU_IO_MAP(3super8_portmap)
+	MCFG_CPU_IO_MAP(_3super8_portmap)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", spoker_state, nmi_line_assert)
 	MCFG_CPU_PERIODIC_INT_DRIVER(spoker_state, irq0_line_hold, 120) // this signal comes from the PIC
 
@@ -969,4 +978,4 @@ GAME( 1993?, spk116itmx, spk306us, spoker,  spoker,  spoker_state,  0,          
 GAME( 1993?, spk115it,   spk306us, spoker,  spoker,  spoker_state,  spk116it,    ROT0,  "IGS",       "Super Poker (v115IT)",     MACHINE_SUPPORTS_SAVE )
 GAME( 1993?, spk114it,   spk306us, spoker,  spoker,  spoker_state,  0,           ROT0,  "IGS",       "Super Poker (v114IT)",     MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )  // needs proper machine driver
 GAME( 1996,  spk102ua,   spk306us, spoker,  spoker,  spoker_state,  spkleftover, ROT0,  "IGS",       "Super Poker (v102UA)",     MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )  // needs proper machine driver
-GAME( 1993?, 3super8,    0,        3super8, 3super8, spoker_state,  3super8,     ROT0,  "<unknown>", "3 Super 8 (Italy)",        MACHINE_NOT_WORKING | MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE ) //roms are badly dumped
+GAME( 1993?, 3super8,    0,        _3super8,3super8, spoker_state,  3super8,     ROT0,  "<unknown>", "3 Super 8 (Italy)",        MACHINE_NOT_WORKING | MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE ) //roms are badly dumped

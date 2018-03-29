@@ -90,24 +90,22 @@ class kingdrby_state : public driver_device
 {
 public:
 	kingdrby_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
-		m_vram(*this, "vram"),
-		m_attr(*this, "attr"),
-		m_spriteram(*this, "spriteram"),
-		m_soundcpu(*this, "soundcpu"),
-		m_gfxdecode(*this, "gfxdecode"),
-		m_palette(*this, "palette") { }
+		: driver_device(mconfig, type, tag)
+		, m_vram(*this, "vram")
+		, m_attr(*this, "attr")
+		, m_spriteram(*this, "spriteram")
+		, m_soundcpu(*this, "soundcpu")
+		, m_gfxdecode(*this, "gfxdecode")
+		, m_palette(*this, "palette")
+		, m_digits(*this, "digit%u", 0U)
+	{
+	}
 
-	uint8_t m_sound_cmd;
-	required_shared_ptr<uint8_t> m_vram;
-	required_shared_ptr<uint8_t> m_attr;
-	tilemap_t *m_sc0_tilemap;
-	tilemap_t *m_sc0w_tilemap;
-	tilemap_t *m_sc1_tilemap;
-	uint8_t m_p1_hopper;
-	uint8_t m_p2_hopper;
-	uint8_t m_mux_data;
-	required_shared_ptr<uint8_t> m_spriteram;
+	void kingdrbb(machine_config &config);
+	void cowrace(machine_config &config);
+	void kingdrby(machine_config &config);
+
+private:
 	DECLARE_WRITE8_MEMBER(sc0_vram_w);
 	DECLARE_WRITE8_MEMBER(sc0_attr_w);
 	DECLARE_WRITE8_MEMBER(led_array_w);
@@ -127,14 +125,36 @@ public:
 	DECLARE_PALETTE_INIT(kingdrbb);
 	uint32_t screen_update_kingdrby(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	void draw_sprites(bitmap_ind16 &bitmap, const rectangle &cliprect);
+
+	void cowrace_sound_io(address_map &map);
+	void cowrace_sound_map(address_map &map);
+	void master_io_map(address_map &map);
+	void master_map(address_map &map);
+	void slave_1986_map(address_map &map);
+	void slave_io_map(address_map &map);
+	void slave_map(address_map &map);
+	void sound_io_map(address_map &map);
+	void sound_map(address_map &map);
+
+	uint8_t m_sound_cmd;
+	required_shared_ptr<uint8_t> m_vram;
+	required_shared_ptr<uint8_t> m_attr;
+	tilemap_t *m_sc0_tilemap;
+	tilemap_t *m_sc0w_tilemap;
+	tilemap_t *m_sc1_tilemap;
+	uint8_t m_p1_hopper;
+	uint8_t m_p2_hopper;
+	uint8_t m_mux_data;
+	required_shared_ptr<uint8_t> m_spriteram;
 	required_device<cpu_device> m_soundcpu;
 	required_device<gfxdecode_device> m_gfxdecode;
 	required_device<palette_device> m_palette;
+	output_finder<30> m_digits;
 };
 
 
-#define CLK_1   XTAL_20MHz
-#define CLK_2   XTAL_3_579545MHz
+#define CLK_1   XTAL(20'000'000)
+#define CLK_2   XTAL(3'579'545)
 
 
 /*************************************
@@ -192,6 +212,8 @@ void kingdrby_state::video_start()
 	m_sc0w_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(FUNC(kingdrby_state::get_sc0_tile_info),this),TILEMAP_SCAN_ROWS,8,8,32,32);
 
 	m_sc1_tilemap->set_transparent_pen(0);
+
+	m_digits.resolve();
 }
 
 static const uint8_t hw_sprite[16] =
@@ -304,7 +326,7 @@ WRITE8_MEMBER(kingdrby_state::hopper_io_w)
 
 WRITE8_MEMBER(kingdrby_state::sound_cmd_w)
 {
-	m_soundcpu->set_input_line(INPUT_LINE_NMI, PULSE_LINE);
+	m_soundcpu->set_input_line(INPUT_LINE_NMI, BIT(data, 7) ? ASSERT_LINE : CLEAR_LINE);
 	m_sound_cmd = data;
 	/* soundlatch is unneeded since we are already using perfect interleave. */
 	// m_soundlatch->write(space,0, data);
@@ -395,8 +417,8 @@ WRITE8_MEMBER(kingdrby_state::led_array_w)
 	they goes from 0 to 5, to indicate the number.
 	If one player bets something, the other led will toggle between p1 and p2 bets.
 	*/
-	output().set_digit_value(0xf + offset, led_map[(data & 0xf0) >> 4]);
-	output().set_digit_value(0x0 + offset, led_map[(data & 0x0f) >> 0]);
+	m_digits[0xf + offset] = led_map[(data & 0xf0) >> 4];
+	m_digits[0x0 + offset] = led_map[(data & 0x0f) >> 0];
 
 }
 
@@ -406,82 +428,91 @@ WRITE8_MEMBER(kingdrby_state::led_array_w)
  *
  *************************************/
 
-static ADDRESS_MAP_START( master_map, AS_PROGRAM, 8, kingdrby_state )
-	AM_RANGE(0x0000, 0x2fff) AM_ROM
-	AM_RANGE(0x3000, 0x33ff) AM_RAM AM_MIRROR(0xc00) AM_SHARE("share1")
-	AM_RANGE(0x4000, 0x43ff) AM_RAM_WRITE(sc0_vram_w) AM_SHARE("vram")
-	AM_RANGE(0x5000, 0x53ff) AM_RAM_WRITE(sc0_attr_w) AM_SHARE("attr")
-ADDRESS_MAP_END
+void kingdrby_state::master_map(address_map &map)
+{
+	map(0x0000, 0x2fff).rom();
+	map(0x3000, 0x33ff).ram().mirror(0xc00).share("share1");
+	map(0x4000, 0x43ff).ram().w(this, FUNC(kingdrby_state::sc0_vram_w)).share("vram");
+	map(0x5000, 0x53ff).ram().w(this, FUNC(kingdrby_state::sc0_attr_w)).share("attr");
+}
 
-static ADDRESS_MAP_START( master_io_map, AS_IO, 8, kingdrby_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_NOP //interrupt ack
-ADDRESS_MAP_END
+void kingdrby_state::master_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).noprw(); //interrupt ack
+}
 
-static ADDRESS_MAP_START( slave_map, AS_PROGRAM, 8, kingdrby_state )
-	AM_RANGE(0x0000, 0x2fff) AM_ROM
-	AM_RANGE(0x3000, 0x3fff) AM_ROM //sound rom, tested for the post check
-	AM_RANGE(0x4000, 0x43ff) AM_RAM AM_SHARE("nvram") //backup ram
-	AM_RANGE(0x5000, 0x5003) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)    /* I/O Ports */
-	AM_RANGE(0x6000, 0x6003) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write)    /* I/O Ports */
-	AM_RANGE(0x7000, 0x73ff) AM_RAM AM_SHARE("share1")
-	AM_RANGE(0x7400, 0x74ff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0x7600, 0x7600) AM_DEVWRITE("crtc", mc6845_device, address_w)
-	AM_RANGE(0x7601, 0x7601) AM_DEVREADWRITE("crtc", mc6845_device, register_r, register_w)
-	AM_RANGE(0x7801, 0x780f) AM_WRITE(led_array_w)
-	AM_RANGE(0x7a00, 0x7a00) AM_RAM //buffer for the key matrix
-	AM_RANGE(0x7c00, 0x7c00) AM_READ_PORT("DSW")
-ADDRESS_MAP_END
+void kingdrby_state::slave_map(address_map &map)
+{
+	map(0x0000, 0x2fff).rom();
+	map(0x3000, 0x3fff).rom(); //sound rom, tested for the post check
+	map(0x4000, 0x43ff).ram().share("nvram"); //backup ram
+	map(0x5000, 0x5003).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* I/O Ports */
+	map(0x6000, 0x6003).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* I/O Ports */
+	map(0x7000, 0x73ff).ram().share("share1");
+	map(0x7400, 0x74ff).ram().share("spriteram");
+	map(0x7600, 0x7600).w("crtc", FUNC(mc6845_device::address_w));
+	map(0x7601, 0x7601).rw("crtc", FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
+	map(0x7801, 0x780f).w(this, FUNC(kingdrby_state::led_array_w));
+	map(0x7a00, 0x7a00).ram(); //buffer for the key matrix
+	map(0x7c00, 0x7c00).portr("DSW");
+}
 
 WRITE8_MEMBER(kingdrby_state::kingdrbb_lamps_w)
 {
 	// (same as the inputs but active high)
 }
 
-static ADDRESS_MAP_START( slave_1986_map, AS_PROGRAM, 8, kingdrby_state )
-	AM_RANGE(0x0000, 0x2fff) AM_ROM
-	AM_RANGE(0x3000, 0x3fff) AM_ROM //sound rom tested for the post check
-	AM_RANGE(0x4000, 0x47ff) AM_RAM AM_SHARE("nvram") //backup ram
-	AM_RANGE(0x5000, 0x5003) AM_DEVREADWRITE("ppi8255_0", i8255_device, read, write)    /* I/O Ports */
+void kingdrby_state::slave_1986_map(address_map &map)
+{
+	map(0x0000, 0x2fff).rom();
+	map(0x3000, 0x3fff).rom(); //sound rom tested for the post check
+	map(0x4000, 0x47ff).ram().share("nvram"); //backup ram
+	map(0x5000, 0x5003).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));    /* I/O Ports */
 //  AM_RANGE(0x6000, 0x6003) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write) /* I/O Ports */
-	AM_RANGE(0x7000, 0x73ff) AM_RAM AM_SHARE("share1")
-	AM_RANGE(0x7400, 0x74ff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0x7600, 0x7600) AM_DEVWRITE("crtc", mc6845_device, address_w)
-	AM_RANGE(0x7601, 0x7601) AM_DEVREADWRITE("crtc", mc6845_device, register_r, register_w)
-	AM_RANGE(0x7800, 0x7800) AM_READ_PORT("KEY0")
-	AM_RANGE(0x7801, 0x7801) AM_READ_PORT("KEY1")
-	AM_RANGE(0x7802, 0x7802) AM_READ_PORT("KEY2")
-	AM_RANGE(0x7803, 0x7803) AM_READ_PORT("KEY3")
-	AM_RANGE(0x7800, 0x7803) AM_WRITE(kingdrbb_lamps_w)
-	AM_RANGE(0x7a00, 0x7a00) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0x7c00, 0x7c00) AM_READ_PORT("DSW")
-ADDRESS_MAP_END
+	map(0x7000, 0x73ff).ram().share("share1");
+	map(0x7400, 0x74ff).ram().share("spriteram");
+	map(0x7600, 0x7600).w("crtc", FUNC(mc6845_device::address_w));
+	map(0x7601, 0x7601).rw("crtc", FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
+	map(0x7800, 0x7800).portr("KEY0");
+	map(0x7801, 0x7801).portr("KEY1");
+	map(0x7802, 0x7802).portr("KEY2");
+	map(0x7803, 0x7803).portr("KEY3");
+	map(0x7800, 0x7803).w(this, FUNC(kingdrby_state::kingdrbb_lamps_w));
+	map(0x7a00, 0x7a00).portr("SYSTEM");
+	map(0x7c00, 0x7c00).portr("DSW");
+}
 
-static ADDRESS_MAP_START( slave_io_map, AS_IO, 8, kingdrby_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_NOP //interrupt ack
-ADDRESS_MAP_END
+void kingdrby_state::slave_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).noprw(); //interrupt ack
+}
 
-static ADDRESS_MAP_START( sound_map, AS_PROGRAM, 8, kingdrby_state )
-	AM_RANGE(0x0000, 0x0fff) AM_ROM
-	AM_RANGE(0x2000, 0x23ff) AM_RAM
-ADDRESS_MAP_END
+void kingdrby_state::sound_map(address_map &map)
+{
+	map(0x0000, 0x0fff).rom();
+	map(0x2000, 0x23ff).ram();
+}
 
-static ADDRESS_MAP_START( sound_io_map, AS_IO, 8, kingdrby_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x40, 0x40) AM_DEVREAD("aysnd", ay8910_device, data_r)
-	AM_RANGE(0x40, 0x41) AM_DEVWRITE("aysnd", ay8910_device, data_address_w)
-ADDRESS_MAP_END
+void kingdrby_state::sound_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x40, 0x40).r("aysnd", FUNC(ay8910_device::data_r));
+	map(0x40, 0x41).w("aysnd", FUNC(ay8910_device::data_address_w));
+}
 
-static ADDRESS_MAP_START( cowrace_sound_map, AS_PROGRAM, 8, kingdrby_state )
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x2000, 0x23ff) AM_RAM
-ADDRESS_MAP_END
+void kingdrby_state::cowrace_sound_map(address_map &map)
+{
+	map(0x0000, 0x1fff).rom();
+	map(0x2000, 0x23ff).ram();
+}
 
-static ADDRESS_MAP_START( cowrace_sound_io, AS_IO, 8, kingdrby_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x40, 0x41) AM_DEVWRITE("aysnd", ym2203_device, write)
-ADDRESS_MAP_END
+void kingdrby_state::cowrace_sound_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x40, 0x41).w("aysnd", FUNC(ym2203_device::write));
+}
 
 
 WRITE8_MEMBER(kingdrby_state::outportb_w)
@@ -904,7 +935,7 @@ PALETTE_INIT_MEMBER(kingdrby_state,kingdrbb)
 	for(i = 0; i < 0x200; i++)
 	{
 		/* this set has an extra address line shuffle applied on the prom */
-		prom[i] = raw_prom[BITSWAP16(i, 15,14,13,12,11,10,9,8,7,6,5,0,1,2,3,4)+0x1000];
+		prom[i] = raw_prom[bitswap<16>(i, 15,14,13,12,11,10,9,8,7,6,5,0,1,2,3,4)+0x1000];
 	}
 
 	for(i = 0; i < 0x200; i++)
@@ -926,7 +957,7 @@ PALETTE_INIT_MEMBER(kingdrby_state,kingdrbb)
 	}
 }
 
-static MACHINE_CONFIG_START( kingdrby )
+MACHINE_CONFIG_START(kingdrby_state::kingdrby)
 	MCFG_CPU_ADD("master", Z80, CLK_2)
 	MCFG_CPU_PROGRAM_MAP(master_map)
 	MCFG_CPU_IO_MAP(master_io_map)
@@ -955,6 +986,7 @@ static MACHINE_CONFIG_START( kingdrby )
 	// 6000-6003 PPI group modes 0/0 - B & C (lower) as input, A & C (upper) as output.
 	MCFG_DEVICE_ADD("ppi8255_1", I8255A, 0)
 	MCFG_I8255_OUT_PORTA_CB(WRITE8(kingdrby_state, sound_cmd_w))
+	MCFG_I8255_TRISTATE_PORTA_CB(CONSTANT(0x7f))
 	MCFG_I8255_IN_PORTB_CB(READ8(kingdrby_state, key_matrix_r))
 	MCFG_I8255_IN_PORTC_CB(READ8(kingdrby_state, input_mux_r))
 	MCFG_I8255_OUT_PORTC_CB(WRITE8(kingdrby_state, outport2_w))
@@ -981,7 +1013,8 @@ static MACHINE_CONFIG_START( kingdrby )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kingdrbb, kingdrby )
+MACHINE_CONFIG_START(kingdrby_state::kingdrbb)
+	kingdrby(config);
 
 	MCFG_CPU_MODIFY("slave")
 	MCFG_CPU_PROGRAM_MAP(slave_1986_map)
@@ -995,6 +1028,7 @@ static MACHINE_CONFIG_DERIVED( kingdrbb, kingdrby )
 	MCFG_DEVICE_ADD("ppi8255_0", I8255A, 0)
 	/* C as input, (all) as output */
 	MCFG_I8255_OUT_PORTA_CB(WRITE8(kingdrby_state, sound_cmd_w))
+	MCFG_I8255_TRISTATE_PORTA_CB(CONSTANT(0x7f))
 	MCFG_I8255_IN_PORTB_CB(IOPORT("IN0"))
 	MCFG_I8255_OUT_PORTB_CB(WRITE8(kingdrby_state, outportb_w))
 	MCFG_I8255_IN_PORTC_CB(IOPORT("IN1"))
@@ -1003,7 +1037,8 @@ static MACHINE_CONFIG_DERIVED( kingdrbb, kingdrby )
 	/* actually unused */
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( cowrace, kingdrbb )
+MACHINE_CONFIG_START(kingdrby_state::cowrace)
+	kingdrbb(config);
 
 	MCFG_CPU_MODIFY("soundcpu")
 	MCFG_CPU_PROGRAM_MAP(cowrace_sound_map)

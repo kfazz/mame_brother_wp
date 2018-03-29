@@ -93,7 +93,7 @@ VBlank = 58Hz
 #include "sound/okim6295.h"
 #include "speaker.h"
 
-#define MAIN_CLOCK      XTAL_12MHz
+#define MAIN_CLOCK      XTAL(12'000'000)
 #define CPU_CLOCK           MAIN_CLOCK / 6
 #define PIXEL_CLOCK     MAIN_CLOCK / 2
 
@@ -170,13 +170,6 @@ WRITE8_MEMBER(vball_state::bankswitch_w)
 	m_scrolly_hi = (data & 0x40) << 2;
 }
 
-/* The sound system comes all but verbatim from Double Dragon */
-WRITE8_MEMBER(vball_state::cpu_sound_command_w)
-{
-	m_soundlatch->write(space, offset, data);
-	m_audiocpu->set_input_line(INPUT_LINE_NMI, PULSE_LINE);
-}
-
 
 /* bit 0 = flip screen
    bit 1 = scrollx hi
@@ -193,46 +186,48 @@ WRITE8_MEMBER(vball_state::scrollx_hi_w)
 	m_scrollx_hi = (data & 0x02) << 7;
 	bgprombank_w((data >> 2) & 0x07);
 	spprombank_w((data >> 5) & 0x07);
-	//logerror("%04x: scrollx_hi = %d\n", space.device().safe_pcbase(), m_scrollx_hi);
+	//logerror("%04x: scrollx_hi = %d\n", m_maincpu->pcbase(), m_scrollx_hi);
 }
 
 WRITE8_MEMBER(vball_state::scrollx_lo_w)
 {
 	m_scrollx_lo = data;
-	//logerror("%04x: scrollx_lo =%d\n", space.device().safe_pcbase(), m_scrollx_lo);
+	//logerror("%04x: scrollx_lo =%d\n", m_maincpu->pcbase(), m_scrollx_lo);
 }
 
 
 //Cheaters note: Scores are stored in ram @ 0x57-0x58 (though the space is used for other things between matches)
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 8, vball_state )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM
-	AM_RANGE(0x0800, 0x08ff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0x1000, 0x1000) AM_READ_PORT("P1")
-	AM_RANGE(0x1001, 0x1001) AM_READ_PORT("P2")
-	AM_RANGE(0x1002, 0x1002) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0x1003, 0x1003) AM_READ_PORT("DSW1")
-	AM_RANGE(0x1004, 0x1004) AM_READ_PORT("DSW2")
-	AM_RANGE(0x1005, 0x1005) AM_READ_PORT("P3")
-	AM_RANGE(0x1006, 0x1006) AM_READ_PORT("P4")
-	AM_RANGE(0x1008, 0x1008) AM_WRITE(scrollx_hi_w)
-	AM_RANGE(0x1009, 0x1009) AM_WRITE(bankswitch_w)
-	AM_RANGE(0x100a, 0x100b) AM_WRITE(irq_ack_w)  /* is there a scanline counter here? */
-	AM_RANGE(0x100c, 0x100c) AM_WRITE(scrollx_lo_w)
-	AM_RANGE(0x100d, 0x100d) AM_WRITE(cpu_sound_command_w)
-	AM_RANGE(0x100e, 0x100e) AM_WRITEONLY AM_SHARE("scrolly_lo")
-	AM_RANGE(0x2000, 0x2fff) AM_WRITE(videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x3000, 0x3fff) AM_WRITE(attrib_w) AM_SHARE("attribram")
-	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("mainbank")
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void vball_state::main_map(address_map &map)
+{
+	map(0x0000, 0x07ff).ram();
+	map(0x0800, 0x08ff).ram().share("spriteram");
+	map(0x1000, 0x1000).portr("P1");
+	map(0x1001, 0x1001).portr("P2");
+	map(0x1002, 0x1002).portr("SYSTEM");
+	map(0x1003, 0x1003).portr("DSW1");
+	map(0x1004, 0x1004).portr("DSW2");
+	map(0x1005, 0x1005).portr("P3");
+	map(0x1006, 0x1006).portr("P4");
+	map(0x1008, 0x1008).w(this, FUNC(vball_state::scrollx_hi_w));
+	map(0x1009, 0x1009).w(this, FUNC(vball_state::bankswitch_w));
+	map(0x100a, 0x100b).w(this, FUNC(vball_state::irq_ack_w));  /* is there a scanline counter here? */
+	map(0x100c, 0x100c).w(this, FUNC(vball_state::scrollx_lo_w));
+	map(0x100d, 0x100d).w(m_soundlatch, FUNC(generic_latch_8_device::write));
+	map(0x100e, 0x100e).writeonly().share("scrolly_lo");
+	map(0x2000, 0x2fff).w(this, FUNC(vball_state::videoram_w)).share("videoram");
+	map(0x3000, 0x3fff).w(this, FUNC(vball_state::attrib_w)).share("attribram");
+	map(0x4000, 0x7fff).bankr("mainbank");
+	map(0x8000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START( sound_map, AS_PROGRAM, 8, vball_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM
-	AM_RANGE(0x8800, 0x8801) AM_DEVREADWRITE("ymsnd", ym2151_device, read, write)
-	AM_RANGE(0x9800, 0x9803) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0xa000, 0xa000) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+void vball_state::sound_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x87ff).ram();
+	map(0x8800, 0x8801).rw("ymsnd", FUNC(ym2151_device::read), FUNC(ym2151_device::write));
+	map(0x9800, 0x9803).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0xa000, 0xa000).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
 
 static INPUT_PORTS_START( vball )
@@ -401,7 +396,7 @@ static GFXDECODE_START( vb )
 GFXDECODE_END
 
 
-static MACHINE_CONFIG_START( vball )
+MACHINE_CONFIG_START(vball_state::vball)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M6502, CPU_CLOCK)   /* 2 MHz - measured by guru but it makes the game far far too slow ?! */
@@ -425,7 +420,9 @@ static MACHINE_CONFIG_START( vball )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
+	// The sound system comes all but verbatim from Double Dragon
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
+	MCFG_GENERIC_LATCH_DATA_PENDING_CB(INPUTLINE("audiocpu", INPUT_LINE_NMI))
 
 	MCFG_YM2151_ADD("ymsnd", 3579545)
 	MCFG_YM2151_IRQ_HANDLER(INPUTLINE("audiocpu", 0))

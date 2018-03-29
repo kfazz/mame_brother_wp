@@ -23,6 +23,7 @@
 
 #include "emu.h"
 #include "cpu/z80/z80.h"
+#include "machine/timer.h"
 #include "sound/spkrdev.h"
 #include "screen.h"
 #include "speaker.h"
@@ -60,6 +61,9 @@ public:
 	DECLARE_WRITE_LINE_MEMBER(screen_vblank_spectrum);
 
 	TIMER_DEVICE_CALLBACK_MEMBER(spec_interrupt_hack);
+	void photon2(machine_config &config);
+	void spectrum_io(address_map &map);
+	void spectrum_mem(address_map &map);
 };
 
 
@@ -254,21 +258,23 @@ WRITE8_MEMBER(photon2_state::misc_w)
  *
  *************************************/
 
-static ADDRESS_MAP_START (spectrum_mem, AS_PROGRAM, 8, photon2_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROMBANK("mainbank")
-	AM_RANGE(0x4000, 0x5aff) AM_RAM AM_SHARE("spectrum_vram")
-	AM_RANGE(0x5b00, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void photon2_state::spectrum_mem(address_map &map)
+{
+	map(0x0000, 0x3fff).bankr("mainbank");
+	map(0x4000, 0x5aff).ram().share("spectrum_vram");
+	map(0x5b00, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START (spectrum_io, AS_IO, 8, photon2_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x1f, 0x1f) AM_READ_PORT("JOY")
-	AM_RANGE(0x5b, 0x5b) AM_READ_PORT("COIN") AM_WRITE(misc_w)
-	AM_RANGE(0x7a, 0x7a) AM_WRITE(membank_w)
-	AM_RANGE(0x7b, 0x7b) AM_WRITENOP // unknown write
-	AM_RANGE(0x7e, 0x7e) AM_WRITE(membank_w)
-	AM_RANGE(0xfe, 0xfe) AM_READWRITE(fe_r, fe_w)
-ADDRESS_MAP_END
+void photon2_state::spectrum_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x1f, 0x1f).portr("JOY");
+	map(0x5b, 0x5b).portr("COIN").w(this, FUNC(photon2_state::misc_w));
+	map(0x7a, 0x7a).w(this, FUNC(photon2_state::membank_w));
+	map(0x7b, 0x7b).nopw(); // unknown write
+	map(0x7e, 0x7e).w(this, FUNC(photon2_state::membank_w));
+	map(0xfe, 0xfe).rw(this, FUNC(photon2_state::fe_r), FUNC(photon2_state::fe_w));
+}
 
 /*************************************
  *
@@ -346,7 +352,7 @@ void photon2_state::machine_start()
 	save_item(NAME(m_nmi_enable));
 }
 
-static MACHINE_CONFIG_START( photon2 )
+MACHINE_CONFIG_START(photon2_state::photon2)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 3500000)        /* 3.5 MHz */
 	MCFG_CPU_PROGRAM_MAP(spectrum_mem)

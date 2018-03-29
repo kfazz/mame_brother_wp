@@ -28,13 +28,14 @@
 #include "includes/rampart.h"
 
 #include "cpu/m68000/m68000.h"
+#include "machine/eeprompar.h"
 #include "machine/watchdog.h"
 #include "sound/okim6295.h"
 #include "sound/ym2413.h"
 #include "speaker.h"
 
 
-#define MASTER_CLOCK        XTAL_14_31818MHz
+#define MASTER_CLOCK        XTAL(14'318'181)
 
 
 /*************************************
@@ -64,7 +65,7 @@ void rampart_state::scanline_update(screen_device &screen, int scanline)
  *
  *************************************/
 
-MACHINE_RESET_MEMBER(rampart_state,rampart)
+void rampart_state::machine_reset()
 {
 	atarigen_state::machine_reset();
 	scanline_timer_reset(*m_screen, 32);
@@ -126,31 +127,32 @@ WRITE16_MEMBER(rampart_state::latch_w)
  *************************************/
 
 /* full memory map deduced from schematics and GALs */
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 16, rampart_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x7fffff)
-	AM_RANGE(0x000000, 0x0fffff) AM_ROM
-	AM_RANGE(0x140000, 0x147fff) AM_MIRROR(0x438000) AM_ROM /* slapstic goes here */
-	AM_RANGE(0x200000, 0x21ffff) AM_RAM AM_SHARE("bitmap")
-	AM_RANGE(0x220000, 0x3bffff) AM_WRITENOP    /* the code blasts right through this when initializing */
-	AM_RANGE(0x3c0000, 0x3c07ff) AM_MIRROR(0x019800) AM_DEVREADWRITE8("palette", palette_device, read, write, 0xff00) AM_SHARE("palette")
-	AM_RANGE(0x3e0000, 0x3e07ff) AM_MIRROR(0x010000) AM_RAM AM_SHARE("mob")
-	AM_RANGE(0x3e0800, 0x3e3f3f) AM_MIRROR(0x010000) AM_RAM
-	AM_RANGE(0x3e3f40, 0x3e3f7f) AM_MIRROR(0x010000) AM_RAM AM_SHARE("mob:slip")
-	AM_RANGE(0x3e3f80, 0x3effff) AM_MIRROR(0x010000) AM_RAM
-	AM_RANGE(0x460000, 0x460001) AM_MIRROR(0x019ffe) AM_DEVREADWRITE8("oki", okim6295_device, read, write, 0xff00)
-	AM_RANGE(0x480000, 0x480003) AM_MIRROR(0x019ffc) AM_DEVWRITE8("ymsnd", ym2413_device, write, 0xff00)
-	AM_RANGE(0x500000, 0x500fff) AM_MIRROR(0x019000) AM_DEVREADWRITE8("eeprom", atari_eeprom_device, read, write, 0x00ff)
-	AM_RANGE(0x5a6000, 0x5a6001) AM_MIRROR(0x019ffe) AM_DEVWRITE("eeprom", atari_eeprom_device, unlock_write)
-	AM_RANGE(0x640000, 0x640001) AM_MIRROR(0x019ffe) AM_WRITE(latch_w)
-	AM_RANGE(0x640000, 0x640001) AM_MIRROR(0x019ffc) AM_READ_PORT("IN0")
-	AM_RANGE(0x640002, 0x640003) AM_MIRROR(0x019ffc) AM_READ_PORT("IN1")
-	AM_RANGE(0x6c0000, 0x6c0001) AM_MIRROR(0x019ff8) AM_READ_PORT("TRACK0")
-	AM_RANGE(0x6c0002, 0x6c0003) AM_MIRROR(0x019ff8) AM_READ_PORT("TRACK1")
-	AM_RANGE(0x6c0004, 0x6c0005) AM_MIRROR(0x019ff8) AM_READ_PORT("TRACK2")
-	AM_RANGE(0x6c0006, 0x6c0007) AM_MIRROR(0x019ff8) AM_READ_PORT("TRACK3")
-	AM_RANGE(0x726000, 0x726001) AM_MIRROR(0x019ffe) AM_DEVWRITE("watchdog", watchdog_timer_device, reset16_w)
-	AM_RANGE(0x7e6000, 0x7e6001) AM_MIRROR(0x019ffe) AM_WRITE(scanline_int_ack_w)
-ADDRESS_MAP_END
+void rampart_state::main_map(address_map &map)
+{
+	map.global_mask(0x7fffff);
+	map(0x000000, 0x0fffff).rom();
+	map(0x140000, 0x147fff).mirror(0x438000).rom(); /* slapstic goes here */
+	map(0x200000, 0x21ffff).ram().share("bitmap");
+	map(0x220000, 0x3bffff).nopw();    /* the code blasts right through this when initializing */
+	map(0x3c0000, 0x3c07ff).mirror(0x019800).rw(m_palette, FUNC(palette_device::read8), FUNC(palette_device::write8)).umask16(0xff00).share("palette");
+	map(0x3e0000, 0x3e07ff).mirror(0x010000).ram().share("mob");
+	map(0x3e0800, 0x3e3f3f).mirror(0x010000).ram();
+	map(0x3e3f40, 0x3e3f7f).mirror(0x010000).ram().share("mob:slip");
+	map(0x3e3f80, 0x3effff).mirror(0x010000).ram();
+	map(0x460000, 0x460000).mirror(0x019ffe).rw(m_oki, FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0x480000, 0x480003).mirror(0x019ffc).w(m_ym2413, FUNC(ym2413_device::write)).umask16(0xff00);
+	map(0x500000, 0x500fff).mirror(0x019000).rw("eeprom", FUNC(eeprom_parallel_28xx_device::read), FUNC(eeprom_parallel_28xx_device::write)).umask16(0x00ff);
+	map(0x5a6000, 0x5a6001).mirror(0x019ffe).w("eeprom", FUNC(eeprom_parallel_28xx_device::unlock_write16));
+	map(0x640000, 0x640001).mirror(0x019ffe).w(this, FUNC(rampart_state::latch_w));
+	map(0x640000, 0x640001).mirror(0x019ffc).portr("IN0");
+	map(0x640002, 0x640003).mirror(0x019ffc).portr("IN1");
+	map(0x6c0000, 0x6c0001).mirror(0x019ff8).portr("TRACK0");
+	map(0x6c0002, 0x6c0003).mirror(0x019ff8).portr("TRACK1");
+	map(0x6c0004, 0x6c0005).mirror(0x019ff8).portr("TRACK2");
+	map(0x6c0006, 0x6c0007).mirror(0x019ff8).portr("TRACK3");
+	map(0x726000, 0x726001).mirror(0x019ffe).w("watchdog", FUNC(watchdog_timer_device::reset16_w));
+	map(0x7e6000, 0x7e6001).mirror(0x019ffe).w(this, FUNC(rampart_state::scanline_int_ack_w));
+}
 
 
 
@@ -335,18 +337,17 @@ GFXDECODE_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( rampart )
+MACHINE_CONFIG_START(rampart_state::rampart)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, MASTER_CLOCK/2)
 	MCFG_CPU_PROGRAM_MAP(main_map)
-	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", atarigen_state, video_int_gen)
+	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", rampart_state, video_int_gen)
 
 	MCFG_SLAPSTIC_ADD("slapstic", 118)
 
-	MCFG_MACHINE_RESET_OVERRIDE(rampart_state,rampart)
-
-	MCFG_ATARI_EEPROM_2816_ADD("eeprom")
+	MCFG_EEPROM_2816_ADD("eeprom")
+	MCFG_EEPROM_28XX_LOCK_AFTER_WRITE(true)
 
 	MCFG_WATCHDOG_ADD("watchdog")
 	MCFG_WATCHDOG_VBLANK_INIT("screen", 8)
@@ -367,8 +368,6 @@ static MACHINE_CONFIG_START( rampart )
 	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK/2, 456, 0+12, 336+12, 262, 0, 240)
 	MCFG_SCREEN_UPDATE_DRIVER(rampart_state, screen_update_rampart)
 	MCFG_SCREEN_PALETTE("palette")
-
-	MCFG_VIDEO_START_OVERRIDE(rampart_state,rampart)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -402,7 +401,7 @@ ROM_START( rampart )
 	ROM_LOAD( "136082-1007.2d", 0x00000, 0x20000, CRC(c96a0fc3) SHA1(6e7e242d0afa4714ca31d77ccbf8ee487bbdb1e4) )
 	ROM_LOAD( "136082-1008.1d", 0x20000, 0x20000, CRC(518218d9) SHA1(edf1b11579dcfa9a872fa4bd866dc2f95fac767d) )
 
-	ROM_REGION( 0x800, "eeprom:eeprom", 0 )
+	ROM_REGION( 0x800, "eeprom", 0 )
 	ROM_LOAD( "rampart-eeprom.bin", 0x0000, 0x800, CRC(0be57615) SHA1(bd1f9eef410c78c091d2c925d6275427c77c7ecd) )
 
 	ROM_REGION( 0x0c00, "plds", 0 )
@@ -429,7 +428,7 @@ ROM_START( rampart2p )
 	ROM_LOAD( "136082-1007.2d", 0x00000, 0x20000, CRC(c96a0fc3) SHA1(6e7e242d0afa4714ca31d77ccbf8ee487bbdb1e4) )
 	ROM_LOAD( "136082-1008.1d", 0x20000, 0x20000, CRC(518218d9) SHA1(edf1b11579dcfa9a872fa4bd866dc2f95fac767d) )
 
-	ROM_REGION( 0x800, "eeprom:eeprom", 0 )
+	ROM_REGION( 0x800, "eeprom", 0 )
 	ROM_LOAD( "rampart-eeprom.bin", 0x0000, 0x800, CRC(0be57615) SHA1(bd1f9eef410c78c091d2c925d6275427c77c7ecd) )
 
 	ROM_REGION( 0x0c00, "plds", 0 )
@@ -460,7 +459,7 @@ ROM_START( rampartj )
 	ROM_LOAD( "136082-1007.2d", 0x00000, 0x20000, CRC(c96a0fc3) SHA1(6e7e242d0afa4714ca31d77ccbf8ee487bbdb1e4) )
 	ROM_LOAD( "136082-1008.1d", 0x20000, 0x20000, CRC(518218d9) SHA1(edf1b11579dcfa9a872fa4bd866dc2f95fac767d) )
 
-	ROM_REGION( 0x800, "eeprom:eeprom", 0 )
+	ROM_REGION( 0x800, "eeprom", 0 )
 	ROM_LOAD( "rampartj-eeprom.bin", 0x0000, 0x800, CRC(096cacdc) SHA1(48328a27ce1975a27d9a83ae05d068cee7556a90) )
 
 	ROM_REGION( 0x0c00, "plds", 0 )

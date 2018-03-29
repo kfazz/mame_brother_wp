@@ -64,42 +64,44 @@ WRITE8_MEMBER(usgames_state::lamps2_w)
 }
 
 
-static ADDRESS_MAP_START( usgames_map, AS_PROGRAM, 8, usgames_state )
-	AM_RANGE(0x0000, 0x1fff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x2000, 0x2000) AM_READ_PORT("DSW")
-	AM_RANGE(0x2010, 0x2010) AM_READ_PORT("INPUTS")
-	AM_RANGE(0x2020, 0x2020) AM_WRITE(lamps1_w)
-	AM_RANGE(0x2030, 0x2030) AM_WRITE(lamps2_w)
-	AM_RANGE(0x2040, 0x2040) AM_DEVWRITE("crtc", mc6845_device, address_w)
-	AM_RANGE(0x2041, 0x2041) AM_READ_PORT("UNK1")
-	AM_RANGE(0x2041, 0x2041) AM_DEVWRITE("crtc", mc6845_device, register_w)
-	AM_RANGE(0x2060, 0x2060) AM_WRITE(rombank_w)
-	AM_RANGE(0x2070, 0x2070) AM_READ_PORT("UNK2")
-	AM_RANGE(0x2400, 0x2401) AM_DEVWRITE("aysnd", ay8912_device, address_data_w)
-	AM_RANGE(0x2800, 0x2fff) AM_RAM_WRITE(charram_w) AM_SHARE("charram")
-	AM_RANGE(0x3000, 0x3fff) AM_RAM_WRITE(videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("bank1")
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void usgames_state::usgames_map(address_map &map)
+{
+	map(0x0000, 0x1fff).ram().share("nvram");
+	map(0x2000, 0x2000).portr("DSW");
+	map(0x2010, 0x2010).portr("INPUTS");
+	map(0x2020, 0x2020).w(this, FUNC(usgames_state::lamps1_w));
+	map(0x2030, 0x2030).w(this, FUNC(usgames_state::lamps2_w));
+	map(0x2040, 0x2040).w("crtc", FUNC(mc6845_device::address_w));
+	map(0x2041, 0x2041).portr("UNK1");
+	map(0x2041, 0x2041).w("crtc", FUNC(mc6845_device::register_w));
+	map(0x2060, 0x2060).w(this, FUNC(usgames_state::rombank_w));
+	map(0x2070, 0x2070).portr("UNK2");
+	map(0x2400, 0x2401).w("aysnd", FUNC(ay8912_device::address_data_w));
+	map(0x2800, 0x2fff).ram().w(this, FUNC(usgames_state::charram_w)).share("charram");
+	map(0x3000, 0x3fff).ram().w(this, FUNC(usgames_state::videoram_w)).share("videoram");
+	map(0x4000, 0x7fff).bankr("bank1");
+	map(0x8000, 0xffff).rom();
+}
 
 
-static ADDRESS_MAP_START( usg185_map, AS_PROGRAM, 8, usgames_state )
-	AM_RANGE(0x0000, 0x1fff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x2000, 0x2001) AM_DEVWRITE("aysnd", ay8912_device, address_data_w)
-	AM_RANGE(0x2400, 0x2400) AM_READ_PORT("DSW")
-	AM_RANGE(0x2410, 0x2410) AM_READ_PORT("INPUTS")
-	AM_RANGE(0x2420, 0x2420) AM_WRITE(lamps1_w)
-	AM_RANGE(0x2430, 0x2430) AM_WRITE(lamps2_w)
-	AM_RANGE(0x2440, 0x2440) AM_DEVWRITE("crtc", mc6845_device, address_w)
-	AM_RANGE(0x2441, 0x2441) AM_READ_PORT("UNK1")
-	AM_RANGE(0x2441, 0x2441) AM_DEVWRITE("crtc", mc6845_device, register_w)
-	AM_RANGE(0x2460, 0x2460) AM_WRITE(rombank_w)
-	AM_RANGE(0x2470, 0x2470) AM_READ_PORT("UNK2")
-	AM_RANGE(0x2800, 0x2fff) AM_RAM_WRITE(charram_w) AM_SHARE("charram")
-	AM_RANGE(0x3000, 0x3fff) AM_RAM_WRITE(videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("bank1")
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void usgames_state::usg185_map(address_map &map)
+{
+	map(0x0000, 0x1fff).ram().share("nvram");
+	map(0x2000, 0x2001).w("aysnd", FUNC(ay8912_device::address_data_w));
+	map(0x2400, 0x2400).portr("DSW");
+	map(0x2410, 0x2410).portr("INPUTS");
+	map(0x2420, 0x2420).w(this, FUNC(usgames_state::lamps1_w));
+	map(0x2430, 0x2430).w(this, FUNC(usgames_state::lamps2_w));
+	map(0x2440, 0x2440).w("crtc", FUNC(mc6845_device::address_w));
+	map(0x2441, 0x2441).portr("UNK1");
+	map(0x2441, 0x2441).w("crtc", FUNC(mc6845_device::register_w));
+	map(0x2460, 0x2460).w(this, FUNC(usgames_state::rombank_w));
+	map(0x2470, 0x2470).portr("UNK2");
+	map(0x2800, 0x2fff).ram().w(this, FUNC(usgames_state::charram_w)).share("charram");
+	map(0x3000, 0x3fff).ram().w(this, FUNC(usgames_state::videoram_w)).share("videoram");
+	map(0x4000, 0x7fff).bankr("bank1");
+	map(0x8000, 0xffff).rom();
+}
 
 
 static INPUT_PORTS_START( usg32 )
@@ -217,7 +219,7 @@ static GFXDECODE_START( usgames )
 GFXDECODE_END
 
 
-static MACHINE_CONFIG_START( usg32 )
+MACHINE_CONFIG_START(usgames_state::usg32)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M6809, 2000000) /* ?? */
@@ -239,7 +241,7 @@ static MACHINE_CONFIG_START( usg32 )
 	MCFG_PALETTE_ADD("palette", 2*256)
 	MCFG_PALETTE_INIT_OWNER(usgames_state, usgames)
 
-	MCFG_MC6845_ADD("crtc", MC6845, "screen", XTAL_18MHz / 16)
+	MCFG_MC6845_ADD("crtc", MC6845, "screen", XTAL(18'000'000) / 16)
 	MCFG_MC6845_SHOW_BORDER_AREA(false)
 	MCFG_MC6845_CHAR_WIDTH(8)
 
@@ -250,7 +252,8 @@ static MACHINE_CONFIG_START( usg32 )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( usg185, usg32 )
+MACHINE_CONFIG_START(usgames_state::usg185)
+	usg32(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(usg185_map)
 MACHINE_CONFIG_END

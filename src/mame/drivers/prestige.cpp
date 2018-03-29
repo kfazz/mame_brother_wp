@@ -81,6 +81,7 @@ Notes:
 
 #include "cpu/z80/z80.h"
 #include "machine/ram.h"
+#include "machine/timer.h"
 
 #include "bus/generic/slot.h"
 #include "bus/generic/carts.h"
@@ -152,6 +153,18 @@ public:
 	DECLARE_PALETTE_INIT(glcolor);
 	TIMER_DEVICE_CALLBACK_MEMBER(irq_timer);
 	IRQ_CALLBACK_MEMBER(prestige_int_ack);
+	void prestige_base(machine_config &config);
+	void princ(machine_config &config);
+	void gl6000sl(machine_config &config);
+	void gjmovie(machine_config &config);
+	void snotec(machine_config &config);
+	void glmcolor(machine_config &config);
+	void glcolor(machine_config &config);
+	void prestige(machine_config &config);
+	void gl7007sl(machine_config &config);
+	void glcolor_io(address_map &map);
+	void prestige_io(address_map &map);
+	void prestige_mem(address_map &map);
 };
 
 
@@ -310,32 +323,35 @@ WRITE8_MEMBER( prestige_state::lcdc_w )
 }
 
 
-static ADDRESS_MAP_START(prestige_mem, AS_PROGRAM, 8, prestige_state)
-	AM_RANGE(0x0000, 0x3fff) AM_ROMBANK("bank1")
-	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("bank2")
-	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK("bank3")
-	AM_RANGE(0xc000, 0xdfff) AM_RAMBANK("bank4")
-	AM_RANGE(0xe000, 0xffff) AM_RAMBANK("bank5")
-ADDRESS_MAP_END
+void prestige_state::prestige_mem(address_map &map)
+{
+	map(0x0000, 0x3fff).bankr("bank1");
+	map(0x4000, 0x7fff).bankr("bank2");
+	map(0x8000, 0xbfff).bankr("bank3");
+	map(0xc000, 0xdfff).bankrw("bank4");
+	map(0xe000, 0xffff).bankrw("bank5");
+}
 
-static ADDRESS_MAP_START( prestige_io , AS_IO, 8, prestige_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x04, 0x05) AM_READWRITE(mouse_r, mouse_w)
-	AM_RANGE(0x30, 0x3f) AM_WRITE(lcdc_w)
-	AM_RANGE(0x40, 0x40) AM_WRITE(kb_w)
-	AM_RANGE(0x41, 0x42) AM_READ(kb_r)
-	AM_RANGE(0x50, 0x56) AM_READWRITE(bankswitch_r, bankswitch_w)
-ADDRESS_MAP_END
+void prestige_state::prestige_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0x04, 0x05).rw(this, FUNC(prestige_state::mouse_r), FUNC(prestige_state::mouse_w));
+	map(0x30, 0x3f).w(this, FUNC(prestige_state::lcdc_w));
+	map(0x40, 0x40).w(this, FUNC(prestige_state::kb_w));
+	map(0x41, 0x42).r(this, FUNC(prestige_state::kb_r));
+	map(0x50, 0x56).rw(this, FUNC(prestige_state::bankswitch_r), FUNC(prestige_state::bankswitch_w));
+}
 
-static ADDRESS_MAP_START( glcolor_io , AS_IO, 8, prestige_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x30, 0x3f) AM_WRITE(lcdc_w)
-	AM_RANGE(0x40, 0x40) AM_WRITE(kb_w)
-	AM_RANGE(0x41, 0x42) AM_READ(kb_r)
-	AM_RANGE(0x50, 0x56) AM_READWRITE(bankswitch_r, bankswitch_w)
-ADDRESS_MAP_END
+void prestige_state::glcolor_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0x30, 0x3f).w(this, FUNC(prestige_state::lcdc_w));
+	map(0x40, 0x40).w(this, FUNC(prestige_state::kb_w));
+	map(0x41, 0x42).r(this, FUNC(prestige_state::kb_r));
+	map(0x50, 0x56).rw(this, FUNC(prestige_state::bankswitch_r), FUNC(prestige_state::bankswitch_w));
+}
 
 /* Input ports */
 INPUT_PORTS_START( prestige )
@@ -722,9 +738,9 @@ TIMER_DEVICE_CALLBACK_MEMBER(prestige_state::irq_timer)
 	m_maincpu->set_input_line(0, ASSERT_LINE);
 }
 
-static MACHINE_CONFIG_START( prestige_base )
+MACHINE_CONFIG_START(prestige_state::prestige_base)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",Z80, XTAL_8MHz)  // Z84C008
+	MCFG_CPU_ADD("maincpu",Z80, XTAL(8'000'000))  // Z84C008
 	MCFG_CPU_PROGRAM_MAP(prestige_mem)
 	MCFG_CPU_IO_MAP(prestige_io)
 	MCFG_CPU_IRQ_ACKNOWLEDGE_DRIVER(prestige_state,prestige_int_ack)
@@ -754,7 +770,8 @@ static MACHINE_CONFIG_START( prestige_base )
 	MCFG_RAM_EXTRA_OPTIONS("64K")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( glcolor, prestige_base )
+MACHINE_CONFIG_START(prestige_state::glcolor)
+	prestige_base(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_IO_MAP(glcolor_io)
 
@@ -772,41 +789,48 @@ static MACHINE_CONFIG_DERIVED( glcolor, prestige_base )
 	MCFG_SOFTWARE_LIST_COMPATIBLE_ADD("snotec_cart", "snotec")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( glmcolor, glcolor )
+MACHINE_CONFIG_START(prestige_state::glmcolor)
+	glcolor(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_IO_MAP(prestige_io)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( snotec, glcolor )
+MACHINE_CONFIG_START(prestige_state::snotec)
+	glcolor(config);
 	MCFG_SOFTWARE_LIST_REMOVE("cart_list")
 	MCFG_SOFTWARE_LIST_REMOVE("snotec_cart")
 	MCFG_SOFTWARE_LIST_ADD("cart_list", "snotec")
 	MCFG_SOFTWARE_LIST_COMPATIBLE_ADD("glcolor_cart", "glcolor")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( prestige, prestige_base )
+MACHINE_CONFIG_START(prestige_state::prestige)
+	prestige_base(config);
 	MCFG_SOFTWARE_LIST_COMPATIBLE_ADD("gl6000sl_cart", "gl6000sl")
 	MCFG_SOFTWARE_LIST_COMPATIBLE_ADD("misterx_cart", "misterx")
 	MCFG_SOFTWARE_LIST_COMPATIBLE_ADD("gl2000_cart", "gl2000")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( gl6000sl, prestige_base )
+MACHINE_CONFIG_START(prestige_state::gl6000sl)
+	prestige_base(config);
 	MCFG_SOFTWARE_LIST_ADD("cart_list", "gl6000sl")
 	MCFG_SOFTWARE_LIST_COMPATIBLE_ADD("misterx_cart", "misterx")
 	MCFG_SOFTWARE_LIST_COMPATIBLE_ADD("gl2000_cart", "gl2000")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( gl7007sl, prestige_base )
+MACHINE_CONFIG_START(prestige_state::gl7007sl)
+	prestige_base(config);
 	MCFG_SOFTWARE_LIST_COMPATIBLE_ADD("gl6000sl_cart", "gl6000sl")
 	MCFG_SOFTWARE_LIST_COMPATIBLE_ADD("gl2000_cart", "gl2000")
 	MCFG_SOFTWARE_LIST_COMPATIBLE_ADD("misterx_cart", "misterx")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( gjmovie, prestige_base )
+MACHINE_CONFIG_START(prestige_state::gjmovie)
+	prestige_base(config);
 	MCFG_SOFTWARE_LIST_ADD("cart_list", "gjmovie")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( princ, prestige_base )
+MACHINE_CONFIG_START(prestige_state::princ)
+	prestige_base(config);
 	MCFG_DEVICE_REMOVE("cartslot")
 	MCFG_GENERIC_CARTSLOT_ADD("cartslot", generic_plain_slot, "princ_cart")
 	MCFG_SOFTWARE_LIST_ADD("cart_list", "princ")
@@ -855,7 +879,7 @@ ROM_END
 
 ROM_START( snotecu )
 	ROM_REGION( 0x100000, "maincpu", 0 )
-	ROM_LOAD("27-6100-00.U1", 0x00000, 0x100000, CRC(b2f979d5) SHA1(d2a76e99351971d1fb4cf4df9fe5741a606eb844))
+	ROM_LOAD("27-6100-00.u1", 0x00000, 0x100000, CRC(b2f979d5) SHA1(d2a76e99351971d1fb4cf4df9fe5741a606eb844))
 ROM_END
 
 ROM_START( glmcolor )
@@ -910,7 +934,7 @@ ROM_END
 
 ROM_START( princ )
 	ROM_REGION( 0x100000, "maincpu", 0 )
-	ROM_LOAD("29F800T.U4", 0x00000, 0x100000, CRC(30b6b864) SHA1(7ada3af85dd8dd3f95ca8965ad8e642c26445293))
+	ROM_LOAD("29f800t.u4", 0x00000, 0x100000, CRC(30b6b864) SHA1(7ada3af85dd8dd3f95ca8965ad8e642c26445293))
 ROM_END
 
 

@@ -42,20 +42,23 @@ public:
 	I8275_DRAW_CHARACTER_MEMBER(display_pixels);
 
 	required_device<speaker_sound_device> m_speaker;
+	void apogee(machine_config &config);
+	void apogee_mem(address_map &map);
 };
 
 
 /* Address maps */
-static ADDRESS_MAP_START(apogee_mem, AS_PROGRAM, 8, apogee_state )
-	AM_RANGE( 0x0000, 0x0fff ) AM_RAMBANK("bank1") // First bank
-	AM_RANGE( 0x1000, 0xebff ) AM_RAM  // RAM
-	AM_RANGE( 0xec00, 0xec03 ) AM_DEVREADWRITE("pit8253", pit8253_device, read, write) AM_MIRROR(0x00fc)
-	AM_RANGE( 0xed00, 0xed03 ) AM_DEVREADWRITE("ppi8255_1", i8255_device, read, write) AM_MIRROR(0x00fc)
+void apogee_state::apogee_mem(address_map &map)
+{
+	map(0x0000, 0x0fff).bankrw("bank1"); // First bank
+	map(0x1000, 0xebff).ram();  // RAM
+	map(0xec00, 0xec03).rw("pit8253", FUNC(pit8253_device::read), FUNC(pit8253_device::write)).mirror(0x00fc);
+	map(0xed00, 0xed03).rw(m_ppi8255_1, FUNC(i8255_device::read), FUNC(i8255_device::write)).mirror(0x00fc);
 	//AM_RANGE( 0xee00, 0xee03 ) AM_DEVREADWRITE("ppi8255_2", i8255_device, read, write) AM_MIRROR(0x00fc)
-	AM_RANGE( 0xef00, 0xef01 ) AM_DEVREADWRITE("i8275", i8275_device, read, write) AM_MIRROR(0x00fe) // video
-	AM_RANGE( 0xf000, 0xf0ff ) AM_DEVWRITE("dma8257", i8257_device, write)    // DMA
-	AM_RANGE( 0xf000, 0xffff ) AM_ROM  // System ROM
-ADDRESS_MAP_END
+	map(0xef00, 0xef01).rw("i8275", FUNC(i8275_device::read), FUNC(i8275_device::write)).mirror(0x00fe); // video
+	map(0xf000, 0xf0ff).w(m_dma8257, FUNC(i8257_device::write));    // DMA
+	map(0xf000, 0xffff).rom();  // System ROM
+}
 
 /* Input ports */
 static INPUT_PORTS_START( apogee )
@@ -84,7 +87,7 @@ static INPUT_PORTS_START( apogee )
 	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_1) PORT_CHAR('1') PORT_CHAR('!')
 	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_2) PORT_CHAR('2') PORT_CHAR('\"')
 	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_3) PORT_CHAR('3') PORT_CHAR('#')
-	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_4) PORT_CHAR('4') PORT_CHAR('\xA4')
+	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_4) PORT_CHAR('4') PORT_CHAR(0xA4)
 	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_5) PORT_CHAR('5') PORT_CHAR('%')
 	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_6) PORT_CHAR('6') PORT_CHAR('&')
 	PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_7) PORT_CHAR('7') PORT_CHAR('\'')
@@ -212,18 +215,18 @@ GFXDECODE_END
 
 
 /* Machine driver */
-static MACHINE_CONFIG_START( apogee )
+MACHINE_CONFIG_START(apogee_state::apogee)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", I8080, XTAL_16MHz / 9)
+	MCFG_CPU_ADD("maincpu", I8080, XTAL(16'000'000) / 9)
 	MCFG_CPU_PROGRAM_MAP(apogee_mem)
 	MCFG_MACHINE_RESET_OVERRIDE(apogee_state, radio86 )
 
 	MCFG_DEVICE_ADD("pit8253", PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_16MHz/9)
+	MCFG_PIT8253_CLK0(XTAL(16'000'000)/9)
 	MCFG_PIT8253_OUT0_HANDLER(WRITELINE(apogee_state,pit8253_out0_changed))
-	MCFG_PIT8253_CLK1(XTAL_16MHz/9)
+	MCFG_PIT8253_CLK1(XTAL(16'000'000)/9)
 	MCFG_PIT8253_OUT1_HANDLER(WRITELINE(apogee_state,pit8253_out1_changed))
-	MCFG_PIT8253_CLK2(XTAL_16MHz/9)
+	MCFG_PIT8253_CLK2(XTAL(16'000'000)/9)
 	MCFG_PIT8253_OUT2_HANDLER(WRITELINE(apogee_state,pit8253_out2_changed))
 
 	MCFG_DEVICE_ADD("ppi8255_1", I8255, 0)
@@ -234,7 +237,7 @@ static MACHINE_CONFIG_START( apogee )
 
 	//MCFG_DEVICE_ADD("ppi8255_2", I8255, 0)
 
-	MCFG_DEVICE_ADD("i8275", I8275, XTAL_16MHz / 12)
+	MCFG_DEVICE_ADD("i8275", I8275, XTAL(16'000'000) / 12)
 	MCFG_I8275_CHARACTER_WIDTH(6)
 	MCFG_I8275_DRAW_CHARACTER_CALLBACK_OWNER(apogee_state, display_pixels)
 	MCFG_I8275_DRQ_CALLBACK(DEVWRITELINE("dma8257",i8257_device, dreq2_w))
@@ -257,7 +260,7 @@ static MACHINE_CONFIG_START( apogee )
 	MCFG_SPEAKER_LEVELS(4, speaker_levels)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
 
-	MCFG_DEVICE_ADD("dma8257", I8257, XTAL_16MHz / 9)
+	MCFG_DEVICE_ADD("dma8257", I8257, XTAL(16'000'000) / 9)
 	MCFG_I8257_OUT_HRQ_CB(WRITELINE(radio86_state, hrq_w))
 	MCFG_I8257_IN_MEMR_CB(READ8(radio86_state, memory_read_byte))
 	MCFG_I8257_OUT_MEMW_CB(WRITE8(radio86_state, memory_write_byte))

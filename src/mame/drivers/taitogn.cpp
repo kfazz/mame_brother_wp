@@ -357,7 +357,7 @@ public:
 		m_cat702_2(*this, "cat702_2"),
 		m_znmcu(*this, "znmcu"),
 		m_maincpu(*this, "maincpu"),
-		m_mn10200(*this, "mn10200"),
+		m_mn10200(*this, "taito_zoom:mn10200"),
 		m_flashbank(*this, "flashbank"),
 		m_mb3773(*this, "mb3773"),
 		m_zoom(*this, "taito_zoom"),
@@ -396,6 +396,15 @@ public:
 	DECLARE_READ32_MEMBER(zsg2_ext_r);
 	DECLARE_DRIVER_INIT(coh3002t_nz);
 
+	void coh3002t_t2_mp(machine_config &config);
+	void coh3002t(machine_config &config);
+	void coh3002t_t1_mp(machine_config &config);
+	void coh3002t_cf(machine_config &config);
+	void coh3002t_t2(machine_config &config);
+	void coh3002t_t1(machine_config &config);
+	void flashbank_map(address_map &map);
+	void taitogn_map(address_map &map);
+	void taitogn_mp_map(address_map &map);
 protected:
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
@@ -626,58 +635,56 @@ DRIVER_INIT_MEMBER(taitogn_state,coh3002t_nz)
 	m_has_zoom = false;
 }
 
-static ADDRESS_MAP_START( taitogn_map, AS_PROGRAM, 32, taitogn_state )
-	AM_RANGE(0x1f000000, 0x1f7fffff) AM_DEVICE16("flashbank", address_map_bank_device, amap16, 0xffffffff)
-	AM_RANGE(0x1fa00000, 0x1fa00003) AM_READ_PORT("P1")
-	AM_RANGE(0x1fa00100, 0x1fa00103) AM_READ_PORT("P2")
-	AM_RANGE(0x1fa00200, 0x1fa00203) AM_READ_PORT("SERVICE")
-	AM_RANGE(0x1fa00300, 0x1fa00303) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0x1fa10000, 0x1fa10003) AM_READ_PORT("P3")
-	AM_RANGE(0x1fa10100, 0x1fa10103) AM_READ_PORT("P4")
-	AM_RANGE(0x1fa10200, 0x1fa10203) AM_READ8(boardconfig_r, 0x000000ff)
-	AM_RANGE(0x1fa10300, 0x1fa10303) AM_READWRITE8(znsecsel_r, znsecsel_w, 0x000000ff)
-	AM_RANGE(0x1fa20000, 0x1fa20003) AM_READWRITE8(coin_r, coin_w, 0x000000ff)
-	AM_RANGE(0x1fa30000, 0x1fa30003) AM_READWRITE8(control3_r, control3_w, 0x000000ff)
-	AM_RANGE(0x1fa51c00, 0x1fa51dff) AM_READNOP // systematic read at spu_address + 250000, result dropped, maybe other accesses
-	AM_RANGE(0x1fa60000, 0x1fa60003) AM_READ16(hack1_r, 0xffffffff)
-	AM_RANGE(0x1faf0000, 0x1faf07ff) AM_DEVREADWRITE8("at28c16", at28c16_device, read, write, 0xffffffff) /* eeprom */
-	AM_RANGE(0x1fb00000, 0x1fb0ffff) AM_DEVREADWRITE16("rf5c296", rf5c296_device, io_r, io_w, 0xffffffff)
-	AM_RANGE(0x1fb40000, 0x1fb40003) AM_READWRITE8(control_r, control_w, 0x000000ff)
-	AM_RANGE(0x1fb60000, 0x1fb60003) AM_WRITE16(control2_w, 0x0000ffff)
-	AM_RANGE(0x1fb70000, 0x1fb70003) AM_READWRITE16(gn_1fb70000_r, gn_1fb70000_w, 0x0000ffff)
-	AM_RANGE(0x1fb80000, 0x1fb80003) AM_DEVWRITE16("taito_zoom", taito_zoom_device, reg_data_w, 0x0000ffff)
-	AM_RANGE(0x1fb80000, 0x1fb80003) AM_DEVWRITE16("taito_zoom", taito_zoom_device, reg_address_w, 0xffff0000)
-	AM_RANGE(0x1fba0000, 0x1fba0003) AM_DEVWRITE16("taito_zoom", taito_zoom_device, sound_irq_w, 0x0000ffff)
-	AM_RANGE(0x1fbc0000, 0x1fbc0003) AM_DEVREAD16("taito_zoom", taito_zoom_device, sound_irq_r, 0x0000ffff)
-	AM_RANGE(0x1fbe0000, 0x1fbe01ff) AM_DEVREADWRITE8("taito_zoom", taito_zoom_device, shared_ram_r, shared_ram_w, 0x00ff00ff) // M66220FP for comms with the MN10200
-ADDRESS_MAP_END
+void taitogn_state::taitogn_map(address_map &map)
+{
+	map(0x1f000000, 0x1f7fffff).m(m_flashbank, FUNC(address_map_bank_device::amap16));
+	map(0x1fa00000, 0x1fa00003).portr("P1");
+	map(0x1fa00100, 0x1fa00103).portr("P2");
+	map(0x1fa00200, 0x1fa00203).portr("SERVICE");
+	map(0x1fa00300, 0x1fa00303).portr("SYSTEM");
+	map(0x1fa10000, 0x1fa10003).portr("P3");
+	map(0x1fa10100, 0x1fa10103).portr("P4");
+	map(0x1fa10200, 0x1fa10200).r(this, FUNC(taitogn_state::boardconfig_r));
+	map(0x1fa10300, 0x1fa10300).rw(this, FUNC(taitogn_state::znsecsel_r), FUNC(taitogn_state::znsecsel_w));
+	map(0x1fa20000, 0x1fa20000).rw(this, FUNC(taitogn_state::coin_r), FUNC(taitogn_state::coin_w));
+	map(0x1fa30000, 0x1fa30000).rw(this, FUNC(taitogn_state::control3_r), FUNC(taitogn_state::control3_w));
+	map(0x1fa51c00, 0x1fa51dff).nopr(); // systematic read at spu_address + 250000, result dropped, maybe other accesses
+	map(0x1fa60000, 0x1fa60003).r(this, FUNC(taitogn_state::hack1_r));
+	map(0x1faf0000, 0x1faf07ff).rw("at28c16", FUNC(at28c16_device::read), FUNC(at28c16_device::write)); /* eeprom */
+	map(0x1fb00000, 0x1fb0ffff).rw("rf5c296", FUNC(rf5c296_device::io_r), FUNC(rf5c296_device::io_w));
+	map(0x1fb40000, 0x1fb40000).rw(this, FUNC(taitogn_state::control_r), FUNC(taitogn_state::control_w));
+	map(0x1fb60000, 0x1fb60001).w(this, FUNC(taitogn_state::control2_w));
+	map(0x1fb70000, 0x1fb70001).rw(this, FUNC(taitogn_state::gn_1fb70000_r), FUNC(taitogn_state::gn_1fb70000_w));
+	map(0x1fb80000, 0x1fb80001).w(m_zoom, FUNC(taito_zoom_device::reg_data_w));
+	map(0x1fb80002, 0x1fb80003).w(m_zoom, FUNC(taito_zoom_device::reg_address_w));
+	map(0x1fba0000, 0x1fba0001).w(m_zoom, FUNC(taito_zoom_device::sound_irq_w));
+	map(0x1fbc0000, 0x1fbc0001).r(m_zoom, FUNC(taito_zoom_device::sound_irq_r));
+	map(0x1fbe0000, 0x1fbe01ff).rw(m_zoom, FUNC(taito_zoom_device::shared_ram_r), FUNC(taito_zoom_device::shared_ram_w)).umask32(0x00ff00ff); // M66220FP for comms with the MN10200
+}
 
-static ADDRESS_MAP_START( flashbank_map, AS_PROGRAM, 16, taitogn_state )
+void taitogn_state::flashbank_map(address_map &map)
+{
 	// Bank 0 has access to the sub-bios, the mn102 flash and the rf5c296 mem zone
-	AM_RANGE(0x00000000, 0x001fffff) AM_DEVREADWRITE("biosflash", intelfsh16_device, read, write)
-	AM_RANGE(0x00200000, 0x002fffff) AM_DEVREADWRITE("rf5c296", rf5c296_device, mem_r, mem_w )
-	AM_RANGE(0x00300000, 0x0037ffff) AM_DEVREADWRITE("pgmflash", intelfsh16_device, read, write)
+	map(0x00000000, 0x001fffff).rw("biosflash", FUNC(intelfsh16_device::read), FUNC(intelfsh16_device::write));
+	map(0x00200000, 0x002fffff).rw("rf5c296", FUNC(rf5c296_device::mem_r), FUNC(rf5c296_device::mem_w));
+	map(0x00300000, 0x0037ffff).rw(m_pgmflash, FUNC(intelfsh16_device::read), FUNC(intelfsh16_device::write));
 
 	// Bank 1 & 3 has access to the 3 samples flashes
-	AM_RANGE(0x08000000, 0x081fffff) AM_MIRROR(0x10000000) AM_DEVREADWRITE("sndflash0", intelfsh16_device, read, write)
-	AM_RANGE(0x08200000, 0x083fffff) AM_MIRROR(0x10000000) AM_DEVREADWRITE("sndflash1", intelfsh16_device, read, write)
-	AM_RANGE(0x08400000, 0x085fffff) AM_MIRROR(0x10000000) AM_DEVREADWRITE("sndflash2", intelfsh16_device, read, write)
+	map(0x08000000, 0x081fffff).mirror(0x10000000).rw(m_sndflash0, FUNC(intelfsh16_device::read), FUNC(intelfsh16_device::write));
+	map(0x08200000, 0x083fffff).mirror(0x10000000).rw(m_sndflash1, FUNC(intelfsh16_device::read), FUNC(intelfsh16_device::write));
+	map(0x08400000, 0x085fffff).mirror(0x10000000).rw(m_sndflash2, FUNC(intelfsh16_device::read), FUNC(intelfsh16_device::write));
 
 	// Bank 2 has access to the sub-bios, the mn102 flash and the mask eprom
-	AM_RANGE(0x10000000, 0x100fffff) AM_ROM AM_REGION("bioseprom", 0)
-	AM_RANGE(0x10100000, 0x1017ffff) AM_MIRROR(0x80000) AM_DEVREADWRITE("pgmflash", intelfsh16_device, read, write)
-	AM_RANGE(0x10200000, 0x103fffff) AM_DEVREADWRITE("biosflash", intelfsh16_device, read, write)
-ADDRESS_MAP_END
+	map(0x10000000, 0x100fffff).rom().region("bioseprom", 0);
+	map(0x10100000, 0x1017ffff).mirror(0x80000).rw(m_pgmflash, FUNC(intelfsh16_device::read), FUNC(intelfsh16_device::write));
+	map(0x10200000, 0x103fffff).rw("biosflash", FUNC(intelfsh16_device::read), FUNC(intelfsh16_device::write));
+}
 
-static ADDRESS_MAP_START( taitogn_mp_map, AS_PROGRAM, 32, taitogn_state )
-	AM_RANGE(0x1fa10100, 0x1fa10103) AM_READ8(gnet_mahjong_panel_r, 0x000000ff)
-	AM_IMPORT_FROM(taitogn_map)
-ADDRESS_MAP_END
-
-static ADDRESS_MAP_START( taitogn_mn_map, AS_PROGRAM, 16, taitogn_state )
-	AM_RANGE(0x080000, 0x0fffff) AM_DEVREAD("pgmflash", intelfsh16_device, read)
-	AM_IMPORT_FROM( taitozoom_mn_map )
-ADDRESS_MAP_END
+void taitogn_state::taitogn_mp_map(address_map &map)
+{
+	taitogn_map(map);
+	map(0x1fa10100, 0x1fa10100).r(this, FUNC(taitogn_state::gnet_mahjong_panel_r));
+}
 
 SLOT_INTERFACE_START(slot_ataflash)
 	SLOT_INTERFACE("taitopccard1", TAITO_PCCARD1)
@@ -686,10 +693,10 @@ SLOT_INTERFACE_START(slot_ataflash)
 	SLOT_INTERFACE("ataflash", ATA_FLASH_PCCARD)
 SLOT_INTERFACE_END
 
-static MACHINE_CONFIG_START( coh3002t )
+MACHINE_CONFIG_START(taitogn_state::coh3002t)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD( "maincpu", CXD8661R, XTAL_100MHz )
+	MCFG_CPU_ADD( "maincpu", CXD8661R, XTAL(100'000'000) )
 	MCFG_CPU_PROGRAM_MAP(taitogn_map)
 
 	MCFG_RAM_MODIFY("maincpu:ram")
@@ -730,58 +737,59 @@ static MACHINE_CONFIG_START( coh3002t )
 	MCFG_DEVICE_ADD("flashbank", ADDRESS_MAP_BANK, 0)
 	MCFG_DEVICE_PROGRAM_MAP(flashbank_map)
 	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_LITTLE)
-	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(16)
+	MCFG_ADDRESS_MAP_BANK_DATA_WIDTH(16)
 	MCFG_ADDRESS_MAP_BANK_STRIDE(0x8000000)
 
 	// 5MHz NEC uPD78081 MCU:
 	// we don't have a 78K0 emulation core yet..
 
 	/* video hardware */
-	MCFG_PSXGPU_ADD( "maincpu", "gpu", CXD8654Q, 0x200000, XTAL_53_693175MHz )
+	MCFG_PSXGPU_ADD( "maincpu", "gpu", CXD8654Q, 0x200000, XTAL(53'693'175) )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MCFG_SPU_ADD("spu", XTAL_67_7376MHz/2)
+	MCFG_SPU_ADD("spu", XTAL(67'737'600)/2)
 	MCFG_SOUND_ROUTE(0, "lspeaker", 0.45)
 	MCFG_SOUND_ROUTE(1, "rspeaker", 0.45)
 
-	MCFG_FRAGMENT_ADD( taito_zoom_sound )
-	MCFG_CPU_MODIFY("mn10200")
-	MCFG_CPU_PROGRAM_MAP(taitogn_mn_map)
+	MCFG_TAITO_ZOOM_ADD("taito_zoom")
+	MCFG_TAITO_ZOOM_USE_FLASH
 
-	MCFG_SOUND_REPLACE("zsg2", ZSG2, XTAL_25MHz)
-	MCFG_ZSG2_EXT_READ_HANDLER(READ32(taitogn_state, zsg2_ext_r))
-
-	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_DEVICE_MODIFY("taito_zoom:zsg2")
+	MCFG_ZSG2_EXT_READ_HANDLER(DEVREAD32(DEVICE_SELF_OWNER, taitogn_state, zsg2_ext_r))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED(coh3002t_t1, coh3002t)
+MACHINE_CONFIG_START(taitogn_state::coh3002t_t1)
+	coh3002t(config);
 	MCFG_DEVICE_MODIFY("pccard")
 	MCFG_SLOT_DEFAULT_OPTION("taitopccard1")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED(coh3002t_t2, coh3002t)
+MACHINE_CONFIG_START(taitogn_state::coh3002t_t2)
+	coh3002t(config);
 	MCFG_DEVICE_MODIFY("pccard")
 	MCFG_SLOT_DEFAULT_OPTION("taitopccard2")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( coh3002t_t1_mp, coh3002t_t1 )
+MACHINE_CONFIG_START(taitogn_state::coh3002t_t1_mp)
+	coh3002t_t1(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY( "maincpu" )
 	MCFG_CPU_PROGRAM_MAP(taitogn_mp_map)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( coh3002t_t2_mp, coh3002t_t2 )
+MACHINE_CONFIG_START(taitogn_state::coh3002t_t2_mp)
+	coh3002t_t2(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY( "maincpu" )
 	MCFG_CPU_PROGRAM_MAP(taitogn_mp_map)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED(coh3002t_cf, coh3002t)
+MACHINE_CONFIG_START(taitogn_state::coh3002t_cf)
+	coh3002t(config);
 	MCFG_DEVICE_MODIFY("pccard")
 	MCFG_SLOT_DEFAULT_OPTION("taitocf")
 MACHINE_CONFIG_END
@@ -952,9 +960,9 @@ INPUT_PORTS_END
 	ROM_LOAD16_WORD_SWAP_BIOS( 0, "f35-01_m27c800_v1.bin", 0x000000, 0x100000, CRC(cd15cc30) SHA1(78361f46fa7186d5058937c86c66247a86b1257f) ) /* hand made */ \
 	ROM_SYSTEM_BIOS( 1, "v2", "G-NET Bios v2 flasher" ) \
 	ROM_LOAD16_WORD_SWAP_BIOS( 1, "f35-01_m27c800.bin", 0x000000, 0x100000, CRC(6225ec11) SHA1(047852d456b6ff85f8e640887caa03cf3e63ffad) ) \
-	ROM_REGION( 0x80000, "mn10200", 0 ) \
+	ROM_REGION( 0x80000, "taito_zoom:mn10200", 0 ) \
 	ROM_FILL( 0, 0x80000, 0xff ) \
-	ROM_REGION32_LE( 0x600000, "zsg2", 0 ) \
+	ROM_REGION32_LE( 0x600000, "taito_zoom:zsg2", 0 ) \
 	ROM_FILL( 0, 0x600000, 0xff )
 
 ROM_START( coh3002t )

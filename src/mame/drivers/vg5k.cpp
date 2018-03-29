@@ -12,8 +12,7 @@
     05/2009 Skeleton driver.
 
     Known issues:
-    - 1200 bauds cassette don't works
-    - BASIC games hangs in default BIOS but works in alternative version
+     - 1200 bauds cassette don't works
 
     Informations ( see the very informative http://vg5k.free.fr/ ):
      - Variants: Radiola VG5000 and Schneider VG5000
@@ -54,6 +53,7 @@
 #include "imagedev/cassette.h"
 #include "imagedev/printer.h"
 #include "machine/ram.h"
+#include "machine/timer.h"
 #include "sound/dac.h"
 #include "sound/volt_reg.h"
 #include "sound/wave.h"
@@ -102,6 +102,9 @@ public:
 	TIMER_CALLBACK_MEMBER(z80_irq_clear);
 	TIMER_DEVICE_CALLBACK_MEMBER(z80_irq);
 	TIMER_DEVICE_CALLBACK_MEMBER(vg5k_scanline);
+	void vg5k(machine_config &config);
+	void vg5k_io(address_map &map);
+	void vg5k_mem(address_map &map);
 };
 
 
@@ -156,42 +159,44 @@ WRITE8_MEMBER ( vg5k_state::cassette_w )
 }
 
 
-static ADDRESS_MAP_START( vg5k_mem, AS_PROGRAM, 8, vg5k_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x0000, 0x3fff ) AM_ROM
-	AM_RANGE( 0x4000, 0x7fff ) AM_RAM
-	AM_RANGE( 0x8000, 0xffff ) AM_NOP /* messram expansion memory */
-ADDRESS_MAP_END
+void vg5k_state::vg5k_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x7fff).ram();
+	map(0x8000, 0xffff).noprw(); /* messram expansion memory */
+}
 
-static ADDRESS_MAP_START( vg5k_io , AS_IO, 8, vg5k_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK (0xff)
+void vg5k_state::vg5k_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
 
 	/* joystick */
-	AM_RANGE( 0x07, 0x07 ) AM_READ_PORT("JOY0")
-	AM_RANGE( 0x08, 0x08 ) AM_READ_PORT("JOY1")
+	map(0x07, 0x07).portr("JOY0");
+	map(0x08, 0x08).portr("JOY1");
 
 	/* printer */
-	AM_RANGE( 0x10, 0x10 ) AM_READ(printer_r)
-	AM_RANGE( 0x11, 0x11 ) AM_WRITE(printer_w)
+	map(0x10, 0x10).r(this, FUNC(vg5k_state::printer_r));
+	map(0x11, 0x11).w(this, FUNC(vg5k_state::printer_w));
 
 	/* keyboard */
-	AM_RANGE( 0x80, 0x80 ) AM_READ_PORT("ROW1")
-	AM_RANGE( 0x81, 0x81 ) AM_READ_PORT("ROW2")
-	AM_RANGE( 0x82, 0x82 ) AM_READ_PORT("ROW3")
-	AM_RANGE( 0x83, 0x83 ) AM_READ_PORT("ROW4")
-	AM_RANGE( 0x84, 0x84 ) AM_READ_PORT("ROW5")
-	AM_RANGE( 0x85, 0x85 ) AM_READ_PORT("ROW6")
-	AM_RANGE( 0x86, 0x86 ) AM_READ_PORT("ROW7")
-	AM_RANGE( 0x87, 0x87 ) AM_READ_PORT("ROW8")
+	map(0x80, 0x80).portr("ROW1");
+	map(0x81, 0x81).portr("ROW2");
+	map(0x82, 0x82).portr("ROW3");
+	map(0x83, 0x83).portr("ROW4");
+	map(0x84, 0x84).portr("ROW5");
+	map(0x85, 0x85).portr("ROW6");
+	map(0x86, 0x86).portr("ROW7");
+	map(0x87, 0x87).portr("ROW8");
 
 	/* EF9345 */
-	AM_RANGE( 0x8f, 0x8f ) AM_WRITE(ef9345_offset_w)
-	AM_RANGE( 0xcf, 0xcf ) AM_READWRITE(ef9345_io_r, ef9345_io_w)
+	map(0x8f, 0x8f).w(this, FUNC(vg5k_state::ef9345_offset_w));
+	map(0xcf, 0xcf).rw(this, FUNC(vg5k_state::ef9345_io_r), FUNC(vg5k_state::ef9345_io_w));
 
 	/* cassette */
-	AM_RANGE( 0xaf,0xaf ) AM_READWRITE(cassette_r, cassette_w)
-ADDRESS_MAP_END
+	map(0xaf, 0xaf).rw(this, FUNC(vg5k_state::cassette_r), FUNC(vg5k_state::cassette_w));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( vg5k )
@@ -358,10 +363,10 @@ DRIVER_INIT_MEMBER(vg5k_state,vg5k)
 }
 
 
-static MACHINE_CONFIG_START( vg5k )
+MACHINE_CONFIG_START(vg5k_state::vg5k)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",Z80, XTAL_4MHz)
+	MCFG_CPU_ADD("maincpu",Z80, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(vg5k_mem)
 	MCFG_CPU_IO_MAP(vg5k_io)
 
@@ -414,14 +419,12 @@ MACHINE_CONFIG_END
 ROM_START( vg5k )
 	ROM_REGION( 0x10000, "maincpu", ROMREGION_ERASEFF )
 	ROM_SYSTEM_BIOS(0, "v11", "BASIC v1.1")
-	ROMX_LOAD( "vg5k11.bin",  0x0000, 0x4000, CRC(a6998ff8) SHA1(881ba594be0a721a999378312aea0c3c1c7b2b58), ROM_BIOS(1) )           // dumped from a Radiola VG-5000
-	ROM_SYSTEM_BIOS(1, "v11a", "BASIC v1.1 (alt)")
-	ROMX_LOAD( "vg5k11a.bin", 0x0000, 0x4000, BAD_DUMP CRC(a6f4a0ea) SHA1(58eccce33cc21fc17bc83921018f531b8001eda3), ROM_BIOS(2) )  // from dcvg5k
-	ROM_SYSTEM_BIOS(2, "v10", "BASIC v1.0")
-	ROMX_LOAD( "vg5k10.bin", 0x0000, 0x4000, BAD_DUMP CRC(57983260) SHA1(5ad1787a6a597b5c3eedb7c3704b649faa9be4ca), ROM_BIOS(3) )
+	ROMX_LOAD( "vg5k11.bin", 0x0000, 0x4000, CRC(a6f4a0ea) SHA1(58eccce33cc21fc17bc83921018f531b8001eda3), ROM_BIOS(1) )  // dumped from a Philips VG-5000.
+	ROM_SYSTEM_BIOS(1, "v10", "BASIC v1.0")
+	ROMX_LOAD( "vg5k10.bin", 0x0000, 0x4000, BAD_DUMP CRC(57983260) SHA1(5ad1787a6a597b5c3eedb7c3704b649faa9be4ca), ROM_BIOS(2) )
 
 	ROM_REGION( 0x4000, "ef9345", 0 )
-	ROM_LOAD( "charset.rom", 0x0000, 0x2000, BAD_DUMP CRC(b2f49eb3) SHA1(d0ef530be33bfc296314e7152302d95fdf9520fc) )            // from dcvg5k
+	ROM_LOAD( "charset.rom", 0x0000, 0x2000, BAD_DUMP CRC(b2f49eb3) SHA1(d0ef530be33bfc296314e7152302d95fdf9520fc) )                // from dcvg5k
 ROM_END
 
 /* Driver */

@@ -156,6 +156,12 @@ public:
 	required_device<cpu_device> m_maincpu;
 	required_device<gfxdecode_device> m_gfxdecode;
 	required_device<palette_device> m_palette;
+	void baryon(machine_config &config);
+	void dreamwld(machine_config &config);
+	void baryon_map(address_map &map);
+	void dreamwld_map(address_map &map);
+	void oki1_map(address_map &map);
+	void oki2_map(address_map &map);
 };
 
 
@@ -425,15 +431,17 @@ READ32_MEMBER(dreamwld_state::dreamwld_protdata_r)
 	return dat << 24;
 }
 
-static ADDRESS_MAP_START( oki1_map, 0, 8, dreamwld_state )
-	AM_RANGE(0x00000, 0x2ffff) AM_ROM
-	AM_RANGE(0x30000, 0x3ffff) AM_ROMBANK("oki1bank")
-ADDRESS_MAP_END
+void dreamwld_state::oki1_map(address_map &map)
+{
+	map(0x00000, 0x2ffff).rom();
+	map(0x30000, 0x3ffff).bankr("oki1bank");
+}
 
-static ADDRESS_MAP_START( oki2_map, 0, 8, dreamwld_state )
-	AM_RANGE(0x00000, 0x2ffff) AM_ROM
-	AM_RANGE(0x30000, 0x3ffff) AM_ROMBANK("oki2bank")
-ADDRESS_MAP_END
+void dreamwld_state::oki2_map(address_map &map)
+{
+	map(0x00000, 0x2ffff).rom();
+	map(0x30000, 0x3ffff).bankr("oki2bank");
+}
 
 WRITE32_MEMBER(dreamwld_state::dreamwld_6295_0_bank_w)
 {
@@ -452,33 +460,35 @@ WRITE32_MEMBER(dreamwld_state::dreamwld_6295_1_bank_w)
 }
 
 
-static ADDRESS_MAP_START( baryon_map, AS_PROGRAM, 32, dreamwld_state )
-	AM_RANGE(0x000000, 0x1fffff) AM_ROM  AM_WRITENOP
+void dreamwld_state::baryon_map(address_map &map)
+{
+	map(0x000000, 0x1fffff).rom().nopw();
 
-	AM_RANGE(0x400000, 0x401fff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0x600000, 0x601fff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0x800000, 0x801fff) AM_RAM_WRITE(dreamwld_bg_videoram_w ) AM_SHARE("bg_videoram")
-	AM_RANGE(0x802000, 0x803fff) AM_RAM_WRITE(dreamwld_bg2_videoram_w ) AM_SHARE("bg2_videoram")
-	AM_RANGE(0x804000, 0x8043ff) AM_READWRITE16(lineram16_r, lineram16_w, 0xffffffff)  // linescroll
-	AM_RANGE(0x804400, 0x805fff) AM_RAM AM_SHARE("vregs")
+	map(0x400000, 0x401fff).ram().share("spriteram");
+	map(0x600000, 0x601fff).ram().w(m_palette, FUNC(palette_device::write32)).share("palette");
+	map(0x800000, 0x801fff).ram().w(this, FUNC(dreamwld_state::dreamwld_bg_videoram_w)).share("bg_videoram");
+	map(0x802000, 0x803fff).ram().w(this, FUNC(dreamwld_state::dreamwld_bg2_videoram_w)).share("bg2_videoram");
+	map(0x804000, 0x8043ff).rw(this, FUNC(dreamwld_state::lineram16_r), FUNC(dreamwld_state::lineram16_w));  // linescroll
+	map(0x804400, 0x805fff).ram().share("vregs");
 
-	AM_RANGE(0xc00000, 0xc00003) AM_READ_PORT("INPUTS")
-	AM_RANGE(0xc00004, 0xc00007) AM_READ_PORT("c00004")
+	map(0xc00000, 0xc00003).portr("INPUTS");
+	map(0xc00004, 0xc00007).portr("c00004");
 
-	AM_RANGE(0xc0000c, 0xc0000f) AM_WRITE(dreamwld_6295_0_bank_w) // sfx
-	AM_RANGE(0xc00018, 0xc0001b) AM_DEVREADWRITE8("oki1", okim6295_device, read, write, 0xff000000) // sfx
+	map(0xc0000c, 0xc0000f).w(this, FUNC(dreamwld_state::dreamwld_6295_0_bank_w)); // sfx
+	map(0xc00018, 0xc00018).rw("oki1", FUNC(okim6295_device::read), FUNC(okim6295_device::write)); // sfx
 
-	AM_RANGE(0xc00030, 0xc00033) AM_READ(dreamwld_protdata_r) // it reads protection data (irq code) from here and puts it at ffd000
+	map(0xc00030, 0xc00033).r(this, FUNC(dreamwld_state::dreamwld_protdata_r)); // it reads protection data (irq code) from here and puts it at ffd000
 
-	AM_RANGE(0xfe0000, 0xffffff) AM_RAM AM_SHARE("workram") // work ram
-ADDRESS_MAP_END
+	map(0xfe0000, 0xffffff).ram().share("workram"); // work ram
+}
 
-static ADDRESS_MAP_START( dreamwld_map, AS_PROGRAM, 32, dreamwld_state )
-	AM_IMPORT_FROM( baryon_map )
+void dreamwld_state::dreamwld_map(address_map &map)
+{
+	baryon_map(map);
 
-	AM_RANGE(0xc0002c, 0xc0002f) AM_WRITE(dreamwld_6295_1_bank_w) // sfx
-	AM_RANGE(0xc00028, 0xc0002b) AM_DEVREADWRITE8("oki2", okim6295_device, read, write, 0xff000000) // sfx
-ADDRESS_MAP_END
+	map(0xc0002c, 0xc0002f).w(this, FUNC(dreamwld_state::dreamwld_6295_1_bank_w)); // sfx
+	map(0xc00028, 0xc00028).rw("oki2", FUNC(okim6295_device::read), FUNC(okim6295_device::write)); // sfx
+}
 
 
 static INPUT_PORTS_START( dreamwld )
@@ -792,10 +802,10 @@ void dreamwld_state::machine_reset()
 }
 
 
-static MACHINE_CONFIG_START( baryon )
+MACHINE_CONFIG_START(dreamwld_state::baryon)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M68EC020, XTAL_32MHz/2) /* 16MHz verified */
+	MCFG_CPU_ADD("maincpu", M68EC020, XTAL(32'000'000)/2) /* 16MHz verified */
 	MCFG_CPU_PROGRAM_MAP(baryon_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", dreamwld_state,  irq4_line_hold)
 
@@ -816,21 +826,22 @@ static MACHINE_CONFIG_START( baryon )
 
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MCFG_OKIM6295_ADD("oki1", XTAL_32MHz/32, PIN7_LOW) /* 1MHz verified */
+	MCFG_OKIM6295_ADD("oki1", XTAL(32'000'000)/32, PIN7_LOW) /* 1MHz verified */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
 	MCFG_DEVICE_ADDRESS_MAP(0, oki1_map)
 
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( dreamwld, baryon )
+MACHINE_CONFIG_START(dreamwld_state::dreamwld)
+	baryon(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(dreamwld_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", dreamwld_state,  irq4_line_hold)
 
-	MCFG_OKIM6295_ADD("oki2", XTAL_32MHz/32, PIN7_LOW) /* 1MHz verified */
+	MCFG_OKIM6295_ADD("oki2", XTAL(32'000'000)/32, PIN7_LOW) /* 1MHz verified */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
 	MCFG_DEVICE_ADDRESS_MAP(0, oki2_map)

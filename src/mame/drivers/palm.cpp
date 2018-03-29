@@ -58,7 +58,15 @@ public:
 	required_ioport m_io_penb;
 	required_ioport m_io_portd;
 
-	offs_t palm_dasm_override(device_t &device, std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, int options);
+	offs_t palm_dasm_override(std::ostream &stream, offs_t pc, const util::disasm_interface::data_buffer &opcodes, const util::disasm_interface::data_buffer &params);
+	void palmiii(machine_config &config);
+	void pilot1k(machine_config &config);
+	void palmvx(machine_config &config);
+	void palmv(machine_config &config);
+	void palm(machine_config &config);
+	void palmpro(machine_config &config);
+	void pilot5k(machine_config &config);
+	void palm_map(address_map &map);
 };
 
 
@@ -157,17 +165,18 @@ PALETTE_INIT_MEMBER(palm_state, palm)
     ADDRESS MAPS
 ***************************************************************************/
 
-static ADDRESS_MAP_START(palm_map, AS_PROGRAM, 16, palm_state)
-	AM_RANGE(0xc00000, 0xe07fff) AM_ROM AM_REGION("bios", 0)
-	AM_RANGE(0xfff000, 0xffffff) AM_DEVREADWRITE(MC68328_TAG, mc68328_device, read, write)
-ADDRESS_MAP_END
+void palm_state::palm_map(address_map &map)
+{
+	map(0xc00000, 0xe07fff).rom().region("bios", 0);
+	map(0xfff000, 0xffffff).rw(m_lsi, FUNC(mc68328_device::read), FUNC(mc68328_device::write));
+}
 
 
 /***************************************************************************
     MACHINE DRIVERS
 ***************************************************************************/
 
-static MACHINE_CONFIG_START( palm )
+MACHINE_CONFIG_START(palm_state::palm)
 	/* basic machine hardware */
 	MCFG_CPU_ADD( "maincpu", M68000, 32768*506 )        /* 16.580608 MHz */
 	MCFG_CPU_PROGRAM_MAP( palm_map)
@@ -418,7 +427,8 @@ ROM_START( spt1740 )
 	ROM_RELOAD(0x000000, 0x004000)
 ROM_END
 
-static MACHINE_CONFIG_DERIVED( pilot1k, palm )
+MACHINE_CONFIG_START(palm_state::pilot1k)
+	palm(config);
 
 	/* internal ram */
 	MCFG_RAM_ADD(RAM_TAG)
@@ -426,7 +436,8 @@ static MACHINE_CONFIG_DERIVED( pilot1k, palm )
 	MCFG_RAM_EXTRA_OPTIONS("512K,1M,2M,4M,8M")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( pilot5k, palm )
+MACHINE_CONFIG_START(palm_state::pilot5k)
+	palm(config);
 
 	/* internal ram */
 	MCFG_RAM_ADD(RAM_TAG)
@@ -434,7 +445,8 @@ static MACHINE_CONFIG_DERIVED( pilot5k, palm )
 	MCFG_RAM_EXTRA_OPTIONS("1M,2M,4M,8M")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( palmpro, palm )
+MACHINE_CONFIG_START(palm_state::palmpro)
+	palm(config);
 
 	/* internal ram */
 	MCFG_RAM_ADD(RAM_TAG)
@@ -442,7 +454,8 @@ static MACHINE_CONFIG_DERIVED( palmpro, palm )
 	MCFG_RAM_EXTRA_OPTIONS("2M,4M,8M")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( palmiii, palm )
+MACHINE_CONFIG_START(palm_state::palmiii)
+	palm(config);
 
 	/* internal ram */
 	MCFG_RAM_ADD(RAM_TAG)
@@ -450,7 +463,8 @@ static MACHINE_CONFIG_DERIVED( palmiii, palm )
 	MCFG_RAM_EXTRA_OPTIONS("4M,8M")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( palmv, palm )
+MACHINE_CONFIG_START(palm_state::palmv)
+	palm(config);
 
 	/* internal ram */
 	MCFG_RAM_ADD(RAM_TAG)
@@ -458,7 +472,8 @@ static MACHINE_CONFIG_DERIVED( palmv, palm )
 	MCFG_RAM_EXTRA_OPTIONS("4M,8M")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( palmvx, palm )
+MACHINE_CONFIG_START(palm_state::palmvx)
+	palm(config);
 
 	/* internal ram */
 	MCFG_RAM_ADD(RAM_TAG)

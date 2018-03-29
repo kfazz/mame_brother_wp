@@ -100,6 +100,9 @@ DEFINE_DEVICE_TYPE(SONY_OA_D31V, sony_oa_d31v, "sony_oa_d31v", "Sony OA-D31V Mic
 DEFINE_DEVICE_TYPE(SONY_OA_D32W, sony_oa_d32w, "sony_oa_d32w", "Sony OA-D32W Micro Floppydisk Drive")
 DEFINE_DEVICE_TYPE(SONY_OA_D32V, sony_oa_d32v, "sony_oa_d32v", "Sony OA-D32V Micro Floppydisk Drive")
 
+// TEAC 3" drives
+DEFINE_DEVICE_TYPE(TEAC_FD_30A, teac_fd_30a, "teac_fd_30a", "TEAC FD-30A FDD")
+
 // TEAC 5.25" drives
 #if 0
 DEFINE_DEVICE_TYPE(TEAC_FD_55A, teac_fd_55a, "teac_fd_55a", "TEAC FD-55A FDD")
@@ -185,7 +188,7 @@ floppy_image_device::floppy_image_device(const machine_config &mconfig, device_t
 		motor_always_on(false),
 		dskchg_writable(false),
 		has_trk00_sensor(true),
-		dir(0), stp(0), wtg(0), mon(0), ss(0), idx(0), wpt(0), rdy(0), dskchg(0),
+		dir(0), stp(0), wtg(0), mon(0), ss(0), ds(-1), idx(0), wpt(0), rdy(0), dskchg(0),
 		ready(false),
 		rpm(0),
 		floppy_ratio_1(0),
@@ -238,6 +241,11 @@ void floppy_image_device::setup_ready_cb(ready_cb cb)
 void floppy_image_device::setup_wpt_cb(wpt_cb cb)
 {
 	cur_wpt_cb = cb;
+}
+
+void floppy_image_device::setup_led_cb(led_cb cb)
+{
+	cur_led_cb = cb;
 }
 
 void floppy_image_device::set_formats(const floppy_format_type *formats)
@@ -314,6 +322,9 @@ void floppy_image_device::device_start()
 	dskchg_writable = false;
 	has_trk00_sensor = true;
 
+	// better would be an extra parameter in the MCFG macro
+	drive_index = atoi(owner()->basetag());
+
 	idx = 0;
 
 	/* motor off */
@@ -322,6 +333,7 @@ void floppy_image_device::device_start()
 	cyl = 0;
 	subcyl = 0;
 	ss  = 0;
+	ds = -1;
 	stp = 1;
 	wpt = 0;
 	dskchg = exists() ? 1 : 0;
@@ -349,12 +361,8 @@ void floppy_image_device::device_reset()
 	revolution_start_time = attotime::never;
 	revolution_count = 0;
 	mon = 1;
-	if(!ready) {
-		ready = true;
-		if(!cur_ready_cb.isnull())
-			cur_ready_cb(this, ready);
-	}
-	if(motor_always_on)
+	set_ready(true);
+	if(motor_always_on && image)
 		mon_w(0);
 }
 
@@ -480,11 +488,9 @@ void floppy_image_device::call_unload()
 	if (motor_always_on) {
 		// When disk is removed, stop motor
 		mon_w(1);
-	} else if(!ready) {
-		ready = true;
-		if(!cur_ready_cb.isnull())
-			cur_ready_cb(this, ready);
 	}
+
+	set_ready(true);
 }
 
 image_init_result floppy_image_device::call_create(int format_type, util::option_resolution *format_options)
@@ -535,9 +541,7 @@ void floppy_image_device::mon_w(int state)
 		if (motor_always_on) {
 			// Drives with motor that is always spinning are immediately ready when a disk is loaded
 			// because there is no spin-up time
-			ready = false;
-			if(!cur_ready_cb.isnull())
-				cur_ready_cb(this, ready);
+			set_ready(false);
 		} else {
 			ready_counter = 2;
 		}
@@ -550,11 +554,7 @@ void floppy_image_device::mon_w(int state)
 			commit_image();
 		revolution_start_time = attotime::never;
 		index_timer->adjust(attotime::zero);
-		if(!ready) {
-			ready = true;
-			if(!cur_ready_cb.isnull())
-				cur_ready_cb(this, ready);
-		}
+		set_ready(true);
 	}
 
 	// Create a motor sound (loaded or empty)
@@ -602,9 +602,7 @@ void floppy_image_device::index_resync()
 			ready_counter--;
 			if(!ready_counter) {
 				// logerror("Drive spun up\n");
-				ready = false;
-				if(!cur_ready_cb.isnull())
-					cur_ready_cb(this, ready);
+				set_ready(false);
 			}
 		}
 		if (!cur_index_pulse_cb.isnull())
@@ -615,6 +613,23 @@ void floppy_image_device::index_resync()
 bool floppy_image_device::ready_r()
 {
 	return ready;
+}
+
+void floppy_image_device::set_ready(bool state)
+{
+	if (state != ready)
+	{
+		ready = state;
+		check_led();
+		if (!cur_ready_cb.isnull())
+			cur_ready_cb(this, ready);
+	}
+}
+
+void floppy_image_device::check_led()
+{
+	if(!cur_led_cb.isnull())
+		cur_led_cb(this, (ds == drive_index) && !ready ? 1 : 0);
 }
 
 double floppy_image_device::get_pos()
@@ -773,8 +788,9 @@ attotime floppy_image_device::get_next_transition(const attotime &from_when)
 	// TODO: Implement a proper spin-up ramp for transition times, also in order
 	// to cover potential copy protection measures that have direct device
 	// access (mz)
-	if (ready_counter > 0)
-		return attotime::never;
+	// MORE TODO: this breaks the tandy2k and pcjr.  needs investigation.
+	//if (ready_counter > 0)
+	//  return attotime::never;
 
 	std::vector<uint32_t> &buf = image->get_buffer(cyl, ss, subcyl);
 	uint32_t cells = buf.size();
@@ -1091,7 +1107,7 @@ void floppy_sound_device::device_start()
 {
 	// What kind of drive do we have?
 	bool is525 = strstr(tag(), "525") != nullptr;
-	static_set_samples_names(*this, is525? floppy525_sample_names : floppy35_sample_names);
+	set_samples_names(is525? floppy525_sample_names : floppy35_sample_names);
 
 	m_motor_on = false;
 
@@ -1345,7 +1361,7 @@ void floppy_sound_device::sound_stream_update(sound_stream &stream, stream_sampl
 
 #define FLOPSPK "flopsndout"
 
-MACHINE_CONFIG_MEMBER( floppy_image_device::device_add_mconfig )
+MACHINE_CONFIG_START(floppy_image_device::device_add_mconfig)
 	MCFG_SPEAKER_STANDARD_MONO(FLOPSPK)
 	MCFG_SOUND_ADD(FLOPSND_TAG, FLOPPYSOUND, 44100)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, FLOPSPK, 0.5)
@@ -2135,6 +2151,39 @@ void sony_oa_d32v::handled_variants(uint32_t *variants, int &var_count) const
 	var_count = 0;
 	variants[var_count++] = floppy_image::SSSD;
 	variants[var_count++] = floppy_image::SSDD;
+}
+
+//-------------------------------------------------
+//  TEAC FD-30A
+//
+//  track to track: 12 ms
+//  average: 171 ms
+//  setting time: 15 ms
+//  motor start time: 400 ms
+//
+//-------------------------------------------------
+
+teac_fd_30a::teac_fd_30a(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	floppy_image_device(mconfig, TEAC_FD_30A, tag, owner, clock)
+{
+}
+
+teac_fd_30a::~teac_fd_30a()
+{
+}
+
+void teac_fd_30a::setup_characteristics()
+{
+	form_factor = floppy_image::FF_3;
+	tracks = 40;
+	sides = 1;
+	set_rpm(300);
+}
+
+void teac_fd_30a::handled_variants(uint32_t *variants, int &var_count) const
+{
+	var_count = 0;
+	variants[var_count++] = floppy_image::SSSD;
 }
 
 //-------------------------------------------------

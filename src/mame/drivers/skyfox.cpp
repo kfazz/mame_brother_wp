@@ -50,17 +50,18 @@ WRITE8_MEMBER(skyfox_state::skyfox_vregs_w)
 	}
 }
 
-static ADDRESS_MAP_START( skyfox_map, AS_PROGRAM, 8, skyfox_state )
-	AM_RANGE(0x0000, 0xbfff) AM_ROM
-	AM_RANGE(0xc000, 0xcfff) AM_RAM
-	AM_RANGE(0xd000, 0xd3ff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0xd400, 0xdfff) AM_RAM // ?
-	AM_RANGE(0xe000, 0xe000) AM_READ_PORT("INPUTS")
-	AM_RANGE(0xe001, 0xe001) AM_READ_PORT("DSW0")
-	AM_RANGE(0xe002, 0xe002) AM_READ_PORT("DSW1")
-	AM_RANGE(0xe008, 0xe00f) AM_WRITE(skyfox_vregs_w)
-	AM_RANGE(0xf001, 0xf001) AM_READ_PORT("DSW2")
-ADDRESS_MAP_END
+void skyfox_state::skyfox_map(address_map &map)
+{
+	map(0x0000, 0xbfff).rom();
+	map(0xc000, 0xcfff).ram();
+	map(0xd000, 0xd3ff).ram().share("spriteram");
+	map(0xd400, 0xdfff).ram(); // ?
+	map(0xe000, 0xe000).portr("INPUTS");
+	map(0xe001, 0xe001).portr("DSW0");
+	map(0xe002, 0xe002).portr("DSW1");
+	map(0xe008, 0xe00f).w(this, FUNC(skyfox_state::skyfox_vregs_w));
+	map(0xf001, 0xf001).portr("DSW2");
+}
 
 
 /***************************************************************************
@@ -69,15 +70,16 @@ ADDRESS_MAP_END
 
 ***************************************************************************/
 
-static ADDRESS_MAP_START( skyfox_sound_map, AS_PROGRAM, 8, skyfox_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM
+void skyfox_state::skyfox_sound_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x87ff).ram();
 //  AM_RANGE(0x9000, 0x9001) AM_WRITENOP // ??
-	AM_RANGE(0xa000, 0xa001) AM_DEVREADWRITE("ym1", ym2203_device, read, write)
+	map(0xa000, 0xa001).rw("ym1", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
 //  AM_RANGE(0xb000, 0xb001) AM_WRITENOP // ??
-	AM_RANGE(0xc000, 0xc001) AM_DEVREADWRITE("ym2", ym2203_device, read, write)
-	AM_RANGE(0xb000, 0xb000) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+	map(0xc000, 0xc001).rw("ym2", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+	map(0xb000, 0xb000).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
 
 /***************************************************************************
@@ -220,14 +222,14 @@ void skyfox_state::machine_reset()
 	m_bg_ctrl = 0;
 }
 
-static MACHINE_CONFIG_START( skyfox )
+MACHINE_CONFIG_START(skyfox_state::skyfox)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_8MHz/2) /* Verified at 4MHz */
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(8'000'000)/2) /* Verified at 4MHz */
 	MCFG_CPU_PROGRAM_MAP(skyfox_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", skyfox_state, skyfox_interrupt)
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_14_31818MHz/8) /* Verified at 1.789772MHz */
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(14'318'181)/8) /* Verified at 1.789772MHz */
 	MCFG_CPU_PROGRAM_MAP(skyfox_sound_map)
 
 	/* video hardware */
@@ -248,10 +250,10 @@ static MACHINE_CONFIG_START( skyfox )
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
 
-	MCFG_SOUND_ADD("ym1", YM2203, XTAL_14_31818MHz/8) /* Verified at 1.789772MHz */
+	MCFG_SOUND_ADD("ym1", YM2203, XTAL(14'318'181)/8) /* Verified at 1.789772MHz */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 
-	MCFG_SOUND_ADD("ym2", YM2203, XTAL_14_31818MHz/8) /* Verified at 1.789772MHz */
+	MCFG_SOUND_ADD("ym2", YM2203, XTAL(14'318'181)/8) /* Verified at 1.789772MHz */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 MACHINE_CONFIG_END
 

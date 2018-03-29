@@ -212,7 +212,7 @@
 #include "screen.h"
 
 
-#define MASTER_CLOCK    XTAL_6MHz   /* confirmed */
+#define MASTER_CLOCK    XTAL(6'000'000)   /* confirmed */
 
 
 class tmspoker_state : public driver_device
@@ -239,6 +239,9 @@ public:
 	INTERRUPT_GEN_MEMBER(tmspoker_interrupt);
 	required_device<cpu_device> m_maincpu;
 	required_device<gfxdecode_device> m_gfxdecode;
+	void tmspoker(machine_config &config);
+	void tmspoker_cru_map(address_map &map);
+	void tmspoker_map(address_map &map);
 };
 
 
@@ -323,15 +326,16 @@ void tmspoker_state::machine_reset()
 * Memory Map Information *
 *************************/
 //59a
-static ADDRESS_MAP_START( tmspoker_map, AS_PROGRAM, 8, tmspoker_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x3fff)
-	AM_RANGE(0x0000, 0x0fff) AM_ROMBANK("bank1")
-	AM_RANGE(0x2800, 0x2800) AM_READNOP AM_DEVWRITE("crtc", mc6845_device, address_w)
-	AM_RANGE(0x2801, 0x2801) AM_DEVREADWRITE("crtc", mc6845_device, register_r, register_w)
-	AM_RANGE(0x3000, 0x33ff) AM_RAM_WRITE(tmspoker_videoram_w) AM_SHARE("videoram")
-	AM_RANGE(0x3800, 0x3fff) AM_RAM //NVRAM?
-	AM_RANGE(0x2000, 0x20ff) AM_RAM //color RAM?
-ADDRESS_MAP_END
+void tmspoker_state::tmspoker_map(address_map &map)
+{
+	map.global_mask(0x3fff);
+	map(0x0000, 0x0fff).bankr("bank1");
+	map(0x2800, 0x2800).nopr().w("crtc", FUNC(mc6845_device::address_w));
+	map(0x2801, 0x2801).rw("crtc", FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
+	map(0x3000, 0x33ff).ram().w(this, FUNC(tmspoker_state::tmspoker_videoram_w)).share("videoram");
+	map(0x3800, 0x3fff).ram(); //NVRAM?
+	map(0x2000, 0x20ff).ram(); //color RAM?
+}
 
 
 READ8_MEMBER(tmspoker_state::unk_r)
@@ -340,9 +344,10 @@ READ8_MEMBER(tmspoker_state::unk_r)
 	return 0;//0xff;//mame_rand(machine);
 }
 
-static ADDRESS_MAP_START( tmspoker_cru_map, AS_IO, 8, tmspoker_state )
-	AM_RANGE(0x0000, 0x07ff) AM_READ(unk_r)
-ADDRESS_MAP_END
+void tmspoker_state::tmspoker_cru_map(address_map &map)
+{
+	map(0x0000, 0x07ff).r(this, FUNC(tmspoker_state::unk_r));
+}
 
 /* I/O byte R/W
 
@@ -550,7 +555,7 @@ GFXDECODE_END
 *    Machine Drivers     *
 *************************/
 
-static MACHINE_CONFIG_START( tmspoker )
+MACHINE_CONFIG_START(tmspoker_state::tmspoker)
 
 	// CPU TMS9980A; no line connections
 	MCFG_TMS99xx_ADD("maincpu", TMS9980A, MASTER_CLOCK/4, tmspoker_map, tmspoker_cru_map)

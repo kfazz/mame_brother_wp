@@ -47,6 +47,7 @@ ToDO:
 #include "cpu/i8085/i8085.h"
 #include "cpu/m6800/m6800.h"
 #include "machine/6821pia.h"
+#include "machine/timer.h"
 #include "sound/ay8910.h"
 #include "sound/dac.h"
 #include "sound/votrax.h"
@@ -76,6 +77,19 @@ public:
 	DECLARE_WRITE_LINE_MEMBER(pia_cb2_w);
 	DECLARE_WRITE_LINE_MEMBER(votrax_request);
 	TIMER_DEVICE_CALLBACK_MEMBER(timer_a);
+	void taito2(machine_config &config);
+	void taito6(machine_config &config);
+	void taito(machine_config &config);
+	void shock(machine_config &config);
+	void taito4(machine_config &config);
+	void taito5(machine_config &config);
+	void taito_ay_audio(machine_config &config);
+	void shock_map(address_map &map);
+	void shock_sub_map(address_map &map);
+	void taito_map(address_map &map);
+	void taito_sub_map(address_map &map);
+	void taito_sub_map2(address_map &map);
+	void taito_sub_map5(address_map &map);
 private:
 	uint8_t m_out_offs;
 	uint8_t m_sndcmd;
@@ -90,88 +104,94 @@ private:
 };
 
 
-static ADDRESS_MAP_START( taito_map, AS_PROGRAM, 8, taito_state )
-	AM_RANGE(0x0000, 0x27ff) AM_ROM AM_REGION("roms", 0)
-	AM_RANGE(0x2800, 0x2800) AM_MIRROR(0x0080) AM_READ_PORT("X0")
-	AM_RANGE(0x2801, 0x2801) AM_MIRROR(0x0080) AM_READ_PORT("X1")
-	AM_RANGE(0x2802, 0x2802) AM_MIRROR(0x0080) AM_READ_PORT("X2")
-	AM_RANGE(0x2803, 0x2803) AM_MIRROR(0x0080) AM_READ_PORT("X3")
-	AM_RANGE(0x2804, 0x2804) AM_MIRROR(0x0080) AM_READ_PORT("X4")
-	AM_RANGE(0x2805, 0x2805) AM_MIRROR(0x0080) AM_READ_PORT("X5")
-	AM_RANGE(0x2806, 0x2806) AM_MIRROR(0x0080) AM_READ_PORT("X6")
-	AM_RANGE(0x2807, 0x2807) AM_MIRROR(0x0080) AM_READ_PORT("X7")
-	AM_RANGE(0x2808, 0x2808) AM_MIRROR(0x0080) AM_READ_PORT("X8")
-	AM_RANGE(0x2838, 0x2838) AM_MIRROR(0x0080) AM_READ_PORT("X0")
-	AM_RANGE(0x2839, 0x2839) AM_MIRROR(0x0080) AM_READ_PORT("X1")
-	AM_RANGE(0x283a, 0x283a) AM_MIRROR(0x0080) AM_READ_PORT("X2")
-	AM_RANGE(0x283b, 0x283b) AM_MIRROR(0x0080) AM_READ_PORT("X3")
-	AM_RANGE(0x283c, 0x283c) AM_MIRROR(0x0080) AM_READ_PORT("X4")
-	AM_RANGE(0x283b, 0x283d) AM_MIRROR(0x0080) AM_READ_PORT("X5")
-	AM_RANGE(0x283e, 0x283e) AM_MIRROR(0x0080) AM_READ_PORT("X6")
-	AM_RANGE(0x283f, 0x283f) AM_MIRROR(0x0080) AM_READ_PORT("X7")
-	AM_RANGE(0x4000, 0x407f) AM_RAM
-	AM_RANGE(0x4080, 0x408f) AM_RAM AM_SHARE("ram")
-	AM_RANGE(0x4090, 0x409f) AM_READWRITE(io_r,io_w)
-	AM_RANGE(0x40a0, 0x40ff) AM_RAM
-	AM_RANGE(0x4800, 0x48ff) AM_ROM AM_REGION("roms", 0x2000)
-ADDRESS_MAP_END
+void taito_state::taito_map(address_map &map)
+{
+	map(0x0000, 0x27ff).rom().region("roms", 0);
+	map(0x2800, 0x2800).mirror(0x0080).portr("X0");
+	map(0x2801, 0x2801).mirror(0x0080).portr("X1");
+	map(0x2802, 0x2802).mirror(0x0080).portr("X2");
+	map(0x2803, 0x2803).mirror(0x0080).portr("X3");
+	map(0x2804, 0x2804).mirror(0x0080).portr("X4");
+	map(0x2805, 0x2805).mirror(0x0080).portr("X5");
+	map(0x2806, 0x2806).mirror(0x0080).portr("X6");
+	map(0x2807, 0x2807).mirror(0x0080).portr("X7");
+	map(0x2808, 0x2808).mirror(0x0080).portr("X8");
+	map(0x2838, 0x2838).mirror(0x0080).portr("X0");
+	map(0x2839, 0x2839).mirror(0x0080).portr("X1");
+	map(0x283a, 0x283a).mirror(0x0080).portr("X2");
+	map(0x283b, 0x283b).mirror(0x0080).portr("X3");
+	map(0x283c, 0x283c).mirror(0x0080).portr("X4");
+	map(0x283d, 0x283d).mirror(0x0080).portr("X5");
+	map(0x283e, 0x283e).mirror(0x0080).portr("X6");
+	map(0x283f, 0x283f).mirror(0x0080).portr("X7");
+	map(0x4000, 0x407f).ram();
+	map(0x4080, 0x408f).ram().share("ram");
+	map(0x4090, 0x409f).rw(this, FUNC(taito_state::io_r), FUNC(taito_state::io_w));
+	map(0x40a0, 0x40ff).ram();
+	map(0x4800, 0x48ff).rom().region("roms", 0x2000);
+}
 
-static ADDRESS_MAP_START( taito_sub_map, AS_PROGRAM, 8, taito_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x1fff)
-	AM_RANGE(0x0000, 0x007f) AM_RAM // internal to the cpu
-	AM_RANGE(0x0400, 0x0403) AM_DEVREADWRITE("pia", pia6821_device, read, write)
-	AM_RANGE(0x0800, 0x1fff) AM_ROM AM_REGION("cpu2", 0x0800)
-ADDRESS_MAP_END
+void taito_state::taito_sub_map(address_map &map)
+{
+	map.global_mask(0x1fff);
+	map(0x0000, 0x007f).ram(); // internal to the cpu
+	map(0x0400, 0x0403).rw(m_pia, FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x0800, 0x1fff).rom().region("cpu2", 0x0800);
+}
 
-static ADDRESS_MAP_START( taito_sub_map2, AS_PROGRAM, 8, taito_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x3fff)
-	AM_RANGE(0x0000, 0x007f) AM_RAM // internal to the cpu
-	AM_RANGE(0x0400, 0x0403) AM_DEVREADWRITE("pia", pia6821_device, read, write)
-	AM_RANGE(0x2000, 0x3fff) AM_ROM AM_REGION("cpu2", 0x2000)
-ADDRESS_MAP_END
+void taito_state::taito_sub_map2(address_map &map)
+{
+	map.global_mask(0x3fff);
+	map(0x0000, 0x007f).ram(); // internal to the cpu
+	map(0x0400, 0x0403).rw(m_pia, FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x2000, 0x3fff).rom().region("cpu2", 0x2000);
+}
 
-static ADDRESS_MAP_START( taito_sub_map5, AS_PROGRAM, 8, taito_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
-	AM_RANGE(0x0000, 0x007f) AM_RAM // internal to the cpu
-	AM_RANGE(0x0400, 0x0403) AM_DEVREADWRITE("pia", pia6821_device, read, write)
-	AM_RANGE(0x1000, 0x1000) AM_DEVWRITE("aysnd_0", ay8910_device, address_w)
-	AM_RANGE(0x1003, 0x1003) AM_DEVWRITE("aysnd_0", ay8910_device, address_w)
-	AM_RANGE(0x1007, 0x1007) AM_DEVREAD("aysnd_0", ay8910_device, data_r)
-	AM_RANGE(0x100c, 0x100c) AM_DEVWRITE("aysnd_1", ay8910_device, address_w)
-	AM_RANGE(0x100a, 0x100a) AM_DEVWRITE("aysnd_0", ay8910_device, data_w)
-	AM_RANGE(0x100b, 0x100b) AM_DEVWRITE("aysnd_0", ay8910_device, data_w)
-	AM_RANGE(0x100d, 0x100d) AM_DEVREAD("aysnd_1", ay8910_device, data_r)
-	AM_RANGE(0x100e, 0x100e) AM_DEVWRITE("aysnd_1", ay8910_device, data_w)
-	AM_RANGE(0x2000, 0x7fff) AM_ROM AM_REGION("cpu2", 0x2000)
-ADDRESS_MAP_END
+void taito_state::taito_sub_map5(address_map &map)
+{
+	map.global_mask(0x7fff);
+	map(0x0000, 0x007f).ram(); // internal to the cpu
+	map(0x0400, 0x0403).rw(m_pia, FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x1000, 0x1000).w("aysnd_0", FUNC(ay8910_device::address_w));
+	map(0x1003, 0x1003).w("aysnd_0", FUNC(ay8910_device::address_w));
+	map(0x1007, 0x1007).r("aysnd_0", FUNC(ay8910_device::data_r));
+	map(0x100c, 0x100c).w("aysnd_1", FUNC(ay8910_device::address_w));
+	map(0x100a, 0x100a).w("aysnd_0", FUNC(ay8910_device::data_w));
+	map(0x100b, 0x100b).w("aysnd_0", FUNC(ay8910_device::data_w));
+	map(0x100d, 0x100d).r("aysnd_1", FUNC(ay8910_device::data_r));
+	map(0x100e, 0x100e).w("aysnd_1", FUNC(ay8910_device::data_w));
+	map(0x2000, 0x7fff).rom().region("cpu2", 0x2000);
+}
 
-static ADDRESS_MAP_START( shock_map, AS_PROGRAM, 8, taito_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x1fff)
-	AM_RANGE(0x0000, 0x0fff) AM_ROM AM_REGION("roms", 0)
-	AM_RANGE(0x1000, 0x100f) AM_RAM AM_SHARE("ram")
-	AM_RANGE(0x1010, 0x101f) AM_READWRITE(io_r,io_w)
-	AM_RANGE(0x1020, 0x10ff) AM_RAM
-	AM_RANGE(0x1400, 0x1400) AM_READ_PORT("X0")
-	AM_RANGE(0x1401, 0x1401) AM_READ_PORT("X1")
-	AM_RANGE(0x1402, 0x1402) AM_READ_PORT("X2")
-	AM_RANGE(0x1404, 0x1404) AM_READ_PORT("X4")
-	AM_RANGE(0x1405, 0x1405) AM_READ_PORT("X5")
-	AM_RANGE(0x1406, 0x1406) AM_READ_PORT("X6")
-	AM_RANGE(0x14d8, 0x14d8) AM_READ_PORT("X0")
-	AM_RANGE(0x14d9, 0x14d9) AM_READ_PORT("X1")
-	AM_RANGE(0x14da, 0x14da) AM_READ_PORT("X2")
-	AM_RANGE(0x14db, 0x14db) AM_READ_PORT("X3")
-	AM_RANGE(0x14dc, 0x14dc) AM_READ_PORT("X4")
-	AM_RANGE(0x14dd, 0x14dd) AM_READ_PORT("X5")
-	AM_RANGE(0x1800, 0x1bff) AM_ROM AM_REGION("roms", 0x1800)
-ADDRESS_MAP_END
+void taito_state::shock_map(address_map &map)
+{
+	map.global_mask(0x1fff);
+	map(0x0000, 0x0fff).rom().region("roms", 0);
+	map(0x1000, 0x100f).ram().share("ram");
+	map(0x1010, 0x101f).rw(this, FUNC(taito_state::io_r), FUNC(taito_state::io_w));
+	map(0x1020, 0x10ff).ram();
+	map(0x1400, 0x1400).portr("X0");
+	map(0x1401, 0x1401).portr("X1");
+	map(0x1402, 0x1402).portr("X2");
+	map(0x1404, 0x1404).portr("X4");
+	map(0x1405, 0x1405).portr("X5");
+	map(0x1406, 0x1406).portr("X6");
+	map(0x14d8, 0x14d8).portr("X0");
+	map(0x14d9, 0x14d9).portr("X1");
+	map(0x14da, 0x14da).portr("X2");
+	map(0x14db, 0x14db).portr("X3");
+	map(0x14dc, 0x14dc).portr("X4");
+	map(0x14dd, 0x14dd).portr("X5");
+	map(0x1800, 0x1bff).rom().region("roms", 0x1800);
+}
 
-static ADDRESS_MAP_START( shock_sub_map, AS_PROGRAM, 8, taito_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x0fff)
-	AM_RANGE(0x0000, 0x007f) AM_RAM // internal to the cpu
-	AM_RANGE(0x0400, 0x0403) AM_DEVREADWRITE("pia", pia6821_device, read, write)
-	AM_RANGE(0x0800, 0x0fff) AM_ROM AM_REGION("cpu2", 0)
-ADDRESS_MAP_END
+void taito_state::shock_sub_map(address_map &map)
+{
+	map.global_mask(0x0fff);
+	map(0x0000, 0x007f).ram(); // internal to the cpu
+	map(0x0400, 0x0403).rw(m_pia, FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x0800, 0x0fff).rom().region("cpu2", 0);
+}
 
 static INPUT_PORTS_START( taito )
 	PORT_START("X0")
@@ -324,7 +344,7 @@ TIMER_DEVICE_CALLBACK_MEMBER( taito_state::timer_a )
 	output().set_digit_value(++digit, patterns[m_p_ram[m_out_offs++]&15]);
 }
 
-static MACHINE_CONFIG_START( taito )
+MACHINE_CONFIG_START(taito_state::taito)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", I8080, 19000000/9)
 	MCFG_CPU_PROGRAM_MAP(taito_map)
@@ -336,7 +356,7 @@ static MACHINE_CONFIG_START( taito )
 	MCFG_DEFAULT_LAYOUT(layout_taito)
 
 	/* Sound */
-	MCFG_FRAGMENT_ADD( genpin_audio )
+	genpin_audio(config);
 
 	MCFG_SPEAKER_STANDARD_MONO("speaker")
 	MCFG_SOUND_ADD("dac", DAC_8BIT_R2R, 0) MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.475) // unknown DAC
@@ -356,20 +376,23 @@ static MACHINE_CONFIG_START( taito )
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("timer_a", taito_state, timer_a, attotime::from_hz(200))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( shock, taito )
+MACHINE_CONFIG_START(taito_state::shock)
+	taito(config);
 	MCFG_CPU_MODIFY( "maincpu" )
 	MCFG_CPU_PROGRAM_MAP(shock_map)
 	MCFG_CPU_MODIFY( "audiocpu" )
 	MCFG_CPU_PROGRAM_MAP(shock_sub_map)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( taito2, taito )
+MACHINE_CONFIG_START(taito_state::taito2)
+	taito(config);
 	MCFG_CPU_MODIFY( "audiocpu" )
 	MCFG_CPU_PROGRAM_MAP(taito_sub_map2)
 MACHINE_CONFIG_END
 
 // add vox
-static MACHINE_CONFIG_DERIVED( taito4, taito )
+MACHINE_CONFIG_START(taito_state::taito4)
+	taito(config);
 	MCFG_SPEAKER_STANDARD_MONO("voxsnd")
 	MCFG_DEVICE_ADD("votrax", VOTRAX_SC01, 720000) // guess
 	MCFG_VOTRAX_SC01_REQUEST_CB(WRITELINE(taito_state, votrax_request))
@@ -379,25 +402,27 @@ static MACHINE_CONFIG_DERIVED( taito4, taito )
 	MCFG_PIA_CB2_HANDLER(WRITELINE(taito_state, pia_cb2_w))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( taito_ay_audio )
+MACHINE_CONFIG_START(taito_state::taito_ay_audio)
 	MCFG_CPU_MODIFY( "audiocpu" )
 	MCFG_CPU_PROGRAM_MAP(taito_sub_map5)
 
 	MCFG_SPEAKER_STANDARD_MONO("aysnd")
-	MCFG_SOUND_ADD("aysnd_0", AY8910, XTAL_3_579545MHz/2) /* guess */
+	MCFG_SOUND_ADD("aysnd_0", AY8910, XTAL(3'579'545)/2) /* guess */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "aysnd", 0.8)
-	MCFG_SOUND_ADD("aysnd_1", AY8910, XTAL_3_579545MHz/2) /* guess */
+	MCFG_SOUND_ADD("aysnd_1", AY8910, XTAL(3'579'545)/2) /* guess */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "aysnd", 0.8)
 MACHINE_CONFIG_END
 
 // add ay
-static MACHINE_CONFIG_DERIVED( taito5, taito )
-	MCFG_FRAGMENT_ADD( taito_ay_audio )
+MACHINE_CONFIG_START(taito_state::taito5)
+	taito(config);
+	taito_ay_audio(config);
 MACHINE_CONFIG_END
 
 // add vox and ay
-static MACHINE_CONFIG_DERIVED( taito6, taito4 )
-	MCFG_FRAGMENT_ADD( taito_ay_audio )
+MACHINE_CONFIG_START(taito_state::taito6)
+	taito4(config);
+	taito_ay_audio(config);
 MACHINE_CONFIG_END
 
 

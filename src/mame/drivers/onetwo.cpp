@@ -50,7 +50,7 @@ Note: this is quite clearly a 'Korean bootleg' of Shisensho - Joshiryo-Hen / Mat
 #include "screen.h"
 #include "speaker.h"
 
-#define MASTER_CLOCK        XTAL_4MHz
+#define MASTER_CLOCK        XTAL(4'000'000)
 
 class onetwo_state : public driver_device
 {
@@ -86,7 +86,6 @@ public:
 	DECLARE_WRITE8_MEMBER(onetwo_fgram_w);
 	DECLARE_WRITE8_MEMBER(onetwo_cpubank_w);
 	DECLARE_WRITE8_MEMBER(onetwo_coin_counters_w);
-	DECLARE_WRITE8_MEMBER(onetwo_soundlatch_w);
 	DECLARE_WRITE8_MEMBER(palette1_w);
 	DECLARE_WRITE8_MEMBER(palette2_w);
 	TILE_GET_INFO_MEMBER(get_fg_tile_info);
@@ -94,6 +93,11 @@ public:
 	virtual void video_start() override;
 	uint32_t screen_update_onetwo(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	void set_color(int offset);
+	void onetwo(machine_config &config);
+	void main_cpu(address_map &map);
+	void main_cpu_io(address_map &map);
+	void sound_cpu(address_map &map);
+	void sound_cpu_io(address_map &map);
 };
 
 
@@ -149,12 +153,6 @@ WRITE8_MEMBER(onetwo_state::onetwo_coin_counters_w)
 	machine().bookkeeping().coin_counter_w(1, BIT(data, 2));
 }
 
-WRITE8_MEMBER(onetwo_state::onetwo_soundlatch_w)
-{
-	m_soundlatch->write(space, 0, data);
-	m_audiocpu->set_input_line(INPUT_LINE_NMI, PULSE_LINE);
-}
-
 void onetwo_state::set_color(int offset)
 {
 	int r, g, b;
@@ -183,37 +181,41 @@ WRITE8_MEMBER(onetwo_state::palette2_w)
  *
  *************************************/
 
-static ADDRESS_MAP_START( main_cpu, AS_PROGRAM, 8, onetwo_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM AM_REGION("maincpu", 0x10000)
-	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK("bank1")
-	AM_RANGE(0xc800, 0xc87f) AM_RAM_WRITE(palette1_w) AM_SHARE("paletteram")
-	AM_RANGE(0xc900, 0xc97f) AM_RAM_WRITE(palette2_w) AM_SHARE("paletteram2")
-	AM_RANGE(0xd000, 0xdfff) AM_RAM_WRITE(onetwo_fgram_w) AM_SHARE("fgram")
-	AM_RANGE(0xe000, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void onetwo_state::main_cpu(address_map &map)
+{
+	map(0x0000, 0x7fff).rom().region("maincpu", 0x10000);
+	map(0x8000, 0xbfff).bankr("bank1");
+	map(0xc800, 0xc87f).ram().w(this, FUNC(onetwo_state::palette1_w)).share("paletteram");
+	map(0xc900, 0xc97f).ram().w(this, FUNC(onetwo_state::palette2_w)).share("paletteram2");
+	map(0xd000, 0xdfff).ram().w(this, FUNC(onetwo_state::onetwo_fgram_w)).share("fgram");
+	map(0xe000, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START( main_cpu_io, AS_IO, 8, onetwo_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_READ_PORT("DSW1") AM_WRITE(onetwo_coin_counters_w)
-	AM_RANGE(0x01, 0x01) AM_READ_PORT("DSW2") AM_WRITE(onetwo_soundlatch_w)
-	AM_RANGE(0x02, 0x02) AM_READ_PORT("P1") AM_WRITE(onetwo_cpubank_w)
-	AM_RANGE(0x03, 0x03) AM_READ_PORT("P2")
-	AM_RANGE(0x04, 0x04) AM_READ_PORT("SYSTEM")
-ADDRESS_MAP_END
+void onetwo_state::main_cpu_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).portr("DSW1").w(this, FUNC(onetwo_state::onetwo_coin_counters_w));
+	map(0x01, 0x01).portr("DSW2").w(m_soundlatch, FUNC(generic_latch_8_device::write));
+	map(0x02, 0x02).portr("P1").w(this, FUNC(onetwo_state::onetwo_cpubank_w));
+	map(0x03, 0x03).portr("P2");
+	map(0x04, 0x04).portr("SYSTEM");
+}
 
-static ADDRESS_MAP_START( sound_cpu, AS_PROGRAM, 8, onetwo_state )
-	AM_RANGE(0x0000, 0x5fff) AM_ROM
-	AM_RANGE(0xf000, 0xf7ff) AM_RAM
-	AM_RANGE(0xf800, 0xf800) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+void onetwo_state::sound_cpu(address_map &map)
+{
+	map(0x0000, 0x5fff).rom();
+	map(0xf000, 0xf7ff).ram();
+	map(0xf800, 0xf800).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
-static ADDRESS_MAP_START( sound_cpu_io, AS_IO, 8, onetwo_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_DEVREADWRITE("ymsnd", ym3812_device, status_port_r, control_port_w)
-	AM_RANGE(0x20, 0x20) AM_DEVWRITE("ymsnd", ym3812_device, write_port_w)
-	AM_RANGE(0x40, 0x40) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0xc0, 0xc0) AM_DEVWRITE("soundlatch", generic_latch_8_device, clear_w)
-ADDRESS_MAP_END
+void onetwo_state::sound_cpu_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).rw("ymsnd", FUNC(ym3812_device::status_port_r), FUNC(ym3812_device::control_port_w));
+	map(0x20, 0x20).w("ymsnd", FUNC(ym3812_device::write_port_w));
+	map(0x40, 0x40).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0xc0, 0xc0).w(m_soundlatch, FUNC(generic_latch_8_device::acknowledge_w));
+}
 
 /*************************************
  *
@@ -355,7 +357,7 @@ void onetwo_state::machine_start()
 
 }
 
-static MACHINE_CONFIG_START( onetwo )
+MACHINE_CONFIG_START(onetwo_state::onetwo)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80,MASTER_CLOCK)   /* 4 MHz */
@@ -386,6 +388,8 @@ static MACHINE_CONFIG_START( onetwo )
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
+	MCFG_GENERIC_LATCH_DATA_PENDING_CB(INPUTLINE("audiocpu", INPUT_LINE_NMI))
+	MCFG_GENERIC_LATCH_SEPARATE_ACKNOWLEDGE(true)
 
 	MCFG_SOUND_ADD("ymsnd", YM3812, MASTER_CLOCK)
 	MCFG_YM3812_IRQ_HANDLER(INPUTLINE("audiocpu", 0))

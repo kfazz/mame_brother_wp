@@ -10,6 +10,7 @@
 
 #include "emu.h"
 #include "r3000.h"
+#include "r3kdasm.h"
 #include "debugger.h"
 
 
@@ -113,11 +114,11 @@
 //  DEVICE INTERFACE
 //**************************************************************************
 
-DEFINE_DEVICE_TYPE(R3041, r3041_device, "r3041", "R3041")
-DEFINE_DEVICE_TYPE(R3051, r3051_device, "r3051", "R3051")
-DEFINE_DEVICE_TYPE(R3052, r3052_device, "r3052", "R3052")
-DEFINE_DEVICE_TYPE(R3071, r3071_device, "r3071", "R3071")
-DEFINE_DEVICE_TYPE(R3081, r3081_device, "r3081", "R3081")
+DEFINE_DEVICE_TYPE(R3041, r3041_device, "r3041", "MIPS R3041")
+DEFINE_DEVICE_TYPE(R3051, r3051_device, "r3051", "MIPS R3051")
+DEFINE_DEVICE_TYPE(R3052, r3052_device, "r3052", "MIPS R3052")
+DEFINE_DEVICE_TYPE(R3071, r3071_device, "r3071", "MIPS R3071")
+DEFINE_DEVICE_TYPE(R3081, r3081_device, "r3081", "MIPS R3081")
 
 
 //-------------------------------------------------
@@ -213,7 +214,7 @@ void r3000_device::device_start()
 {
 	// get our address spaces
 	m_program = &space(AS_PROGRAM);
-	m_direct = &m_program->direct();
+	m_direct = m_program->direct<0>();
 
 	// determine the cache sizes
 	switch (m_chip_type)
@@ -453,41 +454,13 @@ void r3000_device::state_string_export(const device_state_entry &entry, std::str
 
 
 //-------------------------------------------------
-//  disasm_min_opcode_bytes - return the length
-//  of the shortest instruction, in bytes
-//-------------------------------------------------
-
-uint32_t r3000_device::disasm_min_opcode_bytes() const
-{
-	return 4;
-}
-
-
-//-------------------------------------------------
-//  disasm_max_opcode_bytes - return the length
-//  of the longest instruction, in bytes
-//-------------------------------------------------
-
-uint32_t r3000_device::disasm_max_opcode_bytes() const
-{
-	return 4;
-}
-
-
-//-------------------------------------------------
-//  disasm_disassemble - call the disassembly
+//  disassemble - call the disassembly
 //  helper function
 //-------------------------------------------------
 
-offs_t r3000_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> r3000_device::create_disassembler()
 {
-	extern CPU_DISASSEMBLE( r3000le );
-	extern CPU_DISASSEMBLE( r3000be );
-
-	if (m_endianness == ENDIANNESS_BIG)
-		return CPU_DISASSEMBLE_NAME(r3000be)(this, stream, pc, oprom, opram, options);
-	else
-		return CPU_DISASSEMBLE_NAME(r3000le)(this, stream, pc, oprom, opram, options);
+	return std::make_unique<r3000_disassembler>();
 }
 
 

@@ -14,122 +14,7 @@
     By now, six known BIOS versions, U4-52 (dumped from a board with-subboard PCB),
     U4-55 (dumped from an integrated PCB) and U4-60 (dumped from a board with-subboard PCB).
 
-    Known games (followed by game ID, some are duplicate):
-
-    1943 Kai (65)
-    Adventure Island (64)
-    Aero Blaster (32)
-    After Burner II (46)
-    Alice in Wonderland (61)
-    Ankoku Densetsu (Legendary Axe II) (33)
-    Armed-F (?)
-    Ballistix (186)
-    Barunba (39)
-    Batman (30)
-    Be Ball (93)
-  * Blodia
-    Bomberman (71)
-    Bull Fight (185)
-    Burning Angels (49)
-    Cadash (203)
-    Chozetsurinjin Beraboh Man (Super Foolish Man) (27)
-    Chuka Taisen (37)
-    Columns (90)
-    Coryoon (43)
-  * Cross Wiber
-    Cyber Core (13)
-    Daisempuu (3)
-    Dead Moon (?)
-    Devil Crash (47)
-  * Die Hard
-    Dodge Ball (194)
-    Doraemon Meikyuu Daisakusen (20)
-    Doreamon - Nobita's Dorabian Night (Doraemon II, 43)
-    Down Load (43)
-    Dragon Egg! (98)
-    Dragon Saber (65)
-    Dragon Spirit (?)
-    Drop Rock Hora Hora (12)
-    Dungeon Explorer (?)
-  * F1 Triple Battle
-    Fighting Run (195)
-    Final Blaster (29)
-    Final Lap Twin (79)
-    Final Match Tennis (62)
-    Formation Soccer (1)
-    Gomola Speed (27)
-    Gradius (187)
-    Gunhed (148)
-    Hana Taka Daka (Super Long Nose Goblin) (6)
-  * Hatris
-    Image Fight (99)
-    Jackie Chan (54)
-    Jinmu Densho (19)
-    Kato & Ken (42)
-    Kiki Kaikai (120)
-    Legend Of Hero Tomna (56)
-    Makyo Densetsu - The Legendary Axe (40)
-    Mashin Eiyuden Wataru (27)
-    Mesopotamia (197)
-    Mizubaku Daibouken Liquid Kids (10) (marketed as "Parasol Stars II")
-    Mr. Heli (23)
-    Ninja Ryukenden (10)
-    Operation Wolf (26)
-    Ordyne (94)
-    Out Run (38)
-    Override (53)
-    Pac-Land (16)
-  * Paranoia (18)
-  * PC Genjin
-    PC Genjin 2 (84)
-    PC Denjin Punkic Cyborg (201)
-    Power Drift (200)
-    Power Eleven (83)
-  * Power Golf
-    Power League IV (?)
-    Power Sports (199)
-    Power Tennis (183)
-    Pro Yakyuu World Stadium '91 (192)
-    Psycho Chaser (14)
-    Puzzle Boy (57)
-    Puzznic (69)
-    R-Type II (61)
-  * Rabio Lepus Special
-    Raiden (111)
-    Rastan Saga II (33, possibly incorrect riser)
-    Saigo no Nindou (44)
-    Salamander (184)
-    Shinobi (5)
-    Side Arms (2)
-    Skweek (89)
-    Sokoban World (66)
-    Soldier Blade (23)
-    Son Son II (80)
-    Special Criminal Investigation (58)
-    Spin Pair (50)
-    Super Star Soldier (42)
-    Super Volley ball (9)
-    Tatsujin (31)
-    Terra Cresta II (27)
-    The NewZealand Story (11)
-    Thunder Blade (34)
-  * Tiger Road
-  * Titan
-    Toilet Kids (196)
-    Toy Shop Boys (51)
-    Tricky (42)
-  * TV Sports
-    USA Pro Basketball (?)
-    Veigues (40)
-    Vigilante (8)
-    Volfied (68)
-    W-Ring (21)
-    Winning Shot (28)
-    World Jockey (202)
-    Xevious (?)
-
-    Rumored games:
-  * Parasol Stars - often been mentioned, but still not confirmed, for Tourvision. For now it's been added from its NEC PC-Engine dump, which it would be likely identical.
+    Known games list can be found in hash/pce_tourvision.xml.
 
 * Denotes Not Dumped
 
@@ -320,11 +205,17 @@ public:
 	DECLARE_WRITE8_MEMBER(tourvision_i8155_b_w);
 	DECLARE_WRITE8_MEMBER(tourvision_i8155_c_w);
 	DECLARE_WRITE_LINE_MEMBER(tourvision_timer_out);
+
+	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(tourvision_cart);
+
+	void tourvision(machine_config &config);
+	void pce_io(address_map &map);
+	void pce_mem(address_map &map);
+	void tourvision_8085_map(address_map &map);
+private:
 	required_device<cpu_device> m_subcpu;
 	required_device<generic_slot_device> m_cart;
 	uint32_t  m_rom_size;
-
-	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(tourvision_cart);
 };
 
 DEVICE_IMAGE_LOAD_MEMBER( tourvision_state, tourvision_cart )
@@ -442,38 +333,41 @@ static INPUT_PORTS_START( tourvision )
 	PORT_BIT( 0xf0, IP_ACTIVE_HIGH, IPT_SPECIAL ) // games slot status in bits 3 to 7
 INPUT_PORTS_END
 
-static ADDRESS_MAP_START( pce_mem , AS_PROGRAM, 8, tourvision_state )
-	AM_RANGE( 0x000000, 0x0FFFFF) AM_ROM
-	AM_RANGE( 0x1F0000, 0x1F1FFF) AM_RAM AM_MIRROR(0x6000)
-	AM_RANGE( 0x1FE000, 0x1FE3FF) AM_DEVREADWRITE( "huc6270", huc6270_device, read, write )
-	AM_RANGE( 0x1FE400, 0x1FE7FF) AM_DEVREADWRITE( "huc6260", huc6260_device, read, write )
-	AM_RANGE( 0x1FE800, 0x1FEBFF) AM_DEVREADWRITE("c6280", c6280_device, c6280_r, c6280_w )
-	AM_RANGE( 0x1FEC00, 0x1FEFFF) AM_DEVREADWRITE("maincpu", h6280_device, timer_r, timer_w )
-	AM_RANGE( 0x1FF000, 0x1FF3FF) AM_READWRITE(pce_joystick_r, pce_joystick_w )
-	AM_RANGE( 0x1FF400, 0x1FF7FF) AM_DEVREADWRITE("maincpu", h6280_device, irq_status_r, irq_status_w )
-ADDRESS_MAP_END
+void tourvision_state::pce_mem(address_map &map)
+{
+	map(0x000000, 0x0FFFFF).rom();
+	map(0x1F0000, 0x1F1FFF).ram().mirror(0x6000);
+	map(0x1FE000, 0x1FE3FF).rw("huc6270", FUNC(huc6270_device::read), FUNC(huc6270_device::write));
+	map(0x1FE400, 0x1FE7FF).rw(m_huc6260, FUNC(huc6260_device::read), FUNC(huc6260_device::write));
+	map(0x1FE800, 0x1FEBFF).rw("c6280", FUNC(c6280_device::c6280_r), FUNC(c6280_device::c6280_w));
+	map(0x1FEC00, 0x1FEFFF).rw(m_maincpu, FUNC(h6280_device::timer_r), FUNC(h6280_device::timer_w));
+	map(0x1FF000, 0x1FF3FF).rw(this, FUNC(tourvision_state::pce_joystick_r), FUNC(tourvision_state::pce_joystick_w));
+	map(0x1FF400, 0x1FF7FF).rw(m_maincpu, FUNC(h6280_device::irq_status_r), FUNC(h6280_device::irq_status_w));
+}
 
-static ADDRESS_MAP_START( pce_io , AS_IO, 8, tourvision_state )
-	AM_RANGE( 0x00, 0x03) AM_DEVREADWRITE( "huc6270", huc6270_device, read, write )
-ADDRESS_MAP_END
+void tourvision_state::pce_io(address_map &map)
+{
+	map(0x00, 0x03).rw("huc6270", FUNC(huc6270_device::read), FUNC(huc6270_device::write));
+}
 
 WRITE8_MEMBER(tourvision_state::tourvision_8085_d000_w)
 {
 	//logerror( "D000 (8085) write %02x\n", data );
 }
 
-static ADDRESS_MAP_START(tourvision_8085_map, AS_PROGRAM, 8, tourvision_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x80ff) AM_DEVREADWRITE("i8155", i8155_device, memory_r, memory_w)
-	AM_RANGE(0x8100, 0x8107) AM_DEVREADWRITE("i8155", i8155_device, io_r, io_w)
-	AM_RANGE(0x9000, 0x9000) AM_READ_PORT("DSW1")
-	AM_RANGE(0xa000, 0xa000) AM_READ_PORT("DSW2")
-	AM_RANGE(0xb000, 0xb000) AM_READNOP // unknown (must NOT be == 0x03 ? code at 0x1154)
-	AM_RANGE(0xc000, 0xc000) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0xd000, 0xd000) AM_WRITE(tourvision_8085_d000_w )
-	AM_RANGE(0xe000, 0xe1ff) AM_RAM
-	AM_RANGE(0xf000, 0xf000) AM_READNOP // protection or internal counter ? there is sometimes some data in BIOS0 which is replaced by 0xff in BIOS1
-ADDRESS_MAP_END
+void tourvision_state::tourvision_8085_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x80ff).rw("i8155", FUNC(i8155_device::memory_r), FUNC(i8155_device::memory_w));
+	map(0x8100, 0x8107).rw("i8155", FUNC(i8155_device::io_r), FUNC(i8155_device::io_w));
+	map(0x9000, 0x9000).portr("DSW1");
+	map(0xa000, 0xa000).portr("DSW2");
+	map(0xb000, 0xb000).nopr(); // unknown (must NOT be == 0x03 ? code at 0x1154)
+	map(0xc000, 0xc000).portr("SYSTEM");
+	map(0xd000, 0xd000).w(this, FUNC(tourvision_state::tourvision_8085_d000_w));
+	map(0xe000, 0xe1ff).ram();
+	map(0xf000, 0xf000).nopr(); // protection or internal counter ? there is sometimes some data in BIOS0 which is replaced by 0xff in BIOS1
+}
 
 WRITE8_MEMBER(tourvision_state::tourvision_i8155_a_w)
 {
@@ -498,7 +392,7 @@ WRITE_LINE_MEMBER(tourvision_state::tourvision_timer_out)
 }
 
 
-static MACHINE_CONFIG_START( tourvision )
+MACHINE_CONFIG_START(tourvision_state::tourvision)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", H6280, PCE_MAIN_CLOCK/3)
 	MCFG_CPU_PROGRAM_MAP(pce_mem)
@@ -547,18 +441,20 @@ MACHINE_CONFIG_END
 
 #define TOURVISION_BIOS \
 	ROM_REGION( 0x8000, "subcpu", 0 ) \
-	ROM_SYSTEM_BIOS( 0, "60", "U4-60" ) \
-	ROMX_LOAD( "u4-60.ic29", 0x0000, 0x8000, CRC(1fd27e22) SHA1(b103d365eac3fa447c2e9addddf6974b4403ed41), ROM_BIOS(1) ) \
-	ROM_SYSTEM_BIOS( 1, "55", "U4-55" ) \
-	ROMX_LOAD( "u4-55.ic29", 0x0000, 0x8000, CRC(87cf66c1) SHA1(d6b42137be7a07a0e299c2d922328a6a9a2b7b8f), ROM_BIOS(2) ) \
-	ROM_SYSTEM_BIOS( 2, "53", "U4-53" ) \
-	ROMX_LOAD( "u4-53.ic29", 0x0000, 0x8000, CRC(bccb53c9) SHA1(a27113d70cf348c7eafa39fc7a76f55f63723ad7), ROM_BIOS(3) ) \
-	ROM_SYSTEM_BIOS( 3, "52", "U4-52" ) \
-	ROMX_LOAD( "u4-52.ic29", 0x0000, 0x8000, CRC(ffd7b0fe) SHA1(d1804865c91e925a01b05cf441e8458a3db23f50), ROM_BIOS(4) ) \
-	ROM_SYSTEM_BIOS( 4, "43", "U4-43" ) \
-	ROMX_LOAD( "u4-43.ic29", 0x0000, 0x8000, CRC(88da23f3) SHA1(9d24faa116129783e55c7f79a4a08902a236d5a6), ROM_BIOS(5) ) \
-	ROM_SYSTEM_BIOS( 5, "40", "U4-40" ) \
-	ROMX_LOAD( "u4-40.ic29", 0x0000, 0x8000, CRC(ba6290cc) SHA1(92b0e9f55791e892ec209de4fadd80faef370622), ROM_BIOS(6) )
+	ROM_SYSTEM_BIOS( 0, "60", "V4-60" ) \
+	ROMX_LOAD( "v4-60.ic29", 0x0000, 0x8000, CRC(1fd27e22) SHA1(b103d365eac3fa447c2e9addddf6974b4403ed41), ROM_BIOS(1) ) \
+	ROM_SYSTEM_BIOS( 1, "55", "V4-55" ) \
+	ROMX_LOAD( "v4-55.ic29", 0x0000, 0x8000, CRC(87cf66c1) SHA1(d6b42137be7a07a0e299c2d922328a6a9a2b7b8f), ROM_BIOS(2) ) \
+	ROM_SYSTEM_BIOS( 2, "53", "V4-53" ) \
+	ROMX_LOAD( "v4-53.ic29", 0x0000, 0x8000, CRC(bccb53c9) SHA1(a27113d70cf348c7eafa39fc7a76f55f63723ad7), ROM_BIOS(3) ) \
+	ROM_SYSTEM_BIOS( 3, "52", "V4-52" ) \
+	ROMX_LOAD( "v4-52.ic29", 0x0000, 0x8000, CRC(ffd7b0fe) SHA1(d1804865c91e925a01b05cf441e8458a3db23f50), ROM_BIOS(4) ) \
+	ROM_SYSTEM_BIOS( 4, "43", "V4-43" ) \
+	ROMX_LOAD( "v4-43.ic29", 0x0000, 0x8000, CRC(88da23f3) SHA1(9d24faa116129783e55c7f79a4a08902a236d5a6), ROM_BIOS(5) ) \
+	ROM_SYSTEM_BIOS( 5, "40", "V4-40" ) \
+	ROMX_LOAD( "v4-40.ic29", 0x0000, 0x8000, CRC(ba6290cc) SHA1(92b0e9f55791e892ec209de4fadd80faef370622), ROM_BIOS(6) ) \
+	ROM_SYSTEM_BIOS( 6, "12", "V1-20" ) \
+	ROMX_LOAD( "v1_2.0.bin", 0x0000, 0x8000, CRC(36012f88) SHA1(5bd42fb51aa48ff65e704ea06a9181bb87ed2137), ROM_BIOS(7) )
 
 
 ROM_START(tourvis)
@@ -568,4 +464,4 @@ ROM_START(tourvis)
 ROM_END
 
 
-GAME( 19??, tourvis,  0,       tourvision, tourvision, tourvision_state, pce_common, ROT0, "bootleg (Tourvision)",                                      "Tourvision PCE bootleg", MACHINE_IS_BIOS_ROOT | MACHINE_NOT_WORKING )
+GAME( 19??, tourvis, 0, tourvision, tourvision, tourvision_state, pce_common, ROT0, "bootleg (Tourvision)", "Tourvision PCE bootleg", MACHINE_IS_BIOS_ROOT | MACHINE_NOT_WORKING )

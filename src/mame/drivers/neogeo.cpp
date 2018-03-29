@@ -699,7 +699,7 @@ WRITE8_MEMBER(neogeo_state::io_control_w)
 //  case 0x33: break; // coin lockout
 
 		default:
-			logerror("PC: %x  Unmapped I/O control write.  Offset: %x  Data: %x\n", space.device().safe_pc(), offset, data);
+			logerror("PC: %x  Unmapped I/O control write.  Offset: %x  Data: %x\n", m_maincpu->pc(), offset, data);
 			break;
 	}
 }
@@ -724,7 +724,7 @@ READ16_MEMBER(neogeo_state::unmapped_r)
 	else
 	{
 		m_recurse = true;
-		ret = space.read_word(space.device().safe_pc());
+		ret = space.read_word(m_maincpu->pc());
 		m_recurse = false;
 	}
 	return ret;
@@ -869,14 +869,14 @@ WRITE16_MEMBER(neogeo_state::write_banksel)
 	uint32_t len = (!m_slots[m_curr_slot] || m_slots[m_curr_slot]->get_rom_size() == 0) ? m_region_maincpu->bytes() : m_slots[m_curr_slot]->get_rom_size();
 
 	if ((len <= 0x100000) && (data & 0x07))
-		logerror("PC %06x: warning: bankswitch to %02x but no banks available\n", space.device().safe_pc(), data);
+		logerror("PC %06x: warning: bankswitch to %02x but no banks available\n", m_maincpu->pc(), data);
 	else
 	{
 		int bank = data & 0x07;
 
 		if ((bank + 1) * 0x100000 >= len)
 		{
-			logerror("PC %06x: warning: bankswitch to empty bank %02x\n", space.device().safe_pc(), data);
+			logerror("PC %06x: warning: bankswitch to empty bank %02x\n", m_maincpu->pc(), data);
 			bank = 0;
 		}
 		uint8_t *ROM = (!m_slots[m_curr_slot] || m_slots[m_curr_slot]->get_rom_size() == 0) ? m_region_maincpu->base() : (uint8_t *)m_slots[m_curr_slot]->get_rom_base();
@@ -985,7 +985,7 @@ WRITE16_MEMBER(neogeo_state::write_bankprot_kf2k3bl)
 
 WRITE16_MEMBER(neogeo_state::write_bankprot_ms5p)
 {
-	logerror("ms5plus bankswitch - offset: %06x PC %06x: set banking %04x\n", offset, space.device().safe_pc(), data);
+	logerror("ms5plus bankswitch - offset: %06x PC %06x: set banking %04x\n", offset, m_maincpu->pc(), data);
 
 	if ((offset == 0) && (data == 0xa0))
 	{
@@ -1410,32 +1410,36 @@ READ16_MEMBER(neogeo_state::banked_vectors_r)
  *
  *************************************/
 
-ADDRESS_MAP_START( neogeo_main_map, AS_PROGRAM, 16, neogeo_state )
+void neogeo_state::neogeo_main_map(address_map &map)
+{
 
-	AM_RANGE(0x100000, 0x10ffff) AM_MIRROR(0x0f0000) AM_RAM
+	map(0x100000, 0x10ffff).mirror(0x0f0000).ram();
 	/* some games have protection devices in the 0x200000 region, it appears to map to cart space, not surprising, the ROM is read here too */
-	AM_RANGE(0x300080, 0x300081) AM_MIRROR(0x01ff7e) AM_READ_PORT("TEST")
-	AM_RANGE(0x300000, 0x300001) AM_MIRROR(0x01fffe) AM_DEVWRITE8("watchdog", watchdog_timer_device, reset_w, 0x00ff)
-	AM_RANGE(0x320000, 0x320001) AM_MIRROR(0x01fffe) AM_READ_PORT("AUDIO/COIN") AM_WRITE8(audio_command_w, 0xff00)
-	AM_RANGE(0x360000, 0x37ffff) AM_READ(unmapped_r)
-	AM_RANGE(0x380000, 0x380001) AM_MIRROR(0x01fffe) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0x380000, 0x38007f) AM_MIRROR(0x01ff80) AM_WRITE8(io_control_w, 0x00ff)
-	AM_RANGE(0x3a0000, 0x3a001f) AM_MIRROR(0x01ffe0) AM_READ(unmapped_r) AM_DEVWRITE8("systemlatch", hc259_device, write_a3, 0x00ff) // BITW1 (system control registers)
-	AM_RANGE(0x3c0000, 0x3c0007) AM_MIRROR(0x01fff8) AM_READ(video_register_r)
-	AM_RANGE(0x3c0000, 0x3c000f) AM_MIRROR(0x01fff0) AM_WRITE(video_register_w)
-	AM_RANGE(0x3e0000, 0x3fffff) AM_READ(unmapped_r)
-	AM_RANGE(0x400000, 0x401fff) AM_MIRROR(0x3fe000) AM_READWRITE(paletteram_r, paletteram_w)
-	AM_RANGE(0x800000, 0x800fff) AM_READWRITE(memcard_r, memcard_w)
-	AM_RANGE(0xc00000, 0xc1ffff) AM_MIRROR(0x0e0000) AM_ROM AM_REGION("mainbios", 0)
-	AM_RANGE(0xd00000, 0xd0ffff) AM_MIRROR(0x0f0000) AM_RAM_WRITE(save_ram_w) AM_SHARE("saveram")
-	AM_RANGE(0xe00000, 0xffffff) AM_READ(unmapped_r)
-ADDRESS_MAP_END
+	map(0x300080, 0x300081).mirror(0x01ff7e).portr("TEST");
+	map(0x300001, 0x300001).mirror(0x01fffe).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x320000, 0x320001).mirror(0x01fffe).portr("AUDIO/COIN");
+	map(0x320000, 0x320000).mirror(0x01fffe).w(this, FUNC(neogeo_state::audio_command_w));
+	map(0x360000, 0x37ffff).r(this, FUNC(neogeo_state::unmapped_r));
+	map(0x380000, 0x380001).mirror(0x01fffe).portr("SYSTEM");
+	map(0x380000, 0x38007f).mirror(0x01ff80).w(this, FUNC(neogeo_state::io_control_w)).umask16(0x00ff);
+	map(0x3a0000, 0x3a001f).mirror(0x01ffe0).r(this, FUNC(neogeo_state::unmapped_r));
+	map(0x3a0000, 0x3a001f).mirror(0x01ffe0).w("systemlatch", FUNC(hc259_device::write_a3)).umask16(0x00ff); // BITW1 (system control registers)
+	map(0x3c0000, 0x3c0007).mirror(0x01fff8).r(this, FUNC(neogeo_state::video_register_r));
+	map(0x3c0000, 0x3c000f).mirror(0x01fff0).w(this, FUNC(neogeo_state::video_register_w));
+	map(0x3e0000, 0x3fffff).r(this, FUNC(neogeo_state::unmapped_r));
+	map(0x400000, 0x401fff).mirror(0x3fe000).rw(this, FUNC(neogeo_state::paletteram_r), FUNC(neogeo_state::paletteram_w));
+	map(0x800000, 0x800fff).rw(this, FUNC(neogeo_state::memcard_r), FUNC(neogeo_state::memcard_w));
+	map(0xc00000, 0xc1ffff).mirror(0x0e0000).rom().region("mainbios", 0);
+	map(0xd00000, 0xd0ffff).mirror(0x0f0000).ram().w(this, FUNC(neogeo_state::save_ram_w)).share("saveram");
+	map(0xe00000, 0xffffff).r(this, FUNC(neogeo_state::unmapped_r));
+}
 
 
-static ADDRESS_MAP_START( main_map_slot, AS_PROGRAM, 16, neogeo_state )
-	AM_RANGE(0x000000, 0x00007f) AM_READ(banked_vectors_r)
-	AM_IMPORT_FROM( neogeo_main_map )
-ADDRESS_MAP_END
+void neogeo_state::main_map_slot(address_map &map)
+{
+	neogeo_main_map(map);
+	map(0x000000, 0x00007f).r(this, FUNC(neogeo_state::banked_vectors_r));
+}
 
 
 
@@ -1447,25 +1451,28 @@ READ16_MEMBER(aes_state::aes_in2_r)
 	return ret;
 }
 
-static ADDRESS_MAP_START( aes_main_map, AS_PROGRAM, 16, aes_state )
-	AM_RANGE(0x000000, 0x00007f) AM_READ(banked_vectors_r)
-	AM_RANGE(0x100000, 0x10ffff) AM_MIRROR(0x0f0000) AM_RAM
+void aes_state::aes_main_map(address_map &map)
+{
+	map(0x000000, 0x00007f).r(this, FUNC(aes_state::banked_vectors_r));
+	map(0x100000, 0x10ffff).mirror(0x0f0000).ram();
 	// some games have protection devices in the 0x200000 region, it appears to map to cart space, not surprising, the ROM is read here too
-	AM_RANGE(0x300000, 0x300001) AM_MIRROR(0x01fffe) AM_DEVREAD8("ctrl1", neogeo_control_port_device, ctrl_r, 0xff00)
-	AM_RANGE(0x320000, 0x320001) AM_MIRROR(0x01fffe) AM_READ_PORT("AUDIO") AM_WRITE8(audio_command_w, 0xff00)
-	AM_RANGE(0x340000, 0x340001) AM_MIRROR(0x01fffe) AM_DEVREAD8("ctrl2", neogeo_control_port_device, ctrl_r, 0xff00)
-	AM_RANGE(0x360000, 0x37ffff) AM_READ(unmapped_r)
-	AM_RANGE(0x380000, 0x380001) AM_MIRROR(0x01fffe) AM_READ(aes_in2_r)
-	AM_RANGE(0x380000, 0x38007f) AM_MIRROR(0x01ff80) AM_WRITE8(io_control_w, 0x00ff)
-	AM_RANGE(0x3a0000, 0x3a001f) AM_MIRROR(0x01ffe0) AM_READ(unmapped_r) AM_DEVWRITE8("systemlatch", hc259_device, write_a3, 0x00ff)
-	AM_RANGE(0x3c0000, 0x3c0007) AM_MIRROR(0x01fff8) AM_READ(video_register_r)
-	AM_RANGE(0x3c0000, 0x3c000f) AM_MIRROR(0x01fff0) AM_WRITE(video_register_w)
-	AM_RANGE(0x3e0000, 0x3fffff) AM_READ(unmapped_r)
-	AM_RANGE(0x400000, 0x401fff) AM_MIRROR(0x3fe000) AM_READWRITE(paletteram_r, paletteram_w)
-	AM_RANGE(0x800000, 0x800fff) AM_READWRITE(memcard_r, memcard_w)
-	AM_RANGE(0xc00000, 0xc1ffff) AM_MIRROR(0x0e0000) AM_ROM AM_REGION("mainbios", 0)
-	AM_RANGE(0xd00000, 0xffffff) AM_READ(unmapped_r)
-ADDRESS_MAP_END
+	map(0x300000, 0x300000).mirror(0x01fffe).r(m_ctrl1, FUNC(neogeo_control_port_device::ctrl_r));
+	map(0x320000, 0x320001).mirror(0x01fffe).portr("AUDIO");
+	map(0x320000, 0x320000).mirror(0x01fffe).w(this, FUNC(aes_state::audio_command_w));
+	map(0x340000, 0x340000).mirror(0x01fffe).r(m_ctrl2, FUNC(neogeo_control_port_device::ctrl_r));
+	map(0x360000, 0x37ffff).r(this, FUNC(aes_state::unmapped_r));
+	map(0x380000, 0x380001).mirror(0x01fffe).r(this, FUNC(aes_state::aes_in2_r));
+	map(0x380000, 0x38007f).mirror(0x01ff80).w(this, FUNC(aes_state::io_control_w)).umask16(0x00ff);
+	map(0x3a0000, 0x3a001f).mirror(0x01ffe0).r(this, FUNC(aes_state::unmapped_r));
+	map(0x3a0000, 0x3a001f).mirror(0x01ffe0).w("systemlatch", FUNC(hc259_device::write_a3)).umask16(0x00ff);
+	map(0x3c0000, 0x3c0007).mirror(0x01fff8).r(this, FUNC(aes_state::video_register_r));
+	map(0x3c0000, 0x3c000f).mirror(0x01fff0).w(this, FUNC(aes_state::video_register_w));
+	map(0x3e0000, 0x3fffff).r(this, FUNC(aes_state::unmapped_r));
+	map(0x400000, 0x401fff).mirror(0x3fe000).rw(this, FUNC(aes_state::paletteram_r), FUNC(aes_state::paletteram_w));
+	map(0x800000, 0x800fff).rw(this, FUNC(aes_state::memcard_r), FUNC(aes_state::memcard_w));
+	map(0xc00000, 0xc1ffff).mirror(0x0e0000).rom().region("mainbios", 0);
+	map(0xd00000, 0xffffff).r(this, FUNC(aes_state::unmapped_r));
+}
 
 
 /*************************************
@@ -1474,14 +1481,15 @@ ADDRESS_MAP_END
  *
  *************************************/
 
-static ADDRESS_MAP_START( audio_map, AS_PROGRAM, 8, neogeo_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROMBANK("audio_main")
-	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK("audio_8000")
-	AM_RANGE(0xc000, 0xdfff) AM_ROMBANK("audio_c000")
-	AM_RANGE(0xe000, 0xefff) AM_ROMBANK("audio_e000")
-	AM_RANGE(0xf000, 0xf7ff) AM_ROMBANK("audio_f000")
-	AM_RANGE(0xf800, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void neogeo_state::audio_map(address_map &map)
+{
+	map(0x0000, 0x7fff).bankr("audio_main");
+	map(0x8000, 0xbfff).bankr("audio_8000");
+	map(0xc000, 0xdfff).bankr("audio_c000");
+	map(0xe000, 0xefff).bankr("audio_e000");
+	map(0xf000, 0xf7ff).bankr("audio_f000");
+	map(0xf800, 0xffff).ram();
+}
 
 
 
@@ -1491,13 +1499,14 @@ ADDRESS_MAP_END
  *
  *************************************/
 
-static ADDRESS_MAP_START( audio_io_map, AS_IO, 8, neogeo_state )
-	AM_RANGE(0x00, 0x00) AM_MIRROR(0xff00) AM_READ(audio_command_r) AM_DEVWRITE("soundlatch", generic_latch_8_device, clear_w)
-	AM_RANGE(0x04, 0x07) AM_MIRROR(0xff00) AM_DEVREADWRITE("ymsnd", ym2610_device, read, write)
-	AM_RANGE(0x08, 0x08) AM_MIRROR(0xff00) AM_SELECT(0x0010) AM_WRITE(audio_cpu_enable_nmi_w)
-	AM_RANGE(0x08, 0x0b) AM_MIRROR(0x00f0) AM_SELECT(0xff00) AM_READ(audio_cpu_bank_select_r)
-	AM_RANGE(0x0c, 0x0c) AM_MIRROR(0xff00) AM_DEVWRITE("soundlatch2", generic_latch_8_device, write)
-ADDRESS_MAP_END
+void neogeo_state::audio_io_map(address_map &map)
+{
+	map(0x00, 0x00).mirror(0xff00).r(this, FUNC(neogeo_state::audio_command_r)).w(m_soundlatch, FUNC(generic_latch_8_device::clear_w));
+	map(0x04, 0x07).mirror(0xff00).rw(m_ym, FUNC(ym2610_device::read), FUNC(ym2610_device::write));
+	map(0x08, 0x08).mirror(0xff00).select(0x0010).w(this, FUNC(neogeo_state::audio_cpu_enable_nmi_w));
+	map(0x08, 0x0b).mirror(0x00f0).select(0xff00).r(this, FUNC(neogeo_state::audio_cpu_bank_select_r));
+	map(0x0c, 0x0c).mirror(0xff00).w(m_soundlatch2, FUNC(generic_latch_8_device::write));
+}
 
 
 
@@ -1604,7 +1613,7 @@ INPUT_CHANGED_MEMBER(aes_state::aes_jp1)
  *
  *************************************/
 
-MACHINE_CONFIG_START( neogeo_base )
+MACHINE_CONFIG_START(neogeo_state::neogeo_base)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, NEOGEO_MAIN_CPU_CLOCK)
@@ -1652,7 +1661,8 @@ MACHINE_CONFIG_START( neogeo_base )
 MACHINE_CONFIG_END
 
 
-MACHINE_CONFIG_DERIVED( neogeo_arcade, neogeo_base )
+MACHINE_CONFIG_START(neogeo_state::neogeo_arcade)
+	neogeo_base(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(main_map_slot)
 
@@ -1662,7 +1672,7 @@ MACHINE_CONFIG_DERIVED( neogeo_arcade, neogeo_base )
 
 	MCFG_WATCHDOG_MODIFY("watchdog")
 	MCFG_WATCHDOG_TIME_INIT(attotime::from_ticks(3244030, NEOGEO_MASTER_CLOCK))
-	MCFG_UPD4990A_ADD("upd4990a", XTAL_32_768kHz, NOOP, NOOP)
+	MCFG_UPD4990A_ADD("upd4990a", XTAL(32'768), NOOP, NOOP)
 
 	MCFG_NVRAM_ADD_0FILL("saveram")
 	MCFG_NEOGEO_MEMCARD_ADD("memcard")
@@ -1711,7 +1721,8 @@ MACHINE_CONFIG_END
 	MCFG_NEOGEO_CARTRIDGE_ADD("cslot1", neogeo_cart, _default)    \
 	MCFG_SET_IMAGE_LOADABLE(false)
 
-static MACHINE_CONFIG_DERIVED( mvs, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::mvs)
+	neogeo_arcade(config);
 	MCFG_DEVICE_REMOVE("edge")
 	MCFG_NEOGEO_CONTROL_EDGE_CONNECTOR_ADD("edge", neogeo_arc_edge, "joy", false)
 
@@ -1750,7 +1761,8 @@ MACHINE_START_MEMBER(aes_state, aes)
 }
 
 
-static MACHINE_CONFIG_DERIVED( aes, neogeo_base )
+MACHINE_CONFIG_START(aes_state::aes)
+	neogeo_base(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(aes_main_map)
 
@@ -2030,206 +2042,255 @@ CONS( 1990, aes,    0,      0,     aes,      aes,           aes_state,     0,   
 
 // machine config for one-game fixed config, loaded without using softlists
 
-static MACHINE_CONFIG_DERIVED( neobase, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::neobase)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("rom")
 MACHINE_CONFIG_END
 
 // used by fatfury2 & ssideki
-static MACHINE_CONFIG_DERIVED( fatfur2, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::fatfur2)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("rom_fatfur2")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kizuna4p, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kizuna4p)
+	neogeo_arcade(config);
 	MCFG_DEVICE_REMOVE("edge")
 	MCFG_NEOGEO_CONTROL_EDGE_CONNECTOR_ADD("edge", neogeo_arc_edge_fixed, "kiz4p", true)
 
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("rom")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kof97oro, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kof97oro)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_kof97oro")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kog, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kog)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_kog")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( irrmaze, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::irrmaze)
+	neogeo_arcade(config);
 	MCFG_DEVICE_REMOVE("edge")
 	MCFG_NEOGEO_CONTROL_EDGE_CONNECTOR_ADD("edge", neogeo_arc_edge_fixed, "irrmaze", true)
 
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("rom")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kof98, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kof98)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("rom_kof98")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( mslugx, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::mslugx)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("rom_mslugx")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kof99, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kof99)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("sma_kof99")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kof99k, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kof99k)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("cmc42_kof99k")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( garou, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::garou)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("sma_garou")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( garouh, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::garouh)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("sma_garouh")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( garoubl, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::garoubl)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_garoubl")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( mslug3, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::mslug3)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("sma_mslug3")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( mslug3h, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::mslug3h)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("cmc42_mslug3h")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( mslug3b6, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::mslug3b6)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_mslug3b6")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kof2000, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kof2000)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("sma_kof2k")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kof2000n, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kof2000n)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("cmc50_kof2000n")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( zupapa, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::zupapa)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("cmc42_zupapa")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( sengoku3, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::sengoku3)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("cmc42_sengoku3")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kof2001, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kof2001)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("cmc50_kof2001")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( cthd2k3, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::cthd2k3)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_cthd2k3")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( ct2k3sp, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::ct2k3sp)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_ct2k3sp")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( ct2k3sa, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::ct2k3sa)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_ct2k3sa")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kof2002, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kof2002)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("k2k2_kof2k2")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kof2002b, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kof2002b)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_kf2k2b")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kf2k2pls, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kf2k2pls)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("k2k2_kf2k2p")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kf2k2mp, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kf2k2mp)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_kf2k2mp")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kf2k2mp2, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kf2k2mp2)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_kf2k2mp2")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kof10th, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kof10th)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_kf10th")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kf10thep, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kf10thep)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_kf10thep")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kf2k5uni, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kf2k5uni)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_kf2k5uni")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kof2k4se, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kof2k4se)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_kf2k4se")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( mslug5, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::mslug5)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("pvc_mslug5")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( ms5plus, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::ms5plus)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_ms5plus")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( svc, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::svc)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("pvc_svc")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( svcboot, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::svcboot)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_svcboot")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( svcplus, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::svcplus)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_svcplus")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( svcplusa, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::svcplusa)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_svcplusa")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( svcsplus, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::svcsplus)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_svcsplus")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( samsho5, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::samsho5)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("k2k2_samsh5")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( samsho5b, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::samsho5b)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_samsho5b")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kof2003, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kof2003)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("pvc_kf2k3")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kof2003h, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kof2003h)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("pvc_kf2k3h")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kf2k3bl, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kf2k3bl)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_kf2k3bl")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kf2k3pl, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kf2k3pl)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_kf2k3pl")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( kf2k3upl, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::kf2k3upl)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_kf2k3upl")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( samsh5sp, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::samsh5sp)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("k2k2_sams5s")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( neogeo_mj, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::neogeo_mj)
+	neogeo_arcade(config);
 	//no joystick panel
 	MCFG_DEVICE_REMOVE("edge")
 	MCFG_NEOGEO_CONTROL_EDGE_CONNECTOR_ADD("edge", neogeo_arc_edge_fixed, "", true)
@@ -2243,66 +2304,81 @@ static MACHINE_CONFIG_DERIVED( neogeo_mj, neogeo_arcade )
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("rom")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( preisle2, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::preisle2)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("cmc42_preisle2")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( nitd, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::nitd)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("cmc42_nitd")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( s1945p, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::s1945p)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("cmc42_s1945p")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( lans2004, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::lans2004)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_lans2004")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( pnyaa, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::pnyaa)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("pcm2_pnyaa")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( popbounc, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::popbounc)
+	neogeo_arcade(config);
 	MCFG_DEVICE_REMOVE("edge")
 	MCFG_NEOGEO_CONTROL_EDGE_CONNECTOR_ADD("edge", neogeo_arc_edge_fixed, "dial", true)
 
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("rom")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( ganryu, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::ganryu)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("cmc42_ganryu")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( bangbead, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::bangbead)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("cmc42_bangbead")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( mslug4, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::mslug4)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("pcm2_mslug4")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( ms4plus, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::ms4plus)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("pcm2_ms4p")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( rotd, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::rotd)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("pcm2_rotd")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( matrim, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::matrim)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("k2k2_matrim")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( matrimbl, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::matrimbl)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_matrimbl")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( jockeygp, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::jockeygp)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("cmc50_jockeygp")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( vliner, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::vliner)
+	neogeo_arcade(config);
 	// input handlers are installed at DRIVER_INIT...
 	MCFG_DEVICE_REMOVE("edge")
 	MCFG_DEVICE_REMOVE("ctrl1")
@@ -2311,7 +2387,8 @@ static MACHINE_CONFIG_DERIVED( vliner, neogeo_arcade )
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("rom_vliner")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( sbp, neogeo_arcade )
+MACHINE_CONFIG_START(neogeo_state::sbp)
+	neogeo_arcade(config);
 	NEOGEO_CONFIG_ONE_FIXED_CARTSLOT("boot_sbp")
 MACHINE_CONFIG_END
 
@@ -3345,6 +3422,25 @@ ROM_END
 ROM_START( bjourney ) /* MVS AND AES VERSION */
 	ROM_REGION( 0x100000, "cslot1:maincpu", ROMREGION_BE|ROMREGION_16BIT )
 	ROM_LOAD16_WORD_SWAP( "022-p1.p1", 0x000000, 0x100000, CRC(6a2f6d4a) SHA1(b8ca548e56f1c7abcdce415ba7329e0cf698ee13) ) /* TC538200 */
+
+	NEO_SFIX_128K( "022-s1.s1", CRC(843c3624) SHA1(dbdf86c193b7c1d795f8c21f2c103c1d3e18abbe) ) /* TC531000 */
+
+	NEO_BIOS_AUDIO_128K( "022-m1.m1", CRC(8e1d4ab6) SHA1(deabc11ab81e7e68a3e041c03a127ae28d0d7264) ) /* TC531001 */
+
+	ROM_REGION( 0x200000, "cslot1:ymsnd", 0 )
+	ROM_LOAD( "022-v11.v11", 0x000000, 0x100000, CRC(2cb4ad91) SHA1(169ec7303c4275155a66a88cc08270c24132bb36) ) /* TC538200 */
+	ROM_LOAD( "022-v22.v22", 0x100000, 0x100000, CRC(65a54d13) SHA1(a591fbcedca8f679dacbebcd554e3aa3fd163e92) ) /* TC538200 */
+
+	ROM_REGION( 0x300000, "cslot1:sprites", 0 )
+	ROM_LOAD16_BYTE( "022-c1.c1", 0x000000, 0x100000, CRC(4d47a48c) SHA1(6e282285be72583d828e7765b1c1695ecdc44777) ) /* Plane 0,1 */ /* TC538200 */
+	ROM_LOAD16_BYTE( "022-c2.c2", 0x000001, 0x100000, CRC(e8c1491a) SHA1(c468d2556b3de095aaa05edd1bc16d71303e9478) ) /* Plane 2,3 */ /* TC538200 */
+	ROM_LOAD16_BYTE( "022-c3.c3", 0x200000, 0x080000, CRC(66e69753) SHA1(974b823fc62236fbc23e727f25b61a805a707a9e) ) /* Plane 0,1 */ /* TC534200 */
+	ROM_LOAD16_BYTE( "022-c4.c4", 0x200001, 0x080000, CRC(71bfd48a) SHA1(47288be69e6992d09ebef108b4de9ffab6293dc8) ) /* Plane 2,3 */ /* TC534200 */
+ROM_END
+
+ROM_START( bjourneyh ) /* AES VERSION */
+	ROM_REGION( 0x100000, "cslot1:maincpu", ROMREGION_BE|ROMREGION_16BIT )
+	ROM_LOAD16_WORD_SWAP( "022-hp1.p1", 0x000000, 0x100000, CRC(62cbe7b2) SHA1(f9a8fd98702c623ae793804ba50d09751e3fee4c) ) /* TC538200 */
 
 	NEO_SFIX_128K( "022-s1.s1", CRC(843c3624) SHA1(dbdf86c193b7c1d795f8c21f2c103c1d3e18abbe) ) /* TC531000 */
 
@@ -5542,7 +5638,7 @@ ROM_END
  NEO-MVS PROGBK1 / NEO-MVS CHA256B
 ****************************************/
 
-ROM_START( tws96 ) /* MVS ONLY RELEASE */
+ROM_START( twsoc96 ) /* MVS ONLY RELEASE */
 	ROM_REGION( 0x100000, "cslot1:maincpu", ROMREGION_BE|ROMREGION_16BIT )
 	ROM_LOAD16_WORD_SWAP( "086-p1.p1", 0x000000, 0x100000, CRC(03e20ab6) SHA1(3a0a5a54649178ce7a6158980cb4445084b40fb5) ) /* mask rom TC538200 */
 
@@ -5841,8 +5937,8 @@ ROM_END
 
 ROM_START( dragonsh )
 	ROM_REGION( 0x100000, "cslot1:maincpu", ROMREGION_BE|ROMREGION_16BIT )
-	ROM_LOAD16_BYTE( "EP2.bin", 0x000000, 0x080000, CRC(f25c71ad) SHA1(803fb6cd6a7ada59678ad901ff9788b1e54ddd0c) )
-	ROM_LOAD16_BYTE( "EP1.bin", 0x000001, 0x080000, CRC(f353448c) SHA1(f0f966ca15d503e01b40e901765ff0888463b65d) )
+	ROM_LOAD16_BYTE( "ep2.bin", 0x000000, 0x080000, CRC(f25c71ad) SHA1(803fb6cd6a7ada59678ad901ff9788b1e54ddd0c) )
+	ROM_LOAD16_BYTE( "ep1.bin", 0x000001, 0x080000, CRC(f353448c) SHA1(f0f966ca15d503e01b40e901765ff0888463b65d) )
 
 	NEO_SFIX_128K( "s1.s1", BAD_DUMP CRC(706477a7) SHA1(8cbee7f6832e7edd2dc792ca330420a6a984b879) ) // was a dead AXS512PC 512KB sram card, this data is handcrafted to make the set usable (hence BAD_DUMP)
 
@@ -8944,7 +9040,7 @@ ROM_END
  NEO-AEG PROGBK2S (2003.10.16) (NEO-PCM2 PLAYMORE) / NEO-AEG CHAFIO (2003.7.24) (NEO-CMC 7050)
 ****************************************/
 
-ROM_START( samsho5 ) /* Encrypted Set */ /* MVS VERSION */
+ROM_START( samsho5 ) /* Encrypted Set */ /* MVS VERSION, Build Date: Tue Aug 26 22:27:30 2003 */
 	ROM_REGION( 0x800000, "cslot1:maincpu", ROMREGION_BE|ROMREGION_16BIT )
 	ROM_LOAD16_WORD_SWAP( "270-p1.p1",  0x000000, 0x400000, CRC(4a2a09e6) SHA1(2644de02cdab8ccc605488a7c76b8c9cd1d5bcb9) ) /* mask rom TC5332205 */
 	ROM_LOAD16_WORD_SWAP( "270-p2.sp2", 0x400000, 0x400000, CRC(e0c74c85) SHA1(df24a4ee76438e40c2f04a714175a7f85cacdfe0) ) /* mask rom TC5332205 */
@@ -8977,7 +9073,44 @@ ROM_START( samsho5 ) /* Encrypted Set */ /* MVS VERSION */
 	ROM_LOAD16_BYTE( "270-c8.c8", 0x3000001, 0x800000, CRC(02c530a6) SHA1(7a3fafa6075506c6ef78cc4ec2cb72118ec83cb9) ) /* Plane 2,3 */ /* mask rom TC5364205 */
 ROM_END
 
-ROM_START( samsho5h ) /* Encrypted Set, Alternate Set */ /* AES VERSION */
+/* handwritten labels, but appears to be a legitimate alt revision based on the build date at 0xA6C00
+   p1.bin                  270-p1c.p1              90.607002%
+   p2.bin                  270-p2c.sp2             99.999763% (all bytes that differ do so by only bits 0x20 or 0x02)
+*/
+ROM_START( samsho5a ) /* Encrypted Set, Alternate Set */ /* MVS VERSION, Build Date: Mon Oct 20 10:11:27 2003 */
+	ROM_REGION( 0x800000, "cslot1:maincpu", ROMREGION_BE|ROMREGION_16BIT )
+	ROM_LOAD16_WORD_SWAP( "p1.bin", 0x000000, 0x400000, CRC(7795fffe) SHA1(2e74a4dbed553a01f1cb2f3db896375de5f1d212) ) /* EPROM */
+	ROM_LOAD16_WORD_SWAP( "p2.bin", 0x400000, 0x400000, CRC(2b844fe9) SHA1(899fe6457db4a724bdd9c7e4a912eab50a5221d3) ) /* EPROM */
+
+	ROM_Y_ZOOM
+
+	/* The Encrypted Boards do not have an s1 rom, data for it comes from the Cx ROMs */
+	ROM_REGION( 0x20000, "cslot1:fixed", 0 )
+	ROM_FILL( 0x000000, 0x20000, 0x000000 )
+	ROM_REGION( 0x20000, "fixedbios", 0 )
+	ROM_LOAD( "sfix.sfix", 0x000000, 0x20000, CRC(c2ea0cfd) SHA1(fd4a618cdcdbf849374f0a50dd8efe9dbab706c3) )
+
+	/* Encrypted */
+	NEO_BIOS_AUDIO_ENCRYPTED_512K( "270-m1.m1", CRC(49c9901a) SHA1(2623e9765a0eba58fee2de72851e9dc502344a3d) ) /* mask rom 27c040 */
+
+	ROM_REGION( 0x1000000, "cslot1:ymsnd", 0 )
+	/* Encrypted */
+	ROM_LOAD( "270-v1.v1", 0x000000, 0x800000, CRC(62e434eb) SHA1(1985f5e88f8e866f9683b6cea901aa28c04b80bf) ) /* mask rom TC5364205 */
+	ROM_LOAD( "270-v2.v2", 0x800000, 0x800000, CRC(180f3c9a) SHA1(6d7dc2605ead6e78704efa127e7e0dfe621e2c54) ) /* mask rom TC5364205 */
+
+	ROM_REGION( 0x4000000, "cslot1:sprites", 0 )
+	/* Encrypted */
+	ROM_LOAD16_BYTE( "270-c1.c1", 0x0000000, 0x800000, CRC(14ffffac) SHA1(2ccebfdd0c7907679ae95bf6eca85b8d322441e2) ) /* Plane 0,1 */ /* mask rom TC5364205 */
+	ROM_LOAD16_BYTE( "270-c2.c2", 0x0000001, 0x800000, CRC(401f7299) SHA1(94e48cdf1682b1250f53c59f3f71d995e928d17b) ) /* Plane 2,3 */ /* mask rom TC5364205 */
+	ROM_LOAD16_BYTE( "270-c3.c3", 0x1000000, 0x800000, CRC(838f0260) SHA1(d5c8d3c6e7221d04e0b20882a847752e5ba95635) ) /* Plane 0,1 */ /* mask rom TC5364205 */
+	ROM_LOAD16_BYTE( "270-c4.c4", 0x1000001, 0x800000, CRC(041560a5) SHA1(d165e533699f15b1e079c82f97db3542b3a7dd66) ) /* Plane 2,3 */ /* mask rom TC5364205 */
+	ROM_LOAD16_BYTE( "270-c5.c5", 0x2000000, 0x800000, CRC(bd30b52d) SHA1(9f8282e684415b4045218cf764ef7d75a70e3240) ) /* Plane 0,1 */ /* mask rom TC5364205 */
+	ROM_LOAD16_BYTE( "270-c6.c6", 0x2000001, 0x800000, CRC(86a69c70) SHA1(526732cdb408cf680af9da39057bce6a4dfb5e13) ) /* Plane 2,3 */ /* mask rom TC5364205 */
+	ROM_LOAD16_BYTE( "270-c7.c7", 0x3000000, 0x800000, CRC(d28fbc3c) SHA1(a82a6ba6760fad14d9309f9147cb7d80bd6f70fc) ) /* Plane 0,1 */ /* mask rom TC5364205 */
+	ROM_LOAD16_BYTE( "270-c8.c8", 0x3000001, 0x800000, CRC(02c530a6) SHA1(7a3fafa6075506c6ef78cc4ec2cb72118ec83cb9) ) /* Plane 2,3 */ /* mask rom TC5364205 */
+ROM_END
+
+ROM_START( samsho5h ) /* Encrypted Set, Alternate Set */ /* AES VERSION, Build Date: Tue Oct 28 02:24:45 2003 */
 	ROM_REGION( 0x800000, "cslot1:maincpu", ROMREGION_BE|ROMREGION_16BIT )
 	ROM_LOAD16_WORD_SWAP( "270-p1c.p1",  0x000000, 0x400000, CRC(bf956089) SHA1(c538289069bf338b9fa7ecc5c9143763dbb776a8) ) /* mask rom TC5332205 */
 	ROM_LOAD16_WORD_SWAP( "270-p2c.sp2", 0x400000, 0x400000, CRC(943a6b1d) SHA1(12bd02fc197456da6ee86f066086094cef0f4bf9) ) /* mask rom TC5332205 */
@@ -10791,8 +10924,8 @@ GAME( 1990, bstars,     neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   R
 GAME( 1990, bstarsh,    bstars,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Baseball Stars Professional (NGH-002)", MACHINE_SUPPORTS_SAVE )
 GAME( 1990, tpgolf,     neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Top Player's Golf (NGM-003 ~ NGH-003)", MACHINE_SUPPORTS_SAVE )
 GAME( 1990, mahretsu,   neogeo,   neogeo_mj, mjneogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Mahjong Kyo Retsuden (NGM-004 ~ NGH-004)", MACHINE_SUPPORTS_SAVE ) // does not support mahjong panel in MVS mode <- it actually works fine???
-GAME( 1990, ridhero,    neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Riding Hero (NGM-006 ~ NGH-006)", MACHINE_SUPPORTS_SAVE )
-GAME( 1990, ridheroh,   ridhero,  neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Riding Hero (set 2)", MACHINE_SUPPORTS_SAVE )
+GAME( 1990, ridhero,    neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Riding Hero (NGM-006 ~ NGH-006)", MACHINE_NODEVICE_LAN | MACHINE_SUPPORTS_SAVE )
+GAME( 1990, ridheroh,   ridhero,  neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Riding Hero (set 2)", MACHINE_NODEVICE_LAN | MACHINE_SUPPORTS_SAVE )
 GAME( 1991, alpham2,    neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Alpha Mission II / ASO II - Last Guardian (NGM-007 ~ NGH-007)", MACHINE_SUPPORTS_SAVE )
 GAME( 1991, alpham2p,   alpham2,  neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Alpha Mission II / ASO II - Last Guardian (prototype)", MACHINE_SUPPORTS_SAVE )
 GAME( 1990, cyberlip,   neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Cyber-Lip (NGM-010)", MACHINE_SUPPORTS_SAVE )
@@ -10806,7 +10939,7 @@ GAME( 1991, burningf,   neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   R
 GAME( 1991, burningfh,  burningf, neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Burning Fight (NGH-018, US)", MACHINE_SUPPORTS_SAVE )
 GAME( 1991, burningfpa, burningf, neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Burning Fight (prototype, ver 23.3, 910326)", MACHINE_SUPPORTS_SAVE )
 GAME( 1991, burningfp,  burningf, neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Burning Fight (prototype, older)", MACHINE_SUPPORTS_SAVE )
-GAME( 1990, lbowling,   neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "League Bowling (NGM-019 ~ NGH-019)", MACHINE_SUPPORTS_SAVE )
+GAME( 1990, lbowling,   neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "League Bowling (NGM-019 ~ NGH-019)", MACHINE_NODEVICE_LAN | MACHINE_SUPPORTS_SAVE )
 GAME( 1991, gpilots,    neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Ghost Pilots (NGM-020 ~ NGH-020)", MACHINE_SUPPORTS_SAVE )
 GAME( 1991, gpilotsh,   gpilots,  neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Ghost Pilots (NGH-020, US)", MACHINE_SUPPORTS_SAVE )
 GAME( 1990, joyjoy,     neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK", "Puzzled / Joy Joy Kid (NGM-021 ~ NGH-021)", MACHINE_SUPPORTS_SAVE )
@@ -10934,7 +11067,8 @@ GAME( 2003, svcboot,    svc,      svcboot,   neogeo, neogeo_state,   neogeo,   R
 GAME( 2003, svcplus,    svc,      svcplus,   neogeo, neogeo_state,   neogeo,   ROT0, "bootleg", "SNK vs. Capcom - SVC Chaos Plus (bootleg set 1)", MACHINE_SUPPORTS_SAVE )
 GAME( 2003, svcplusa,   svc,      svcplusa,  neogeo, neogeo_state,   neogeo,   ROT0, "bootleg", "SNK vs. Capcom - SVC Chaos Plus (bootleg set 2)", MACHINE_SUPPORTS_SAVE )
 GAME( 2003, svcsplus,   svc,      svcsplus,  neogeo, neogeo_state,   neogeo,   ROT0, "bootleg", "SNK vs. Capcom - SVC Chaos Super Plus (bootleg)", MACHINE_SUPPORTS_SAVE )
-GAME( 2003, samsho5,    neogeo,   samsho5,   neogeo, neogeo_state,   neogeo,   ROT0, "Yuki Enterprise / SNK Playmore", "Samurai Shodown V / Samurai Spirits Zero (NGM-2700)", MACHINE_SUPPORTS_SAVE )
+GAME( 2003, samsho5,    neogeo,   samsho5,   neogeo, neogeo_state,   neogeo,   ROT0, "Yuki Enterprise / SNK Playmore", "Samurai Shodown V / Samurai Spirits Zero (NGM-2700, set 1)", MACHINE_SUPPORTS_SAVE )
+GAME( 2003, samsho5a,   samsho5,  samsho5,   neogeo, neogeo_state,   neogeo,   ROT0, "Yuki Enterprise / SNK Playmore", "Samurai Shodown V / Samurai Spirits Zero (NGM-2700, set 2)", MACHINE_SUPPORTS_SAVE )
 GAME( 2003, samsho5h,   samsho5,  samsho5,   neogeo, neogeo_state,   neogeo,   ROT0, "Yuki Enterprise / SNK Playmore", "Samurai Shodown V / Samurai Spirits Zero (NGH-2700)", MACHINE_SUPPORTS_SAVE )
 GAME( 2003, samsho5b,   samsho5,  samsho5b,  neogeo, neogeo_state,   neogeo,   ROT0, "bootleg", "Samurai Shodown V / Samurai Spirits Zero (bootleg)", MACHINE_SUPPORTS_SAVE ) // different program scrambling
 GAME( 2003, kof2003,    neogeo,   kof2003,   neogeo, neogeo_state,   neogeo,   ROT0, "SNK Playmore", "The King of Fighters 2003 (NGM-2710)", MACHINE_SUPPORTS_SAVE )
@@ -10953,8 +11087,9 @@ GAME( 1990, maglordh,   maglord,  neobase,   neogeo, neogeo_state,   neogeo,   R
 GAME( 1990, ncombat,    neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "Alpha Denshi Co.", "Ninja Combat (NGM-009)", MACHINE_SUPPORTS_SAVE )
 GAME( 1990, ncombath,   ncombat,  neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "Alpha Denshi Co.", "Ninja Combat (NGH-009)", MACHINE_SUPPORTS_SAVE )
 GAME( 1990, bjourney,   neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "Alpha Denshi Co.", "Blue's Journey / Raguy (ALM-001 ~ ALH-001)", MACHINE_SUPPORTS_SAVE )
+GAME( 1990, bjourneyh,  bjourney, neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "Alpha Denshi Co.", "Blue's Journey / Raguy (ALH-001)", MACHINE_SUPPORTS_SAVE )
 GAME( 1991, crsword,    neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "Alpha Denshi Co.", "Crossed Swords (ALM-002 ~ ALH-002)", MACHINE_SUPPORTS_SAVE )
-GAME( 1991, trally,     neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "Alpha Denshi Co.", "Thrash Rally (ALM-003 ~ ALH-003)", MACHINE_SUPPORTS_SAVE )
+GAME( 1991, trally,     neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "Alpha Denshi Co.", "Thrash Rally (ALM-003 ~ ALH-003)", MACHINE_NODEVICE_LAN | MACHINE_SUPPORTS_SAVE )
 GAME( 1992, ncommand,   neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "Alpha Denshi Co.", "Ninja Commando", MACHINE_SUPPORTS_SAVE )
 GAME( 1992, wh1,        neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "Alpha Denshi Co.", "World Heroes (ALM-005)", MACHINE_SUPPORTS_SAVE )
 GAME( 1992, wh1h,       wh1,      neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "Alpha Denshi Co.", "World Heroes (ALH-005)", MACHINE_SUPPORTS_SAVE )
@@ -11048,7 +11183,7 @@ GAME( 1995, gowcaizr,   neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   R
 GAME( 1996, sdodgeb,    neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "Technos Japan", "Super Dodge Ball / Kunio no Nekketsu Toukyuu Densetsu", MACHINE_SUPPORTS_SAVE )
 
 /* Tecmo */
-GAME( 1996, tws96,      neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "Tecmo", "Tecmo World Soccer '96", MACHINE_SUPPORTS_SAVE )
+GAME( 1996, twsoc96,    neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "Tecmo", "Tecmo World Soccer '96", MACHINE_SUPPORTS_SAVE )
 
 /* Viccom */
 GAME( 1994, fightfev,   neogeo,   neobase,   neogeo, neogeo_state,   neogeo,   ROT0, "Viccom", "Fight Fever (set 1)", MACHINE_SUPPORTS_SAVE )

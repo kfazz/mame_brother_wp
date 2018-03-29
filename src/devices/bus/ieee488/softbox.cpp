@@ -72,25 +72,27 @@ const tiny_rom_entry *softbox_device::device_rom_region() const
 //  ADDRESS_MAP( softbox_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( softbox_mem, AS_PROGRAM, 8, softbox_device )
-	AM_RANGE(0x0000, 0xefff) AM_RAM
-	AM_RANGE(0xf000, 0xffff) AM_ROM AM_REGION(Z80_TAG, 0)
-ADDRESS_MAP_END
+void softbox_device::softbox_mem(address_map &map)
+{
+	map(0x0000, 0xefff).ram();
+	map(0xf000, 0xffff).rom().region(Z80_TAG, 0);
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( softbox_io )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( softbox_io, AS_IO, 8, softbox_device )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x08, 0x08) AM_DEVREADWRITE(I8251_TAG, i8251_device, data_r, data_w)
-	AM_RANGE(0x09, 0x09) AM_DEVREADWRITE(I8251_TAG, i8251_device, status_r, control_w)
-	AM_RANGE(0x0c, 0x0c) AM_WRITE(dbrg_w)
-	AM_RANGE(0x10, 0x13) AM_DEVREADWRITE(I8255_0_TAG, i8255_device, read, write)
-	AM_RANGE(0x14, 0x17) AM_DEVREADWRITE(I8255_1_TAG, i8255_device, read, write)
-	AM_RANGE(0x18, 0x18) AM_DEVREADWRITE(CORVUS_HDC_TAG, corvus_hdc_device, read, write)
-ADDRESS_MAP_END
+void softbox_device::softbox_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x08, 0x08).rw(I8251_TAG, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x09, 0x09).rw(I8251_TAG, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x0c, 0x0c).w(this, FUNC(softbox_device::dbrg_w));
+	map(0x10, 0x13).rw(I8255_0_TAG, FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x14, 0x17).rw(I8255_1_TAG, FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x18, 0x18).rw(CORVUS_HDC_TAG, FUNC(corvus_hdc_device::read), FUNC(corvus_hdc_device::write));
+}
 
 
 
@@ -232,9 +234,9 @@ DEVICE_INPUT_DEFAULTS_END
 //  device_add_mconfig - add device configuration
 //-------------------------------------------------
 
-MACHINE_CONFIG_MEMBER( softbox_device::device_add_mconfig )
+MACHINE_CONFIG_START(softbox_device::device_add_mconfig)
 	// basic machine hardware
-	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_8MHz/2)
+	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL(8'000'000)/2)
 	MCFG_CPU_PROGRAM_MAP(softbox_mem)
 	MCFG_CPU_IO_MAP(softbox_io)
 
@@ -260,7 +262,7 @@ MACHINE_CONFIG_MEMBER( softbox_device::device_add_mconfig )
 	MCFG_I8255_IN_PORTC_CB(READ8(softbox_device, ppi1_pc_r))
 	MCFG_I8255_OUT_PORTC_CB(WRITE8(softbox_device, ppi1_pc_w))
 
-	MCFG_DEVICE_ADD(COM8116_TAG, COM8116, XTAL_5_0688MHz)
+	MCFG_DEVICE_ADD(COM8116_TAG, COM8116, XTAL(5'068'800))
 	MCFG_COM8116_FR_HANDLER(DEVWRITELINE(I8251_TAG, i8251_device, write_rxc))
 	MCFG_COM8116_FT_HANDLER(DEVWRITELINE(I8251_TAG, i8251_device, write_txc))
 

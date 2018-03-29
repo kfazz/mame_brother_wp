@@ -162,7 +162,7 @@ WRITE16_MEMBER(darius_state::cpua_ctrl_w)
 
 	parse_control();
 
-	logerror("CPU #0 PC %06x: write %04x to cpu control\n", space.device().safe_pc(), data);
+	logerror("CPU #0 PC %06x: write %04x to cpu control\n", m_maincpu->pc(), data);
 }
 
 
@@ -170,65 +170,21 @@ WRITE16_MEMBER(darius_state::cpua_ctrl_w)
                         GAME INPUTS
 **********************************************************/
 
-READ16_MEMBER(darius_state::darius_ioc_r)
+READ16_MEMBER(darius_state::coin_r)
 {
-	switch (offset)
-	{
-		case 0x01:
-			return (m_tc0140syt->master_comm_r(space, 0) & 0xff);    /* sound interface read */
-
-		case 0x04:
-			return ioport("P1")->read();
-
-		case 0x05:
-			return ioport("P2")->read();
-
-		case 0x06:
-			return ioport("SYSTEM")->read();
-
-		case 0x07:
-			return m_coin_word; /* bits 3&4 coin lockouts, must return zero */
-
-		case 0x08:
-			return ioport("DSW")->read();
-	}
-
-logerror("CPU #0 PC %06x: warning - read unmapped ioc offset %06x\n",space.device().safe_pc(),offset);
-
-	return 0xff;
+	return m_coin_word; /* bits 3&4 coin lockouts, must return zero */
 }
 
-WRITE16_MEMBER(darius_state::darius_ioc_w)
+WRITE16_MEMBER(darius_state::coin_w)
 {
-	switch (offset)
-	{
-		case 0x00:  /* sound interface write */
-
-			m_tc0140syt->master_port_w(space, 0, data & 0xff);
-			return;
-
-		case 0x01:  /* sound interface write */
-
-			m_tc0140syt->master_comm_w(space, 0, data & 0xff);
-			return;
-
-		case 0x28:  /* unknown, written by both cpus - always 0? */
-//popmessage(" address %04x value %04x",offset,data);
-			return;
-
-		case 0x30:  /* coin control */
-			/* bits 7,5,4,0 used on reset */
-			/* bit 4 used whenever bg is blanked ? */
-			machine().bookkeeping().coin_lockout_w(0, ~data & 0x02);
-			machine().bookkeeping().coin_lockout_w(1, ~data & 0x04);
-			machine().bookkeeping().coin_counter_w(0, data & 0x08);
-			machine().bookkeeping().coin_counter_w(1, data & 0x40);
-			m_coin_word = data & 0xffff;
-//popmessage(" address %04x value %04x",offset,data);
-			return;
-	}
-
-logerror("CPU #0 PC %06x: warning - write unmapped ioc offset %06x with %04x\n",space.device().safe_pc(),offset,data);
+	/* coin control */
+	/* bits 7,5,4,0 used on reset */
+	/* bit 4 used whenever bg is blanked ? */
+	machine().bookkeeping().coin_lockout_w(0, ~data & 0x02);
+	machine().bookkeeping().coin_lockout_w(1, ~data & 0x04);
+	machine().bookkeeping().coin_counter_w(0, data & 0x08);
+	machine().bookkeeping().coin_counter_w(1, data & 0x40);
+	m_coin_word = data;
 }
 
 
@@ -236,32 +192,43 @@ logerror("CPU #0 PC %06x: warning - write unmapped ioc offset %06x with %04x\n",
                      MEMORY STRUCTURES
 ***********************************************************/
 
-static ADDRESS_MAP_START( darius_map, AS_PROGRAM, 16, darius_state )
-	AM_RANGE(0x000000, 0x05ffff) AM_ROM
-	AM_RANGE(0x080000, 0x08ffff) AM_RAM                                             /* main RAM */
-	AM_RANGE(0x0a0000, 0x0a0001) AM_WRITE(cpua_ctrl_w)
-	AM_RANGE(0x0b0000, 0x0b0001) AM_DEVWRITE("watchdog", watchdog_timer_device, reset16_w)
-	AM_RANGE(0xc00000, 0xc0007f) AM_READWRITE(darius_ioc_r, darius_ioc_w)           /* inputs, sound */
-	AM_RANGE(0xd00000, 0xd0ffff) AM_DEVREADWRITE("pc080sn", pc080sn_device, word_r, word_w)  /* tilemaps */
-	AM_RANGE(0xd20000, 0xd20003) AM_DEVWRITE("pc080sn", pc080sn_device, yscroll_word_w)
-	AM_RANGE(0xd40000, 0xd40003) AM_DEVWRITE("pc080sn", pc080sn_device, xscroll_word_w)
-	AM_RANGE(0xd50000, 0xd50003) AM_DEVWRITE("pc080sn", pc080sn_device, ctrl_word_w)
-	AM_RANGE(0xd80000, 0xd80fff) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")/* palette */
-	AM_RANGE(0xe00100, 0xe00fff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0xe01000, 0xe02fff) AM_RAM AM_SHARE("share2")
-	AM_RANGE(0xe08000, 0xe0ffff) AM_RAM_WRITE(darius_fg_layer_w) AM_SHARE("fg_ram")
-	AM_RANGE(0xe10000, 0xe10fff) AM_RAM                                             /* ??? */
-ADDRESS_MAP_END
+void darius_state::darius_map(address_map &map)
+{
+	map(0x000000, 0x05ffff).rom();
+	map(0x080000, 0x08ffff).ram();                                             /* main RAM */
+	map(0x0a0000, 0x0a0001).w(this, FUNC(darius_state::cpua_ctrl_w));
+	map(0x0b0000, 0x0b0001).rw("watchdog", FUNC(watchdog_timer_device::reset16_r), FUNC(watchdog_timer_device::reset16_w));
+	map(0xc00000, 0xc00001).nopr();
+	map(0xc00001, 0xc00001).w("ciu", FUNC(pc060ha_device::master_port_w));
+	map(0xc00003, 0xc00003).rw("ciu", FUNC(pc060ha_device::master_comm_r), FUNC(pc060ha_device::master_comm_w));
+	map(0xc00008, 0xc00009).portr("P1");
+	map(0xc0000a, 0xc0000b).portr("P2");
+	map(0xc0000c, 0xc0000d).portr("SYSTEM");
+	map(0xc0000e, 0xc0000f).r(this, FUNC(darius_state::coin_r));
+	map(0xc00010, 0xc00011).portr("DSW");
+	map(0xc00050, 0xc00051).noprw(); // unknown, written by both cpus - always 0?
+	map(0xc00060, 0xc00061).w(this, FUNC(darius_state::coin_w));
+	map(0xd00000, 0xd0ffff).rw(m_pc080sn, FUNC(pc080sn_device::word_r), FUNC(pc080sn_device::word_w));  /* tilemaps */
+	map(0xd20000, 0xd20003).w(m_pc080sn, FUNC(pc080sn_device::yscroll_word_w));
+	map(0xd40000, 0xd40003).w(m_pc080sn, FUNC(pc080sn_device::xscroll_word_w));
+	map(0xd50000, 0xd50003).w(m_pc080sn, FUNC(pc080sn_device::ctrl_word_w));
+	map(0xd80000, 0xd80fff).ram().w(m_palette, FUNC(palette_device::write16)).share("palette");/* palette */
+	map(0xe00100, 0xe00fff).ram().share("spriteram");
+	map(0xe01000, 0xe02fff).ram().share("share2");
+	map(0xe08000, 0xe0ffff).ram().w(this, FUNC(darius_state::darius_fg_layer_w)).share("fg_ram");
+	map(0xe10000, 0xe10fff).ram();                                             /* ??? */
+}
 
-static ADDRESS_MAP_START( darius_cpub_map, AS_PROGRAM, 16, darius_state )
-	AM_RANGE(0x000000, 0x03ffff) AM_ROM
-	AM_RANGE(0x040000, 0x04ffff) AM_RAM             /* local RAM */
-	AM_RANGE(0xc00000, 0xc0007f) AM_WRITE(darius_ioc_w) /* only writes $c00050 (?) */
-	AM_RANGE(0xd80000, 0xd80fff) AM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE(0xe00100, 0xe00fff) AM_RAM AM_SHARE("spriteram")
-	AM_RANGE(0xe01000, 0xe02fff) AM_RAM AM_SHARE("share2")
-	AM_RANGE(0xe08000, 0xe0ffff) AM_RAM_WRITE(darius_fg_layer_w) AM_SHARE("fg_ram")
-ADDRESS_MAP_END
+void darius_state::darius_cpub_map(address_map &map)
+{
+	map(0x000000, 0x03ffff).rom();
+	map(0x040000, 0x04ffff).ram();             /* local RAM */
+	map(0xc00050, 0xc00051).noprw(); // unknown, written by both cpus - always 0?
+	map(0xd80000, 0xd80fff).w(m_palette, FUNC(palette_device::write16)).share("palette");
+	map(0xe00100, 0xe00fff).ram().share("spriteram");
+	map(0xe01000, 0xe02fff).ram().share("share2");
+	map(0xe08000, 0xe0ffff).ram().w(this, FUNC(darius_state::darius_fg_layer_w)).share("fg_ram");
+}
 
 
 /*****************************************************
@@ -454,28 +421,30 @@ WRITE8_MEMBER(darius_state::darius_write_portB1)
            Sound memory structures / ADPCM
 *****************************************************/
 
-static ADDRESS_MAP_START( darius_sound_map, AS_PROGRAM, 8, darius_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("bank1")
-	AM_RANGE(0x8000, 0x8fff) AM_RAM
-	AM_RANGE(0x9000, 0x9001) AM_DEVREADWRITE("ym1", ym2203_device, read, write)
-	AM_RANGE(0xa000, 0xa001) AM_DEVREADWRITE("ym2", ym2203_device, read, write)
-	AM_RANGE(0xb000, 0xb000) AM_READNOP AM_DEVWRITE("tc0140syt", tc0140syt_device, slave_port_w)
-	AM_RANGE(0xb001, 0xb001) AM_DEVREADWRITE("tc0140syt", tc0140syt_device, slave_comm_r, slave_comm_w)
-	AM_RANGE(0xc000, 0xc000) AM_WRITE(darius_fm0_pan)
-	AM_RANGE(0xc400, 0xc400) AM_WRITE(darius_fm1_pan)
-	AM_RANGE(0xc800, 0xc800) AM_WRITE(darius_psg0_pan)
-	AM_RANGE(0xcc00, 0xcc00) AM_WRITE(darius_psg1_pan)
-	AM_RANGE(0xd000, 0xd000) AM_WRITE(darius_da_pan)
-	AM_RANGE(0xd400, 0xd400) AM_WRITE(adpcm_command_w)  /* ADPCM command for second Z80 to read from port 0x00 */
+void darius_state::darius_sound_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x7fff).bankr("bank1");
+	map(0x8000, 0x8fff).ram();
+	map(0x9000, 0x9001).rw("ym1", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+	map(0xa000, 0xa001).rw("ym2", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+	map(0xb000, 0xb000).nopr().w("ciu", FUNC(pc060ha_device::slave_port_w));
+	map(0xb001, 0xb001).rw("ciu", FUNC(pc060ha_device::slave_comm_r), FUNC(pc060ha_device::slave_comm_w));
+	map(0xc000, 0xc000).w(this, FUNC(darius_state::darius_fm0_pan));
+	map(0xc400, 0xc400).w(this, FUNC(darius_state::darius_fm1_pan));
+	map(0xc800, 0xc800).w(this, FUNC(darius_state::darius_psg0_pan));
+	map(0xcc00, 0xcc00).w(this, FUNC(darius_state::darius_psg1_pan));
+	map(0xd000, 0xd000).w(this, FUNC(darius_state::darius_da_pan));
+	map(0xd400, 0xd400).w(this, FUNC(darius_state::adpcm_command_w));  /* ADPCM command for second Z80 to read from port 0x00 */
 //  AM_RANGE(0xd800, 0xd800) AM_WRITE(display_value)    /* ??? */
-	AM_RANGE(0xdc00, 0xdc00) AM_WRITE(sound_bankswitch_w)
-ADDRESS_MAP_END
+	map(0xdc00, 0xdc00).w(this, FUNC(darius_state::sound_bankswitch_w));
+}
 
-static ADDRESS_MAP_START( darius_sound2_map, AS_PROGRAM, 8, darius_state )
-	AM_RANGE(0x0000, 0xffff) AM_ROM AM_WRITENOP
+void darius_state::darius_sound2_map(address_map &map)
+{
+	map(0x0000, 0xffff).rom().nopw();
 	/* yes, no RAM */
-ADDRESS_MAP_END
+}
 
 
 WRITE_LINE_MEMBER(darius_state::darius_adpcm_int)
@@ -518,13 +487,14 @@ WRITE8_MEMBER(darius_state::adpcm_data_w)
 	m_msm->reset_w(!(data & 0x20));    /* my best guess, but it could be output enable as well */
 }
 
-static ADDRESS_MAP_START( darius_sound2_io_map, AS_IO, 8, darius_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_READWRITE(adpcm_command_read, adpcm_nmi_disable)
-	AM_RANGE(0x01, 0x01) AM_WRITE(adpcm_nmi_enable)
-	AM_RANGE(0x02, 0x02) AM_READ(readport2) AM_WRITE(adpcm_data_w)  /* readport2 ??? */
-	AM_RANGE(0x03, 0x03) AM_READ(readport3) /* ??? */
-ADDRESS_MAP_END
+void darius_state::darius_sound2_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).rw(this, FUNC(darius_state::adpcm_command_read), FUNC(darius_state::adpcm_nmi_disable));
+	map(0x01, 0x01).w(this, FUNC(darius_state::adpcm_nmi_enable));
+	map(0x02, 0x02).r(this, FUNC(darius_state::readport2)).w(this, FUNC(darius_state::adpcm_data_w));  /* readport2 ??? */
+	map(0x03, 0x03).r(this, FUNC(darius_state::readport3)); /* ??? */
+}
 
 
 /***********************************************************
@@ -734,21 +704,21 @@ void darius_state::machine_reset()
 }
 
 
-static MACHINE_CONFIG_START( darius )
+MACHINE_CONFIG_START(darius_state::darius)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M68000, XTAL_16MHz/2)  /* 8 MHz */
+	MCFG_CPU_ADD("maincpu", M68000, XTAL(16'000'000)/2)  /* 8 MHz */
 	MCFG_CPU_PROGRAM_MAP(darius_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("lscreen", darius_state,  irq4_line_hold)
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_8MHz/2) /* 4 MHz */
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(8'000'000)/2) /* 4 MHz */
 	MCFG_CPU_PROGRAM_MAP(darius_sound_map)
 
-	MCFG_CPU_ADD("cpub", M68000, XTAL_16MHz/2) /* 8 MHz */
+	MCFG_CPU_ADD("cpub", M68000, XTAL(16'000'000)/2) /* 8 MHz */
 	MCFG_CPU_PROGRAM_MAP(darius_cpub_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("lscreen", darius_state,  irq4_line_hold)
 
-	MCFG_CPU_ADD("adpcm", Z80, XTAL_8MHz/2) /* 4 MHz */  /* ADPCM player using MSM5205 */
+	MCFG_CPU_ADD("adpcm", Z80, XTAL(8'000'000)/2) /* 4 MHz */  /* ADPCM player using MSM5205 */
 	MCFG_CPU_PROGRAM_MAP(darius_sound2_map)
 	MCFG_CPU_IO_MAP(darius_sound2_io_map)
 
@@ -796,7 +766,7 @@ static MACHINE_CONFIG_START( darius )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MCFG_SOUND_ADD("ym1", YM2203, XTAL_8MHz/2) /* 4 MHz */
+	MCFG_SOUND_ADD("ym1", YM2203, XTAL(8'000'000)/2) /* 4 MHz */
 	MCFG_YM2203_IRQ_HANDLER(INPUTLINE("audiocpu", 0)) /* assumes Z80 sandwiched between 68Ks */
 	MCFG_AY8910_PORT_A_WRITE_CB(WRITE8(darius_state, darius_write_portA0))  /* portA write */
 	MCFG_AY8910_PORT_B_WRITE_CB(WRITE8(darius_state, darius_write_portB0))  /* portB write */
@@ -809,7 +779,7 @@ static MACHINE_CONFIG_START( darius )
 	MCFG_SOUND_ROUTE(3, "filter0.3l", 0.60)
 	MCFG_SOUND_ROUTE(3, "filter0.3r", 0.60)
 
-	MCFG_SOUND_ADD("ym2", YM2203, XTAL_8MHz/2) /* 4 MHz */
+	MCFG_SOUND_ADD("ym2", YM2203, XTAL(8'000'000)/2) /* 4 MHz */
 	MCFG_AY8910_PORT_A_WRITE_CB(WRITE8(darius_state, darius_write_portA1))  /* portA write */
 	MCFG_AY8910_PORT_B_WRITE_CB(WRITE8(darius_state, darius_write_portB1))  /* portB write */
 	MCFG_SOUND_ROUTE(0, "filter1.0l", 0.08)
@@ -821,7 +791,7 @@ static MACHINE_CONFIG_START( darius )
 	MCFG_SOUND_ROUTE(3, "filter1.3l", 0.60)
 	MCFG_SOUND_ROUTE(3, "filter1.3r", 0.60)
 
-	MCFG_SOUND_ADD("msm", MSM5205, XTAL_384kHz)
+	MCFG_SOUND_ADD("msm", MSM5205, XTAL(384'000))
 	MCFG_MSM5205_VCLK_CB(WRITELINE(darius_state, darius_adpcm_int))   /* interrupt function */
 	MCFG_MSM5205_PRESCALER_SELECTOR(S48_4B)      /* 8KHz   */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "msm5205.l", 1.0)
@@ -866,9 +836,9 @@ static MACHINE_CONFIG_START( darius )
 	MCFG_FILTER_VOLUME_ADD("msm5205.r", 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MCFG_DEVICE_ADD("tc0140syt", TC0140SYT, 0)
-	MCFG_TC0140SYT_MASTER_CPU("maincpu")
-	MCFG_TC0140SYT_SLAVE_CPU("audiocpu")
+	MCFG_DEVICE_ADD("ciu", PC060HA, 0)
+	MCFG_PC060HA_MASTER_CPU("maincpu")
+	MCFG_PC060HA_SLAVE_CPU("audiocpu")
 MACHINE_CONFIG_END
 
 

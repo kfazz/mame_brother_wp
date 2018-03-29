@@ -175,6 +175,12 @@ public:
 	DECLARE_MACHINE_RESET(mmd1);
 	DECLARE_MACHINE_RESET(mmd2);
 	required_device<cpu_device> m_maincpu;
+	void mmd1(machine_config &config);
+	void mmd2(machine_config &config);
+	void mmd1_io(address_map &map);
+	void mmd1_mem(address_map &map);
+	void mmd2_io(address_map &map);
+	void mmd2_mem(address_map &map);
 };
 
 
@@ -243,40 +249,44 @@ READ8_MEMBER( mmd1_state::mmd1_keyboard_r )
 		return m_return_code;
 }
 
-static ADDRESS_MAP_START(mmd1_mem, AS_PROGRAM, 8, mmd1_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x0000, 0x00ff ) AM_ROM // Main ROM
-	AM_RANGE( 0x0100, 0x01ff ) AM_ROM // Expansion slot
-	AM_RANGE( 0x0200, 0x02ff ) AM_RAM
-	AM_RANGE( 0x0300, 0x03ff ) AM_RAM
-ADDRESS_MAP_END
+void mmd1_state::mmd1_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x00ff).rom(); // Main ROM
+	map(0x0100, 0x01ff).rom(); // Expansion slot
+	map(0x0200, 0x02ff).ram();
+	map(0x0300, 0x03ff).ram();
+}
 
-static ADDRESS_MAP_START(mmd1_io, AS_IO, 8, mmd1_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0x07)
-	AM_RANGE( 0x00, 0x00 ) AM_READWRITE(mmd1_keyboard_r, mmd1_port0_w)
-	AM_RANGE( 0x01, 0x01 ) AM_WRITE(mmd1_port1_w)
-	AM_RANGE( 0x02, 0x02 ) AM_WRITE(mmd1_port2_w)
-ADDRESS_MAP_END
+void mmd1_state::mmd1_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0x07);
+	map(0x00, 0x00).rw(this, FUNC(mmd1_state::mmd1_keyboard_r), FUNC(mmd1_state::mmd1_port0_w));
+	map(0x01, 0x01).w(this, FUNC(mmd1_state::mmd1_port1_w));
+	map(0x02, 0x02).w(this, FUNC(mmd1_state::mmd1_port2_w));
+}
 
-static ADDRESS_MAP_START(mmd2_mem, AS_PROGRAM, 8, mmd1_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x03ff) AM_READ_BANK("bank1") AM_WRITE_BANK("bank2")
-	AM_RANGE(0x0400, 0x0fff) AM_READ_BANK("bank3") AM_WRITE_BANK("bank4")
-	AM_RANGE(0xd800, 0xe3ff) AM_READ_BANK("bank5") AM_WRITE_BANK("bank6")
-	AM_RANGE(0xe400, 0xe7ff) AM_READ_BANK("bank7") AM_WRITE_BANK("bank8")
-	AM_RANGE(0xfc00, 0xfcff) AM_RAM // Scratchpad
-ADDRESS_MAP_END
+void mmd1_state::mmd2_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x03ff).bankr("bank1").bankw("bank2");
+	map(0x0400, 0x0fff).bankr("bank3").bankw("bank4");
+	map(0xd800, 0xe3ff).bankr("bank5").bankw("bank6");
+	map(0xe400, 0xe7ff).bankr("bank7").bankw("bank8");
+	map(0xfc00, 0xfcff).ram(); // Scratchpad
+}
 
-static ADDRESS_MAP_START(mmd2_io, AS_IO, 8, mmd1_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x00, 0x00 ) AM_WRITE(mmd1_port0_w)
-	AM_RANGE( 0x01, 0x01 ) AM_READWRITE(mmd2_01_r,mmd1_port1_w)
-	AM_RANGE( 0x02, 0x02 ) AM_WRITE(mmd1_port2_w)
-	AM_RANGE( 0x03, 0x03 ) AM_DEVREADWRITE("i8279", i8279_device, status_r, cmd_w)
-	AM_RANGE( 0x04, 0x04 ) AM_DEVREADWRITE("i8279", i8279_device, data_r, data_w)
-	AM_RANGE( 0x05, 0x07 ) AM_READ(mmd2_bank_r)
-ADDRESS_MAP_END
+void mmd1_state::mmd2_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00, 0x00).w(this, FUNC(mmd1_state::mmd1_port0_w));
+	map(0x01, 0x01).rw(this, FUNC(mmd1_state::mmd2_01_r), FUNC(mmd1_state::mmd1_port1_w));
+	map(0x02, 0x02).w(this, FUNC(mmd1_state::mmd1_port2_w));
+	map(0x03, 0x03).rw("i8279", FUNC(i8279_device::status_r), FUNC(i8279_device::cmd_w));
+	map(0x04, 0x04).rw("i8279", FUNC(i8279_device::data_r), FUNC(i8279_device::data_w));
+	map(0x05, 0x07).r(this, FUNC(mmd1_state::mmd2_bank_r));
+}
 
 
 /* Input ports */
@@ -475,7 +485,7 @@ We preset all banks here, so that bankswitching will incur no speed penalty.
 	membank("bank8")->configure_entry(2, &p_ram[0xd800]);
 }
 
-static MACHINE_CONFIG_START( mmd1 )
+MACHINE_CONFIG_START(mmd1_state::mmd1)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu",I8080, 6750000 / 9)
 	MCFG_CPU_PROGRAM_MAP(mmd1_mem)
@@ -487,7 +497,7 @@ static MACHINE_CONFIG_START( mmd1 )
 	MCFG_DEFAULT_LAYOUT(layout_mmd1)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( mmd2 )
+MACHINE_CONFIG_START(mmd1_state::mmd2)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu",I8080, 6750000 / 9)
 	MCFG_CPU_PROGRAM_MAP(mmd2_mem)

@@ -100,7 +100,7 @@ Graphics: CY37256P160-83AC x 2 (Ultra37000 CPLD family - 160 pin TQFP, 256 Macro
  *
  *************************************/
 
-#define MASTER_CLOCK        (XTAL_73_728MHz)
+#define MASTER_CLOCK        (XTAL(73'728'000))
 #define MAIN_CPU_CLOCK      (MASTER_CLOCK / 4)  /* divider is either 3 or 4 */
 #define NAMCO_AUDIO_CLOCK   (MASTER_CLOCK / 4 /  6 / 32)
 
@@ -186,39 +186,41 @@ WRITE8_MEMBER(_20pacgal_state::sprite_lookup_w)
 // where does the clut (sprite_lookup_w) get uploaded? even if I set a WP on that data in ROM it isn't hit?
 // likewise the sound table.. is it being uploaded in a different format at 0x0c000?
 // we also need the palette data because there is only a single rom on this pcb?
-static ADDRESS_MAP_START( 25pacman_map, AS_PROGRAM, 8, _25pacman_state )
-	AM_RANGE(0x04000, 0x047ff) AM_RAM AM_SHARE("video_ram")
-	AM_RANGE(0x04800, 0x05fff) AM_RAM
-	AM_RANGE(0x06000, 0x06fff) AM_WRITEONLY AM_SHARE("char_gfx_ram")
-	AM_RANGE(0x07000, 0x0717f) AM_WRITE(sprite_ram_w)
+void _25pacman_state::_25pacman_map(address_map &map)
+{
+	map(0x00000, 0x3ffff).rw("flash", FUNC(amd_29lv200t_device::read), FUNC(amd_29lv200t_device::write));  // (always fall through if nothing else is mapped?)
+
+	map(0x04000, 0x047ff).ram().share("video_ram");
+	map(0x04800, 0x05fff).ram();
+	map(0x06000, 0x06fff).writeonly().share("char_gfx_ram");
+	map(0x07000, 0x0717f).w(this, FUNC(_25pacman_state::sprite_ram_w));
 //  AM_RANGE(0x08000, 0x09fff) AM_READ_BANK("bank1") AM_WRITE(ram_48000_w)
-	AM_RANGE(0x08000, 0x09fff) AM_WRITENOP
-	AM_RANGE(0x0a000, 0x0bfff) AM_WRITE(sprite_gfx_w)
-	AM_RANGE(0x0c000, 0x0dfff) AM_WRITENOP // is this the sound waveforms in a different format?
-	AM_RANGE(0x0e000, 0x0ffff) AM_WRITENOP
-	AM_RANGE(0x1c000, 0x1ffff) AM_WRITENOP
-	AM_RANGE(0x00000, 0x3ffff) AM_DEVREADWRITE("flash", amd_29lv200t_device, read, write )  // (always fall through if nothing else is mapped?)
+	map(0x08000, 0x09fff).nopw();
+	map(0x0a000, 0x0bfff).w(this, FUNC(_25pacman_state::sprite_gfx_w));
+	map(0x0c000, 0x0dfff).nopw(); // is this the sound waveforms in a different format?
+	map(0x0e000, 0x0ffff).nopw();
+	map(0x1c000, 0x1ffff).nopw();
+}
 
-ADDRESS_MAP_END
-
-static ADDRESS_MAP_START( 20pacgal_map, AS_PROGRAM, 8, _20pacgal_state )
-	AM_RANGE(0x00000, 0x03fff) AM_ROM
-	AM_RANGE(0x04000, 0x07fff) AM_ROM
-	AM_RANGE(0x08000, 0x09fff) AM_ROM
-	AM_RANGE(0x0a000, 0x0ffff) AM_MIRROR(0x40000) AM_ROM
-	AM_RANGE(0x10000, 0x3ffff) AM_ROM
-	AM_RANGE(0x44000, 0x447ff) AM_RAM AM_SHARE("video_ram")
-	AM_RANGE(0x45040, 0x4505f) AM_DEVWRITE("namco", namco_cus30_device, pacman_sound_w)
-	AM_RANGE(0x44800, 0x45eff) AM_RAM
-	AM_RANGE(0x45f00, 0x45fff) AM_DEVWRITE("namco", namco_cus30_device, namcos1_cus30_w)
-	AM_RANGE(0x46000, 0x46fff) AM_WRITEONLY AM_SHARE("char_gfx_ram")
-	AM_RANGE(0x47100, 0x47100) AM_RAM   /* leftover from original Galaga code */
-	AM_RANGE(0x48000, 0x49fff) AM_READ_BANK("bank1") AM_WRITE(ram_48000_w)  /* this should be a mirror of 08000-09fff */
-	AM_RANGE(0x4c000, 0x4dfff) AM_WRITE(sprite_gfx_w)
-	AM_RANGE(0x4e000, 0x4e17f) AM_WRITE(sprite_ram_w)
-	AM_RANGE(0x4e180, 0x4feff) AM_WRITENOP
-	AM_RANGE(0x4ff00, 0x4ffff) AM_WRITE(sprite_lookup_w)
-ADDRESS_MAP_END
+void _20pacgal_state::_20pacgal_map(address_map &map)
+{
+	map(0x00000, 0x03fff).rom();
+	map(0x04000, 0x07fff).rom();
+	map(0x08000, 0x09fff).rom();
+	map(0x0a000, 0x0ffff).mirror(0x40000).rom();
+	map(0x10000, 0x3ffff).rom();
+	map(0x44000, 0x447ff).ram().share("video_ram");
+	map(0x44800, 0x45eff).ram();
+	map(0x45040, 0x4505f).w("namco", FUNC(namco_cus30_device::pacman_sound_w));
+	map(0x45f00, 0x45fff).w("namco", FUNC(namco_cus30_device::namcos1_cus30_w));
+	map(0x46000, 0x46fff).writeonly().share("char_gfx_ram");
+	map(0x47100, 0x47100).ram();   /* leftover from original Galaga code */
+	map(0x48000, 0x49fff).bankr("bank1").w(this, FUNC(_20pacgal_state::ram_48000_w));  /* this should be a mirror of 08000-09fff */
+	map(0x4c000, 0x4dfff).w(this, FUNC(_20pacgal_state::sprite_gfx_w));
+	map(0x4e000, 0x4e17f).w(this, FUNC(_20pacgal_state::sprite_ram_w));
+	map(0x4e180, 0x4feff).nopw();
+	map(0x4ff00, 0x4ffff).w(this, FUNC(_20pacgal_state::sprite_lookup_w));
+}
 
 
 /*************************************
@@ -232,47 +234,49 @@ READ8_MEMBER( _25pacman_state::_25pacman_io_87_r )
 	return 0xff;
 }
 
-	static ADDRESS_MAP_START( 25pacman_io_map, AS_IO, 8, _25pacman_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x3f) AM_NOP /* Z180 internal registers */
-	AM_RANGE(0x40, 0x7f) AM_NOP /* Z180 internal registers */
-	AM_RANGE(0x80, 0x80) AM_READ_PORT("P1")
-	AM_RANGE(0x81, 0x81) AM_READ_PORT("P2")
-	AM_RANGE(0x82, 0x82) AM_READ_PORT("SERVICE")
-	AM_RANGE(0x80, 0x80) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x81, 0x81) AM_WRITE(timer_pulse_w)        /* ??? pulsed by the timer irq */
-	AM_RANGE(0x82, 0x82) AM_WRITE(irqack_w)
+void _25pacman_state::_25pacman_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x3f).noprw(); /* Z180 internal registers */
+	map(0x40, 0x7f).noprw(); /* Z180 internal registers */
+	map(0x80, 0x80).portr("P1");
+	map(0x81, 0x81).portr("P2");
+	map(0x82, 0x82).portr("SERVICE");
+	map(0x80, 0x80).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x81, 0x81).w(this, FUNC(_25pacman_state::timer_pulse_w));        /* ??? pulsed by the timer irq */
+	map(0x82, 0x82).w(this, FUNC(_25pacman_state::irqack_w));
 //  AM_RANGE(0x84, 0x84) AM_NOP /* ?? */
-	AM_RANGE(0x85, 0x86) AM_WRITEONLY AM_SHARE("stars_seed")    /* stars: rng seed (lo/hi) */
-	AM_RANGE(0x87, 0x87) AM_READ( _25pacman_io_87_r ) // not eeprom on this
-	AM_RANGE(0x87, 0x87) AM_WRITENOP
+	map(0x85, 0x86).writeonly().share("stars_seed");    /* stars: rng seed (lo/hi) */
+	map(0x87, 0x87).r(this, FUNC(_25pacman_state::_25pacman_io_87_r)); // not eeprom on this
+	map(0x87, 0x87).nopw();
 //  AM_RANGE(0x88, 0x88) AM_WRITE(ram_bank_select_w)
-	AM_RANGE(0x89, 0x89) AM_DEVWRITE("dac", dac_byte_interface, write)
-	AM_RANGE(0x8a, 0x8a) AM_WRITEONLY AM_SHARE("stars_ctrl")    /* stars: bits 3-4 = active set; bit 5 = enable */
-	AM_RANGE(0x8b, 0x8b) AM_WRITEONLY AM_SHARE("flip")
-	AM_RANGE(0x8c, 0x8c) AM_WRITENOP
-	AM_RANGE(0x8f, 0x8f) AM_WRITE(_20pacgal_coin_counter_w)
-ADDRESS_MAP_END
+	map(0x89, 0x89).w("dac", FUNC(dac_byte_interface::write));
+	map(0x8a, 0x8a).writeonly().share("stars_ctrl");    /* stars: bits 3-4 = active set; bit 5 = enable */
+	map(0x8b, 0x8b).writeonly().share("flip");
+	map(0x8c, 0x8c).nopw();
+	map(0x8f, 0x8f).w(this, FUNC(_25pacman_state::_20pacgal_coin_counter_w));
+}
 
-static ADDRESS_MAP_START( 20pacgal_io_map, AS_IO, 8, _20pacgal_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x3f) AM_NOP /* Z180 internal registers */
-	AM_RANGE(0x40, 0x7f) AM_NOP /* Z180 internal registers */
-	AM_RANGE(0x80, 0x80) AM_READ_PORT("P1")
-	AM_RANGE(0x81, 0x81) AM_READ_PORT("P2")
-	AM_RANGE(0x82, 0x82) AM_READ_PORT("SERVICE")
-	AM_RANGE(0x80, 0x80) AM_DEVWRITE("watchdog", watchdog_timer_device, reset_w)
-	AM_RANGE(0x81, 0x81) AM_WRITE(timer_pulse_w)        /* ??? pulsed by the timer irq */
-	AM_RANGE(0x82, 0x82) AM_WRITE(irqack_w)
-	AM_RANGE(0x84, 0x84) AM_NOP /* ?? */
-	AM_RANGE(0x85, 0x86) AM_WRITEONLY AM_SHARE("stars_seed")    /* stars: rng seed (lo/hi) */
-	AM_RANGE(0x87, 0x87) AM_READ_PORT("EEPROMIN") AM_WRITE_PORT("EEPROMOUT")
-	AM_RANGE(0x88, 0x88) AM_WRITE(ram_bank_select_w)
-	AM_RANGE(0x89, 0x89) AM_DEVWRITE("dac", dac_byte_interface, write)
-	AM_RANGE(0x8a, 0x8a) AM_WRITEONLY AM_SHARE("stars_ctrl")    /* stars: bits 3-4 = active set; bit 5 = enable */
-	AM_RANGE(0x8b, 0x8b) AM_WRITEONLY AM_SHARE("flip")
-	AM_RANGE(0x8f, 0x8f) AM_WRITE(_20pacgal_coin_counter_w)
-ADDRESS_MAP_END
+void _20pacgal_state::_20pacgal_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x3f).noprw(); /* Z180 internal registers */
+	map(0x40, 0x7f).noprw(); /* Z180 internal registers */
+	map(0x80, 0x80).portr("P1");
+	map(0x81, 0x81).portr("P2");
+	map(0x82, 0x82).portr("SERVICE");
+	map(0x80, 0x80).w("watchdog", FUNC(watchdog_timer_device::reset_w));
+	map(0x81, 0x81).w(this, FUNC(_20pacgal_state::timer_pulse_w));        /* ??? pulsed by the timer irq */
+	map(0x82, 0x82).w(this, FUNC(_20pacgal_state::irqack_w));
+	map(0x84, 0x84).noprw(); /* ?? */
+	map(0x85, 0x86).writeonly().share("stars_seed");    /* stars: rng seed (lo/hi) */
+	map(0x87, 0x87).portr("EEPROMIN").portw("EEPROMOUT");
+	map(0x88, 0x88).w(this, FUNC(_20pacgal_state::ram_bank_select_w));
+	map(0x89, 0x89).w("dac", FUNC(dac_byte_interface::write));
+	map(0x8a, 0x8a).writeonly().share("stars_ctrl");    /* stars: bits 3-4 = active set; bit 5 = enable */
+	map(0x8b, 0x8b).writeonly().share("flip");
+	map(0x8f, 0x8f).w(this, FUNC(_20pacgal_state::_20pacgal_coin_counter_w));
+}
 
 
 
@@ -389,12 +393,12 @@ INTERRUPT_GEN_MEMBER(_20pacgal_state::vblank_irq)
 		device.execute().set_input_line(0, HOLD_LINE); // TODO: assert breaks the inputs in 25pacman test mode
 }
 
-static MACHINE_CONFIG_START( 20pacgal )
+MACHINE_CONFIG_START(_20pacgal_state::_20pacgal)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z180, MAIN_CPU_CLOCK)
-	MCFG_CPU_PROGRAM_MAP(20pacgal_map)
-	MCFG_CPU_IO_MAP(20pacgal_io_map)
+	MCFG_CPU_PROGRAM_MAP(_20pacgal_map)
+	MCFG_CPU_IO_MAP(_20pacgal_io_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", _20pacgal_state,  vblank_irq)
 
 	MCFG_EEPROM_SERIAL_93C46_8BIT_ADD("eeprom")
@@ -402,7 +406,7 @@ static MACHINE_CONFIG_START( 20pacgal )
 	MCFG_WATCHDOG_ADD("watchdog")
 
 	/* video hardware */
-	MCFG_FRAGMENT_ADD(20pacgal_video)
+	_20pacgal_video(config);
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("speaker")
@@ -417,12 +421,13 @@ static MACHINE_CONFIG_START( 20pacgal )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( 25pacman, 20pacgal )
+MACHINE_CONFIG_START(_25pacman_state::_25pacman)
+	_20pacgal(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
-	MCFG_CPU_PROGRAM_MAP(25pacman_map)
-	MCFG_CPU_IO_MAP(25pacman_io_map)
+	MCFG_CPU_PROGRAM_MAP(_25pacman_map)
+	MCFG_CPU_IO_MAP(_25pacman_io_map)
 
 	MCFG_AMD_29LV200T_ADD("flash")
 MACHINE_CONFIG_END
@@ -534,12 +539,12 @@ DRIVER_INIT_MEMBER(_20pacgal_state,25pacman)
  *
  *************************************/
 
-GAME( 2006, 25pacman,   0,        25pacman, 25pacman,  _25pacman_state, 25pacman, ROT90, "Namco / Cosmodog", "Pac-Man - 25th Anniversary Edition (Rev 3.00)",                       MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE | MACHINE_NOT_WORKING )
-GAME( 2005, 25pacmano,  25pacman, 20pacgal, 25pacmano, _20pacgal_state, 25pacman, ROT90, "Namco / Cosmodog", "Pac-Man - 25th Anniversary Edition (Rev 2.00)",                       MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)
+GAME( 2006, 25pacman,   0,        _25pacman, 25pacman,  _25pacman_state, 25pacman, ROT90, "Namco / Cosmodog", "Pac-Man - 25th Anniversary Edition (Rev 3.00)",                       MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE | MACHINE_NOT_WORKING )
+GAME( 2005, 25pacmano,  25pacman, _20pacgal, 25pacmano, _20pacgal_state, 25pacman, ROT90, "Namco / Cosmodog", "Pac-Man - 25th Anniversary Edition (Rev 2.00)",                       MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)
 
-GAME( 2000, 20pacgal,   0,        20pacgal, 20pacgal,  _20pacgal_state, 20pacgal, ROT90, "Namco / Cosmodog", "Ms. Pac-Man/Galaga - 20th Anniversary Class of 1981 Reunion (V1.08)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)
-GAME( 2000, 20pacgalr4, 20pacgal, 20pacgal, 20pacgal,  _20pacgal_state, 20pacgal, ROT90, "Namco / Cosmodog", "Ms. Pac-Man/Galaga - 20th Anniversary Class of 1981 Reunion (V1.04)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)
-GAME( 2000, 20pacgalr3, 20pacgal, 20pacgal, 20pacgal,  _20pacgal_state, 20pacgal, ROT90, "Namco / Cosmodog", "Ms. Pac-Man/Galaga - 20th Anniversary Class of 1981 Reunion (V1.03)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)
-GAME( 2000, 20pacgalr2, 20pacgal, 20pacgal, 20pacgal,  _20pacgal_state, 20pacgal, ROT90, "Namco / Cosmodog", "Ms. Pac-Man/Galaga - 20th Anniversary Class of 1981 Reunion (V1.02)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)
-GAME( 2000, 20pacgalr1, 20pacgal, 20pacgal, 20pacgal,  _20pacgal_state, 20pacgal, ROT90, "Namco / Cosmodog", "Ms. Pac-Man/Galaga - 20th Anniversary Class of 1981 Reunion (V1.01)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)
-GAME( 2000, 20pacgalr0, 20pacgal, 20pacgal, 20pacgal,  _20pacgal_state, 20pacgal, ROT90, "Namco / Cosmodog", "Ms. Pac-Man/Galaga - 20th Anniversary Class of 1981 Reunion (V1.00)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)
+GAME( 2000, 20pacgal,   0,        _20pacgal, 20pacgal,  _20pacgal_state, 20pacgal, ROT90, "Namco / Cosmodog", "Ms. Pac-Man/Galaga - 20th Anniversary Class of 1981 Reunion (V1.08)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)
+GAME( 2000, 20pacgalr4, 20pacgal, _20pacgal, 20pacgal,  _20pacgal_state, 20pacgal, ROT90, "Namco / Cosmodog", "Ms. Pac-Man/Galaga - 20th Anniversary Class of 1981 Reunion (V1.04)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)
+GAME( 2000, 20pacgalr3, 20pacgal, _20pacgal, 20pacgal,  _20pacgal_state, 20pacgal, ROT90, "Namco / Cosmodog", "Ms. Pac-Man/Galaga - 20th Anniversary Class of 1981 Reunion (V1.03)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)
+GAME( 2000, 20pacgalr2, 20pacgal, _20pacgal, 20pacgal,  _20pacgal_state, 20pacgal, ROT90, "Namco / Cosmodog", "Ms. Pac-Man/Galaga - 20th Anniversary Class of 1981 Reunion (V1.02)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)
+GAME( 2000, 20pacgalr1, 20pacgal, _20pacgal, 20pacgal,  _20pacgal_state, 20pacgal, ROT90, "Namco / Cosmodog", "Ms. Pac-Man/Galaga - 20th Anniversary Class of 1981 Reunion (V1.01)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)
+GAME( 2000, 20pacgalr0, 20pacgal, _20pacgal, 20pacgal,  _20pacgal_state, 20pacgal, ROT90, "Namco / Cosmodog", "Ms. Pac-Man/Galaga - 20th Anniversary Class of 1981 Reunion (V1.00)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE)

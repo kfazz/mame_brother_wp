@@ -12,11 +12,12 @@
 #include "cpu/v60/v60.h"
 #include "machine/i8251.h"
 #include "machine/m1comm.h"
+#include "machine/timer.h"
 #include "video/segaic24.h"
 
 #include "screen.h"
 
-#include <glm/glm/vec3.hpp>
+#include <glm/vec3.hpp>
 
 #include <functional>
 
@@ -32,13 +33,15 @@ public:
 	model1_state(const machine_config &mconfig, device_type type, const char *tag)
 		: driver_device(mconfig, type, tag)
 		, m_maincpu(*this, "maincpu")
-		, m_m1audio(*this, "m1audio")
+		, m_m1audio(*this, M1AUDIO_TAG)
 		, m_m1uart(*this, "m1uart")
 		, m_m1comm(*this, "m1comm")
 		, m_dsbz80(*this, DSBZ80_TAG)
 		, m_tgp(*this, "tgp")
 		, m_screen(*this, "screen")
 		, m_io_timer(*this, "iotimer")
+		, m_poly_rom(*this, "polygons")
+		, m_tgp_data(*this, "tgp_data")
 		, m_mr2(*this, "mr2")
 		, m_mr(*this, "mr")
 		, m_display_list0(*this, "display_list0")
@@ -124,36 +127,37 @@ public:
 	class quad_t
 	{
 	public:
-		quad_t() : z(0), col(0) { p[0] = nullptr; p[1] = nullptr; p[2] = nullptr; p[3] = nullptr; }
+		quad_t() { }
 		quad_t(int ccol, float cz, point_t* p0, point_t* p1, point_t* p2, point_t* p3)
-			: z(cz)
+			: p{ p0, p1, p2, p3 }
+			, z(cz)
 			, col(ccol)
 		{
-			p[0] = p0;
-			p[1] = p1;
-			p[2] = p2;
-			p[3] = p3;
 		}
 
 		int compare(const quad_t* other) const;
 
-		point_t *p[4];
-		float z;
-		int col;
+		point_t *p[4] = { nullptr, nullptr, nullptr, nullptr };
+		float z = 0;
+		int col = 0;
 	};
 
 	struct lightparam_t
 	{
-		float a;
-		float d;
-		float s;
-		int p;
+		float a = 0;
+		float d = 0;
+		float s = 0;
+		int p = 0;
 	};
 
 	class view_t
 	{
 	public:
-		view_t() { }
+		view_t() {
+			light.x = 0;
+			light.y = 0;
+			light.z = 0;
+		}
 
 		void init_translation_matrix();
 
@@ -172,15 +176,29 @@ public:
 
 		void recompute_frustum();
 
-		int xc, yc, x1, y1, x2, y2;
-		float zoomx, zoomy, viewx, viewy;
-		float a_bottom, a_top, a_left, a_right;
-		float vxx, vyy, vzz, ayy, ayyc, ayys;
-		float translation[12];
+		int xc = 0, yc = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+		float zoomx = 0, zoomy = 0, viewx = 0, viewy = 0;
+		float a_bottom = 0, a_top = 0, a_left = 0, a_right = 0;
+		float vxx = 0, vyy = 0, vzz = 0, ayy = 0, ayyc = 0, ayys = 0;
+		float translation[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 		glm::vec3 light;
 		lightparam_t lightparams[32];
 	};
 
+	void model1(machine_config &config);
+	void wingwar(machine_config &config);
+	void swa(machine_config &config);
+	void netmerc(machine_config &config);
+	void model1_vr(machine_config &config);
+	void vr(machine_config &config);
+	void vformula(machine_config &config);
+	void model1_io(address_map &map);
+	void model1_mem(address_map &map);
+	void model1_comm_mem(address_map &map);
+	void model1_vr_io(address_map &map);
+	void model1_vr_mem(address_map &map);
+	void model1_vr_tgp_map(address_map &map);
+	void polhemus_map(address_map &map);
 private:
 	// Machine
 	void irq_raise(int level);
@@ -201,6 +219,9 @@ private:
 	optional_device<mb86233_cpu_device> m_tgp;
 	required_device<screen_device> m_screen;
 	required_device<timer_device> m_io_timer;
+
+	required_region_ptr<uint32_t> m_poly_rom;
+	optional_region_ptr<uint32_t> m_tgp_data;
 
 	required_shared_ptr<uint16_t> m_mr2;
 	required_shared_ptr<uint16_t> m_mr;
@@ -356,7 +377,7 @@ private:
 		std::function<void(view_t*, point_t*, point_t*, point_t*)> m_clip;
 	};
 
-	view_t      *m_view;
+	std::unique_ptr<view_t> m_view;
 	point_t *m_pointdb;
 	point_t *m_pointpt;
 	quad_t      *m_quaddb;
@@ -418,7 +439,6 @@ private:
 	bool    m_render_done;
 
 	std::unique_ptr<uint16_t[]> m_tgp_ram;
-	uint32_t *m_poly_rom;
 	std::unique_ptr<uint32_t[]> m_poly_ram;
 
 	// Rendering helper functions
@@ -486,7 +506,5 @@ private:
 
 
 /*----------- defined in machine/model1.c -----------*/
-
-ADDRESS_MAP_EXTERN( model1_vr_tgp_map, 32 );
 
 #endif // MAME_INCLUDES_MODEL1_H

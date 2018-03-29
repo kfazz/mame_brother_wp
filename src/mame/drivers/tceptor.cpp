@@ -27,7 +27,6 @@
 
 /*******************************************************************/
 
-
 READ8_MEMBER(tceptor_state::m68k_shared_r)
 {
 	return m_m68k_shared_ram[offset];
@@ -144,90 +143,92 @@ READ8_MEMBER(tceptor_state::input1_r)
 	return fix_input1(ioport("BUTTONS")->read(), ioport("SERVICE")->read());
 }
 
-READ8_MEMBER(tceptor_state::readFF)
-{
-	return 0xff;
-}
-
 /*******************************************************************/
 
-static ADDRESS_MAP_START( m6809_map, AS_PROGRAM, 8, tceptor_state )
-	AM_RANGE(0x0000, 0x17ff) AM_RAM
-	AM_RANGE(0x1800, 0x1bff) AM_RAM_WRITE(tceptor_tile_ram_w) AM_SHARE("tile_ram")
-	AM_RANGE(0x1c00, 0x1fff) AM_RAM_WRITE(tceptor_tile_attr_w) AM_SHARE("tile_attr")
-	AM_RANGE(0x2000, 0x3fff) AM_RAM_WRITE(tceptor_bg_ram_w) AM_SHARE("bg_ram")  // background (VIEW RAM)
-	AM_RANGE(0x4000, 0x43ff) AM_DEVREADWRITE("namco", namco_cus30_device, namcos1_cus30_r, namcos1_cus30_w)
-	AM_RANGE(0x4800, 0x4800) AM_WRITENOP                // 3D scope left/right?
-	AM_RANGE(0x4f00, 0x4f00) AM_READNOP             // unknown
-	AM_RANGE(0x4f01, 0x4f01) AM_READ_PORT("PEDAL")          // analog input (accel)
-	AM_RANGE(0x4f02, 0x4f02) AM_READ_PORT("STICKX")         // analog input (left/right)
-	AM_RANGE(0x4f03, 0x4f03) AM_READ_PORT("STICKY")         // analog input (up/down)
-	AM_RANGE(0x4f00, 0x4f03) AM_WRITENOP                // analog input control?
-	AM_RANGE(0x5000, 0x5006) AM_WRITE(tceptor_bg_scroll_w)  // bg scroll
-	AM_RANGE(0x6000, 0x7fff) AM_RAM AM_SHARE("m68k_shared_ram") // COM RAM
-	AM_RANGE(0x8000, 0x8000) AM_WRITE(m6809_irq_disable_w)
-	AM_RANGE(0x8800, 0x8800) AM_WRITE(m6809_irq_enable_w)
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void tceptor_state::m6809_map(address_map &map)
+{
+	map(0x0000, 0x17ff).ram();
+	map(0x1800, 0x1bff).ram().w(this, FUNC(tceptor_state::tceptor_tile_ram_w)).share("tile_ram");
+	map(0x1c00, 0x1fff).ram().w(this, FUNC(tceptor_state::tceptor_tile_attr_w)).share("tile_attr");
+	map(0x2000, 0x3fff).ram().w(this, FUNC(tceptor_state::tceptor_bg_ram_w)).share("bg_ram");  // background (VIEW RAM)
+	map(0x4000, 0x43ff).rw(m_cus30, FUNC(namco_cus30_device::namcos1_cus30_r), FUNC(namco_cus30_device::namcos1_cus30_w));
+	map(0x4800, 0x4800).w(this, FUNC(tceptor_state::tceptor2_shutter_w));
+	map(0x4f00, 0x4f00).nopr();             // unknown
+	map(0x4f01, 0x4f01).portr("PEDAL");          // analog input (accel)
+	map(0x4f02, 0x4f02).portr("STICKX");         // analog input (left/right)
+	map(0x4f03, 0x4f03).portr("STICKY");         // analog input (up/down)
+	map(0x4f00, 0x4f03).nopw();                // analog input control?
+	map(0x5000, 0x5006).w(this, FUNC(tceptor_state::tceptor_bg_scroll_w));  // bg scroll
+	map(0x6000, 0x7fff).ram().share("m68k_shared_ram"); // COM RAM
+	map(0x8000, 0x8000).w(this, FUNC(tceptor_state::m6809_irq_disable_w));
+	map(0x8800, 0x8800).w(this, FUNC(tceptor_state::m6809_irq_enable_w));
+	map(0x8000, 0xffff).rom();
+}
 
 
-static ADDRESS_MAP_START( m6502_a_map, AS_PROGRAM, 8, tceptor_state )
-	AM_RANGE(0x0000, 0x00ff) AM_RAM AM_SHARE("share2")
-	AM_RANGE(0x0100, 0x01ff) AM_RAM
-	AM_RANGE(0x0200, 0x02ff) AM_RAM
-	AM_RANGE(0x0300, 0x030f) AM_RAM
-	AM_RANGE(0x2000, 0x2001) AM_DEVREADWRITE("ymsnd", ym2151_device, read, write)
-	AM_RANGE(0x3000, 0x30ff) AM_RAM AM_SHARE("share3")
-	AM_RANGE(0x3c01, 0x3c01) AM_WRITEONLY
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void tceptor_state::m6502_a_map(address_map &map)
+{
+	map(0x0000, 0x00ff).ram().share("share2");
+	map(0x0100, 0x01ff).ram();
+	map(0x0200, 0x02ff).ram();
+	map(0x0300, 0x030f).ram();
+	map(0x2000, 0x2001).rw("ymsnd", FUNC(ym2151_device::read), FUNC(ym2151_device::write));
+	map(0x3000, 0x30ff).ram().share("share3");
+	map(0x3c01, 0x3c01).writeonly();
+	map(0x8000, 0xffff).rom();
+}
 
 
-static ADDRESS_MAP_START( m6502_b_map, AS_PROGRAM, 8, tceptor_state )
-	AM_RANGE(0x0000, 0x00ff) AM_RAM AM_SHARE("share2")
-	AM_RANGE(0x0100, 0x01ff) AM_RAM
-	AM_RANGE(0x4000, 0x4000) AM_DEVWRITE("dac", dac_byte_interface, write)
-	AM_RANGE(0x5000, 0x5000) AM_WRITEONLY           // voice ctrl??
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void tceptor_state::m6502_b_map(address_map &map)
+{
+	map(0x0000, 0x00ff).ram().share("share2");
+	map(0x0100, 0x01ff).ram();
+	map(0x4000, 0x4000).w("dac", FUNC(dac_byte_interface::write));
+	map(0x5000, 0x5000).writeonly();           // voice ctrl??
+	map(0x8000, 0xffff).rom();
+}
 
 
-static ADDRESS_MAP_START( m68k_map, AS_PROGRAM, 16, tceptor_state )
-	AM_RANGE(0x000000, 0x00ffff) AM_ROM         // M68K ERROR 1
-	AM_RANGE(0x100000, 0x10ffff) AM_ROM         // not sure
-	AM_RANGE(0x200000, 0x203fff) AM_RAM         // M68K ERROR 0
-	AM_RANGE(0x300000, 0x300001) AM_WRITEONLY
-	AM_RANGE(0x400000, 0x4001ff) AM_WRITEONLY AM_SHARE("sprite_ram")
-	AM_RANGE(0x500000, 0x51ffff) AM_DEVWRITE("c45_road", namco_c45_road_device, write)
-	AM_RANGE(0x600000, 0x600001) AM_WRITE(m68k_irq_enable_w)    // not sure
-	AM_RANGE(0x700000, 0x703fff) AM_READWRITE8(m68k_shared_r, m68k_shared_w, 0x00ff)
-ADDRESS_MAP_END
+void tceptor_state::m68k_map(address_map &map)
+{
+	map(0x000000, 0x00ffff).rom();         // M68K ERROR 1
+	map(0x100000, 0x10ffff).rom();         // not sure
+	map(0x200000, 0x203fff).ram();         // M68K ERROR 0
+	map(0x300000, 0x300001).writeonly();
+	map(0x400000, 0x4001ff).writeonly().share("sprite_ram");
+	map(0x500000, 0x51ffff).w(m_c45_road, FUNC(namco_c45_road_device::write));
+	map(0x600000, 0x600001).w(this, FUNC(tceptor_state::m68k_irq_enable_w));    // not sure
+	map(0x700000, 0x703fff).rw(this, FUNC(tceptor_state::m68k_shared_r), FUNC(tceptor_state::m68k_shared_w)).umask16(0x00ff);
+}
 
 
-static ADDRESS_MAP_START( mcu_map, AS_PROGRAM, 8, tceptor_state )
-	AM_RANGE(0x0000, 0x001f) AM_DEVREADWRITE("mcu", hd63701_cpu_device, m6801_io_r, m6801_io_w)
-	AM_RANGE(0x0080, 0x00ff) AM_RAM
-	AM_RANGE(0x1000, 0x13ff) AM_DEVREADWRITE("namco", namco_cus30_device, namcos1_cus30_r, namcos1_cus30_w)
-	AM_RANGE(0x1400, 0x154d) AM_RAM
-	AM_RANGE(0x17c0, 0x17ff) AM_RAM
-	AM_RANGE(0x2000, 0x20ff) AM_RAM AM_SHARE("share3")
-	AM_RANGE(0x2100, 0x2100) AM_READ(dsw0_r)
-	AM_RANGE(0x2101, 0x2101) AM_READ(dsw1_r)
-	AM_RANGE(0x2200, 0x2200) AM_READ(input0_r)
-	AM_RANGE(0x2201, 0x2201) AM_READ(input1_r)
-	AM_RANGE(0x8000, 0x8000) AM_WRITE(mcu_irq_disable_w)
-	AM_RANGE(0x8800, 0x8800) AM_WRITE(mcu_irq_enable_w)
-	AM_RANGE(0x8000, 0xbfff) AM_ROM
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM
-	AM_RANGE(0xc800, 0xdfff) AM_RAM AM_SHARE("nvram")   // Battery Backup
-	AM_RANGE(0xf000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void tceptor_state::mcu_map(address_map &map)
+{
+	map(0x0000, 0x001f).rw("mcu", FUNC(hd63701_cpu_device::m6801_io_r), FUNC(hd63701_cpu_device::m6801_io_w));
+	map(0x0080, 0x00ff).ram();
+	map(0x1000, 0x13ff).rw(m_cus30, FUNC(namco_cus30_device::namcos1_cus30_r), FUNC(namco_cus30_device::namcos1_cus30_w));
+	map(0x1400, 0x154d).ram();
+	map(0x17c0, 0x17ff).ram();
+	map(0x2000, 0x20ff).ram().share("share3");
+	map(0x2100, 0x2100).r(this, FUNC(tceptor_state::dsw0_r));
+	map(0x2101, 0x2101).r(this, FUNC(tceptor_state::dsw1_r));
+	map(0x2200, 0x2200).r(this, FUNC(tceptor_state::input0_r));
+	map(0x2201, 0x2201).r(this, FUNC(tceptor_state::input1_r));
+	map(0x8000, 0x8000).w(this, FUNC(tceptor_state::mcu_irq_disable_w));
+	map(0x8800, 0x8800).w(this, FUNC(tceptor_state::mcu_irq_enable_w));
+	map(0x8000, 0xbfff).rom();
+	map(0xc000, 0xc7ff).ram();
+	map(0xc800, 0xdfff).ram().share("nvram");   // Battery Backup
+	map(0xf000, 0xffff).rom();
+}
 
 
-static ADDRESS_MAP_START( mcu_io_map, AS_IO, 8, tceptor_state )
-	AM_RANGE(M6801_PORT1, M6801_PORT1) AM_READ(readFF) AM_WRITENOP
-	AM_RANGE(M6801_PORT2, M6801_PORT2) AM_READ(readFF) AM_WRITENOP
-ADDRESS_MAP_END
+void tceptor_state::mcu_io_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(M6801_PORT1, M6801_PORT1).nopw();
+	map(M6801_PORT2, M6801_PORT2).nopw();
+}
 
 
 
@@ -293,7 +294,7 @@ static INPUT_PORTS_START( tceptor2 )
 	PORT_INCLUDE( tceptor )
 
 	PORT_MODIFY("DSW2")
-	PORT_DIPNAME( 0x04, 0x04, "MODE" )
+	PORT_DIPNAME( 0x04, 0x04, "Mode" )
 	PORT_DIPSETTING(    0x00, "2D" )
 	PORT_DIPSETTING(    0x04, "3D" )
 	PORT_BIT( 0xf8, IP_ACTIVE_LOW, IPT_UNKNOWN )
@@ -344,32 +345,31 @@ void tceptor_state::machine_reset()
 
 /*******************************************************************/
 
-static MACHINE_CONFIG_START( tceptor )
+MACHINE_CONFIG_START(tceptor_state::tceptor)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6809, 49152000/32)
+	MCFG_CPU_ADD("maincpu", M6809, XTAL(49'152'000)/32)
 	MCFG_CPU_PROGRAM_MAP(m6809_map)
-	MCFG_CPU_VBLANK_INT_DRIVER("2dscreen", tceptor_state,  m6809_vb_interrupt)
+	MCFG_CPU_VBLANK_INT_DRIVER("screen", tceptor_state, m6809_vb_interrupt)
 
-	MCFG_CPU_ADD("audiocpu", M65C02, 49152000/24)
+	MCFG_CPU_ADD("audiocpu", M65C02, XTAL(49'152'000)/24)
 	MCFG_CPU_PROGRAM_MAP(m6502_a_map)
 
-	MCFG_CPU_ADD("audio2", M65C02, 49152000/24)
+	MCFG_CPU_ADD("audio2", M65C02, XTAL(49'152'000)/24)
 	MCFG_CPU_PROGRAM_MAP(m6502_b_map)
 
-	MCFG_CPU_ADD("sub", M68000, 49152000/4)
+	MCFG_CPU_ADD("sub", M68000, XTAL(49'152'000)/4)
 	MCFG_CPU_PROGRAM_MAP(m68k_map)
-	MCFG_CPU_VBLANK_INT_DRIVER("2dscreen", tceptor_state,  m68k_vb_interrupt)
+	MCFG_CPU_VBLANK_INT_DRIVER("screen", tceptor_state, m68k_vb_interrupt)
 
-	MCFG_CPU_ADD("mcu", HD63701, 49152000/8)    /* or compatible 6808 with extra instructions */
+	MCFG_CPU_ADD("mcu", HD63701, XTAL(49'152'000)/8) // or compatible 6808 with extra instructions
 	MCFG_CPU_PROGRAM_MAP(mcu_map)
 	MCFG_CPU_IO_MAP(mcu_io_map)
-	MCFG_CPU_VBLANK_INT_DRIVER("2dscreen", tceptor_state,  mcu_vb_interrupt)
+	MCFG_CPU_VBLANK_INT_DRIVER("screen", tceptor_state, mcu_vb_interrupt)
 
 	MCFG_QUANTUM_TIME(attotime::from_hz(6000))
 
 	MCFG_NVRAM_ADD_1FILL("nvram")
-
 
 	/* video hardware */
 	MCFG_GFXDECODE_ADD("gfxdecode", "palette", tceptor)
@@ -377,46 +377,26 @@ static MACHINE_CONFIG_START( tceptor )
 	MCFG_PALETTE_INDIRECT_ENTRIES(1024)
 	MCFG_PALETTE_INIT_OWNER(tceptor_state, tceptor)
 
-	MCFG_DEFAULT_LAYOUT(layout_horizont)
-
 	MCFG_NAMCO_C45_ROAD_ADD("c45_road")
 	MCFG_GFX_PALETTE("palette")
 
-	MCFG_SCREEN_ADD("2dscreen", RASTER)
+	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60.606060)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
 	MCFG_SCREEN_SIZE(38*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(2*8, 34*8-1 + 2*8, 0*8, 28*8-1 + 0)
-	MCFG_SCREEN_UPDATE_DRIVER(tceptor_state, screen_update_tceptor_2d)
-	MCFG_SCREEN_PALETTE("palette")
-
-	MCFG_SCREEN_ADD("3dleft", RASTER)
-	MCFG_SCREEN_REFRESH_RATE(60.606060)
-	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_SIZE(38*8, 32*8)
-	MCFG_SCREEN_VISIBLE_AREA(2*8, 34*8-1 + 2*8, 0*8, 28*8-1 + 0)
-	MCFG_SCREEN_UPDATE_DRIVER(tceptor_state, screen_update_tceptor_3d_left)
-	MCFG_SCREEN_PALETTE("palette")
-
-	MCFG_SCREEN_ADD("3dright", RASTER)
-	MCFG_SCREEN_REFRESH_RATE(60.606060)
-	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_SIZE(38*8, 32*8)
-	MCFG_SCREEN_VISIBLE_AREA(2*8, 34*8-1 + 2*8, 0*8, 28*8-1 + 0)
-	MCFG_SCREEN_UPDATE_DRIVER(tceptor_state, screen_update_tceptor_3d_right)
+	MCFG_SCREEN_UPDATE_DRIVER(tceptor_state, screen_update_tceptor)
 	MCFG_SCREEN_VBLANK_CALLBACK(WRITELINE(tceptor_state, screen_vblank_tceptor))
 	MCFG_SCREEN_PALETTE("palette")
-
-
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MCFG_YM2151_ADD("ymsnd", 14318180/4)
+	MCFG_YM2151_ADD("ymsnd", XTAL(14'318'181)/4)
 	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
 	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MCFG_SOUND_ADD("namco", NAMCO_CUS30, 49152000/2048)
+	MCFG_SOUND_ADD("namco", NAMCO_CUS30, XTAL(49'152'000)/2048)
 	MCFG_NAMCO_AUDIO_VOICES(8)
 	MCFG_NAMCO_AUDIO_STEREO(1)
 	MCFG_SOUND_ROUTE(0, "lspeaker", 0.40)
@@ -542,6 +522,6 @@ ROM_START( tceptor2 )
 ROM_END
 
 
-//   ( YEAR  NAME      PARENT    MACHINE   INPUT     STATE          INIT      MONITOR   COMPANY   FULLNAME             FLAGS )
-GAME ( 1986, tceptor,  0,        tceptor,  tceptor,  tceptor_state, 0,        ROT0,     "Namco",  "Thunder Ceptor",    0)
-GAMEL( 1986, tceptor2, tceptor,  tceptor,  tceptor2, tceptor_state, 0,        ROT0,     "Namco",  "Thunder Ceptor II", 0, layout_tceptor2)
+//   ( YEAR  NAME      PARENT    MACHINE   INPUT     STATE          INIT      MONITOR   COMPANY   FULLNAME                 FLAGS )
+GAME ( 1986, tceptor,  0,        tceptor,  tceptor,  tceptor_state, 0,        ROT0,     "Namco",  "Thunder Ceptor",        0)
+GAMEL( 1986, tceptor2, tceptor,  tceptor,  tceptor2, tceptor_state, 0,        ROT0,     "Namco",  "3-D Thunder Ceptor II", 0, layout_tceptor2)

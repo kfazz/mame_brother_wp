@@ -75,10 +75,11 @@ Package: 132-pin PGA, 200-pin QFP
 
 #include "emu.h"
 #include "v60.h"
+#include "v60d.h"
 #include "debugger.h"
 
-DEFINE_DEVICE_TYPE(V60, v60_device, "v60", "V60")
-DEFINE_DEVICE_TYPE(V70, v70_device, "v70", "V70")
+DEFINE_DEVICE_TYPE(V60, v60_device, "v60", "NEC V60")
+DEFINE_DEVICE_TYPE(V70, v70_device, "v70", "NEC V70")
 
 
 // Set m_PIR (Processor ID) for NEC m_ LSB is reserved to NEC,
@@ -115,17 +116,9 @@ device_memory_interface::space_config_vector v60_device::memory_space_config() c
 }
 
 
-offs_t v60_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
+std::unique_ptr<util::disasm_interface> v60_device::create_disassembler()
 {
-	extern CPU_DISASSEMBLE( v60 );
-	return CPU_DISASSEMBLE_NAME(v60)(this, stream, pc, oprom, opram, options);
-}
-
-
-offs_t v70_device::disasm_disassemble(std::ostream &stream, offs_t pc, const uint8_t *oprom, const uint8_t *opram, uint32_t options)
-{
-	extern CPU_DISASSEMBLE( v70 );
-	return CPU_DISASSEMBLE_NAME(v70)(this, stream, pc, oprom, opram, options);
+	return std::make_unique<v60_disassembler>();
 }
 
 
@@ -428,7 +421,7 @@ void v60_device::device_start()
 	m_moddim = 0;
 
 	m_program = &space(AS_PROGRAM);
-	m_direct = &m_program->direct();
+	m_direct = m_program->direct<0>();
 	m_io = &space(AS_IO);
 
 	save_item(NAME(m_fetch_xor));

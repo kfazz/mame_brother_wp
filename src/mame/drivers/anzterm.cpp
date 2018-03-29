@@ -367,6 +367,8 @@ public:
 	{
 		return 0;
 	}
+	void anzterm(machine_config &config);
+	void anzterm(address_map &map);
 };
 
 
@@ -399,16 +401,17 @@ GFXDECODE_START( anzterm )
 GFXDECODE_END
 
 
-ADDRESS_MAP_START( anzterm, AS_PROGRAM, 8, anzterm_state )
+void anzterm_state::anzterm(address_map &map)
+{
 	// There are two battery-backed 2kB SRAM chips with a 4kb SRAM chip for parity
 	// There are two 64kB DRAM banks (with parity)
 	// There's also a whole lot of ROM
-	AM_RANGE(0x0000, 0x3fff) AM_RAM
-	AM_RANGE(0xe000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+	map(0x0000, 0x3fff).ram();
+	map(0xe000, 0xffff).rom();
+}
 
 
-MACHINE_CONFIG_START( anzterm )
+MACHINE_CONFIG_START(anzterm_state::anzterm)
 	MCFG_CPU_ADD("maincpu", M6809, 15974400/4)
 	MCFG_CPU_PROGRAM_MAP(anzterm)
 

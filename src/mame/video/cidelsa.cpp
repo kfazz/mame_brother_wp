@@ -102,15 +102,17 @@ WRITE_LINE_MEMBER( cidelsa_state::prd_w )
 
 /* Page RAM */
 
-static ADDRESS_MAP_START( cidelsa_page_ram, 0, 8, cidelsa_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x000, 0x3ff) AM_RAM
-ADDRESS_MAP_END
+void cidelsa_state::cidelsa_page_ram(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x000, 0x3ff).ram();
+}
 
-static ADDRESS_MAP_START( draco_page_ram, 0, 8, draco_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x000, 0x7ff) AM_RAM
-ADDRESS_MAP_END
+void draco_state::draco_page_ram(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x000, 0x7ff).ram();
+}
 
 /* Video Start */
 
@@ -148,7 +150,7 @@ WRITE8_MEMBER( draco_state::psg_pb_w )
 
 /* Machine Drivers */
 
-MACHINE_CONFIG_START( destryer_video )
+MACHINE_CONFIG_START(cidelsa_state::destryer_video)
 	MCFG_CDP1869_SCREEN_PAL_ADD(CDP1869_TAG, SCREEN_TAG, DESTRYER_CHR2)
 	MCFG_SCREEN_DEFAULT_POSITION(1.226, 0.012, 1.4, 0.044)
 
@@ -162,7 +164,7 @@ MACHINE_CONFIG_START( destryer_video )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 MACHINE_CONFIG_END
 
-MACHINE_CONFIG_START( altair_video )
+MACHINE_CONFIG_START(cidelsa_state::altair_video)
 	MCFG_CDP1869_SCREEN_PAL_ADD(CDP1869_TAG, SCREEN_TAG, ALTAIR_CHR2)
 	MCFG_SCREEN_DEFAULT_POSITION(1.226, 0.012, 1.4, 0.044)
 
@@ -176,7 +178,7 @@ MACHINE_CONFIG_START( altair_video )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 MACHINE_CONFIG_END
 
-MACHINE_CONFIG_START( draco_video )
+MACHINE_CONFIG_START(draco_state::draco_video)
 	MCFG_CDP1869_SCREEN_PAL_ADD(CDP1869_TAG, SCREEN_TAG, DRACO_CHR2)
 	MCFG_SCREEN_DEFAULT_POSITION(1.226, 0.012, 1.360, 0.024)
 

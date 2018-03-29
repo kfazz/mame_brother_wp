@@ -13,9 +13,10 @@
 #include "cpu/z80/z80.h"
 #include "cpu/z80/z80daisy.h"
 #include "machine/ram.h"
+#include "machine/timer.h"
 #include "machine/upd765.h"
 #include "machine/z80ctc.h"
-#include "machine/z80dart.h"
+#include "machine/z80sio.h"
 #include "machine/z80pio.h"
 
 #include "formats/nanos_dsk.h"
@@ -60,6 +61,9 @@ public:
 	DECLARE_FLOPPY_FORMATS( floppy_formats );
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
+	void nanos(machine_config &config);
+	void nanos_io(address_map &map);
+	void nanos_mem(address_map &map);
 private:
 	uint8_t m_key_command;
 	uint8_t m_last_code;
@@ -71,8 +75,8 @@ private:
 	required_device<z80pio_device> m_pio;
 	required_device<z80pio_device> m_pio_0;
 	required_device<z80pio_device> m_pio_1;
-	required_device<z80sio0_device> m_sio_0;
-	required_device<z80sio0_device> m_sio_1;
+	required_device<z80sio_device> m_sio_0;
+	required_device<z80sio_device> m_sio_1;
 	required_device<z80ctc_device> m_ctc_0;
 	required_device<z80ctc_device> m_ctc_1;
 	required_device<upd765a_device> m_fdc;
@@ -89,10 +93,11 @@ private:
 
 
 
-static ADDRESS_MAP_START(nanos_mem, AS_PROGRAM, 8, nanos_state)
-	AM_RANGE( 0x0000, 0x0fff ) AM_READ_BANK("bank1") AM_WRITE_BANK("bank3")
-	AM_RANGE( 0x1000, 0xffff ) AM_RAMBANK("bank2")
-ADDRESS_MAP_END
+void nanos_state::nanos_mem(address_map &map)
+{
+	map(0x0000, 0x0fff).bankr("bank1").bankw("bank3");
+	map(0x1000, 0xffff).bankrw("bank2");
+}
 
 WRITE8_MEMBER(nanos_state::nanos_tc_w)
 {
@@ -135,31 +140,32 @@ static const z80_daisy_config nanos_daisy_chain[] =
 	{ nullptr }
 };
 
-static ADDRESS_MAP_START( nanos_io , AS_IO, 8, nanos_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
+void nanos_state::nanos_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
 	/* CPU card */
-	AM_RANGE(0x00, 0x03) AM_DEVREADWRITE("z80pio", z80pio_device, read, write)
+	map(0x00, 0x03).rw(m_pio, FUNC(z80pio_device::read), FUNC(z80pio_device::write));
 
 	/* I/O card */
-	AM_RANGE(0x80, 0x83) AM_DEVREADWRITE("z80pio_0", z80pio_device, read, write)
-	AM_RANGE(0x84, 0x87) AM_DEVREADWRITE("z80sio_0", z80sio0_device, ba_cd_r, ba_cd_w)
-	AM_RANGE(0x88, 0x8B) AM_DEVREADWRITE("z80pio_1", z80pio_device, read, write)
-	AM_RANGE(0x8C, 0x8F) AM_DEVREADWRITE("z80ctc_0", z80ctc_device, read, write)
+	map(0x80, 0x83).rw(m_pio_0, FUNC(z80pio_device::read), FUNC(z80pio_device::write));
+	map(0x84, 0x87).rw(m_sio_0, FUNC(z80sio_device::ba_cd_r), FUNC(z80sio_device::ba_cd_w));
+	map(0x88, 0x8B).rw(m_pio_1, FUNC(z80pio_device::read), FUNC(z80pio_device::write));
+	map(0x8C, 0x8F).rw(m_ctc_0, FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
 
 	/* FDC card */
-	AM_RANGE(0x92, 0x92) AM_WRITE(nanos_tc_w)
-	AM_RANGE(0x94, 0x95) AM_DEVICE("upd765", upd765a_device, map)
+	map(0x92, 0x92).w(this, FUNC(nanos_state::nanos_tc_w));
+	map(0x94, 0x95).m(m_fdc, FUNC(upd765a_device::map));
 	/* V24+IFSS card */
-	AM_RANGE(0xA0, 0xA3) AM_DEVREADWRITE("z80sio_0", z80sio0_device, ba_cd_r, ba_cd_w)
-	AM_RANGE(0xA4, 0xA7) AM_DEVREADWRITE("z80ctc_1", z80ctc_device, read, write)
+	map(0xA0, 0xA3).rw(m_sio_0, FUNC(z80sio_device::ba_cd_r), FUNC(z80sio_device::ba_cd_w));
+	map(0xA4, 0xA7).rw(m_ctc_1, FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
 
 	/* 256-k RAM card I  -  64k OS-Memory + 192k-RAM-Floppy */
 	//AM_RANGE(0xC0, 0xC7)
 
 	/* 256-k RAM card II -  64k OS-Memory + 192k-RAM-Floppy */
 	//AM_RANGE(0xC8, 0xCF)
-ADDRESS_MAP_END
+}
 
 /* Input ports */
 static INPUT_PORTS_START( nanos )
@@ -453,9 +459,9 @@ static GFXDECODE_START( nanos )
 	GFXDECODE_ENTRY( "chargen", 0x0000, nanos_charlayout, 0, 1 )
 GFXDECODE_END
 
-static MACHINE_CONFIG_START( nanos )
+MACHINE_CONFIG_START(nanos_state::nanos)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",Z80, XTAL_4MHz)
+	MCFG_CPU_ADD("maincpu",Z80, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(nanos_mem)
 	MCFG_CPU_IO_MAP(nanos_io)
 	MCFG_Z80_DAISY_CHAIN(nanos_daisy_chain)
@@ -473,31 +479,31 @@ static MACHINE_CONFIG_START( nanos )
 	MCFG_PALETTE_ADD_MONOCHROME("palette")
 
 	/* devices */
-	MCFG_DEVICE_ADD("z80ctc_0", Z80CTC, XTAL_4MHz)
+	MCFG_DEVICE_ADD("z80ctc_0", Z80CTC, XTAL(4'000'000))
 	MCFG_Z80CTC_INTR_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 	MCFG_Z80CTC_ZC0_CB(WRITELINE(nanos_state, ctc_z0_w))
 	MCFG_Z80CTC_ZC1_CB(WRITELINE(nanos_state, ctc_z1_w))
 	MCFG_Z80CTC_ZC2_CB(WRITELINE(nanos_state, ctc_z2_w))
 
-	MCFG_DEVICE_ADD("z80ctc_1", Z80CTC, XTAL_4MHz)
+	MCFG_DEVICE_ADD("z80ctc_1", Z80CTC, XTAL(4'000'000))
 	MCFG_Z80CTC_INTR_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 	MCFG_Z80CTC_ZC0_CB(WRITELINE(nanos_state, ctc_z0_w))
 	MCFG_Z80CTC_ZC1_CB(WRITELINE(nanos_state, ctc_z1_w))
 	MCFG_Z80CTC_ZC2_CB(WRITELINE(nanos_state, ctc_z2_w))
 
-	MCFG_DEVICE_ADD("z80pio_0", Z80PIO, XTAL_4MHz)
+	MCFG_DEVICE_ADD("z80pio_0", Z80PIO, XTAL(4'000'000))
 	MCFG_Z80PIO_OUT_INT_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 
-	MCFG_DEVICE_ADD("z80pio_1", Z80PIO, XTAL_4MHz)
+	MCFG_DEVICE_ADD("z80pio_1", Z80PIO, XTAL(4'000'000))
 	MCFG_Z80PIO_OUT_INT_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 
-	MCFG_Z80SIO0_ADD("z80sio_0", XTAL_4MHz, 0, 0, 0, 0)
-	MCFG_Z80DART_OUT_INT_CB(WRITELINE(nanos_state, z80daisy_interrupt))
+	MCFG_DEVICE_ADD("z80sio_0", Z80SIO, XTAL(4'000'000))
+	MCFG_Z80SIO_OUT_INT_CB(WRITELINE(nanos_state, z80daisy_interrupt))
 
-	MCFG_Z80SIO0_ADD("z80sio_1", XTAL_4MHz, 0, 0, 0, 0)
-	MCFG_Z80DART_OUT_INT_CB(WRITELINE(nanos_state, z80daisy_interrupt))
+	MCFG_DEVICE_ADD("z80sio_1", Z80SIO, XTAL(4'000'000))
+	MCFG_Z80SIO_OUT_INT_CB(WRITELINE(nanos_state, z80daisy_interrupt))
 
-	MCFG_DEVICE_ADD("z80pio", Z80PIO, XTAL_4MHz)
+	MCFG_DEVICE_ADD("z80pio", Z80PIO, XTAL(4'000'000))
 	MCFG_Z80PIO_IN_PA_CB(READ8(nanos_state, nanos_port_a_r))
 	MCFG_Z80PIO_IN_PB_CB(READ8(nanos_state, nanos_port_b_r))
 	MCFG_Z80PIO_OUT_PB_CB(WRITE8(nanos_state, nanos_port_b_w))

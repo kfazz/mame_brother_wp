@@ -79,14 +79,14 @@ void vixen_state::update_interrupt()
 
 READ8_MEMBER( vixen_state::opram_r )
 {
-	if (!machine().side_effect_disabled())
+	if (!machine().side_effects_disabled())
 		membank("bank3")->set_entry(0); // read videoram
 	return m_program->read_byte(offset);
 }
 
 READ8_MEMBER( vixen_state::oprom_r )
 {
-	if (!machine().side_effect_disabled())
+	if (!machine().side_effects_disabled())
 		membank("bank3")->set_entry(1); // read rom
 	return m_rom[offset];
 }
@@ -260,40 +260,43 @@ READ8_MEMBER( vixen_state::port3_r )
 //-------------------------------------------------
 
 // when M1 is inactive: read and write of data
-static ADDRESS_MAP_START( vixen_mem, AS_PROGRAM, 8, vixen_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0xefff) AM_RAM
-	AM_RANGE(0xf000, 0xffff) AM_READ_BANK("bank3") AM_WRITE_BANK("bank4") AM_SHARE("video_ram")
-ADDRESS_MAP_END
+void vixen_state::vixen_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0xefff).ram();
+	map(0xf000, 0xffff).bankr("bank3").bankw("bank4").share("video_ram");
+}
 
 // when M1 is active: read opcodes
-static ADDRESS_MAP_START( bios_mem, AS_OPCODES, 8, vixen_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0xefff) AM_READ(opram_r)
-	AM_RANGE(0xf000, 0xffff) AM_READ(oprom_r)
-ADDRESS_MAP_END
+void vixen_state::bios_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0xefff).r(this, FUNC(vixen_state::opram_r));
+	map(0xf000, 0xffff).r(this, FUNC(vixen_state::oprom_r));
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( vixen_io )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( vixen_io, AS_IO, 8, vixen_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x03) AM_DEVREADWRITE(FDC1797_TAG, fd1797_device, read, write)
-	AM_RANGE(0x04, 0x04) AM_MIRROR(0x03) AM_READWRITE(status_r, cmd_w)
-	AM_RANGE(0x08, 0x08) AM_MIRROR(0x01) AM_DEVREADWRITE(P8155H_TAG, i8155_device, read, write)
-	AM_RANGE(0x0c, 0x0d) AM_DEVWRITE(P8155H_TAG, i8155_device, ale_w)
-	AM_RANGE(0x10, 0x10) AM_MIRROR(0x07) AM_DEVREAD(IEEE488_TAG, ieee488_device, dio_r)
-	AM_RANGE(0x18, 0x18) AM_MIRROR(0x07) AM_READ(ieee488_r)
-	AM_RANGE(0x20, 0x21) AM_MIRROR(0x04) AM_DEVWRITE(P8155H_IO_TAG, i8155_device, ale_w)
-	AM_RANGE(0x28, 0x28) AM_MIRROR(0x05) AM_DEVREADWRITE(P8155H_IO_TAG, i8155_device, read, write)
-	AM_RANGE(0x30, 0x30) AM_MIRROR(0x06) AM_DEVREADWRITE(P8251A_TAG, i8251_device, data_r, data_w)
-	AM_RANGE(0x31, 0x31) AM_MIRROR(0x06) AM_DEVREADWRITE(P8251A_TAG, i8251_device, status_r, control_w)
-	AM_RANGE(0x38, 0x38) AM_MIRROR(0x07) AM_READ(port3_r)
+void vixen_state::vixen_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0x00, 0x03).rw(m_fdc, FUNC(fd1797_device::read), FUNC(fd1797_device::write));
+	map(0x04, 0x04).mirror(0x03).rw(this, FUNC(vixen_state::status_r), FUNC(vixen_state::cmd_w));
+	map(0x08, 0x08).mirror(0x01).rw(P8155H_TAG, FUNC(i8155_device::read), FUNC(i8155_device::write));
+	map(0x0c, 0x0d).w(P8155H_TAG, FUNC(i8155_device::ale_w));
+	map(0x10, 0x10).mirror(0x07).r(m_ieee488, FUNC(ieee488_device::dio_r));
+	map(0x18, 0x18).mirror(0x07).r(this, FUNC(vixen_state::ieee488_r));
+	map(0x20, 0x21).mirror(0x04).w(m_io_i8155, FUNC(i8155_device::ale_w));
+	map(0x28, 0x28).mirror(0x05).rw(m_io_i8155, FUNC(i8155_device::read), FUNC(i8155_device::write));
+	map(0x30, 0x30).mirror(0x06).rw(m_usart, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x31, 0x31).mirror(0x06).rw(m_usart, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x38, 0x38).mirror(0x07).r(this, FUNC(vixen_state::port3_r));
 //  AM_RANGE(0xf0, 0xff) Hard Disk?
-ADDRESS_MAP_END
+}
 
 
 
@@ -485,7 +488,7 @@ uint32_t vixen_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
 
 static DISCRETE_SOUND_START( vixen )
 	DISCRETE_INPUT_LOGIC(NODE_01)
-	DISCRETE_SQUAREWAVE(NODE_02, NODE_01, XTAL_23_9616MHz/15360, 100, 50, 0, 90)
+	DISCRETE_SQUAREWAVE(NODE_02, NODE_01, (XTAL(23'961'600)/15360).dvalue(), 100, 50, 0, 90)
 	DISCRETE_OUTPUT(NODE_02, 2000)
 DISCRETE_SOUND_END
 
@@ -737,18 +740,18 @@ void vixen_state::machine_reset()
 //  MACHINE_CONFIG( vixen )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_START( vixen )
+MACHINE_CONFIG_START(vixen_state::vixen)
 	// basic machine hardware
-	MCFG_CPU_ADD(Z8400A_TAG, Z80, XTAL_23_9616MHz/6)
+	MCFG_CPU_ADD(Z8400A_TAG, Z80, XTAL(23'961'600)/6)
 	MCFG_CPU_PROGRAM_MAP(vixen_mem)
-	MCFG_CPU_DECRYPTED_OPCODES_MAP(bios_mem)
+	MCFG_CPU_OPCODES_MAP(bios_mem)
 	MCFG_CPU_IO_MAP(vixen_io)
 	MCFG_CPU_IRQ_ACKNOWLEDGE_DRIVER(vixen_state,vixen_int_ack)
 
 	// video hardware
 	MCFG_SCREEN_ADD_MONOCHROME(SCREEN_TAG, RASTER, rgb_t::amber())
 	MCFG_SCREEN_UPDATE_DRIVER(vixen_state, screen_update)
-	MCFG_SCREEN_RAW_PARAMS(XTAL_23_9616MHz/2, 96*8, 0*8, 81*8, 27*10, 0*10, 26*10)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(23'961'600)/2, 96*8, 0*8, 81*8, 27*10, 0*10, 26*10)
 
 	MCFG_TIMER_DRIVER_ADD_SCANLINE("vsync", vixen_state, vsync_tick, SCREEN_TAG, 26*10, 27*10)
 
@@ -761,12 +764,12 @@ static MACHINE_CONFIG_START( vixen )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
 
 	// devices
-	MCFG_DEVICE_ADD(P8155H_TAG, I8155, XTAL_23_9616MHz/6)
+	MCFG_DEVICE_ADD(P8155H_TAG, I8155, XTAL(23'961'600)/6)
 	MCFG_I8155_IN_PORTA_CB(READ8(vixen_state, i8155_pa_r))
 	MCFG_I8155_OUT_PORTB_CB(WRITE8(vixen_state, i8155_pb_w))
 	MCFG_I8155_OUT_PORTC_CB(WRITE8(vixen_state, i8155_pc_w))
 
-	MCFG_DEVICE_ADD(P8155H_IO_TAG, I8155, XTAL_23_9616MHz/6)
+	MCFG_DEVICE_ADD(P8155H_IO_TAG, I8155, XTAL(23'961'600)/6)
 	MCFG_I8155_OUT_PORTA_CB(DEVWRITE8(IEEE488_TAG, ieee488_device, dio_w))
 	MCFG_I8155_OUT_PORTB_CB(WRITE8(vixen_state, io_i8155_pb_w))
 	MCFG_I8155_OUT_PORTC_CB(WRITE8(vixen_state, io_i8155_pc_w))
@@ -783,7 +786,7 @@ static MACHINE_CONFIG_START( vixen )
 	MCFG_RS232_RXD_HANDLER(DEVWRITELINE(P8251A_TAG, i8251_device, write_rxd))
 	MCFG_RS232_DSR_HANDLER(DEVWRITELINE(P8251A_TAG, i8251_device, write_dsr))
 
-	MCFG_FD1797_ADD(FDC1797_TAG, XTAL_23_9616MHz/24)
+	MCFG_FD1797_ADD(FDC1797_TAG, XTAL(23'961'600)/24)
 	MCFG_WD_FDC_INTRQ_CALLBACK(WRITELINE(vixen_state, fdc_intrq_w))
 	MCFG_FLOPPY_DRIVE_ADD(FDC1797_TAG":0", vixen_floppies, "525dd", floppy_image_device::default_floppy_formats)
 	MCFG_FLOPPY_DRIVE_SOUND(true)

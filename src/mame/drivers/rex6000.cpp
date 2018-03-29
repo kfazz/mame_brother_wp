@@ -34,6 +34,7 @@
 #include "machine/bankdev.h"
 #include "machine/ram.h"
 #include "machine/intelfsh.h"
+#include "machine/timer.h"
 #include "imagedev/snapquik.h"
 #include "sound/beep.h"
 #include "rendlay.h"
@@ -122,6 +123,10 @@ public:
 	TIMER_DEVICE_CALLBACK_MEMBER(irq_timer2);
 	TIMER_DEVICE_CALLBACK_MEMBER(sec_timer);
 	DECLARE_QUICKLOAD_LOAD_MEMBER(rex6000);
+	void rex6000(machine_config &config);
+	void rex6000_banked_map(address_map &map);
+	void rex6000_io(address_map &map);
+	void rex6000_mem(address_map &map);
 };
 
 
@@ -145,6 +150,9 @@ public:
 	virtual void machine_reset() override;
 	uint32_t screen_update_oz(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
+	void oz750(machine_config &config);
+	void oz750_banked_map(address_map &map);
+	void oz750_io(address_map &map);
 private:
 	int oz_wzd_extract_tag(const std::vector<uint8_t> &data, const char *tag, char *dest_buf);
 
@@ -362,59 +370,64 @@ WRITE8_MEMBER( oz750_state::kb_mask_w )
 		m_kb_mask = (m_kb_mask & 0xff00) | data;
 }
 
-static ADDRESS_MAP_START(rex6000_banked_map, AS_PROGRAM, 8, rex6000_state)
-	AM_RANGE( 0x0000000, 0x00fffff ) AM_DEVREADWRITE("flash0a", intelfsh8_device, read, write)
-	AM_RANGE( 0x0100000, 0x01fffff ) AM_DEVREADWRITE("flash0b", intelfsh8_device, read, write)
-	AM_RANGE( 0x0c00000, 0x0cfffff ) AM_DEVREADWRITE("flash1a", intelfsh8_device, read, write)
-	AM_RANGE( 0x0d00000, 0x0dfffff ) AM_DEVREADWRITE("flash1b", intelfsh8_device, read, write)
-	AM_RANGE( 0x1600000, 0x16fffff ) AM_DEVREADWRITE("flash1a", intelfsh8_device, read, write)
-	AM_RANGE( 0x1700000, 0x17fffff ) AM_DEVREADWRITE("flash1b", intelfsh8_device, read, write)
-	AM_RANGE( 0x2000000, 0x2007fff ) AM_RAM AM_SHARE("nvram")
-ADDRESS_MAP_END
+void rex6000_state::rex6000_banked_map(address_map &map)
+{
+	map(0x0000000, 0x00fffff).rw("flash0a", FUNC(intelfsh8_device::read), FUNC(intelfsh8_device::write));
+	map(0x0100000, 0x01fffff).rw(m_flash0b, FUNC(intelfsh8_device::read), FUNC(intelfsh8_device::write));
+	map(0x0c00000, 0x0cfffff).rw("flash1a", FUNC(intelfsh8_device::read), FUNC(intelfsh8_device::write));
+	map(0x0d00000, 0x0dfffff).rw("flash1b", FUNC(intelfsh8_device::read), FUNC(intelfsh8_device::write));
+	map(0x1600000, 0x16fffff).rw("flash1a", FUNC(intelfsh8_device::read), FUNC(intelfsh8_device::write));
+	map(0x1700000, 0x17fffff).rw("flash1b", FUNC(intelfsh8_device::read), FUNC(intelfsh8_device::write));
+	map(0x2000000, 0x2007fff).ram().share("nvram");
+}
 
-static ADDRESS_MAP_START(oz750_banked_map, AS_PROGRAM, 8, oz750_state)
-	AM_RANGE( 0x0000000, 0x01fffff )  AM_DEVREADWRITE("flash0a", intelfsh8_device, read, write)
-	AM_RANGE( 0x0200000, 0x02fffff )  AM_MIRROR(0x100000) AM_DEVREADWRITE("flash1a", intelfsh8_device, read, write)
-	AM_RANGE( 0x0600000, 0x07fffff )  AM_READWRITE(lcd_io_r, lcd_io_w)
-	AM_RANGE( 0x0800000, 0x083ffff )  AM_MIRROR(0x1c0000) AM_RAM AM_SHARE("nvram")
-	AM_RANGE( 0x0a00000, 0x0a3ffff )  AM_MIRROR(0x1c0000) AM_RAM
-ADDRESS_MAP_END
+void oz750_state::oz750_banked_map(address_map &map)
+{
+	map(0x0000000, 0x01fffff).rw("flash0a", FUNC(intelfsh8_device::read), FUNC(intelfsh8_device::write));
+	map(0x0200000, 0x02fffff).mirror(0x100000).rw("flash1a", FUNC(intelfsh8_device::read), FUNC(intelfsh8_device::write));
+	map(0x0600000, 0x07fffff).rw(this, FUNC(oz750_state::lcd_io_r), FUNC(oz750_state::lcd_io_w));
+	map(0x0800000, 0x083ffff).mirror(0x1c0000).ram().share("nvram");
+	map(0x0a00000, 0x0a3ffff).mirror(0x1c0000).ram();
+}
 
 
-static ADDRESS_MAP_START(rex6000_mem, AS_PROGRAM, 8, rex6000_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x0000, 0x7fff ) AM_DEVREADWRITE("flash0a", intelfsh8_device, read, write)
-	AM_RANGE( 0x8000, 0x9fff ) AM_DEVREADWRITE("bank0", address_map_bank_device, read8, write8)
-	AM_RANGE( 0xa000, 0xbfff ) AM_DEVREADWRITE("bank1", address_map_bank_device, read8, write8)
-	AM_RANGE( 0xc000, 0xffff ) AM_RAMBANK("ram")            //system RAM
-ADDRESS_MAP_END
+void rex6000_state::rex6000_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x7fff).rw("flash0a", FUNC(intelfsh8_device::read), FUNC(intelfsh8_device::write));
+	map(0x8000, 0x9fff).rw(m_bankdev0, FUNC(address_map_bank_device::read8), FUNC(address_map_bank_device::write8));
+	map(0xa000, 0xbfff).rw(m_bankdev1, FUNC(address_map_bank_device::read8), FUNC(address_map_bank_device::write8));
+	map(0xc000, 0xffff).bankrw("ram");            //system RAM
+}
 
-static ADDRESS_MAP_START( rex6000_io, AS_IO, 8, rex6000_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE( 0x01, 0x04 ) AM_READWRITE(bankswitch_r, bankswitch_w)
-	AM_RANGE( 0x05, 0x07 ) AM_READWRITE(irq_r, irq_w)
-	AM_RANGE( 0x10, 0x10 ) AM_READ_PORT("INPUT")
-	AM_RANGE( 0x15, 0x19 ) AM_READWRITE(beep_r, beep_w)
-	AM_RANGE( 0x22, 0x23 ) AM_READWRITE(lcd_base_r, lcd_base_w)
-	AM_RANGE( 0x30, 0x3f ) AM_DEVREADWRITE(TC8521_TAG, tc8521_device, read, write)
-	AM_RANGE( 0x40, 0x47 ) AM_MIRROR(0x08)  AM_DEVREADWRITE("ns16550", ns16550_device, ins8250_r, ins8250_w )
-	AM_RANGE( 0x50, 0x51 ) AM_READWRITE(lcd_io_r, lcd_io_w)
-	AM_RANGE( 0x60, 0x6f ) AM_READWRITE(touchscreen_r, touchscreen_w)
-ADDRESS_MAP_END
+void rex6000_state::rex6000_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0x01, 0x04).rw(this, FUNC(rex6000_state::bankswitch_r), FUNC(rex6000_state::bankswitch_w));
+	map(0x05, 0x07).rw(this, FUNC(rex6000_state::irq_r), FUNC(rex6000_state::irq_w));
+	map(0x10, 0x10).portr("INPUT");
+	map(0x15, 0x19).rw(this, FUNC(rex6000_state::beep_r), FUNC(rex6000_state::beep_w));
+	map(0x22, 0x23).rw(this, FUNC(rex6000_state::lcd_base_r), FUNC(rex6000_state::lcd_base_w));
+	map(0x30, 0x3f).rw(TC8521_TAG, FUNC(tc8521_device::read), FUNC(tc8521_device::write));
+	map(0x40, 0x47).mirror(0x08).rw(m_uart, FUNC(ns16550_device::ins8250_r), FUNC(ns16550_device::ins8250_w));
+	map(0x50, 0x51).rw(this, FUNC(rex6000_state::lcd_io_r), FUNC(rex6000_state::lcd_io_w));
+	map(0x60, 0x6f).rw(this, FUNC(rex6000_state::touchscreen_r), FUNC(rex6000_state::touchscreen_w));
+}
 
-static ADDRESS_MAP_START( oz750_io, AS_IO, 8, oz750_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE( 0x01, 0x04 ) AM_READWRITE(bankswitch_r, bankswitch_w)
-	AM_RANGE( 0x05, 0x08 ) AM_READWRITE(irq_r, irq_w)
-	AM_RANGE( 0x10, 0x10 ) AM_READ(kb_data_r)
-	AM_RANGE( 0x11, 0x12 ) AM_READWRITE(kb_status_r, kb_mask_w)
-	AM_RANGE( 0x15, 0x19 ) AM_READWRITE(beep_r, beep_w)
-	AM_RANGE( 0x22, 0x23 ) AM_READWRITE(lcd_base_r, lcd_base_w)
-	AM_RANGE( 0x30, 0x3f ) AM_DEVREADWRITE(TC8521_TAG, tc8521_device, read, write)
-	AM_RANGE( 0x40, 0x47 ) AM_MIRROR(0x08)  AM_DEVREADWRITE("ns16550", ns16550_device, ins8250_r, ins8250_w )
-ADDRESS_MAP_END
+void oz750_state::oz750_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0x01, 0x04).rw(this, FUNC(oz750_state::bankswitch_r), FUNC(oz750_state::bankswitch_w));
+	map(0x05, 0x08).rw(this, FUNC(oz750_state::irq_r), FUNC(oz750_state::irq_w));
+	map(0x10, 0x10).r(this, FUNC(oz750_state::kb_data_r));
+	map(0x11, 0x12).rw(this, FUNC(oz750_state::kb_status_r), FUNC(oz750_state::kb_mask_w));
+	map(0x15, 0x19).rw(this, FUNC(oz750_state::beep_r), FUNC(oz750_state::beep_w));
+	map(0x22, 0x23).rw(this, FUNC(oz750_state::lcd_base_r), FUNC(oz750_state::lcd_base_w));
+	map(0x30, 0x3f).rw(TC8521_TAG, FUNC(tc8521_device::read), FUNC(tc8521_device::write));
+	map(0x40, 0x47).mirror(0x08).rw(m_uart, FUNC(ns16550_device::ins8250_r), FUNC(ns16550_device::ins8250_w));
+}
 
 INPUT_CHANGED_MEMBER(rex6000_state::trigger_irq)
 {
@@ -773,7 +786,7 @@ QUICKLOAD_LOAD_MEMBER(oz750_state,oz750)
 	oz_wzd_extract_tag(data, "<TITLE>", app_name);
 	oz_wzd_extract_tag(data, "<DATA>", file_name);
 	if (!strncmp(file_name, "PFILE:", 6))
-		strcpy(file_name, file_name + 6);
+		memmove(file_name, file_name + 6, strlen(file_name + 6) + 1);
 
 	uint32_t img_start = oz_wzd_extract_tag(data, "<BIN>", nullptr);
 
@@ -870,9 +883,9 @@ static GFXDECODE_START( rex6000 )
 GFXDECODE_END
 
 
-static MACHINE_CONFIG_START( rex6000 )
+MACHINE_CONFIG_START(rex6000_state::rex6000)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",Z80, XTAL_4MHz) //Toshiba microprocessor Z80 compatible at 4.3MHz
+	MCFG_CPU_ADD("maincpu",Z80, XTAL(4'000'000)) //Toshiba microprocessor Z80 compatible at 4.3MHz
 	MCFG_CPU_PROGRAM_MAP(rex6000_mem)
 	MCFG_CPU_IO_MAP(rex6000_io)
 
@@ -897,16 +910,16 @@ static MACHINE_CONFIG_START( rex6000 )
 	MCFG_DEVICE_ADD("bank0", ADDRESS_MAP_BANK, 0)
 	MCFG_DEVICE_PROGRAM_MAP(rex6000_banked_map)
 	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_LITTLE)
-	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(8)
+	MCFG_ADDRESS_MAP_BANK_DATA_WIDTH(8)
 	MCFG_ADDRESS_MAP_BANK_STRIDE(0x2000)
 
 	MCFG_DEVICE_ADD("bank1", ADDRESS_MAP_BANK, 0)
 	MCFG_DEVICE_PROGRAM_MAP(rex6000_banked_map)
 	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_LITTLE)
-	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(8)
+	MCFG_ADDRESS_MAP_BANK_DATA_WIDTH(8)
 	MCFG_ADDRESS_MAP_BANK_STRIDE(0x2000)
 
-	MCFG_DEVICE_ADD( "ns16550", NS16550, XTAL_1_8432MHz )
+	MCFG_DEVICE_ADD( "ns16550", NS16550, XTAL(1'843'200) )
 	MCFG_INS8250_OUT_TX_CB(DEVWRITELINE("serport", rs232_port_device, write_txd))
 	MCFG_INS8250_OUT_DTR_CB(DEVWRITELINE("serport", rs232_port_device, write_dtr))
 	MCFG_INS8250_OUT_RTS_CB(DEVWRITELINE("serport", rs232_port_device, write_rts))
@@ -922,7 +935,7 @@ static MACHINE_CONFIG_START( rex6000 )
 	/* quickload */
 	MCFG_QUICKLOAD_ADD("quickload", rex6000_state, rex6000, "rex,ds2", 0)
 
-	MCFG_DEVICE_ADD(TC8521_TAG, TC8521, XTAL_32_768kHz)
+	MCFG_DEVICE_ADD(TC8521_TAG, TC8521, XTAL(32'768))
 	MCFG_RP5C01_OUT_ALARM_CB(WRITELINE(rex6000_state, alarm_irq))
 
 	/*
@@ -947,9 +960,9 @@ static MACHINE_CONFIG_START( rex6000 )
 	MCFG_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( oz750 )
+MACHINE_CONFIG_START(oz750_state::oz750)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",Z80, XTAL_9_8304MHz) //Toshiba microprocessor Z80 compatible at 9.8MHz
+	MCFG_CPU_ADD("maincpu",Z80, XTAL(9'830'400)) //Toshiba microprocessor Z80 compatible at 9.8MHz
 	MCFG_CPU_PROGRAM_MAP(rex6000_mem)
 	MCFG_CPU_IO_MAP(oz750_io)
 
@@ -957,7 +970,7 @@ static MACHINE_CONFIG_START( oz750 )
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("irq_timer1", rex6000_state, irq_timer1, attotime::from_hz(64))
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("irq_timer2", rex6000_state, irq_timer2, attotime::from_hz(8192))
 
-	MCFG_DEVICE_ADD( "ns16550", NS16550, XTAL_9_8304MHz / 4 )
+	MCFG_DEVICE_ADD( "ns16550", NS16550, XTAL(9'830'400) / 4 )
 	MCFG_INS8250_OUT_TX_CB(DEVWRITELINE("serport", rs232_port_device, write_txd))
 	MCFG_INS8250_OUT_DTR_CB(DEVWRITELINE("serport", rs232_port_device, write_dtr))
 	MCFG_INS8250_OUT_RTS_CB(DEVWRITELINE("serport", rs232_port_device, write_rts))
@@ -986,19 +999,19 @@ static MACHINE_CONFIG_START( oz750 )
 	MCFG_DEVICE_ADD("bank0", ADDRESS_MAP_BANK, 0)
 	MCFG_DEVICE_PROGRAM_MAP(oz750_banked_map)
 	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_LITTLE)
-	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(8)
+	MCFG_ADDRESS_MAP_BANK_DATA_WIDTH(8)
 	MCFG_ADDRESS_MAP_BANK_STRIDE(0x2000)
 
 	MCFG_DEVICE_ADD("bank1", ADDRESS_MAP_BANK, 0)
 	MCFG_DEVICE_PROGRAM_MAP(oz750_banked_map)
 	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_LITTLE)
-	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(8)
+	MCFG_ADDRESS_MAP_BANK_DATA_WIDTH(8)
 	MCFG_ADDRESS_MAP_BANK_STRIDE(0x2000)
 
 	/* quickload */
 	MCFG_QUICKLOAD_ADD("quickload", oz750_state, oz750, "wzd", 0)
 
-	MCFG_DEVICE_ADD(TC8521_TAG, TC8521, XTAL_32_768kHz)
+	MCFG_DEVICE_ADD(TC8521_TAG, TC8521, XTAL(32'768))
 	MCFG_RP5C01_OUT_ALARM_CB(WRITELINE(rex6000_state, alarm_irq))
 
 	MCFG_SHARP_LH28F016S_ADD("flash0a")
