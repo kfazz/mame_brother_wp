@@ -1,6 +1,7 @@
 mame (0.196-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Update Vcs-* fields to reflect migration to salsa.debian.org.
 
  -- Jordi Mallach <jordi@debian.org>  Fri, 30 Mar 2018 01:40:54 +0200
 
