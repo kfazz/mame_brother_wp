@@ -1,4 +1,4 @@
-mame (0.196-1) UNRELEASED; urgency=medium
+mame (0.196+dfsg.1-1) UNRELEASED; urgency=medium
 
   * New upstream release.
   * Update Vcs-* fields to reflect migration to salsa.debian.org.
