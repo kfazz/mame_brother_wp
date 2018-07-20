@@ -38,7 +38,6 @@
 void xybots_state::update_interrupts()
 {
 	m_maincpu->set_input_line(1, m_video_int_state ? ASSERT_LINE : CLEAR_LINE);
-	m_maincpu->set_input_line(2, m_sound_int_state ? ASSERT_LINE : CLEAR_LINE);
 }
 
 
@@ -79,11 +78,11 @@ void xybots_state::main_map(address_map &map)
 	map(0x805000, 0x805fff).mirror(0x7f8000).rw("eeprom", FUNC(eeprom_parallel_28xx_device::read), FUNC(eeprom_parallel_28xx_device::write)).umask16(0x00ff);
 	map(0x806000, 0x8060ff).mirror(0x7f8000).r(m_jsa, FUNC(atari_jsa_i_device::main_response_r)).umask16(0x00ff);
 	map(0x806100, 0x8061ff).mirror(0x7f8000).portr("FFE100");
-	map(0x806200, 0x8062ff).mirror(0x7f8000).r(this, FUNC(xybots_state::special_port1_r));
+	map(0x806200, 0x8062ff).mirror(0x7f8000).r(FUNC(xybots_state::special_port1_r));
 	map(0x806800, 0x8068ff).mirror(0x7f8000).w("eeprom", FUNC(eeprom_parallel_28xx_device::unlock_write16));
 	map(0x806900, 0x8069ff).mirror(0x7f8000).w(m_jsa, FUNC(atari_jsa_i_device::main_command_w)).umask16(0x00ff);
 	map(0x806a00, 0x806aff).mirror(0x7f8000).w("watchdog", FUNC(watchdog_timer_device::reset16_w));
-	map(0x806b00, 0x806bff).mirror(0x7f8000).w(this, FUNC(xybots_state::video_int_ack_w));
+	map(0x806b00, 0x806bff).mirror(0x7f8000).w(FUNC(xybots_state::video_int_ack_w));
 	map(0x806e00, 0x806eff).mirror(0x7f8000).w(m_jsa, FUNC(atari_jsa_i_device::sound_reset_w));
 }
 
@@ -118,7 +117,7 @@ static INPUT_PORTS_START( xybots )
 	PORT_BIT( 0x00ff, IP_ACTIVE_LOW, IPT_UNUSED )
 	PORT_SERVICE( 0x0100, IP_ACTIVE_LOW )
 	PORT_BIT( 0x0200, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_ATARI_JSA_MAIN_TO_SOUND_READY("jsa") /* /AUDBUSY */
-	PORT_BIT( 0x0400, IP_ACTIVE_HIGH, IPT_SPECIAL ) /* 256H */
+	PORT_BIT( 0x0400, IP_ACTIVE_HIGH, IPT_CUSTOM ) /* 256H */
 	PORT_BIT( 0x0800, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_VBLANK("screen") /* VBLANK */
 	PORT_BIT( 0xf000, IP_ACTIVE_LOW, IPT_UNUSED )
 
@@ -161,7 +160,7 @@ static const gfx_layout pfmolayout =
 };
 
 
-static GFXDECODE_START( xybots )
+static GFXDECODE_START( gfx_xybots )
 	GFXDECODE_ENTRY( "gfx1", 0, pfmolayout,    512, 16 ) /* playfield */
 	GFXDECODE_ENTRY( "gfx2", 0, pfmolayout,    256, 48 ) /* sprites */
 	GFXDECODE_ENTRY( "gfx3", 0, anlayout,        0, 64 ) /* characters 8x8 */
@@ -178,11 +177,10 @@ GFXDECODE_END
 MACHINE_CONFIG_START(xybots_state::xybots)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M68000, ATARI_CLOCK_14MHz/2)
-	MCFG_CPU_PROGRAM_MAP(main_map)
-	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", xybots_state, video_int_gen)
+	MCFG_DEVICE_ADD("maincpu", M68000, ATARI_CLOCK_14MHz/2)
+	MCFG_DEVICE_PROGRAM_MAP(main_map)
 
-	MCFG_SLAPSTIC_ADD("slapstic", 107)
+	MCFG_DEVICE_ADD("slapstic", SLAPSTIC, 107, true)
 
 	MCFG_EEPROM_2804_ADD("eeprom")
 	MCFG_EEPROM_28XX_LOCK_AFTER_WRITE(true)
@@ -190,7 +188,7 @@ MACHINE_CONFIG_START(xybots_state::xybots)
 	MCFG_WATCHDOG_ADD("watchdog")
 
 	/* video hardware */
-	MCFG_GFXDECODE_ADD("gfxdecode", "palette", xybots)
+	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_xybots)
 
 	MCFG_PALETTE_ADD("palette", 1024)
 	MCFG_PALETTE_FORMAT(IIIIRRRRGGGGBBBB)
@@ -207,11 +205,13 @@ MACHINE_CONFIG_START(xybots_state::xybots)
 	MCFG_SCREEN_RAW_PARAMS(ATARI_CLOCK_14MHz/2, 456, 0, 336, 262, 0, 240)
 	MCFG_SCREEN_UPDATE_DRIVER(xybots_state, screen_update_xybots)
 	MCFG_SCREEN_PALETTE("palette")
+	MCFG_SCREEN_VBLANK_CALLBACK(WRITELINE(*this, xybots_state, video_int_write_line))
 
 	/* sound hardware */
-	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	SPEAKER(config, "lspeaker").front_left();
+	SPEAKER(config, "rspeaker").front_right();
 
-	MCFG_ATARI_JSA_I_ADD("jsa", WRITELINE(xybots_state, sound_int_write_line))
+	MCFG_ATARI_JSA_I_ADD("jsa", INPUTLINE("maincpu", M68K_IRQ_2))
 	MCFG_ATARI_JSA_TEST_PORT("FFE200", 8)
 	MCFG_SOUND_ROUTE(0, "rspeaker", 1.0)
 	MCFG_SOUND_ROUTE(1, "lspeaker", 1.0)
@@ -384,7 +384,7 @@ ROM_END
  *
  *************************************/
 
-DRIVER_INIT_MEMBER(xybots_state,xybots)
+void xybots_state::init_xybots()
 {
 	m_h256 = 0x0400;
 	slapstic_configure(*m_maincpu, 0x008000, 0, memregion("maincpu")->base() + 0x8000);
@@ -398,8 +398,8 @@ DRIVER_INIT_MEMBER(xybots_state,xybots)
  *
  *************************************/
 
-GAME( 1987, xybots,  0,      xybots, xybots, xybots_state, xybots, ROT0, "Atari Games", "Xybots (rev 2)", 0 )
-GAME( 1987, xybotsg, xybots, xybots, xybots, xybots_state, xybots, ROT0, "Atari Games", "Xybots (German, rev 3)", 0 )
-GAME( 1987, xybotsf, xybots, xybots, xybots, xybots_state, xybots, ROT0, "Atari Games", "Xybots (French, rev 3)", 0 )
-GAME( 1987, xybots1, xybots, xybots, xybots, xybots_state, xybots, ROT0, "Atari Games", "Xybots (rev 1)", 0 )
-GAME( 1987, xybots0, xybots, xybots, xybots, xybots_state, xybots, ROT0, "Atari Games", "Xybots (rev 0)", 0 )
+GAME( 1987, xybots,  0,      xybots, xybots, xybots_state, init_xybots, ROT0, "Atari Games", "Xybots (rev 2)", 0 )
+GAME( 1987, xybotsg, xybots, xybots, xybots, xybots_state, init_xybots, ROT0, "Atari Games", "Xybots (German, rev 3)", 0 )
+GAME( 1987, xybotsf, xybots, xybots, xybots, xybots_state, init_xybots, ROT0, "Atari Games", "Xybots (French, rev 3)", 0 )
+GAME( 1987, xybots1, xybots, xybots, xybots, xybots_state, init_xybots, ROT0, "Atari Games", "Xybots (rev 1)", 0 )
+GAME( 1987, xybots0, xybots, xybots, xybots, xybots_state, init_xybots, ROT0, "Atari Games", "Xybots (rev 0)", 0 )

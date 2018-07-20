@@ -40,25 +40,29 @@ class cvicny_state : public driver_device
 {
 public:
 	cvicny_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
-	m_maincpu(*this, "maincpu"),
-	m_digit_last(0)
-	{ }
+		: driver_device(mconfig, type, tag)
+		, m_digit_last(0)
+		, m_maincpu(*this, "maincpu")
+		, m_digits(*this, "digit%u", 0U)
+		{ }
 
-	required_device<cpu_device> m_maincpu;
+	void cvicny(machine_config &config);
+	void cvicny_mem(address_map &map);
 	DECLARE_READ8_MEMBER(key_r);
 	DECLARE_WRITE8_MEMBER(digit_w);
 	DECLARE_WRITE8_MEMBER(segment_w );
+private:
 	uint8_t m_digit;
 	uint8_t m_digit_last;
-	void cvicny(machine_config &config);
-	void cvicny_mem(address_map &map);
+	virtual void machine_start() override { m_digits.resolve(); }
+	required_device<cpu_device> m_maincpu;
+	output_finder<8> m_digits;
 };
 
 WRITE8_MEMBER( cvicny_state::segment_w ) // output segments on the selected digit
 {
 	if (m_digit != m_digit_last)
-		output().set_digit_value(m_digit, data);
+		m_digits[m_digit] = data;
 
 	m_digit_last = m_digit;
 }
@@ -82,9 +86,9 @@ void cvicny_state::cvicny_mem(address_map &map)
 	map.unmap_value_high();
 	map(0x0000, 0x07ff).rom(); // 1 x 2716
 	map(0x0800, 0x0bff).ram().mirror(0x400); // 2x 2114 static ram
-	map(0x1000, 0x17ff).r(this, FUNC(cvicny_state::key_r));
-	map(0x1800, 0x1fff).w(this, FUNC(cvicny_state::digit_w));
-	map(0x2000, 0x27ff).w(this, FUNC(cvicny_state::segment_w));
+	map(0x1000, 0x17ff).r(FUNC(cvicny_state::key_r));
+	map(0x1800, 0x1fff).w(FUNC(cvicny_state::digit_w));
+	map(0x2000, 0x27ff).w(FUNC(cvicny_state::segment_w));
 }
 
 
@@ -133,8 +137,8 @@ INPUT_PORTS_END
 
 MACHINE_CONFIG_START(cvicny_state::cvicny)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",Z80, XTAL(2'000'000))
-	MCFG_CPU_PROGRAM_MAP(cvicny_mem)
+	MCFG_DEVICE_ADD("maincpu",Z80, XTAL(2'000'000))
+	MCFG_DEVICE_PROGRAM_MAP(cvicny_mem)
 
 	/* video hardware */
 	MCFG_DEFAULT_LAYOUT(layout_cvicny)
@@ -148,5 +152,5 @@ ROM_END
 
 /* Driver */
 
-//    YEAR  NAME    PARENT  COMPAT   MACHINE    INPUT   STATE          INIT   COMPANY      FULLNAME        FLAGS
-COMP( 1984, cvicny, 0,      0,       cvicny,    cvicny, cvicny_state,  0,     "<unknown>", "Practice-z80", MACHINE_NO_SOUND_HW)
+//    YEAR  NAME    PARENT  COMPAT  MACHINE  INPUT   CLASS         INIT        COMPANY      FULLNAME        FLAGS
+COMP( 1984, cvicny, 0,      0,      cvicny,  cvicny, cvicny_state, empty_init, "<unknown>", "Practice-z80", MACHINE_NO_SOUND_HW)

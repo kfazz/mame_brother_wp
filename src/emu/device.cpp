@@ -25,9 +25,9 @@ namespace {
 
 struct device_registrations
 {
-	device_type_impl *first = nullptr;
-	device_type_impl *last = nullptr;
-	device_type_impl *unsorted = nullptr;
+	device_type_impl_base *first = nullptr;
+	device_type_impl_base *last = nullptr;
+	device_type_impl_base *unsorted = nullptr;
 };
 
 device_registrations &device_registration_data()
@@ -53,7 +53,7 @@ device_registrar::const_iterator device_registrar::cend() const
 }
 
 
-device_type_impl *device_registrar::register_device(device_type_impl &type)
+device_type_impl_base *device_registrar::register_device(device_type_impl_base &type)
 {
 	device_registrations &data(device_registration_data());
 
@@ -208,6 +208,21 @@ std::string device_t::parameter(const char *tag) const
 
 
 //-------------------------------------------------
+//  add_machine_configuration - add device-
+//  specific machine configuration
+//-------------------------------------------------
+
+void device_t::add_machine_configuration(machine_config &config)
+{
+	assert(&config == &m_machine_config);
+	machine_config::token const tok(config.begin_configuration(*this));
+	device_add_mconfig(config);
+	for (finder_base *autodev = m_auto_finder_list; autodev != nullptr; autodev = autodev->next())
+		autodev->end_configuration();
+}
+
+
+//-------------------------------------------------
 //  set_clock - set/change the clock on
 //  a device
 //-------------------------------------------------
@@ -231,7 +246,56 @@ void device_t::set_clock(u32 clock)
 
 void device_t::config_complete()
 {
-	// first notify the interfaces
+	// resolve default BIOS
+	tiny_rom_entry const *const roms(rom_region());
+	if (roms)
+	{
+		// first pass: try to find default BIOS from ROM region or machine configuration
+		char const *defbios(m_default_bios_tag.empty() ? nullptr : m_default_bios_tag.c_str());
+		bool twopass(false), havebios(false);
+		u8 firstbios(0);
+		for (const tiny_rom_entry *rom = roms; !m_default_bios && !ROMENTRY_ISEND(rom); ++rom)
+		{
+			if (ROMENTRY_ISSYSTEM_BIOS(rom))
+			{
+				if (!havebios)
+				{
+					havebios = true;
+					firstbios = ROM_GETBIOSFLAGS(rom);
+				}
+				if (!defbios)
+					twopass = true;
+				else if (!std::strcmp(rom->name, defbios))
+					m_default_bios = ROM_GETBIOSFLAGS(rom);
+			}
+			else if (!defbios && ROMENTRY_ISDEFAULT_BIOS(rom))
+			{
+				defbios = rom->name;
+			}
+		}
+
+		// second pass is needed if default BIOS came after one or more system BIOSes
+		if (havebios && !m_default_bios)
+		{
+			if (defbios && twopass)
+			{
+				for (const tiny_rom_entry *rom = roms; !m_default_bios && !ROMENTRY_ISEND(rom); ++rom)
+				{
+					if (ROMENTRY_ISSYSTEM_BIOS(rom) && !std::strcmp(rom->name, defbios))
+						m_default_bios = ROM_GETBIOSFLAGS(rom);
+				}
+			}
+
+			// no default BIOS declared but at least one system BIOS declared
+			if (!m_default_bios)
+				m_default_bios = firstbios;
+		}
+
+		// set system BIOS to the default unless something overrides it
+		set_system_bios(m_default_bios);
+	}
+
+	// notify the interfaces
 	for (device_interface &intf : interfaces())
 		intf.interface_config_complete();
 
@@ -422,31 +486,30 @@ void device_t::set_machine(running_machine &machine)
 //  list and return status
 //-------------------------------------------------
 
-bool device_t::findit(bool pre_map, bool isvalidation) const
+bool device_t::findit(bool isvalidation) const
 {
 	bool allfound = true;
 	for (finder_base *autodev = m_auto_finder_list; autodev != nullptr; autodev = autodev->next())
-		if (autodev->is_pre_map() == pre_map)
+	{
+		if (isvalidation)
 		{
-			if (isvalidation)
+			// sanity checking
+			char const *const tag = autodev->finder_tag();
+			if (!tag)
 			{
-				// sanity checking
-				const char *tag = autodev->finder_tag();
-				if (tag == nullptr)
-				{
-					osd_printf_error("Finder tag is null!\n");
-					allfound = false;
-					continue;
-				}
-				if (tag[0] == '^' && tag[1] == ':')
-				{
-					osd_printf_error("Malformed finder tag: %s\n", tag);
-					allfound = false;
-					continue;
-				}
+				osd_printf_error("Finder tag is null!\n");
+				allfound = false;
+				continue;
 			}
-			allfound &= autodev->findit(isvalidation);
+			if (tag[0] == '^' && tag[1] == ':')
+			{
+				osd_printf_error("Malformed finder tag: %s\n", tag);
+				allfound = false;
+				continue;
+			}
 		}
+		allfound &= autodev->findit(isvalidation);
+	}
 	return allfound;
 }
 
@@ -460,21 +523,16 @@ void device_t::resolve_pre_map()
 	// prepare the logerror buffer
 	if (m_machine->allow_logging())
 		m_string_buffer.reserve(1024);
-
-	// find all the registered pre-map objects
-	if (!findit(true, false))
-		throw emu_fatalerror("Missing some required devices, unable to proceed");
 }
 
 //-------------------------------------------------
-//  resolve_post_map - find objects that are created
-//  in memory maps
+//  resolve - find objects
 //-------------------------------------------------
 
 void device_t::resolve_post_map()
 {
 	// find all the registered post-map objects
-	if (!findit(false, false))
+	if (!findit(false))
 		throw emu_fatalerror("Missing some required objects, unable to proceed");
 
 	// allow implementation to do additional setup

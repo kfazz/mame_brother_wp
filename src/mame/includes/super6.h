@@ -6,7 +6,7 @@
 #pragma once
 
 #include "cpu/z80/z80.h"
-#include "cpu/z80/z80daisy.h"
+#include "machine/z80daisy.h"
 #include "machine/com8116.h"
 #include "machine/ram.h"
 #include "machine/timer.h"
@@ -57,7 +57,6 @@ protected:
 	DECLARE_WRITE8_MEMBER( s100_w );
 	DECLARE_WRITE8_MEMBER( bank0_w );
 	DECLARE_WRITE8_MEMBER( bank1_w );
-	DECLARE_WRITE8_MEMBER( baud_w );
 	DECLARE_WRITE_LINE_MEMBER( fdc_intrq_w );
 	DECLARE_WRITE_LINE_MEMBER( fdc_drq_w );
 

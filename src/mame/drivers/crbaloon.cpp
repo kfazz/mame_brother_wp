@@ -197,8 +197,8 @@ void crbaloon_state::main_map(address_map &map)
 	map.global_mask(0x7fff); /* A15 is not decoded */
 	map(0x0000, 0x3fff).rom();     /* not fully populated */
 	map(0x4000, 0x43ff).mirror(0x0400).ram();
-	map(0x4800, 0x4bff).mirror(0x0400).ram().w(this, FUNC(crbaloon_state::crbaloon_videoram_w)).share("videoram");
-	map(0x5000, 0x53ff).mirror(0x0400).ram().w(this, FUNC(crbaloon_state::crbaloon_colorram_w)).share("colorram");
+	map(0x4800, 0x4bff).mirror(0x0400).ram().w(FUNC(crbaloon_state::crbaloon_videoram_w)).share("videoram");
+	map(0x5000, 0x53ff).mirror(0x0400).ram().w(FUNC(crbaloon_state::crbaloon_colorram_w)).share("colorram");
 	map(0x5800, 0x7fff).noprw();
 }
 
@@ -215,15 +215,15 @@ void crbaloon_state::main_io_map(address_map &map)
 	map.global_mask(0xf);
 	map(0x00, 0x00).mirror(0x0c).portr("DSW0");
 	map(0x01, 0x01).mirror(0x0c).portr("IN0");
-	map(0x02, 0x02).select(0x0c).r(this, FUNC(crbaloon_state::pc3259_r));
+	map(0x02, 0x02).select(0x0c).r(FUNC(crbaloon_state::pc3259_r));
 	map(0x03, 0x03).mirror(0x0c).portr("IN1");
 
 	map(0x00, 0x00).nopw();    /* not connected */
 	map(0x01, 0x01).nopw(); /* watchdog */
 	map(0x02, 0x04).writeonly().share("spriteram");
-	map(0x05, 0x05).w(this, FUNC(crbaloon_state::crbaloon_audio_set_music_freq));
-	map(0x06, 0x06).w(this, FUNC(crbaloon_state::port_sound_w));
-	map(0x07, 0x0b).w(this, FUNC(crbaloon_state::pc3092_w)).share("pc3092_data");
+	map(0x05, 0x05).w(FUNC(crbaloon_state::crbaloon_audio_set_music_freq));
+	map(0x06, 0x06).w(FUNC(crbaloon_state::port_sound_w));
+	map(0x07, 0x0b).w(FUNC(crbaloon_state::pc3092_w)).share("pc3092_data");
 	map(0x0c, 0x0c).nopw(); /* MSK - to PC3259 */
 	map(0x0d, 0x0d).nopw(); /* schematics has it in a box marked "NOT USE" */
 	map(0x0e, 0x0f).nopw();
@@ -274,7 +274,7 @@ static INPUT_PORTS_START( crbaloon )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_8WAY PORT_COCKTAIL
 
 	PORT_START("DSW1")
-	PORT_BIT( 0x0f, IP_ACTIVE_HIGH, IPT_SPECIAL )   /* PC3259 */
+	PORT_BIT( 0x0f, IP_ACTIVE_HIGH, IPT_CUSTOM )   /* PC3259 */
 	PORT_DIPNAME( 0x10, 0x10, "Invulnerability") PORT_DIPLOCATION("SW B:1")
 	PORT_DIPSETTING(    0x10, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
@@ -295,7 +295,7 @@ static INPUT_PORTS_START( crbaloon )
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_NAME("Name Reset")
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE1 )
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_TILT )
-	PORT_BIT( 0xf0, IP_ACTIVE_HIGH, IPT_SPECIAL ) PORT_CUSTOM_MEMBER(DEVICE_SELF, crbaloon_state,pc3092_r, nullptr)
+	PORT_BIT( 0xf0, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_CUSTOM_MEMBER(DEVICE_SELF, crbaloon_state,pc3092_r, nullptr)
 
 	PORT_START("PC3092")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_START1 )
@@ -325,7 +325,7 @@ static const gfx_layout charlayout =
 };
 
 
-static GFXDECODE_START( crbaloon )
+static GFXDECODE_START( gfx_crbaloon )
 	GFXDECODE_ENTRY( "gfx1", 0, charlayout, 0, 16 )
 GFXDECODE_END
 
@@ -364,14 +364,14 @@ INTERRUPT_GEN_MEMBER(crbaloon_state::vblank_irq)
 MACHINE_CONFIG_START(crbaloon_state::crbaloon)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, CRBALOON_MASTER_XTAL / 3)
-	MCFG_CPU_PROGRAM_MAP(main_map)
-	MCFG_CPU_IO_MAP(main_io_map)
-	MCFG_CPU_VBLANK_INT_DRIVER("screen", crbaloon_state,  vblank_irq)
+	MCFG_DEVICE_ADD("maincpu", Z80, CRBALOON_MASTER_XTAL / 3)
+	MCFG_DEVICE_PROGRAM_MAP(main_map)
+	MCFG_DEVICE_IO_MAP(main_io_map)
+	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", crbaloon_state,  vblank_irq)
 
 
 	/* video hardware */
-	MCFG_GFXDECODE_ADD("gfxdecode", "palette", crbaloon)
+	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_crbaloon)
 	MCFG_PALETTE_ADD("palette", 32)
 	MCFG_PALETTE_INIT_OWNER(crbaloon_state, crbaloon)
 
@@ -438,5 +438,5 @@ ROM_END
  *
  *************************************/
 
-GAME( 1980, crbaloon, 0,        crbaloon, crbaloon, crbaloon_state, 0, ROT90, "Taito Corporation", "Crazy Balloon (set 1)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
-GAME( 1980, crbaloon2,crbaloon, crbaloon, crbaloon, crbaloon_state, 0, ROT90, "Taito Corporation", "Crazy Balloon (set 2)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
+GAME( 1980, crbaloon,  0,        crbaloon, crbaloon, crbaloon_state, empty_init, ROT90, "Taito Corporation", "Crazy Balloon (set 1)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )
+GAME( 1980, crbaloon2, crbaloon, crbaloon, crbaloon, crbaloon_state, empty_init, ROT90, "Taito Corporation", "Crazy Balloon (set 2)", MACHINE_IMPERFECT_SOUND | MACHINE_SUPPORTS_SAVE )

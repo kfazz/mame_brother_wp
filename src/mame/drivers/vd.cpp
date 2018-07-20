@@ -31,6 +31,7 @@ public:
 	vd_state(const machine_config &mconfig, device_type type, const char *tag)
 		: genpin_class(mconfig, type, tag)
 		, m_maincpu(*this, "maincpu")
+		, m_digits(*this, "digit%u", 0U)
 	{ }
 
 	DECLARE_READ8_MEMBER(ack_r);
@@ -42,16 +43,14 @@ public:
 	void vd(machine_config &config);
 	void vd_io(address_map &map);
 	void vd_map(address_map &map);
-protected:
 
-	// devices
-	required_device<cpu_device> m_maincpu;
-
-	// driver_device overrides
-	virtual void machine_reset() override;
 private:
 	uint8_t m_t_c;
 	uint8_t segment[5];
+	virtual void machine_reset() override;
+	virtual void machine_start() override { m_digits.resolve(); }
+	required_device<cpu_device> m_maincpu;
+	output_finder<60> m_digits;
 };
 
 
@@ -77,17 +76,17 @@ void vd_state::vd_io(address_map &map)
 	map(0x03, 0x03).portr("X3");
 	map(0x04, 0x04).portr("X4");
 	map(0x05, 0x05).portr("X5");
-	map(0x20, 0x27).w(this, FUNC(vd_state::lamp_w));
-	map(0x28, 0x28).w(this, FUNC(vd_state::sol_w));
-	map(0x40, 0x44).w(this, FUNC(vd_state::disp_w));
+	map(0x20, 0x27).w(FUNC(vd_state::lamp_w));
+	map(0x28, 0x28).w(FUNC(vd_state::sol_w));
+	map(0x40, 0x44).w(FUNC(vd_state::disp_w));
 	map(0x60, 0x60).w("ay1", FUNC(ay8910_device::address_w));
 	map(0x61, 0x61).r("ay1", FUNC(ay8910_device::data_r));
 	map(0x62, 0x62).w("ay1", FUNC(ay8910_device::data_w));
 	map(0x80, 0x80).w("ay2", FUNC(ay8910_device::address_w));
 	map(0x81, 0x81).r("ay2", FUNC(ay8910_device::data_r)); // probably never read
 	map(0x82, 0x82).w("ay2", FUNC(ay8910_device::data_w));
-	map(0xa0, 0xa0).r(this, FUNC(vd_state::ack_r));
-	map(0xc0, 0xc0).w(this, FUNC(vd_state::col_w));
+	map(0xa0, 0xa0).r(FUNC(vd_state::ack_r));
+	map(0xc0, 0xc0).w(FUNC(vd_state::col_w));
 }
 
 static INPUT_PORTS_START( break86 )
@@ -173,11 +172,11 @@ WRITE8_MEMBER( vd_state::col_w )
 	if (data != 0x3f)
 	{
 		data &= 7;
-		output().set_digit_value(data + 11, segment[0]);
-		output().set_digit_value(data + 21, segment[1]);
-		output().set_digit_value(data + 31, segment[2]);
-		output().set_digit_value(data + 41, segment[3]);
-		output().set_digit_value(data + 51, segment[4]);
+		m_digits[data + 11] = segment[0];
+		m_digits[data + 21] = segment[1];
+		m_digits[data + 31] = segment[2];
+		m_digits[data + 41] = segment[3];
+		m_digits[data + 51] = segment[4];
 	}
 }
 
@@ -188,19 +187,20 @@ void vd_state::machine_reset()
 
 MACHINE_CONFIG_START(vd_state::vd)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, 4000000)
-	MCFG_CPU_PROGRAM_MAP(vd_map)
-	MCFG_CPU_IO_MAP(vd_io)
+	MCFG_DEVICE_ADD("maincpu", Z80, 4000000)
+	MCFG_DEVICE_PROGRAM_MAP(vd_map)
+	MCFG_DEVICE_IO_MAP(vd_io)
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("irq", vd_state, irq, attotime::from_hz(484))
 
 	/* Sound */
 	genpin_audio(config);
-	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MCFG_SOUND_ADD("ay1", AY8910, 2000000) //?
+	SPEAKER(config, "lspeaker").front_left();
+	SPEAKER(config, "rspeaker").front_right();
+	MCFG_DEVICE_ADD("ay1", AY8910, 2000000) //?
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.33/3)
 	MCFG_AY8910_PORT_A_READ_CB(IOPORT("DSW2"))
 	MCFG_AY8910_PORT_B_READ_CB(IOPORT("DSW1"))
-	MCFG_SOUND_ADD("ay2", AY8910, 2000000) //?
+	MCFG_DEVICE_ADD("ay2", AY8910, 2000000) //?
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.33/3)
 	MCFG_AY8910_PORT_B_READ_CB(IOPORT("DSW3")) //?
 
@@ -233,5 +233,5 @@ ROM_START(papillon)
 ROM_END
 
 
-GAME(1986, break86,  0,    vd,  break86,  vd_state, 0,  ROT0,  "Video Dens", "Break '86", MACHINE_IS_SKELETON_MECHANICAL)
-GAME(1986, papillon, 0,    vd,  papillon, vd_state, 0,  ROT0,  "Video Dens", "Papillon",  MACHINE_IS_SKELETON_MECHANICAL)
+GAME(1986, break86,  0,    vd,  break86,  vd_state, empty_init, ROT0,  "Video Dens", "Break '86", MACHINE_IS_SKELETON_MECHANICAL)
+GAME(1986, papillon, 0,    vd,  papillon, vd_state, empty_init, ROT0,  "Video Dens", "Papillon",  MACHINE_IS_SKELETON_MECHANICAL)

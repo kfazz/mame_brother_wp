@@ -156,6 +156,8 @@ debugger_commands::debugger_commands(running_machine& machine, debugger_cpu& cpu
 	m_console.register_command("gv",        CMDFLAG_NONE, 0, 0, 0, std::bind(&debugger_commands::execute_go_vblank, this, _1, _2));
 	m_console.register_command("gint",      CMDFLAG_NONE, 0, 0, 1, std::bind(&debugger_commands::execute_go_interrupt, this, _1, _2));
 	m_console.register_command("gi",        CMDFLAG_NONE, 0, 0, 1, std::bind(&debugger_commands::execute_go_interrupt, this, _1, _2));
+	m_console.register_command("gex",       CMDFLAG_NONE, 0, 0, 1, std::bind(&debugger_commands::execute_go_exception, this, _1, _2));
+	m_console.register_command("ge",        CMDFLAG_NONE, 0, 0, 1, std::bind(&debugger_commands::execute_go_exception, this, _1, _2));
 	m_console.register_command("gtime",     CMDFLAG_NONE, 0, 0, 1, std::bind(&debugger_commands::execute_go_time, this, _1, _2));
 	m_console.register_command("gt",        CMDFLAG_NONE, 0, 0, 1, std::bind(&debugger_commands::execute_go_time, this, _1, _2));
 	m_console.register_command("next",      CMDFLAG_NONE, 0, 0, 0, std::bind(&debugger_commands::execute_next, this, _1, _2));
@@ -163,6 +165,8 @@ debugger_commands::debugger_commands(running_machine& machine, debugger_cpu& cpu
 	m_console.register_command("focus",     CMDFLAG_NONE, 0, 1, 1, std::bind(&debugger_commands::execute_focus, this, _1, _2));
 	m_console.register_command("ignore",    CMDFLAG_NONE, 0, 0, MAX_COMMAND_PARAMS, std::bind(&debugger_commands::execute_ignore, this, _1, _2));
 	m_console.register_command("observe",   CMDFLAG_NONE, 0, 0, MAX_COMMAND_PARAMS, std::bind(&debugger_commands::execute_observe, this, _1, _2));
+	m_console.register_command("suspend",   CMDFLAG_NONE, 0, 0, MAX_COMMAND_PARAMS, std::bind(&debugger_commands::execute_suspend, this, _1, _2));
+	m_console.register_command("resume",    CMDFLAG_NONE, 0, 0, MAX_COMMAND_PARAMS, std::bind(&debugger_commands::execute_resume, this, _1, _2));
 
 	m_console.register_command("comadd",    CMDFLAG_NONE, 0, 1, 2, std::bind(&debugger_commands::execute_comment_add, this, _1, _2));
 	m_console.register_command("//",        CMDFLAG_NONE, 0, 1, 2, std::bind(&debugger_commands::execute_comment_add, this, _1, _2));
@@ -439,7 +443,7 @@ bool debugger_commands::validate_cpu_parameter(const char *param, device_t *&res
 	}
 
 	/* first look for a tag match */
-	result = m_machine.device(param);
+	result = m_machine.root_device().subdevice(param);
 	if (result)
 		return true;
 
@@ -863,6 +867,21 @@ void debugger_commands::execute_go_interrupt(int ref, const std::vector<std::str
 	m_cpu.get_visible_cpu()->debug()->go_interrupt(irqline);
 }
 
+/*-------------------------------------------------
+    execute_go_exception - execute the goex command
+-------------------------------------------------*/
+
+void debugger_commands::execute_go_exception(int ref, const std::vector<std::string> &params)
+{
+	u64 exception = -1;
+
+	/* if we have a parameter, use it instead */
+	if (params.size() > 0 && !validate_number_parameter(params[0], exception))
+		return;
+
+	m_cpu.get_visible_cpu()->debug()->go_exception(exception);
+}
+
 
 /*-------------------------------------------------
     execute_go_time - execute the gtime command
@@ -1023,6 +1042,109 @@ void debugger_commands::execute_observe(int ref, const std::vector<std::string> 
 	}
 }
 
+/*-------------------------------------------------
+    execute_suspend - suspend execution on cpu
+-------------------------------------------------*/
+
+void debugger_commands::execute_suspend(int ref, const std::vector<std::string> &params)
+{
+	/* if there are no parameters, dump the ignore list */
+	if (params.empty())
+	{
+		std::string buffer;
+
+		/* loop over all executable devices */
+		for (device_execute_interface &exec : execute_interface_iterator(m_machine.root_device()))
+
+			/* build up a comma-separated list */
+			if (exec.device().debug()->suspended())
+			{
+				if (buffer.empty())
+					buffer = string_format("Currently suspended device '%s'", exec.device().tag());
+				else
+					buffer.append(string_format(", '%s'", exec.device().tag()));
+			}
+
+		/* special message for none */
+		if (buffer.empty())
+			buffer = string_format("No currently suspended devices");
+		m_console.printf("%s\n", buffer.c_str());
+	}
+	else
+	{
+		device_t *devicelist[MAX_COMMAND_PARAMS];
+
+		/* validate parameters */
+		for (int paramnum = 0; paramnum < params.size(); paramnum++)
+			if (!validate_cpu_parameter(params[paramnum].c_str(), devicelist[paramnum]))
+				return;
+
+		for (int paramnum = 0; paramnum < params.size(); paramnum++)
+		{
+			/* make sure this isn't the last live CPU */
+			bool gotone = false;
+			for (device_execute_interface &exec : execute_interface_iterator(m_machine.root_device()))
+				if (&exec.device() != devicelist[paramnum] && !exec.device().debug()->suspended())
+				{
+					gotone = true;
+					break;
+				}
+			if (!gotone)
+			{
+				m_console.printf("Can't suspend all devices!\n");
+				return;
+			}
+
+			devicelist[paramnum]->debug()->suspend(true);
+			m_console.printf("Suspended device '%s'\n", devicelist[paramnum]->tag());
+		}
+	}
+}
+
+/*-------------------------------------------------
+    execute_resume - Resume execution on CPU
+-------------------------------------------------*/
+
+void debugger_commands::execute_resume(int ref, const std::vector<std::string> &params)
+{
+	/* if there are no parameters, dump the ignore list */
+	if (params.empty())
+	{
+		std::string buffer;
+
+		/* loop over all executable devices */
+		for (device_execute_interface &exec : execute_interface_iterator(m_machine.root_device()))
+
+			/* build up a comma-separated list */
+			if (exec.device().debug()->suspended())
+			{
+				if (buffer.empty())
+					buffer = string_format("Currently suspended device '%s'", exec.device().tag());
+				else
+					buffer.append(string_format(", '%s'", exec.device().tag()));
+			}
+
+		/* special message for none */
+		if (buffer.empty())
+			buffer = string_format("No currently suspended devices");
+		m_console.printf("%s\n", buffer.c_str());
+	}
+	else
+	{
+		device_t *devicelist[MAX_COMMAND_PARAMS];
+
+		/* validate parameters */
+		for (int paramnum = 0; paramnum < params.size(); paramnum++)
+			if (!validate_cpu_parameter(params[paramnum].c_str(), devicelist[paramnum]))
+				return;
+
+		for (int paramnum = 0; paramnum < params.size(); paramnum++)
+		{
+			devicelist[paramnum]->debug()->suspend(false);
+			m_console.printf("Resumed device '%s'\n", devicelist[paramnum]->tag());
+		}
+	}
+}
 
 /*-------------------------------------------------
     execute_comment - add a comment to a line
@@ -1697,29 +1819,37 @@ void debugger_commands::execute_save(int ref, const std::vector<std::string> &pa
 	case -3:
 		for (offs_t i = offset; i != endoffset; i++)
 		{
-			u64 data = space->read_qword(i);
+			offs_t curaddr = i;
+			u64 data = space->device().memory().translate(space->spacenum(), TRANSLATE_READ_DEBUG, curaddr) ?
+				space->read_qword(curaddr) : space->unmap();
 			fwrite(&data, 8, 1, f);
 		}
 		break;
 	case -2:
 		for (offs_t i = offset; i != endoffset; i++)
 		{
-			u32 data = space->read_dword(i);
+			offs_t curaddr = i;
+			u32 data = space->device().memory().translate(space->spacenum(), TRANSLATE_READ_DEBUG, curaddr) ?
+				space->read_dword(curaddr) : space->unmap();
 			fwrite(&data, 4, 1, f);
 		}
 		break;
 	case -1:
 		for (offs_t i = offset; i != endoffset; i++)
 		{
-			u16 byte = space->read_word(i);
-			fwrite(&byte, 2, 1, f);
+			offs_t curaddr = i;
+			u16 data = space->device().memory().translate(space->spacenum(), TRANSLATE_READ_DEBUG, curaddr) ?
+				space->read_word(curaddr) : space->unmap();
+			fwrite(&data, 2, 1, f);
 		}
 		break;
 	case  0:
 		for (offs_t i = offset; i != endoffset; i++)
 		{
-			u8 byte = space->read_byte(i);
-			fwrite(&byte, 1, 1, f);
+			offs_t curaddr = i;
+			u8 data = space->device().memory().translate(space->spacenum(), TRANSLATE_READ_DEBUG, curaddr) ?
+				space->read_byte(curaddr) : space->unmap();
+			fwrite(&data, 1, 1, f);
 		}
 		break;
 	case  3:
@@ -1727,8 +1857,10 @@ void debugger_commands::execute_save(int ref, const std::vector<std::string> &pa
 		endoffset &= ~15;
 		for (offs_t i = offset; i != endoffset; i+=16)
 		{
-			u16 byte = space->read_word(i >> 4);
-			fwrite(&byte, 2, 1, f);
+			offs_t curaddr = i >> 4;
+			u16 data = space->device().memory().translate(space->spacenum(), TRANSLATE_READ_DEBUG, curaddr) ?
+				space->read_word(curaddr) : space->unmap();
+			fwrite(&data, 2, 1, f);
 		}
 		break;
 	}
@@ -1787,37 +1919,41 @@ void debugger_commands::execute_load(int ref, const std::vector<std::string> &pa
 	case -3:
 		for (i = offset; f.good() && (i <= endoffset || endoffset == offset - 1); i++)
 		{
+			offs_t curaddr = i;
 			u64 data;
 			f.read((char *)&data, 8);
-			if (f)
-				space->write_qword(i, data);
+			if (f && space->device().memory().translate(space->spacenum(), TRANSLATE_WRITE_DEBUG, curaddr))
+				space->write_qword(curaddr, data);
 		}
 		break;
 	case -2:
 		for (i = offset; f.good() && (i <= endoffset || endoffset == offset - 1); i++)
 		{
+			offs_t curaddr = i;
 			u32 data;
 			f.read((char *)&data, 4);
-			if (f)
-				space->write_dword(i, data);
+			if (f && space->device().memory().translate(space->spacenum(), TRANSLATE_WRITE_DEBUG, curaddr))
+				space->write_dword(curaddr, data);
 		}
 		break;
 	case -1:
 		for (i = offset; f.good() && (i <= endoffset || endoffset == offset - 1); i++)
 		{
+			offs_t curaddr = i;
 			u16 data;
 			f.read((char *)&data, 2);
-			if (f)
-				space->write_word(i, data);
+			if (f && space->device().memory().translate(space->spacenum(), TRANSLATE_WRITE_DEBUG, curaddr))
+				space->write_word(curaddr, data);
 		}
 		break;
 	case  0:
 		for (i = offset; f.good() && (i <= endoffset || endoffset == offset - 1); i++)
 		{
+			offs_t curaddr = i;
 			u8 data;
 			f.read((char *)&data, 1);
-			if (f)
-				space->write_byte(i, data);
+			if (f && space->device().memory().translate(space->spacenum(), TRANSLATE_WRITE_DEBUG, curaddr))
+				space->write_byte(curaddr, data);
 		}
 		break;
 	case  3:
@@ -1825,10 +1961,11 @@ void debugger_commands::execute_load(int ref, const std::vector<std::string> &pa
 		endoffset &= ~15;
 		for (i = offset; f.good() && (i <= endoffset || endoffset == offset - 16); i+=16)
 		{
+			offs_t curaddr = i >> 4;
 			u16 data;
 			f.read((char *)&data, 2);
-			if (f)
-				space->write_word(i >> 4, data);
+			if (f && space->device().memory().translate(space->spacenum(), TRANSLATE_WRITE_DEBUG, curaddr))
+				space->write_word(curaddr, data);
 		}
 		break;
 	}
@@ -1939,13 +2076,13 @@ void debugger_commands::execute_dump(int ref, const std::vector<std::string> &pa
 					switch (width)
 					{
 					case 8:
-						util::stream_format(output, " %016X", space->read_qword(i+j));
+						util::stream_format(output, " %016X", space->read_qword_unaligned(i+j));
 						break;
 					case 4:
-						util::stream_format(output, " %08X", space->read_dword(i+j));
+						util::stream_format(output, " %08X", space->read_dword_unaligned(i+j));
 						break;
 					case 2:
-						util::stream_format(output, " %04X", space->read_word(i+j));
+						util::stream_format(output, " %04X", space->read_word_unaligned(i+j));
 						break;
 					case 1:
 						util::stream_format(output, " %02X", space->read_byte(i+j));
@@ -1974,13 +2111,13 @@ void debugger_commands::execute_dump(int ref, const std::vector<std::string> &pa
 					switch (width)
 					{
 					case 8:
-						data = space->read_qword(i+j);
+						data = space->read_qword_unaligned(i+j);
 						break;
 					case 4:
-						data = space->read_dword(i+j);
+						data = space->read_dword_unaligned(i+j);
 						break;
 					case 2:
-						data = space->read_word(i+j);
+						data = space->read_word_unaligned(i+j);
 						break;
 					case 1:
 						data = space->read_byte(i+j);
@@ -2820,7 +2957,7 @@ void debugger_commands::execute_trackpc(int ref, const std::vector<std::string> 
 		// Insert current pc
 		if (m_cpu.get_visible_cpu() == cpu)
 		{
-			const offs_t pc = cpu->safe_pcbase();
+			const offs_t pc = cpu->state().pcbase();
 			cpu->debug()->set_track_pc_visited(pc);
 		}
 		m_console.printf("PC tracking enabled\n");
