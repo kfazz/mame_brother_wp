@@ -3,4 +3,3 @@ hurd.patch
 sphinx_mathjax_location.patch
 m68000_archopts.patch
 kfreebsd_dirent.h_path.patch
-fix_c_fallback.patch
