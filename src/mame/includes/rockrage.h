@@ -10,6 +10,7 @@
 #include "sound/vlm5030.h"
 #include "video/k007342.h"
 #include "video/k007420.h"
+#include "emupal.h"
 
 class rockrage_state : public driver_device
 {
@@ -51,7 +52,7 @@ public:
 	virtual void machine_reset() override;
 	DECLARE_PALETTE_INIT(rockrage);
 	uint32_t screen_update_rockrage(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
-	INTERRUPT_GEN_MEMBER(rockrage_interrupt);
+	DECLARE_WRITE_LINE_MEMBER(vblank_irq);
 	K007342_CALLBACK_MEMBER(rockrage_tile_callback);
 	K007420_CALLBACK_MEMBER(rockrage_sprite_callback);
 

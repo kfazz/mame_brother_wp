@@ -21,7 +21,9 @@ public:
 		atarigen_state(mconfig, type, tag),
 		m_nvram(*this, "nvram"),
 		m_playfield_tilemap(*this, "playfield"),
-		m_spriteram(*this, "spriteram")
+		m_scan_timer(*this, "scan_timer"),
+		m_spriteram(*this, "spriteram"),
+		m_leds(*this, "led%u", 0U)
 	{ }
 
 	void foodf(machine_config &config);
@@ -33,8 +35,6 @@ protected:
 	virtual void update_interrupts() override;
 	DECLARE_WRITE16_MEMBER(nvram_recall_w);
 	DECLARE_WRITE8_MEMBER(digital_w);
-	DECLARE_READ16_MEMBER(analog_r);
-	DECLARE_WRITE16_MEMBER(analog_w);
 	DECLARE_WRITE16_MEMBER(foodf_paletteram_w);
 	void foodf_set_flip(int flip);
 	DECLARE_READ8_MEMBER(pot_r);
@@ -47,14 +47,15 @@ protected:
 private:
 	required_device<x2212_device> m_nvram;
 	required_device<tilemap_device> m_playfield_tilemap;
+	required_device<timer_device> m_scan_timer;
 
 	double          m_rweights[3];
 	double          m_gweights[3];
 	double          m_bweights[2];
 	uint8_t           m_playfield_flip;
 
-	uint8_t           m_whichport;
 	required_shared_ptr<uint16_t> m_spriteram;
+	output_finder<2> m_leds;
 };
 
 #endif // MAME_INCLUDES_FOODF_H

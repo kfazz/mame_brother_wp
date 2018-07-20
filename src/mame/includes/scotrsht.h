@@ -2,6 +2,7 @@
 // copyright-holders:David Haywood, ???
 
 #include "machine/gen_latch.h"
+#include "emupal.h"
 
 class scotrsht_state : public driver_device
 {
@@ -44,7 +45,7 @@ public:
 
 	TILE_GET_INFO_MEMBER(get_bg_tile_info);
 
-	INTERRUPT_GEN_MEMBER(interrupt);
+	DECLARE_WRITE_LINE_MEMBER(vblank_irq);
 
 	virtual void video_start() override;
 	DECLARE_PALETTE_INIT(scotrsht);

@@ -1,5 +1,8 @@
 // license:BSD-3-Clause
 // copyright-holders:Uki
+
+#include "emupal.h"
+
 class xxmissio_state : public driver_device
 {
 public:
@@ -40,7 +43,7 @@ public:
 
 	DECLARE_CUSTOM_INPUT_MEMBER(status_r);
 
-	INTERRUPT_GEN_MEMBER(interrupt_m);
+	DECLARE_WRITE_LINE_MEMBER(interrupt_m);
 	INTERRUPT_GEN_MEMBER(interrupt_s);
 
 	TILE_GET_INFO_MEMBER(get_bg_tile_info);

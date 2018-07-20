@@ -221,9 +221,6 @@ public:
 	DECLARE_READ8_MEMBER( read );
 	DECLARE_WRITE8_MEMBER( write );
 
-	uint8_t read(offs_t offset);
-	void  write(offs_t offset, uint8_t data);
-
 	DECLARE_WRITE_LINE_MEMBER( sid_w ); // pin 24
 	void serin_ready(int after);
 
@@ -265,7 +262,6 @@ private:
 		int32_t m_counter;        /* channel counter */
 		uint8_t m_output;         /* channel output signal (1 active, 0 inactive) */
 		uint8_t m_filter_sample;  /* high-pass filter sample */
-		uint8_t m_div2;           /* division by 2 */
 
 		inline void sample(void)            { m_filter_sample = m_output; }
 		inline void reset_channel(void)     { m_counter = m_AUDF ^ 0xff; }
