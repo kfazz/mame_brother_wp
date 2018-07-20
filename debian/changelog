@@ -1,8 +1,8 @@
-mame (0.199+dfsg.1-1) UNRELEASED; urgency=medium
+mame (0.199+dfsg.1-1) unstable; urgency=medium
 
   * New upstream release.
 
- -- Jordi Mallach <jordi@debian.org>  Fri, 20 Jul 2018 16:24:51 +0200
+ -- Jordi Mallach <jordi@debian.org>  Fri, 20 Jul 2018 16:25:34 +0200
 
 mame (0.196+dfsg.1-1) unstable; urgency=medium
 
