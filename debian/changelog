@@ -1,10 +1,10 @@
-mame (0.196+dfsg.1-1) UNRELEASED; urgency=medium
+mame (0.196+dfsg.1-1) unstable; urgency=medium
 
   * New upstream release.
   * Update Vcs-* fields to reflect migration to salsa.debian.org.
   * Remove fix_c_fallback.patch, which was taken from git.
 
- -- Jordi Mallach <jordi@debian.org>  Fri, 30 Mar 2018 01:40:54 +0200
+ -- Jordi Mallach <jordi@debian.org>  Fri, 20 Jul 2018 12:13:33 +0200
 
 mame (0.195+dfsg.1-2) unstable; urgency=medium
 
