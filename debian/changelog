@@ -1,3 +1,9 @@
+mame (0.199+dfsg.1-2) UNRELEASED; urgency=medium
+
+  * Use system libasio and libpugixml. Update B-D accordingly.
+
+ -- Jordi Mallach <jordi@debian.org>  Mon, 23 Jul 2018 16:40:48 +0200
+
 mame (0.199+dfsg.1-1) unstable; urgency=medium
 
   * New upstream release.
