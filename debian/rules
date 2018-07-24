@@ -22,9 +22,6 @@ export DEB_CFLAGS_MAINT_APPEND = $(shell dpkg-buildflags --get CPPFLAGS)
 export DEB_LDFLAGS_MAINT_APPEND = \
     -Wl,--no-keep-memory,--reduce-memory-overheads,--hash-size=31
 
-# Also, use Gold linker which is less greed for memory
-LDFLAGS = "-fuse-ld=gold"
-
 # taken verbatim from debian policy
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
 NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
@@ -58,18 +55,20 @@ DEB_OPTS = \
     USE_SYSTEM_LIB_PUGIXML=1 \
     VERBOSE=1
 
-# Override make variables for specific archs
-# Linux architectures
+# Set specific arch options:
+# Use Gold linker which is less greedy for memory
 ifeq ($(DEB_HOST_ARCH),amd64)
 DEB_OPTS += \
     FORCE_DRC_C_BACKEND= \
     PTR64=1 \
     NOASM=
+DEB_LDFLAGS_MAINT_APPEND = "-fuse-ld=gold"
 endif
 
 ifeq ($(DEB_HOST_ARCH),arm64)
 DEB_OPTS += \
     ARCHOPTS="-mabi=lp64 -fPIC"
+DEB_LDFLAGS_MAINT_APPEND = "-fuse-ld=gold"
 endif
 
 ifeq ($(DEB_HOST_ARCH),i386)
@@ -77,6 +76,7 @@ DEB_OPTS += \
     OPTIMIZE=2 \
     FORCE_DRC_C_BACKEND= \
     NOASM=
+DEB_LDFLAGS_MAINT_APPEND = "-fuse-ld=gold"
 endif
 
 ifeq ($(DEB_HOST_ARCH),ia64)
@@ -93,6 +93,10 @@ endif
 ifeq ($(DEB_HOST_ARCH),mipsel)
 DEB_OPTS += \
     ARCHOPTS=-Umips
+endif
+
+ifeq ($(DEB_HOST_ARCH),mips64el)
+DEB_LDFLAGS_MAINT_APPEND = "-fuse-ld=gold"
 endif
 
 ifeq ($(DEB_HOST_ARCH),powerpc)
@@ -124,6 +128,7 @@ ifeq ($(DEB_HOST_ARCH),s390x)
 DEB_OPTS += \
     PTR64=1 \
     BIGENDIAN=1
+DEB_LDFLAGS_MAINT_APPEND = "-fuse-ld=gold"
 endif
 
 ifeq ($(DEB_HOST_ARCH),sparc)
@@ -141,6 +146,7 @@ ifeq ($(DEB_HOST_ARCH),x32)
 DEB_OPTS += \
     FORCE_DRC_C_BACKEND= \
     NOASM=
+DEB_LDFLAGS_MAINT_APPEND = "-fuse-ld=gold"
 endif
 
 # kFreeBSD architectures
