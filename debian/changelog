@@ -1,5 +1,6 @@
-mame (0.199+dfsg.1-2) UNRELEASED; urgency=medium
+mame (0.200+dfsg.1-1) UNRELEASED; urgency=medium
 
+  * New upstream release.
   * Use system libasio and libpugixml. Update B-D accordingly.
   * Make use of the gold linker conditional to availability.
 
