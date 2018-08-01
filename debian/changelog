@@ -3,6 +3,8 @@ mame (0.200+dfsg.1-1) UNRELEASED; urgency=medium
   * New upstream release.
   * Use system libasio and libpugixml. Update B-D accordingly.
   * Make use of the gold linker conditional to availability.
+  * Drop usage of system asio, as it does not build with current versions
+    in unstable or experimental.
 
  -- Jordi Mallach <jordi@debian.org>  Mon, 23 Jul 2018 16:40:48 +0200
 
