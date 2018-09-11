@@ -62,7 +62,7 @@ You can verify that MAME has read the correct options with "{{{mame -showconfig}
 and even create a fresh mame.ini file with "{{{mame -createconfig}}}".
 
 If you upgraded from a previous version of mame, you might have to replace your
-rom sets, see the [[http://bit.ly/nBnkIf|Mame FAQ on ROMs]].
+rom sets, see the [[https://bit.ly/nBnkIf|Mame FAQ on ROMs]].
 
 == TOOLS ==
 
