@@ -1,19 +1,19 @@
     DESTPATH="/usr/share/games/mame/roms/";
     FREEROMS=(
-      'Robby Roto (Ballt/Midway)'  'http://www.mamedev.org/roms/robby/robby.zip' \
-      'Gridlee (Videa)'            'http://www.mamedev.org/roms/gridlee/gridlee.zip' \
-      'Alien Arena (Duncan Brown)' 'http://www.mamedev.org/roms/alienar/alienar.zip' \
-      'Teeter Torture (Exidy)'     'http://www.mamedev.org/roms/teetert/teetert.zip' \
-      'Circus (Exidy)'             'http://www.mamedev.org/roms/circus/circus.zip' \
-      'Robot Bowl (Exidy)'         'http://www.mamedev.org/roms/robotbwl/robotbwl.zip' \
-      'Car Polo (Exidy)'           'http://www.mamedev.org/roms/carpolo/carpolo.zip' \
-      'Rip Cord (Exidy)'           'http://www.mamedev.org/roms/ripcord/ripcord.zip' \
-      'Fire One (Exidy)'           'http://www.mamedev.org/roms/fireone/fireone.zip' \
-      'Crash (Exidy)'              'http://www.mamedev.org/roms/crash/crash.zip' \
-      'Star Fire (Exidy)'          'http://www.mamedev.org/roms/starfire/starfire.zip' \
-      'Side Track (Exidy)'         'http://www.mamedev.org/roms/sidetrac/sidetrac.zip' \
-      'Spectar (Exidy)'            'http://www.mamedev.org/roms/spectar/spectar.zip' \
-      'Targ (Exidy)'               'http://www.mamedev.org/roms/targ/targ.zip' \
+      'Robby Roto (Ballt/Midway)'  'https://www.mamedev.org/roms/robby/robby.zip' \
+      'Gridlee (Videa)'            'https://www.mamedev.org/roms/gridlee/gridlee.zip' \
+      'Alien Arena (Duncan Brown)' 'https://www.mamedev.org/roms/alienar/alienar.zip' \
+      'Teeter Torture (Exidy)'     'https://www.mamedev.org/roms/teetert/teetert.zip' \
+      'Circus (Exidy)'             'https://www.mamedev.org/roms/circus/circus.zip' \
+      'Robot Bowl (Exidy)'         'https://www.mamedev.org/roms/robotbwl/robotbwl.zip' \
+      'Car Polo (Exidy)'           'https://www.mamedev.org/roms/carpolo/carpolo.zip' \
+      'Rip Cord (Exidy)'           'https://www.mamedev.org/roms/ripcord/ripcord.zip' \
+      'Fire One (Exidy)'           'https://www.mamedev.org/roms/fireone/fireone.zip' \
+      'Crash (Exidy)'              'https://www.mamedev.org/roms/crash/crash.zip' \
+      'Star Fire (Exidy)'          'https://www.mamedev.org/roms/starfire/starfire.zip' \
+      'Side Track (Exidy)'         'https://www.mamedev.org/roms/sidetrac/sidetrac.zip' \
+      'Spectar (Exidy)'            'https://www.mamedev.org/roms/spectar/spectar.zip' \
+      'Targ (Exidy)'               'https://www.mamedev.org/roms/targ/targ.zip' \
     );
     NBROMS=$((${#FREEROMS[@]}/2));
 

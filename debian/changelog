@@ -1,6 +1,7 @@
 mame (0.201+dfsg.1-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Use HTTPS for links to mamedev.org.
 
  -- Jordi Mallach <jordi@debian.org>  Tue, 11 Sep 2018 23:33:42 +0200
 
