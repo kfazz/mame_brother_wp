@@ -1,11 +1,11 @@
-mame (0.201+dfsg.1-1) UNRELEASED; urgency=medium
+mame (0.201+dfsg.1-1) experimental; urgency=medium
 
   * New upstream release.
   * Use HTTPS for links to mamedev.org.
   * Set Rules-Requires-Root to no.
   * Update Standards-Version to 4.2.1.
 
- -- Jordi Mallach <jordi@debian.org>  Tue, 11 Sep 2018 23:33:42 +0200
+ -- Jordi Mallach <jordi@debian.org>  Tue, 11 Sep 2018 23:56:25 +0200
 
 mame (0.200+dfsg.1-1) unstable; urgency=medium
 
