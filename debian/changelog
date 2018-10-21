@@ -6,6 +6,7 @@ mame (0.202+dfsg.1-1) UNRELEASED; urgency=medium
   * Remove get-orig-source rule, as it relies on uscan anyway.
   * Really update Standards-Version to 4.2.1 (not 4.1.2!).
   * Do not run uupdate in watch file.
+  * Switch from dh_install --fail-missing to dh_missing --fail-missing.
 
  -- Jordi Mallach <jordi@debian.org>  Sun, 21 Oct 2018 02:21:11 +0200
 

@@ -209,10 +209,12 @@ override_dh_auto_test-arch:
 	-$(CURDIR)/mame -validate
 
 override_dh_install:
-	dh_install --fail-missing \
-		   --exclude=dir.txt \
+	dh_install --exclude=dir.txt \
 		   --exclude=LICENSE \
 		   --exclude=README.md
+
+override_dh_missing:
+	dh_missing --fail-missing
 
 override_dh_fixperms-arch:
 	dh_fixperms
