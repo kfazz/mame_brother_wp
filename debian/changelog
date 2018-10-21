@@ -4,6 +4,7 @@ mame (0.202+dfsg.1-1) UNRELEASED; urgency=medium
   * Remove full CC0 text from debian/copyright and add a pointer to
     common-licenses.
   * Remove get-orig-source rule, as it relies on uscan anyway.
+  * Really update Standards-Version to 4.2.1 (not 4.1.2!).
 
  -- Jordi Mallach <jordi@debian.org>  Sun, 21 Oct 2018 02:21:11 +0200
 
