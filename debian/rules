@@ -231,6 +231,3 @@ override_dh_fixperms-indep:
 	find debian/mame-data/usr/share/games/mame/language -type f -name "*.po" -delete
 	find debian/mame-data/usr/share/games/mame/language -type f -execdir chmod 644 {} \;
 	find debian/mame-data/usr/share/games/mame/plugins -type f -execdir chmod 644 {} \;
-
-PKD := $(abspath $(dir $(MAKEFILE_LIST)))
-VER ?= $(shell dpkg-parsechangelog -l$(PKD)/changelog --show-field=Version | sed -e 's/\(.*\)-.*/\1/')

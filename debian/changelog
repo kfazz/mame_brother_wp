@@ -1,6 +1,7 @@
 mame (0.203+dfsg.1-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Remove leftover cruft from the removal of get-orig-source target.
 
  -- Jordi Mallach <jordi@debian.org>  Fri, 02 Nov 2018 01:04:49 +0100
 
