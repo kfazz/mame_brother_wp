@@ -935,14 +935,14 @@ TIMER_CALLBACK_MEMBER(x68k_state::bus_error)
 	m_bus_error = false;
 }
 
-void x68k_state::set_bus_error(uint32_t address, bool write, uint16_t mem_mask)
+void x68k_state::set_bus_error(uint32_t address, bool rw, uint16_t mem_mask)
 {
 	if(m_bus_error)
 		return;
 	if(!ACCESSING_BITS_8_15)
 		address++;
 	m_bus_error = true;
-	m_maincpu->set_buserror_details(address, write, m_maincpu->get_fc());
+	m_maincpu->set_buserror_details(address, rw, m_maincpu->get_fc());
 	m_maincpu->set_input_line(M68K_LINE_BUSERROR, ASSERT_LINE);
 	m_maincpu->set_input_line(M68K_LINE_BUSERROR, CLEAR_LINE);
 	m_bus_error_timer->adjust(m_maincpu->cycles_to_attotime(16)); // let rmw cycles complete
@@ -954,7 +954,7 @@ READ16_MEMBER(x68k_state::rom0_r)
 	/* this location contains the address of some expansion device ROM, if no ROM exists,
 	   then access causes a bus error */
 	if((m_options->read() & 0x02) && !machine().side_effects_disabled())
-		set_bus_error((offset << 1) + 0xbffffc, 0, mem_mask);
+		set_bus_error((offset << 1) + 0xbffffc, true, mem_mask);
 	return 0xff;
 }
 
@@ -963,7 +963,7 @@ WRITE16_MEMBER(x68k_state::rom0_w)
 	/* this location contains the address of some expansion device ROM, if no ROM exists,
 	   then access causes a bus error */
 	if((m_options->read() & 0x02) && !machine().side_effects_disabled())
-		set_bus_error((offset << 1) + 0xbffffc, 1, mem_mask);
+		set_bus_error((offset << 1) + 0xbffffc, false, mem_mask);
 }
 
 READ16_MEMBER(x68k_state::emptyram_r)
@@ -1616,7 +1616,7 @@ MACHINE_CONFIG_START(x68k_state::x68000_base)
 	FILTER_VOLUME(config, m_adpcm_out[0]).add_route(ALL_OUTPUTS, "lspeaker", 1.0);
 	FILTER_VOLUME(config, m_adpcm_out[1]).add_route(ALL_OUTPUTS, "rspeaker", 1.0);
 
-	UPD72065(config, m_upd72065, 0, true, false);
+	UPD72065(config, m_upd72065, 16_MHz_XTAL / 2, true, false); // clocked through SED9420CAC
 	m_upd72065->intrq_wr_callback().set(FUNC(x68k_state::fdc_irq));
 	m_upd72065->drq_wr_callback().set(m_hd63450, FUNC(hd63450_device::drq0_w));
 	FLOPPY_CONNECTOR(config, "upd72065:0", x68k_floppies, "525hd", x68k_state::floppy_formats);

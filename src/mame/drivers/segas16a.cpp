@@ -1963,24 +1963,24 @@ GFXDECODE_END
 //  GENERIC MACHINE DRIVERS
 //**************************************************************************
 
-MACHINE_CONFIG_START(segas16a_state::system16a)
-
+void segas16a_state::system16a(machine_config &config)
+{
 	// basic machine hardware
-	MCFG_DEVICE_ADD("maincpu", M68000, 10000000)
-	MCFG_DEVICE_PROGRAM_MAP(system16a_map)
-	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", segas16a_state, irq4_line_hold)
+	M68000(config, m_maincpu, 10000000);
+	m_maincpu->set_addrmap(AS_PROGRAM, &segas16a_state::system16a_map);
+	m_maincpu->set_vblank_int("screen", FUNC(segas16a_state::irq4_line_hold));
 
-	MCFG_DEVICE_ADD("soundcpu", Z80, 4000000)
-	MCFG_DEVICE_PROGRAM_MAP(sound_map)
-	MCFG_DEVICE_IO_MAP(sound_portmap)
+	Z80(config, m_soundcpu, 4000000);
+	m_soundcpu->set_addrmap(AS_PROGRAM, &segas16a_state::sound_map);
+	m_soundcpu->set_addrmap(AS_IO, &segas16a_state::sound_portmap);
 
-	MCFG_DEVICE_ADD("n7751", N7751, 6000000)
-	MCFG_MCS48_PORT_BUS_IN_CB(READ8(*this, segas16a_state, n7751_rom_r))
-	MCFG_MCS48_PORT_T1_IN_CB(CONSTANT(0)) // labelled as "TEST", connected to ground
-	MCFG_MCS48_PORT_P1_OUT_CB(WRITE8("dac", dac_byte_interface, data_w))
-	MCFG_MCS48_PORT_P2_IN_CB(READ8(*this, segas16a_state, n7751_p2_r))
-	MCFG_MCS48_PORT_P2_OUT_CB(WRITE8(*this, segas16a_state, n7751_p2_w))
-	MCFG_MCS48_PORT_PROG_OUT_CB(WRITELINE("n7751_8243", i8243_device, prog_w))
+	N7751(config, m_n7751, 6000000);
+	m_n7751->bus_in_cb().set(FUNC(segas16a_state::n7751_rom_r));
+	m_n7751->t1_in_cb().set_constant(0); // labelled as "TEST", connected to ground
+	m_n7751->p1_out_cb().set("dac", FUNC(dac_byte_interface::data_w));
+	m_n7751->p2_in_cb().set(FUNC(segas16a_state::n7751_p2_r));
+	m_n7751->p2_out_cb().set(FUNC(segas16a_state::n7751_p2_w));
+	m_n7751->prog_out_cb().set("n7751_8243", FUNC(i8243_device::prog_w));
 
 	I8243(config, m_n7751_i8243);
 	m_n7751_i8243->p4_out_cb().set(FUNC(segas16a_state::n7751_rom_offset_w<0>));
@@ -1998,97 +1998,102 @@ MACHINE_CONFIG_START(segas16a_state::system16a)
 	m_i8255->out_pc_callback().set(FUNC(segas16a_state::tilemap_sound_w));
 
 	// video hardware
-	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_REFRESH_RATE(60)
-	MCFG_SCREEN_SIZE(342,262)   // to be verified
-	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 28*8-1)
-	MCFG_SCREEN_UPDATE_DRIVER(segas16a_state, screen_update)
-	MCFG_SCREEN_PALETTE("palette")
+	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	m_screen->set_refresh_hz(60);
+	m_screen->set_size(342, 262);   // to be verified
+	m_screen->set_visarea(0*8, 40*8-1, 0*8, 28*8-1);
+	m_screen->set_screen_update(FUNC(segas16a_state::screen_update));
+	m_screen->set_palette(m_palette);
 
-	MCFG_DEVICE_ADD("sprites", SEGA_SYS16A_SPRITES, 0)
-	MCFG_DEVICE_ADD("segaic16vid", SEGAIC16VID, 0, "gfxdecode")
+	SEGA_SYS16A_SPRITES(config, m_sprites, 0);
+	SEGAIC16VID(config, m_segaic16vid, 0, "gfxdecode");
 
-	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_segas16a)
-	MCFG_PALETTE_ADD("palette", 2048*3)
+	GFXDECODE(config, "gfxdecode", m_palette, gfx_segas16a);
+	PALETTE(config, m_palette, 2048*3);
 
 	// sound hardware
 	SPEAKER(config, "speaker").front_center();
 
-	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
+	GENERIC_LATCH_8(config, m_soundlatch);
 
-	MCFG_DEVICE_ADD("ymsnd", YM2151, 4000000)
-	MCFG_YM2151_PORT_WRITE_HANDLER(WRITE8(*this, segas16a_state, n7751_control_w))
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.43)
+	YM2151(config, m_ymsnd, 4000000);
+	m_ymsnd->port_write_handler().set(FUNC(segas16a_state::n7751_control_w));
+	m_ymsnd->add_route(ALL_OUTPUTS, "speaker", 0.43);
 
-	MCFG_DEVICE_ADD("dac", DAC_8BIT_R2R, 0) MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 0.4) // unknown DAC
-	MCFG_DEVICE_ADD("vref", VOLTAGE_REGULATOR, 0) MCFG_VOLTAGE_REGULATOR_OUTPUT(5.0)
-	MCFG_SOUND_ROUTE(0, "dac", 1.0, DAC_VREF_POS_INPUT) MCFG_SOUND_ROUTE(0, "dac", -1.0, DAC_VREF_NEG_INPUT)
-MACHINE_CONFIG_END
+	DAC_8BIT_R2R(config, "dac", 0).add_route(ALL_OUTPUTS, "speaker", 0.4); // unknown DAC
+	voltage_regulator_device &vref(VOLTAGE_REGULATOR(config, "vref", 0));
+	vref.set_output(5.0);
+	vref.add_route(0, "dac", 1.0, DAC_VREF_POS_INPUT);
+	vref.add_route(0, "dac", -1.0, DAC_VREF_NEG_INPUT);
+}
 
 
-MACHINE_CONFIG_START(segas16a_state::system16a_fd1089a)
+void segas16a_state::system16a_fd1089a(machine_config &config)
+{
 	system16a(config);
-	MCFG_DEVICE_REPLACE("maincpu", FD1089A, 10000000)
-	MCFG_DEVICE_PROGRAM_MAP(system16a_map)
-	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", segas16a_state, irq4_line_hold)
-MACHINE_CONFIG_END
+	FD1089A(config.replace(), m_maincpu, 10000000);
+	m_maincpu->set_addrmap(AS_PROGRAM, &segas16a_state::system16a_map);
+	m_maincpu->set_vblank_int("screen", FUNC(segas16a_state::irq4_line_hold));
+}
 
-MACHINE_CONFIG_START(segas16a_state::system16a_fd1089b)
+void segas16a_state::system16a_fd1089b(machine_config &config)
+{
 	system16a(config);
-	MCFG_DEVICE_REPLACE("maincpu", FD1089B, 10000000)
-	MCFG_DEVICE_PROGRAM_MAP(system16a_map)
-	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", segas16a_state, irq4_line_hold)
-MACHINE_CONFIG_END
+	FD1089B(config.replace(), m_maincpu, 10000000);
+	m_maincpu->set_addrmap(AS_PROGRAM, &segas16a_state::system16a_map);
+	m_maincpu->set_vblank_int("screen", FUNC(segas16a_state::irq4_line_hold));
+}
 
-MACHINE_CONFIG_START(segas16a_state::system16a_fd1094)
+void segas16a_state::system16a_fd1094(machine_config &config)
+{
 	system16a(config);
-	MCFG_DEVICE_REPLACE("maincpu", FD1094, 10000000)
-	MCFG_DEVICE_PROGRAM_MAP(system16a_map)
-	MCFG_DEVICE_OPCODES_MAP(decrypted_opcodes_map)
-	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", segas16a_state, irq4_line_hold)
-MACHINE_CONFIG_END
+	FD1094(config.replace(), m_maincpu, 10000000);
+	m_maincpu->set_addrmap(AS_PROGRAM, &segas16a_state::system16a_map);
+	m_maincpu->set_addrmap(AS_OPCODES, &segas16a_state::decrypted_opcodes_map);
+	m_maincpu->set_vblank_int("screen", FUNC(segas16a_state::irq4_line_hold));
+}
 
-MACHINE_CONFIG_START(segas16a_state::aceattaca_fd1094)
+void segas16a_state::aceattaca_fd1094(machine_config &config)
+{
 	system16a_fd1094(config);
-	MCFG_DEVICE_ADD("cxdio", CXD1095, 0)
-MACHINE_CONFIG_END
+	CXD1095(config, "cxdio", 0);
+}
 
-
-MACHINE_CONFIG_START(segas16a_state::system16a_i8751)
+void segas16a_state::system16a_i8751(machine_config &config)
+{
 	system16a(config);
-	MCFG_DEVICE_MODIFY("maincpu")
-	MCFG_DEVICE_VBLANK_INT_REMOVE()
+	m_maincpu->set_vblank_int(device_interrupt_delegate(), nullptr);
 
-	MCFG_DEVICE_ADD("mcu", I8751, 8000000)
-	MCFG_DEVICE_IO_MAP(mcu_io_map)
-	MCFG_MCS51_PORT_P1_OUT_CB(WRITE8(*this, segas16a_state, mcu_control_w))
+	I8751(config, m_mcu, 8000000);
+	m_mcu->set_addrmap(AS_IO, &segas16a_state::mcu_io_map);
+	m_mcu->port_out_cb<1>().set(FUNC(segas16a_state::mcu_control_w));
 
-	MCFG_SCREEN_MODIFY("screen")
-	MCFG_SCREEN_VBLANK_CALLBACK(WRITELINE(*this, segas16a_state, i8751_main_cpu_vblank_w))
-MACHINE_CONFIG_END
+	m_screen->screen_vblank().set(FUNC(segas16a_state::i8751_main_cpu_vblank_w));
+}
 
-
-MACHINE_CONFIG_START(segas16a_state::system16a_no7751)
+void segas16a_state::system16a_no7751(machine_config &config)
+{
 	system16a(config);
-	MCFG_DEVICE_MODIFY("soundcpu")
-	MCFG_DEVICE_IO_MAP(sound_no7751_portmap)
+	m_soundcpu->set_addrmap(AS_IO, &segas16a_state::sound_no7751_portmap);
 
-	MCFG_DEVICE_REMOVE("n7751")
-	MCFG_DEVICE_REMOVE("dac")
-	MCFG_DEVICE_REMOVE("vref")
+	config.device_remove("n7751");
+	config.device_remove("n7751_8243");
+	config.device_remove("dac");
+	config.device_remove("vref");
 
-	MCFG_DEVICE_REPLACE("ymsnd", YM2151, 4000000)
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
-MACHINE_CONFIG_END
+	YM2151(config.replace(), m_ymsnd, 4000000);
+	m_ymsnd->add_route(ALL_OUTPUTS, "speaker", 1.0);
+}
 
-MACHINE_CONFIG_START(segas16a_state::system16a_no7751p)
+void segas16a_state::system16a_no7751p(machine_config &config)
+{
 	system16a_no7751(config);
-	MCFG_DEVICE_REPLACE("soundcpu", SEGA_315_5177, 4000000)
-	MCFG_DEVICE_PROGRAM_MAP(sound_map)
-	MCFG_DEVICE_IO_MAP(sound_no7751_portmap)
-	MCFG_DEVICE_OPCODES_MAP(sound_decrypted_opcodes_map)
-	MCFG_SEGAZ80_SET_DECRYPTED_TAG(":sound_decrypted_opcodes")
-MACHINE_CONFIG_END
+	segacrp2_z80_device &z80(SEGA_315_5177(config.replace(), m_soundcpu, 4000000));
+	z80.set_addrmap(AS_PROGRAM, &segas16a_state::sound_map);
+	z80.set_addrmap(AS_IO, &segas16a_state::sound_no7751_portmap);
+	z80.set_addrmap(AS_OPCODES, &segas16a_state::sound_decrypted_opcodes_map);
+	z80.set_decrypted_tag(m_sound_decrypted_opcodes);
+}
 
 /*
 static MACHINE_CONFIG_START( system16a_i8751_no7751 )
@@ -2102,44 +2107,44 @@ static MACHINE_CONFIG_START( system16a_i8751_no7751 )
 MACHINE_CONFIG_END
 */
 
-MACHINE_CONFIG_START(segas16a_state::system16a_fd1089a_no7751)
+void segas16a_state::system16a_fd1089a_no7751(machine_config &config)
+{
 	system16a_fd1089a(config);
-	MCFG_DEVICE_MODIFY("soundcpu")
-	MCFG_DEVICE_IO_MAP(sound_no7751_portmap)
+	m_soundcpu->set_addrmap(AS_IO, &segas16a_state::sound_no7751_portmap);
 
-	MCFG_DEVICE_REMOVE("n7751")
-	MCFG_DEVICE_REMOVE("dac")
-	MCFG_DEVICE_REMOVE("vref")
+	config.device_remove("n7751");
+	config.device_remove("dac");
+	config.device_remove("vref");
 
-	MCFG_DEVICE_REPLACE("ymsnd", YM2151, 4000000)
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
-MACHINE_CONFIG_END
+	YM2151(config.replace(), m_ymsnd, 4000000);
+	m_ymsnd->add_route(ALL_OUTPUTS, "speaker", 1.0);
+}
 
-MACHINE_CONFIG_START(segas16a_state::system16a_fd1089b_no7751)
+void segas16a_state::system16a_fd1089b_no7751(machine_config &config)
+{
 	system16a_fd1089b(config);
-	MCFG_DEVICE_MODIFY("soundcpu")
-	MCFG_DEVICE_IO_MAP(sound_no7751_portmap)
+	m_soundcpu->set_addrmap(AS_IO, &segas16a_state::sound_no7751_portmap);
 
-	MCFG_DEVICE_REMOVE("n7751")
-	MCFG_DEVICE_REMOVE("dac")
-	MCFG_DEVICE_REMOVE("vref")
+	config.device_remove("n7751");
+	config.device_remove("dac");
+	config.device_remove("vref");
 
-	MCFG_DEVICE_REPLACE("ymsnd", YM2151, 4000000)
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
-MACHINE_CONFIG_END
+	YM2151(config.replace(), m_ymsnd, 4000000);
+	m_ymsnd->add_route(ALL_OUTPUTS, "speaker", 1.0);
+}
 
-MACHINE_CONFIG_START(segas16a_state::system16a_fd1094_no7751)
+void segas16a_state::system16a_fd1094_no7751(machine_config &config)
+{
 	system16a_fd1094(config);
-	MCFG_DEVICE_MODIFY("soundcpu")
-	MCFG_DEVICE_IO_MAP(sound_no7751_portmap)
+	m_soundcpu->set_addrmap(AS_IO, &segas16a_state::sound_no7751_portmap);
 
-	MCFG_DEVICE_REMOVE("n7751")
-	MCFG_DEVICE_REMOVE("dac")
-	MCFG_DEVICE_REMOVE("vref")
+	config.device_remove("n7751");
+	config.device_remove("dac");
+	config.device_remove("vref");
 
-	MCFG_DEVICE_REPLACE("ymsnd", YM2151, 4000000)
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
-MACHINE_CONFIG_END
+	YM2151(config.replace(), m_ymsnd, 4000000);
+	m_ymsnd->add_route(ALL_OUTPUTS, "speaker", 1.0);
+}
 
 
 
@@ -2785,7 +2790,7 @@ ROM_START( fantzonepr )
 	ROM_LOAD16_BYTE( "ic26-prg20-658q.bin", 0x000001, 0x8000, CRC(a0d53b86) SHA1(02b8ba869c226d929b6b761982efc262467baafc) ) // different
 	ROM_LOAD16_BYTE( "ic42-prg13-eb1f.bin", 0x010000, 0x8000, CRC(a08e9d65) SHA1(e3f8b4f1dcdd7bcdd57ae295d721131b7cc33500) ) // different
 	ROM_LOAD16_BYTE( "ic25-prg15-2b8c.bin", 0x010001, 0x8000, CRC(7e6fdae0) SHA1(c00e7e4e78505ce731483275cfcad285999bbaf3) ) // different
-	ROM_LOAD16_BYTE( "epr-7387.41",         0x020000, 0x8000, CRC(0acd335d) SHA1(f39566a2069eefa7682c57c6521ea7a328738d06) ) // missing - assumed to be the same because the rom below is
+	ROM_LOAD16_BYTE( "epr-7387.41",         0x020000, 0x8000, CRC(0acd335d) SHA1(f39566a2069eefa7682c57c6521ea7a328738d06) ) // missing - assumed to be the same because the ROM below is
 	ROM_LOAD16_BYTE( "ic24-prg20-2f57.bin", 0x020001, 0x8000, CRC(fd909341) SHA1(2f1e01eb7d7b330c9c0dd98e5f8ed4973f0e93fb) ) // MATCH
 
 	ROM_REGION( 0x18000, "gfx1", 0 ) // tiles
@@ -3258,7 +3263,7 @@ ROM_START( shinobls )
 	ROM_CONTINUE(           0x60001, 0x08000 )
 	ROM_LOAD16_BYTE( "b16", 0x20000, 0x08000, CRC(04a437f8) SHA1(ea5fed64443236e3404fab243761e60e2e48c84c) )
 	ROM_CONTINUE(           0x60000, 0x08000 )
-	// It's possible that the modifications to these roms are meant to stop the Sega logo from appearing,
+	// It's possible that the modifications to these ROMs are meant to stop the Sega logo from appearing,
 	// however, with the current system 16a emulation this doesn't happen, maybe it isn't actually running
 	// on a genuine Sega board?
 	ROM_LOAD16_BYTE( "b13", 0x30001, 0x08000, CRC(7e98bd36) SHA1(069c51478af7567e704fc9e25c9e327f02db171d) )
@@ -3277,7 +3282,7 @@ ROM_START( shinobls )
 ROM_END
 
 //*************************************************************************************************************************
-// Shinobi bootleg by 'Beta' (7751 replaced by what? Sample rom is different, but no extra sound CPU rom present, missing?)
+// Shinobi bootleg by 'Beta' (7751 replaced by what? Sample ROM is different, but no extra sound CPU ROM present, missing?)
 // otherwise it seems to run fine on System 16A
 //
 // note fron any:
@@ -3317,7 +3322,7 @@ ROM_START( shinoblb )
 	ROM_REGION( 0x20000, "soundcpu", 0 ) // sound CPU
 	ROM_LOAD( "1.5s", 0x0000, 0x8000, CRC(dd50b745) SHA1(52e1977569d3713ad864d607170c9a61cd059a65) )
 
-	// these 2 n7751 roms weren't present in this set, it's possible it didn't have them
+	// these 2 n7751 ROMs weren't present in this set, it's possible it didn't have them
 	ROM_REGION( 0x1000, "n7751", 0 )      // 4k for 7751 onboard ROM
 	ROM_LOAD( "7751.bin",     0x0000, 0x0400, CRC(6a9534fc) SHA1(67ad94674db5c2aab75785668f610f6f4eccd158) ) // 7751 - U34
 
@@ -3326,7 +3331,7 @@ ROM_START( shinoblb )
 
 	ROM_REGION( 0x08000, "samples", 0 )
 	// sound samples (played by what?, not the same as the original)
-	// marked as 'bad dump' pending investigation, we might actually be missing a cpu rom to play them
+	// marked as 'bad dump' pending investigation, we might actually be missing a cpu ROM to play them
 	ROM_LOAD( "17.6u", 0x0000, 0x8000, BAD_DUMP CRC(b7a6890c) SHA1(6431df82c7dbe454cabc6084c1a677ebb42ae4b3) )
 ROM_END
 
@@ -3957,7 +3962,7 @@ GAME( 1986, alexkidd1,  alexkidd, system16a_fd1089a,        alexkidd,        seg
 GAME( 1986, fantzone,   0,        system16a_no7751,         fantzone,        segas16a_state,            init_generic,     ROT0,   "Sega", "Fantasy Zone (Rev A, unprotected)", MACHINE_SUPPORTS_SAVE )
 GAME( 1986, fantzone1,  fantzone, system16a_no7751,         fantzone,        segas16a_state,            init_generic,     ROT0,   "Sega", "Fantasy Zone (unprotected)", MACHINE_SUPPORTS_SAVE )
 GAME( 1986, fantzonep,  fantzone, system16a_no7751p,        fantzone,        segas16a_state,            init_generic,     ROT0,   "Sega", "Fantasy Zone (317-5000)", MACHINE_SUPPORTS_SAVE )
-GAME( 1986, fantzonepr, fantzone, system16a_no7751,         fantzone,        segas16a_state,            init_generic,     ROT0,   "Sega", "Fantasy Zone (prototype)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE ) // bad / missing gfx roms
+GAME( 1986, fantzonepr, fantzone, system16a_no7751,         fantzone,        segas16a_state,            init_generic,     ROT0,   "Sega", "Fantasy Zone (prototype)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE ) // bad / missing gfx ROMs
 
 GAME( 1988, passsht16a, passsht,  system16a_fd1094,         passsht16a,      segas16a_state,            init_passsht16a,  ROT270, "Sega", "Passing Shot (Japan, 4 Players, System 16A) (FD1094 317-0071)", MACHINE_SUPPORTS_SAVE )
 
