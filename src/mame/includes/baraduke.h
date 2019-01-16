@@ -1,13 +1,19 @@
 // license:BSD-3-Clause
 // copyright-holders:Manuel Abadia
+#ifndef MAME_INCLUDES_BARADUKE_H
+#define MAME_INCLUDES_BARADUKE_H
+
+#pragma once
+
+#include "cpu/m6800/m6801.h"
 #include "sound/namco.h"
 #include "emupal.h"
 
 class baraduke_state : public driver_device
 {
 public:
-	baraduke_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
+	baraduke_state(const machine_config &mconfig, device_type type, const char *tag) :
+		driver_device(mconfig, type, tag),
 		m_spriteram(*this, "spriteram"),
 		m_videoram(*this, "videoram"),
 		m_textram(*this, "textram"),
@@ -57,7 +63,7 @@ protected:
 	required_shared_ptr<uint8_t> m_videoram;
 	required_shared_ptr<uint8_t> m_textram;
 	required_device<cpu_device> m_maincpu;
-	required_device<cpu_device> m_mcu;
+	required_device<hd63701_cpu_device> m_mcu;
 	required_device<namco_cus30_device> m_cus30;
 	required_device<gfxdecode_device> m_gfxdecode;
 	required_device<palette_device> m_palette;
@@ -68,3 +74,5 @@ protected:
 	int m_copy_sprites;
 	output_finder<2> m_lamps;
 };
+
+#endif // MAME_INCLUDES_BARADUKE_H

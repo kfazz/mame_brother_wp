@@ -9,19 +9,40 @@
         - I2C
         - SPI
 
+    Known SunPlus SPG2xx/u'nSP-based systems:
+
+         D - SPG240 - Radica Skateboarder (Sunplus QL8041C die)
+        ND - SPG243 - Some form of Leapfrog "edutainment" system
+        ND - SPG243 - Star Wars: Clone Wars
+        ND - SPG243 - Toy Story
+        ND - SPG243 - Animal Art Studio
+        ND - SPG243 - Finding Nemo
+         D - SPG243 - The Batman
+         D - SPG243 - Wall-E
+         D - SPG243 - KenSingTon / Siatronics / Jungle Soft Vii
+ Partial D - SPG200 - VTech V.Smile
+        ND - unknown - Zone 40
+         D - SPG243 - Zone 60
+         D - SPG243 - Wireless 60
+        ND - unknown - Wireless Air 60
+        ND - Likely many more
+
+    Also on this hardware:
+
+        name                        PCB ID      ROM width   TSOP pads   ROM size        SEEPROM         die markings
+        Radica Play TV Football 2   L7278       x16         48          not dumped      no              Sunplus
+        Dream Life                  ?           x16         48          not dumped      no              Sunplus
+
 **********************************************************************/
 
-#ifndef DEVICES_MACHINE_SPG2XX_H
-#define DEVICES_MACHINE_SPG2XX_H
+#ifndef MAME_MACHINE_SPG2XX_H
+#define MAME_MACHINE_SPG2XX_H
 
 #pragma once
 
-#include "emu.h"
 #include "cpu/unsp/unsp.h"
 #include "sound/okiadpcm.h"
 #include "screen.h"
-
-#define SPG2XX_VISUAL_AUDIO_DEBUG (0)
 
 class spg2xx_device : public device_t, public device_sound_interface
 {
@@ -49,10 +70,6 @@ public:
 	void uart_rx(uint8_t data);
 
 	uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
-#if SPG2XX_VISUAL_AUDIO_DEBUG
-	void advance_debug_pos();
-	uint32_t debug_screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
-#endif
 	DECLARE_WRITE_LINE_MEMBER(vblank);
 
 protected:
@@ -91,73 +108,73 @@ protected:
 	inline uint32_t get_envclk_frame_count(const uint32_t channel);
 
 	// Audio getters
-	inline bool get_channel_enable(const offs_t channel) const { return m_audio_regs[AUDIO_CHANNEL_ENABLE] & (1 << channel); }
-	inline bool get_channel_status(const offs_t channel) const { return m_audio_regs[AUDIO_CHANNEL_STATUS] & (1 << channel); }
-	inline bool get_manual_envelope_enable(const offs_t channel) const { return m_audio_regs[AUDIO_CHANNEL_ENV_MODE] & (1 << channel); }
-	inline bool get_auto_envelope_enable(const offs_t channel) const { return !get_manual_envelope_enable(channel); }
+	bool get_channel_enable(const offs_t channel) const { return m_audio_regs[AUDIO_CHANNEL_ENABLE] & (1 << channel); }
+	bool get_channel_status(const offs_t channel) const { return m_audio_regs[AUDIO_CHANNEL_STATUS] & (1 << channel); }
+	bool get_manual_envelope_enable(const offs_t channel) const { return m_audio_regs[AUDIO_CHANNEL_ENV_MODE] & (1 << channel); }
+	bool get_auto_envelope_enable(const offs_t channel) const { return !get_manual_envelope_enable(channel); }
 	uint32_t get_envelope_clock(const offs_t channel) const;
 
 	// Audio Mode getters
-	inline uint16_t get_wave_addr_high(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_MODE] & AUDIO_WADDR_HIGH_MASK; }
-	inline uint16_t get_loop_addr_high(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_MODE] & AUDIO_LADDR_HIGH_MASK) >> AUDIO_LADDR_HIGH_SHIFT; }
-	inline uint16_t get_tone_mode(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_MODE] & AUDIO_TONE_MODE_MASK) >> AUDIO_TONE_MODE_SHIFT; }
-	inline uint16_t get_16bit_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_MODE] & AUDIO_16M_MASK) ? 1 : 0; }
-	inline uint16_t get_adpcm_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_MODE] & AUDIO_ADPCM_MASK) ? 1 : 0; }
+	uint16_t get_wave_addr_high(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_MODE] & AUDIO_WADDR_HIGH_MASK; }
+	uint16_t get_loop_addr_high(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_MODE] & AUDIO_LADDR_HIGH_MASK) >> AUDIO_LADDR_HIGH_SHIFT; }
+	uint16_t get_tone_mode(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_MODE] & AUDIO_TONE_MODE_MASK) >> AUDIO_TONE_MODE_SHIFT; }
+	uint16_t get_16bit_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_MODE] & AUDIO_16M_MASK) ? 1 : 0; }
+	uint16_t get_adpcm_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_MODE] & AUDIO_ADPCM_MASK) ? 1 : 0; }
 
 	// Audio Pan getters
-	inline uint16_t get_volume(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_PAN_VOL] & AUDIO_VOLUME_MASK; }
-	inline uint16_t get_pan(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_PAN_VOL] & AUDIO_PAN_MASK) >> AUDIO_PAN_SHIFT; }
+	uint16_t get_volume(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_PAN_VOL] & AUDIO_VOLUME_MASK; }
+	uint16_t get_pan(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_PAN_VOL] & AUDIO_PAN_MASK) >> AUDIO_PAN_SHIFT; }
 
 	// Audio Envelope0 Data getters
-	inline uint16_t get_envelope_inc(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_ENVELOPE0] & AUDIO_ENVELOPE_INC_MASK; }
-	inline uint16_t get_envelope_sign_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE0] & AUDIO_ENVELOPE_SIGN_MASK) ? 1 : 0; }
-	inline uint16_t get_envelope_target(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE0] & AUDIO_ENVELOPE_TARGET_MASK) >> AUDIO_ENVELOPE_TARGET_SHIFT; }
-	inline uint16_t get_repeat_period_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE0] & AUDIO_ENVELOPE_REPEAT_PERIOD_MASK) ? 1 : 0; }
+	uint16_t get_envelope_inc(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_ENVELOPE0] & AUDIO_ENVELOPE_INC_MASK; }
+	uint16_t get_envelope_sign_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE0] & AUDIO_ENVELOPE_SIGN_MASK) ? 1 : 0; }
+	uint16_t get_envelope_target(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE0] & AUDIO_ENVELOPE_TARGET_MASK) >> AUDIO_ENVELOPE_TARGET_SHIFT; }
+	uint16_t get_repeat_period_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE0] & AUDIO_ENVELOPE_REPEAT_PERIOD_MASK) ? 1 : 0; }
 
 	// Audio Envelope Data getters
-	inline uint16_t get_edd(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_DATA] & AUDIO_EDD_MASK; }
-	inline uint16_t get_envelope_count(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_DATA] & AUDIO_ENVELOPE_COUNT_MASK) >> AUDIO_ENVELOPE_COUNT_SHIFT; }
-	inline void set_edd(const offs_t channel, uint8_t edd) { m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_DATA] = (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_DATA] & ~AUDIO_EDD_MASK) | edd; }
-	inline void set_envelope_count(const offs_t channel, uint16_t count) { m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_DATA] = get_edd(channel) | (count << AUDIO_ENVELOPE_COUNT_SHIFT); }
+	uint16_t get_edd(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_DATA] & AUDIO_EDD_MASK; }
+	uint16_t get_envelope_count(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_DATA] & AUDIO_ENVELOPE_COUNT_MASK) >> AUDIO_ENVELOPE_COUNT_SHIFT; }
+	void set_edd(const offs_t channel, uint8_t edd) { m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_DATA] = (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_DATA] & ~AUDIO_EDD_MASK) | edd; }
+	void set_envelope_count(const offs_t channel, uint16_t count) { m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_DATA] = get_edd(channel) | (count << AUDIO_ENVELOPE_COUNT_SHIFT); }
 
 	// Audio Envelope1 Data getters
-	inline uint16_t get_envelope_load(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_ENVELOPE1] & AUDIO_ENVELOPE_LOAD_MASK; }
-	inline uint16_t get_envelope_repeat_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE1] & AUDIO_ENVELOPE_RPT_MASK) ? 1 : 0; }
-	inline uint16_t get_envelope_repeat_count(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE1] & AUDIO_ENVELOPE_RPCNT_MASK) >> AUDIO_ENVELOPE_RPCNT_SHIFT; }
+	uint16_t get_envelope_load(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_ENVELOPE1] & AUDIO_ENVELOPE_LOAD_MASK; }
+	uint16_t get_envelope_repeat_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE1] & AUDIO_ENVELOPE_RPT_MASK) ? 1 : 0; }
+	uint16_t get_envelope_repeat_count(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE1] & AUDIO_ENVELOPE_RPCNT_MASK) >> AUDIO_ENVELOPE_RPCNT_SHIFT; }
 	inline void set_envelope_repeat_count(const offs_t channel, const uint16_t count) { m_audio_regs[(channel << 4) | AUDIO_ENVELOPE1] = (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE1] & ~AUDIO_ENVELOPE_RPCNT_MASK) | ((count << AUDIO_ENVELOPE_RPCNT_SHIFT) & AUDIO_ENVELOPE_RPCNT_MASK); }
 
 	// Audio Envelope Address getters
-	inline uint16_t get_envelope_addr_high(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_ADDR_HIGH] & AUDIO_EADDR_HIGH_MASK; }
-	inline uint16_t get_audio_irq_enable_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_ADDR_HIGH] & AUDIO_IRQ_EN_MASK) ? 1 : 0; }
-	inline uint16_t get_audio_irq_addr(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_ADDR_HIGH] & AUDIO_IRQ_ADDR_MASK) >> AUDIO_IRQ_ADDR_SHIFT; }
+	uint16_t get_envelope_addr_high(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_ADDR_HIGH] & AUDIO_EADDR_HIGH_MASK; }
+	uint16_t get_audio_irq_enable_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_ADDR_HIGH] & AUDIO_IRQ_EN_MASK) ? 1 : 0; }
+	uint16_t get_audio_irq_addr(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_ADDR_HIGH] & AUDIO_IRQ_ADDR_MASK) >> AUDIO_IRQ_ADDR_SHIFT; }
 
 	// Audio Envelope Loop getters
-	inline uint16_t get_envelope_eaoffset(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_LOOP_CTRL] & AUDIO_EAOFFSET_MASK; }
-	inline uint16_t get_rampdown_offset(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_LOOP_CTRL] & AUDIO_RAMPDOWN_OFFSET_MASK) >> AUDIO_RAMPDOWN_OFFSET_SHIFT; }
-	inline void set_envelope_eaoffset(const offs_t channel, uint16_t eaoffset) { m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_LOOP_CTRL] = (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_LOOP_CTRL] & ~AUDIO_RAMPDOWN_OFFSET_MASK) | (eaoffset & AUDIO_EAOFFSET_MASK); }
+	uint16_t get_envelope_eaoffset(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_LOOP_CTRL] & AUDIO_EAOFFSET_MASK; }
+	uint16_t get_rampdown_offset(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_LOOP_CTRL] & AUDIO_RAMPDOWN_OFFSET_MASK) >> AUDIO_RAMPDOWN_OFFSET_SHIFT; }
+	void set_envelope_eaoffset(const offs_t channel, uint16_t eaoffset) { m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_LOOP_CTRL] = (m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_LOOP_CTRL] & ~AUDIO_RAMPDOWN_OFFSET_MASK) | (eaoffset & AUDIO_EAOFFSET_MASK); }
 
 	// Audio ADPCM getters
-	inline uint16_t get_point_number(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ADPCM_SEL] & AUDIO_POINT_NUMBER_MASK) >> AUDIO_POINT_NUMBER_SHIFT; }
-	inline uint16_t get_adpcm36_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ADPCM_SEL] & AUDIO_ADPCM36_MASK) ? 1 : 0; }
+	uint16_t get_point_number(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ADPCM_SEL] & AUDIO_POINT_NUMBER_MASK) >> AUDIO_POINT_NUMBER_SHIFT; }
+	uint16_t get_adpcm36_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_ADPCM_SEL] & AUDIO_ADPCM36_MASK) ? 1 : 0; }
 
 	// Audio high-word getters
-	inline uint16_t get_phase_high(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_PHASE_HIGH] & AUDIO_PHASE_HIGH_MASK; }
-	inline uint16_t get_phase_accum_high(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_PHASE_ACCUM_HIGH] & AUDIO_PHASE_ACCUM_HIGH_MASK; }
-	inline uint16_t get_target_phase_high(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_TARGET_PHASE_HIGH] & AUDIO_TARGET_PHASE_HIGH_MASK; }
-	inline uint16_t get_rampdown_clock(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_RAMP_DOWN_CLOCK] & AUDIO_RAMP_DOWN_CLOCK_MASK; }
+	uint16_t get_phase_high(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_PHASE_HIGH] & AUDIO_PHASE_HIGH_MASK; }
+	uint16_t get_phase_accum_high(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_PHASE_ACCUM_HIGH] & AUDIO_PHASE_ACCUM_HIGH_MASK; }
+	uint16_t get_target_phase_high(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_TARGET_PHASE_HIGH] & AUDIO_TARGET_PHASE_HIGH_MASK; }
+	uint16_t get_rampdown_clock(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_RAMP_DOWN_CLOCK] & AUDIO_RAMP_DOWN_CLOCK_MASK; }
 
 	// Audio ADPCM getters
-	inline uint16_t get_phase_offset(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_PHASE_CTRL] & AUDIO_PHASE_OFFSET_MASK; }
-	inline uint16_t get_phase_sign_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_PHASE_CTRL] & AUDIO_PHASE_SIGN_MASK) >> AUDIO_PHASE_SIGN_SHIFT; }
-	inline uint16_t get_phase_time_step(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_PHASE_CTRL] & AUDIO_PHASE_TIME_STEP_MASK) >> AUDIO_PHASE_TIME_STEP_SHIFT; }
+	uint16_t get_phase_offset(const offs_t channel) const { return m_audio_regs[(channel << 4) | AUDIO_PHASE_CTRL] & AUDIO_PHASE_OFFSET_MASK; }
+	uint16_t get_phase_sign_bit(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_PHASE_CTRL] & AUDIO_PHASE_SIGN_MASK) >> AUDIO_PHASE_SIGN_SHIFT; }
+	uint16_t get_phase_time_step(const offs_t channel) const { return (m_audio_regs[(channel << 4) | AUDIO_PHASE_CTRL] & AUDIO_PHASE_TIME_STEP_MASK) >> AUDIO_PHASE_TIME_STEP_SHIFT; }
 
 	// Audio combined getters
-	inline uint32_t get_phase(const offs_t channel) const { return ((uint32_t)get_phase_high(channel) << 16) | m_audio_regs[(channel << 4) | AUDIO_PHASE]; }
-	inline uint32_t get_phase_accum(const offs_t channel) const { return ((uint32_t)get_phase_accum_high(channel) << 16) | m_audio_regs[(channel << 4) | AUDIO_PHASE_ACCUM]; }
-	inline uint32_t get_target_phase(const offs_t channel) const { return ((uint32_t)get_target_phase_high(channel) << 16) | m_audio_regs[(channel << 4) | AUDIO_TARGET_PHASE]; }
-	inline uint32_t get_wave_addr(const offs_t channel) const { return ((uint32_t)get_wave_addr_high(channel) << 16) | m_audio_regs[(channel << 4) | AUDIO_WAVE_ADDR]; }
-	inline uint32_t get_loop_addr(const offs_t channel) const { return ((uint32_t)get_loop_addr_high(channel) << 16) | m_audio_regs[(channel << 4) | AUDIO_LOOP_ADDR]; }
-	inline uint32_t get_envelope_addr(const offs_t channel) const { return ((uint32_t)get_envelope_addr_high(channel) << 16) | m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_ADDR]; }
+	uint32_t get_phase(const offs_t channel) const { return ((uint32_t)get_phase_high(channel) << 16) | m_audio_regs[(channel << 4) | AUDIO_PHASE]; }
+	uint32_t get_phase_accum(const offs_t channel) const { return ((uint32_t)get_phase_accum_high(channel) << 16) | m_audio_regs[(channel << 4) | AUDIO_PHASE_ACCUM]; }
+	uint32_t get_target_phase(const offs_t channel) const { return ((uint32_t)get_target_phase_high(channel) << 16) | m_audio_regs[(channel << 4) | AUDIO_TARGET_PHASE]; }
+	uint32_t get_wave_addr(const offs_t channel) const { return ((uint32_t)get_wave_addr_high(channel) << 16) | m_audio_regs[(channel << 4) | AUDIO_WAVE_ADDR]; }
+	uint32_t get_loop_addr(const offs_t channel) const { return ((uint32_t)get_loop_addr_high(channel) << 16) | m_audio_regs[(channel << 4) | AUDIO_LOOP_ADDR]; }
+	uint32_t get_envelope_addr(const offs_t channel) const { return ((uint32_t)get_envelope_addr_high(channel) << 16) | m_audio_regs[(channel << 4) | AUDIO_ENVELOPE_ADDR]; }
 
 	enum
 	{
@@ -399,15 +416,15 @@ protected:
 	void blit_sprite(const rectangle &cliprect, int depth, uint32_t base_addr);
 	void blit_sprites(const rectangle &cliprect, int depth);
 
-	inline uint8_t expand_rgb5_to_rgb8(uint8_t val);
-	inline uint8_t mix_channel(uint8_t a, uint8_t b);
+	uint8_t expand_rgb5_to_rgb8(uint8_t val);
+	uint8_t mix_channel(uint8_t a, uint8_t b);
 	void mix_pixel(uint32_t offset, uint16_t rgb);
 	void set_pixel(uint32_t offset, uint16_t rgb);
 
-	inline void stop_channel(const uint32_t channel);
+	void stop_channel(const uint32_t channel);
 	bool advance_channel(address_space &space, const uint32_t channel);
 	bool fetch_sample(address_space &space, const uint32_t channel);
-	inline void loop_channel(const uint32_t channel);
+	void loop_channel(const uint32_t channel);
 
 	struct rgbtriad_t
 	{
@@ -439,6 +456,10 @@ protected:
 	uint16_t m_audio_curr_beat_base_count;
 
 	uint16_t m_io_regs[0x200];
+	uint8_t m_uart_rx_fifo[8];
+	uint8_t m_uart_rx_fifo_start;
+	uint8_t m_uart_rx_fifo_end;
+	uint8_t m_uart_rx_fifo_count;
 	bool m_uart_rx_available;
 
 	uint16_t m_video_regs[0x100];
@@ -473,12 +494,6 @@ protected:
 	required_shared_ptr<uint16_t> m_paletteram;
 	required_shared_ptr<uint16_t> m_spriteram;
 
-#if SPG2XX_VISUAL_AUDIO_DEBUG
-	std::unique_ptr<uint8_t[]> m_audio_debug_buffer;
-	uint16_t m_audio_debug_x;
-	required_device<screen_device> m_audio_screen;
-#endif
-
 	static const uint32_t s_rampdown_frame_counts[8];
 	static const uint32_t s_envclk_frame_counts[16];
 };
@@ -486,20 +501,12 @@ protected:
 class spg24x_device : public spg2xx_device
 {
 public:
-#if SPG2XX_VISUAL_AUDIO_DEBUG
-	template <typename T, typename U, typename V>
-	spg24x_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock, T &&cpu_tag, U &&screen_tag, V &&debug_screen_tag)
-#else
 	template <typename T, typename U>
 	spg24x_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock, T &&cpu_tag, U &&screen_tag)
-#endif
 		: spg24x_device(mconfig, tag, owner, clock)
 	{
 		m_cpu.set_tag(std::forward<T>(cpu_tag));
 		m_screen.set_tag(std::forward<U>(screen_tag));
-#if SPG2XX_VISUAL_AUDIO_DEBUG
-		m_audio_screen.set_tag(std::forward<V>(debug_screen_tag));
-#endif
 	}
 
 	spg24x_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
@@ -508,20 +515,12 @@ public:
 class spg28x_device : public spg2xx_device
 {
 public:
-#if SPG2XX_VISUAL_AUDIO_DEBUG
-	template <typename T, typename U, typename V>
-	spg28x_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock, T &&cpu_tag, U &&screen_tag, V &&debug_screen_tag)
-#else
 	template <typename T, typename U>
 	spg28x_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock, T &&cpu_tag, U &&screen_tag)
-#endif
 		: spg28x_device(mconfig, tag, owner, clock)
 	{
 		m_cpu.set_tag(std::forward<T>(cpu_tag));
 		m_screen.set_tag(std::forward<U>(screen_tag));
-#if SPG2XX_VISUAL_AUDIO_DEBUG
-		m_audio_screen.set_tag(std::forward<V>(debug_screen_tag));
-#endif
 	}
 
 	spg28x_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
@@ -530,4 +529,4 @@ public:
 DECLARE_DEVICE_TYPE(SPG24X, spg24x_device)
 DECLARE_DEVICE_TYPE(SPG28X, spg28x_device)
 
-#endif // DEVICES_MACHINE_SPG2XX_H
+#endif // MAME_MACHINE_SPG2XX_H

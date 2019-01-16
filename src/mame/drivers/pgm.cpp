@@ -160,9 +160,9 @@ Notes:
 
       ROMs
       ----
-         PGM_M01S.U18 - 16MBit MASKROM (TSOP48)
-         PGM_P01S.U20 - 1MBit  MASKROM (DIP40, socketed, equivalent to 27C1024 EPROM)
-         PGM_T01S.U29 - 16MBit MASKROM (SOP44)
+         PGM_M01S.U18 - 16MBit mask ROM (TSOP48)
+         PGM_P01S.U20 - 1MBit  mask ROM (DIP40, socketed, equivalent to 27C1024 EPROM)
+         PGM_T01S.U29 - 16MBit mask ROM (SOP44)
 
       CUSTOM IC's
       -----------
@@ -508,54 +508,57 @@ MACHINE_RESET_MEMBER(pgm_state,pgm)
 	m_soundcpu->set_input_line(INPUT_LINE_HALT, ASSERT_LINE);
 }
 
-MACHINE_CONFIG_START(pgm_state::pgmbase)
+void pgm_state::pgmbase(machine_config &config)
+{
 	/* basic machine hardware */
-	MCFG_DEVICE_ADD("maincpu", M68000, 20000000) /* 20 mhz! verified on real board */
-	MCFG_DEVICE_PROGRAM_MAP(pgm_basic_mem)
-	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", pgm_state,  irq6_line_hold)
-	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", pgm_state, pgm_interrupt, "screen", 0, 1)
+	M68000(config, m_maincpu, 20000000); /* 20 mhz! verified on real board */
+	m_maincpu->set_addrmap(AS_PROGRAM, &pgm_state::pgm_basic_mem);
+	m_maincpu->set_vblank_int("screen", FUNC(pgm_state::irq6_line_hold));
+	TIMER(config, "scantimer").configure_scanline(FUNC(pgm_state::pgm_interrupt), "screen", 0, 1);
 
-	MCFG_DEVICE_ADD("soundcpu", Z80, 33868800/4)
-	MCFG_DEVICE_PROGRAM_MAP(pgm_z80_mem)
-	MCFG_DEVICE_IO_MAP(pgm_z80_io)
+	Z80(config, m_soundcpu, 33868800/4);
+	m_soundcpu->set_addrmap(AS_PROGRAM, &pgm_state::pgm_z80_mem);
+	m_soundcpu->set_addrmap(AS_IO, &pgm_state::pgm_z80_io);
 
 	MCFG_MACHINE_START_OVERRIDE(pgm_state, pgm )
 	MCFG_MACHINE_RESET_OVERRIDE(pgm_state, pgm )
+
 	NVRAM(config, "sram", nvram_device::DEFAULT_ALL_0);
 
 	V3021(config, "rtc");
 
 	/* video hardware */
-	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_REFRESH_RATE(60) // killing blade won't boot (just displays 'error') if this is lower than 59.9 or higher than 60.1 .. are actual PGM boards different to the Cave one?
-	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_SIZE(64*8, 64*8)
-	MCFG_SCREEN_VISIBLE_AREA(0*8, 56*8-1, 0*8, 28*8-1)
-	MCFG_SCREEN_UPDATE_DRIVER(pgm_state, screen_update_pgm)
-	MCFG_SCREEN_VBLANK_CALLBACK(WRITELINE(*this, pgm_state, screen_vblank_pgm))
-	MCFG_SCREEN_PALETTE("palette")
+	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen.set_refresh_hz(60); // killing blade won't boot (just displays 'error') if this is lower than 59.9 or higher than 60.1 .. are actual PGM boards different to the Cave one?
+	screen.set_vblank_time(ATTOSECONDS_IN_USEC(0));
+	screen.set_size(64*8, 64*8);
+	screen.set_visarea(0*8, 56*8-1, 0*8, 28*8-1);
+	screen.set_screen_update(FUNC(pgm_state::screen_update_pgm));
+	screen.screen_vblank().set(FUNC(pgm_state::screen_vblank_pgm));
+	screen.set_palette(m_palette);
 
-	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_pgm)
-	MCFG_PALETTE_ADD("palette", 0x1200/2)
-	MCFG_PALETTE_FORMAT(xRRRRRGGGGGBBBBB)
+	GFXDECODE(config, m_gfxdecode, m_palette, gfx_pgm);
+	PALETTE(config, m_palette, 0x1200/2);
+	m_palette->set_format(PALETTE_FORMAT_xRRRRRGGGGGBBBBB);
 
 	MCFG_VIDEO_START_OVERRIDE(pgm_state,pgm)
 
 	/*sound hardware */
 	SPEAKER(config, "mono").front_center();
 
-	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
-	MCFG_GENERIC_LATCH_8_ADD("soundlatch2")
-	MCFG_GENERIC_LATCH_8_ADD("soundlatch3")
+	GENERIC_LATCH_8(config, m_soundlatch);
+	GENERIC_LATCH_8(config, "soundlatch2");
+	GENERIC_LATCH_8(config, m_soundlatch3);
 
-	MCFG_ICS2115_ADD("ics", 0)
-	MCFG_ICS2115_IRQ_CB(INPUTLINE("soundcpu", 0))
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 5.0)
-MACHINE_CONFIG_END
+	ICS2115(config, m_ics, 0);
+	m_ics->irq().set_inputline("soundcpu", 0);
+	m_ics->add_route(ALL_OUTPUTS, "mono", 5.0);
+}
 
-MACHINE_CONFIG_START(pgm_state::pgm)
+void pgm_state::pgm(machine_config &config)
+{
 	pgmbase(config);
-MACHINE_CONFIG_END
+}
 
 
 /*** Rom Loading *************************************************************/
@@ -922,8 +925,8 @@ Notes:
       V-110X.U2    - AM27C4096 4MBit EPROM (DIP42, labelled "DRAGON II V-100C")
 
       PALs         - x3, labelled "CZ U3", "CZ U4", "CZ U6"
-      *1           - Unpopulated position for MX23C4100 SOP40 MASKROM
-      *2           - Unpopulated position for MX23C4100 DIP40 EPROM/MASKROM
+      *1           - Unpopulated position for MX23C4100 SOP40 mask ROM
+      *2           - Unpopulated position for MX23C4100 DIP40 EPROM/mask ROM
 
 
 IGS PCB NO-0135
@@ -941,7 +944,7 @@ IGS PCB NO-0135
   |--------------------||---------------------|
 
 Notes:
-      This PCB contains only SOP44 MASKROMS and 2 logic IC's
+      This PCB contains only SOP44 mask ROMS and 2 logic IC's
       Only U5 and U9 are populated
 
       glitch on select screen exists on real board.
@@ -1151,10 +1154,10 @@ IGS025 ASIC
 1x PAL
 2x 27C040 EPROMs (main 68k program)
 1x 27C512 EPROM (protection code?)
-1x 32MBit smt MASKROM (T0400)
+1x 32MBit smt mask ROM (T0400)
 
 Bottom board contains.....
-4x 32MBit smt MASKROMs (A0400, A0401, B0400, M0400)
+4x 32MBit smt mask ROMs (A0400, A0401, B0400, M0400)
 
 */
 
@@ -1987,7 +1990,7 @@ Notes:
       U5           - 27C4000 4MBit EPROM (DIP32, labelled "KB U5 V104")
       U6           - 27C4000 4MBit EPROM (DIP32, labelled "KB U6 V104")
       PALs         - x3, labelled "DH U8", "DH U1", "DH U7"
-      *            - Unpopulated position for DIP42 EPROM/MASKROM (labelled "P0300")
+      *            - Unpopulated position for DIP42 EPROM/mask ROM (labelled "P0300")
 
 
 IGS PCB NO-0178
@@ -2005,19 +2008,19 @@ IGS PCB NO-0178
   |--------------------||---------------------|
 
 Notes:
-      U1           - 32MBit MASKROM (SOP44, labelled "M0300")
-      U2           - 32MBit MASKROM (SOP44, labelled "A0307")
-      U3           - 16MBit MASKROM (DIP42, labelled "A0302")
-      U4           - 16MBit MASKROM (DIP42, labelled "A0304")
-      U5           - 16MBit MASKROM (DIP42, labelled "A0305")
-      U8           - 16MBit MASKROM (DIP42, labelled "B0301")
-      U9           - 32MBit MASKROM (SOP44, labelled "A0300")
-      U10          - 32MBit MASKROM (SOP44, labelled "A0301")
-      U11          - 32MBit MASKROM (SOP44, labelled "A0303")
-      U12          - 32MBit MASKROM (SOP44, labelled "A0306")
-      U13          - 32MBit MASKROM (SOP44, labelled "B0300")
-      U14          - 32MBit MASKROM (SOP44, labelled "B0302")
-      U15          - 32MBit MASKROM (SOP44, labelled "B0303")
+      U1           - 32MBit mask ROM (SOP44, labelled "M0300")
+      U2           - 32MBit mask ROM (SOP44, labelled "A0307")
+      U3           - 16MBit mask ROM (DIP42, labelled "A0302")
+      U4           - 16MBit mask ROM (DIP42, labelled "A0304")
+      U5           - 16MBit mask ROM (DIP42, labelled "A0305")
+      U8           - 16MBit mask ROM (DIP42, labelled "B0301")
+      U9           - 32MBit mask ROM (SOP44, labelled "A0300")
+      U10          - 32MBit mask ROM (SOP44, labelled "A0301")
+      U11          - 32MBit mask ROM (SOP44, labelled "A0303")
+      U12          - 32MBit mask ROM (SOP44, labelled "A0306")
+      U13          - 32MBit mask ROM (SOP44, labelled "B0300")
+      U14          - 32MBit mask ROM (SOP44, labelled "B0302")
+      U15          - 32MBit mask ROM (SOP44, labelled "B0303")
 
 */
 
@@ -2169,7 +2172,7 @@ Notes:
       U1_V100MG.U1  - MX27C4000 512K x8 EPROM (DIP32, labelled 'PuzzleStar U1 V100MG')
       U2_V100MG.U2  - MX27C4000 512K x8 EPROM (DIP32, labelled 'PuzzleStar U2 V100MG')
       PAL           - Atmel ATF22V10B PAL (DIP24, labelled 'EA U4')
-      U3            - Unpopulated position for 32MBit MASKROM (DIP42)
+      U3            - Unpopulated position for 32MBit mask ROM (DIP42)
       U6, U7        - Unpopulated position for 74LS245 logic chip (x2)
 
 
@@ -2248,7 +2251,7 @@ Notes:
       V101.U2/3/4/5- MX27C4000 4MBit EPROM (DIP32)
       PALs         - x2, labelled "CW-2 U8", "CW-2 U7"
       6264         - 8K x8 SRAM
-      *1           - Unpopulated position for SOP44 MASKROM labelled "P0500"
+      *1           - Unpopulated position for SOP44 mask ROM labelled "P0500"
 
 
 IGS PCB NO-0135
@@ -5029,6 +5032,6 @@ GAME( 2008, kovshxas,     kovshp,    pgm_arm_type1,         kovsh,    pgm_arm_ty
 //乱世拳皇/Luànshì quánhuáng
 GAME( 200?, kovlsqh,      kovshp,    pgm_arm_type1,         kovsh,    pgm_arm_type1_state, init_kovlsqh2, ROT0,   "bootleg", "Luanshi Quanhuang (bootleg of Knights of Valour Super Heroes Plus, ver. 200CN)", MACHINE_IMPERFECT_SOUND | MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE ) /* need internal rom of IGS027A */
 GAME( 200?, kovlsqh2,     kovshp,    pgm_arm_type1,         kovsh,    pgm_arm_type1_state, init_kovlsqh2, ROT0,   "bootleg", "Luanshi Quanhuang 2 (bootleg of Knights of Valour Super Heroes Plus, ver. 200CN)", MACHINE_IMPERFECT_SOUND | MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE ) /* need internal rom of IGS027A */
-//乱世街霸/Luànshì jiē bà
+//乱世街霸/Luànshì jiē b�
 GAME( 200?, kovlsjb,      kovshp,    pgm_arm_type1,         kovsh,    pgm_arm_type1_state, init_kovlsqh2, ROT0,   "bootleg", "Luanshi Jie Ba (bootleg of Knights of Valour Super Heroes Plus, ver. 200CN, set 1)", MACHINE_IMPERFECT_SOUND | MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE ) /* need internal rom of IGS027A */
 GAME( 200?, kovlsjba,     kovshp,    pgm_arm_type1,         kovsh,    pgm_arm_type1_state, init_kovlsqh2, ROT0,   "bootleg", "Luanshi Jie Ba (bootleg of Knights of Valour Super Heroes Plus, ver. 200CN, set 2)", MACHINE_IMPERFECT_SOUND | MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE ) /* need internal rom of IGS027A */

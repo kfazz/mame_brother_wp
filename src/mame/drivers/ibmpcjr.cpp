@@ -599,25 +599,25 @@ void pcjr_state::ibmpcjx_io(address_map &map)
 
 MACHINE_CONFIG_START(pcjr_state::ibmpcjr)
 	/* basic machine hardware */
-	MCFG_DEVICE_ADD("maincpu", I8088, 4900000)
-	MCFG_DEVICE_PROGRAM_MAP(ibmpcjr_map)
-	MCFG_DEVICE_IO_MAP(ibmpcjr_io)
-	MCFG_DEVICE_IRQ_ACKNOWLEDGE_DEVICE("pic8259", pic8259_device, inta_cb)
+	I8088(config, m_maincpu, 4900000);
+	m_maincpu->set_addrmap(AS_PROGRAM, &pcjr_state::ibmpcjr_map);
+	m_maincpu->set_addrmap(AS_IO, &pcjr_state::ibmpcjr_io);
+	m_maincpu->set_irq_acknowledge_callback("pic8259", FUNC(pic8259_device::inta_cb));
 
 /*
   On the PC Jr the input for clock 1 seems to be selectable
   based on bit 4(/5?) written to output port A0h. This is not
   supported yet.
  */
-	MCFG_DEVICE_ADD("pit8253", PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL(14'318'181)/12)
-	MCFG_PIT8253_OUT0_HANDLER(WRITELINE(m_pic8259, pic8259_device, ir0_w))
-	MCFG_PIT8253_CLK1(XTAL(14'318'181)/12)
-	MCFG_PIT8253_CLK2(XTAL(14'318'181)/12)
-	MCFG_PIT8253_OUT2_HANDLER(WRITELINE(*this, pcjr_state, out2_changed))
+	PIT8253(config, m_pit8253, 0);
+	m_pit8253->set_clk<0>(XTAL(14'318'181)/12);
+	m_pit8253->out_handler<0>().set(m_pic8259, FUNC(pic8259_device::ir0_w));
+	m_pit8253->set_clk<1>(XTAL(14'318'181)/12);
+	m_pit8253->set_clk<2>(XTAL(14'318'181)/12);
+	m_pit8253->out_handler<2>().set(FUNC(pcjr_state::out2_changed));
 
-	MCFG_DEVICE_ADD(m_pic8259, PIC8259, 0)
-	MCFG_PIC8259_OUT_INT_CB(WRITELINE(*this, pcjr_state, pic8259_set_int_line))
+	PIC8259(config, m_pic8259, 0);
+	m_pic8259->out_int_callback().set(FUNC(pcjr_state::pic8259_set_int_line));
 
 	i8255_device &ppi(I8255(config, "ppi8255"));
 	ppi.in_pa_callback().set_constant(0xff);
@@ -654,13 +654,13 @@ MACHINE_CONFIG_START(pcjr_state::ibmpcjr)
 	pc_lpt_device &lpt0(PC_LPT(config, "lpt_0"));
 	lpt0.irq_handler().set(m_pic8259, FUNC(pic8259_device::ir7_w));
 
-	MCFG_PC_JOY_ADD("pc_joy")
+	PC_JOY(config, "pc_joy");
 
 	/* cassette */
 	MCFG_CASSETTE_ADD( "cassette")
 	MCFG_CASSETTE_DEFAULT_STATE(CASSETTE_PLAY | CASSETTE_MOTOR_DISABLED | CASSETTE_SPEAKER_ENABLED)
 
-	UPD765A(config, m_fdc, false, false);
+	UPD765A(config, m_fdc, 8'000'000, false, false);
 
 	MCFG_FLOPPY_DRIVE_ADD("fdc:0", pcjr_floppies, "525dd", isa8_fdc_device::floppy_formats)
 	MCFG_SLOT_FIXED(true)
