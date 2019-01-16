@@ -1,9 +1,9 @@
-mame (0.205+dfsg.1-1) UNRELEASED; urgency=medium
+mame (0.205+dfsg.1-1) unstable; urgency=medium
 
   * New upstream release.
   * Update Standards-Version to 4.3.0.
 
- -- Jordi Mallach <jordi@debian.org>  Thu, 17 Jan 2019 00:39:06 +0100
+ -- Jordi Mallach <jordi@debian.org>  Thu, 17 Jan 2019 00:44:19 +0100
 
 mame (0.203+dfsg.1-1) unstable; urgency=medium
 
