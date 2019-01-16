@@ -27,7 +27,7 @@ Build-Depends: debhelper (>= 11),
  rapidjson-dev (>= 1.0),
  zlib1g-dev
 Build-Depends-Indep: python3-sphinx
-Standards-Version: 4.2.1
+Standards-Version: 4.3.0
 Vcs-Git: https://salsa.debian.org/games-team/mame.git
 Vcs-Browser: https://salsa.debian.org/games-team/mame
 Homepage: https://mamedev.org/
