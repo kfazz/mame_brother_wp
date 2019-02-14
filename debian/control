@@ -59,6 +59,7 @@ Architecture: all
 Depends: ${misc:Depends}
 Replaces: mess-data (<< 0.162)
 Breaks: mess-data (<< 0.162)
+Multi-Arch: foreign
 Description: Multiple Arcade Machine Emulator (MAME) -- data files
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation). This program is not a game but can
@@ -95,6 +96,7 @@ Architecture: all
 Depends: ${misc:Depends}
 Suggests: libjs-sphinxdoc, libjs-mathjax
 Enhances: mame
+Multi-Arch: foreign
 Description: Documentation for MAME
  MAME is a hardware emulator: it faithfully reproduces the behavior of many
  arcade machines (it is not a simulation).

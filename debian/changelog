@@ -1,6 +1,7 @@
 mame (0.206+dfsg.1-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Mark -doc and -data as M-A: foreign.
 
  -- Jordi Mallach <jordi@debian.org>  Thu, 14 Feb 2019 10:19:32 +0100
 
