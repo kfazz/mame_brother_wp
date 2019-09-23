@@ -51,6 +51,9 @@ private:
 
 	DECLARE_READ8_MEMBER(unk_r);
 	DECLARE_WRITE8_MEMBER(unk_w);
+	//fake floppy state for now
+	DECLARE_READ8_MEMBER(fdc_r);
+	DECLARE_WRITE8_MEMBER(fdc_w);
 
 	DECLARE_WRITE8_MEMBER(kb_w);
 	DECLARE_READ8_MEMBER(kb_r);
@@ -144,12 +147,14 @@ void wp75_state::wp75_io(address_map &map)
 	map(0x74, 0x74).mirror(0xff00).w(FUNC(wp75_state::vctl_w));
 	map(0x75, 0x75).mirror(0xff00).w(FUNC(wp75_state::vcrl_w));
 	map(0x76, 0x76).mirror(0xff00).w(FUNC(wp75_state::vcrh_w));
-	map(0x80, 0xA0).mirror(0xff00).r(FUNC(wp75_state::unk_r));
-	map(0x80, 0xA0).mirror(0xff00).w(FUNC(wp75_state::unk_w));
+//	map(0x80, 0xA0).mirror(0xff00).r(FUNC(wp75_state::unk_r));
+//	map(0x80, 0xA0).mirror(0xff00).w(FUNC(wp75_state::unk_w));
 
-	map(0x78, 0x7b).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
-//	map(0x7c, 0x7F).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
+//	map(0x78, 0x7b).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)); //.umask16(0x0Ff);
+//	map(0x7c, 0x7F).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)); //.umask16(0x0Ff);
 
+	map(0x78, 0x7b).mirror(0xff00).r(FUNC(wp75_state::fdc_r));
+	map(0x78, 0x7b).mirror(0xff00).w(FUNC(wp75_state::fdc_w));
 
 	map(0xB8, 0xB8).mirror(0xff00).r(FUNC(wp75_state::kb_r));
 	map(0xB8, 0xB8).mirror(0xff00).w(FUNC(wp75_state::kb_w));
@@ -233,7 +238,7 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 {
 	vl = data & 0xff;
 	v_ptr = (vh << 8) | (vl & 0xff);
-	printf("vpl_w :%02x\n", vl);
+//	printf("vpl_w :%02x\n", vl);
 }
 	WRITE8_MEMBER(wp75_state::vph_w)
 {
@@ -245,7 +250,7 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 {
 	uint8_t *vram = memregion("vram")->base();
 	uint16_t index = (vh << 8) | (vl & 0xff);
-	printf("vram_w @:%02x :%02x\n",index, data);
+//	printf("vram_w @:%02x :%02x\n",index, data);
 
 	if (index > 0x7FFF)
 	{
@@ -273,7 +278,7 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 	WRITE8_MEMBER(wp75_state::vctl_w)
 {
 	v_ctl = data;
-	printf("vctl:%02x\n",data);
+//	printf("vctl:%02x\n",data);
 }
 	WRITE8_MEMBER(wp75_state::vcrl_w)
 {
@@ -289,7 +294,7 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 {
 	//11 = s5 70 or 66 line s4 0, s3,2,1,0 country code 
 	uint8_t data = 0xcf; //0xc2
-	printf("sysr h:%02x\n",data);
+//	printf("sysr h:%02x\n",data);
 	return data;
 }
 
@@ -309,7 +314,7 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 {
 	if (data & 1)
 	{
-	//printf("pg_w BEEP h:%02x\n",data);
+	printf("pg_w BEEP h:%02x\n",data);
 	}
 	else {
 	//printf("pg_w h:%02x\n",data);
@@ -327,6 +332,27 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 //	data = 0xf;
 	printf("portb h:%02x\n",data);
 	return data;
+}
+
+
+
+        READ8_MEMBER(wp75_state::fdc_r)
+{
+        uint8_t data = 0;
+	switch (offset)
+	{
+	case 0: data = 00; break;
+	case 1: data = 00; break;
+	case 2: data = 00; break;
+	case 3: data = 00; break;
+	}
+//        printf("unk a:%02x h:%02x\n",offset,data);
+        return data;
+}
+
+        WRITE8_MEMBER(wp75_state::fdc_w)
+{
+//        printf("fdc a:%02x h:%02x\n",offset,data);
 }
 
 
@@ -381,43 +407,45 @@ INTERRUPT_GEN_MEMBER(wp75_state::wp75_timer_interrupt)
 	WRITE8_MEMBER(wp75_state::kb_w)
 {
 	kb_matrix = data;
-	printf("kb_w h:%02x\n",data);
+//	printf("kb_w h:%02x\n",data);
 }
 
 	READ8_MEMBER(wp75_state::kb_r)
 {
 
 	uint8_t data = 0xfF;
-//        if(kb_matrix == 8) data = 0xef;
-//        if(kb_matrix == 7) data = 0xFF;
-//        if(kb_matrix == 6) data = 0x7f;
-//        if(kb_matrix == 5) data = 0xef;
-//        if(kb_matrix == 4) data = 0x7f;
-//        if(kb_matrix == 3) data = 0x7f;
-//        if(kb_matrix == 2) data = 0x7f;
-//        if(kb_matrix == 1) data = 0x7f;
-//        if(kb_matrix == 0) data = 0x7f;//8B?
-	data = 0xFF;
-	printf("kb_r m:%x h:%02x\n", kb_matrix,data);
+        if(kb_matrix == 8) data = 0xef;
+        if(kb_matrix == 7) data = 0xFF;
+        if(kb_matrix == 6) data = 0x7f;
+        if(kb_matrix == 5) data = 0xef;
+        if(kb_matrix == 4) data = 0x7f;
+        if(kb_matrix == 3) data = 0x7f;
+        if(kb_matrix == 2) data = 0x7f;
+        if(kb_matrix == 1) data = 0x7f;
+        if(kb_matrix == 0) data = 0x7f;//8B?
+//	printf("kb_r m:%x h:%02x\n", kb_matrix,data);
 	return data;
 }
 
 	WRITE8_MEMBER(wp75_state::ca_w)
 {
 	//ca_idx = true;
-	//if(carriage_position > 0)
-	//	carriage_position--;
-	printf("ca_w h:%02x\n",data);
+	if(carriage_position > 0)
+		carriage_position--;
+	if (data!=0xff)
+		printf("ca_w h:%02x\n",data);
 }
 
 	WRITE8_MEMBER(wp75_state::wh_w)
 {
+ 	if(data != 0xff)
 	printf("wh_w h:%02x\n",data);
 }
 
 	WRITE8_MEMBER(wp75_state::lf_w)
 {
-	printf("lf_w h:%02x\n",data);
+	if(data != 0xff)
+		printf("lf_w h:%02x\n",data);
 }
 
 
