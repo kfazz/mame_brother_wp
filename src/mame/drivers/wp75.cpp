@@ -105,16 +105,16 @@ mir 0x70000-0x71FFF
 ram 0x02000-0x05FFF mirror mask = 0x60000
 mir 0x62000-0x65FFF
 
-ram 0x66000-0x6FFFF			
+ram 0x66000-0x6FFFF
 	*/
 
 	map.unmap_value_high();
-	map(0x0000, 0x1FFF).rom();
-//	map(0x0000, 0x7FFFF).rom();
+//	map(0x0000, 0x1FFF).rom();
+	map(0x0000, 0x7FFFF).rom();
 	map(0x2000, 0x5FFF).ram().rw(FUNC(wp75_state::window_r), FUNC(wp75_state::window_w)).share("window");
-	map(0x6000,0x3FFFF).rom();
+//	map(0x6000,0x3FFFF).rom();
 
-	map(0x40000, 0x5FFFF).rom(); // Dict
+//	map(0x40000, 0x5FFFF).rom(); // Dict
 
 //	map(0x40000, 0x5FFFF).bankr("rom1"); //dictionary & bank program
 //	map(0x2000, 0x5FFF).ram(); //mirror(0x60000).ram();
@@ -125,12 +125,11 @@ ram 0x66000-0x6FFFF
 	map(0x66000,0x6FFFF).ram();
 //	map(0x70000,0x71FFF).ram(); //.mirror(0x10000).ram();
 
-
-//	map(0x72000, 0x75FFF).r(FUNC(wp75_state::rom_wind_r)).share("romwindow");
-	map(0x72000, 0x7FFFF).r(FUNC(wp75_state::rom_wind_r)).share("romwindow");
+	//this window points at the rom that is shadowed by ram from 0x2000-0x5FFF
+	map(0x72000, 0x75FFF).r(FUNC(wp75_state::rom_wind_r)).share("romwindow");
 
 //	map(0x72000, 0x75FFF).rom();
-//	map(0x76000,0x7FFFF).rom(); //supposedly Unused?
+//	map(0x76000, 0x7FFFF).rom(); //supposedly Unused?
 }
 
 void wp75_state::wp75_io(address_map &map)
@@ -148,7 +147,7 @@ void wp75_state::wp75_io(address_map &map)
 	map(0x80, 0xA0).mirror(0xff00).r(FUNC(wp75_state::unk_r));
 	map(0x80, 0xA0).mirror(0xff00).w(FUNC(wp75_state::unk_w));
 
-//	map(0x78, 0x7b).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
+	map(0x78, 0x7b).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
 //	map(0x7c, 0x7F).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
 
 
@@ -186,10 +185,10 @@ void wp75_state::video_start()
 void wp75_state::init_wp75()
 {
 	//8 banks of 128k, but A16 is don't care
-//	membank("rom1")->configure_entries(0, 8, memregion("rom1")->base(), 0x20000);
+	//membank("rom1")->configure_entries(0, 8, memregion("rom1")->base(), 0x20000);
 	//wp70 starts with entry 0?
 	//2540DS starts with entry 2???
-//	membank("rom1")->set_entry(0);
+	//membank("rom1")->set_entry(0);
 }
 
 uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
@@ -225,7 +224,7 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 	WRITE8_MEMBER(wp75_state::bank_w)
 {
 	printf("Rom1 bank dat:%02x\n",data ); //, (data >>1) & 3);
-//	membank("rom1")->set_entry((data >> 1) & 3 ); //(data >> 1) & 3);
+	//membank("rom1")->set_entry((data >> 1) & 3 ); //(data >> 1) & 3);
 	//membank("rom1")->set_entry(data);
 
 }
@@ -289,7 +288,7 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 	READ8_MEMBER(wp75_state::sys_r)
 {
 	//11 = s5 70 or 66 line s4 0, s3,2,1,0 country code 
-	uint8_t data = 0xc0; //0xc2
+	uint8_t data = 0xcf; //0xc2
 	printf("sysr h:%02x\n",data);
 	return data;
 }
@@ -325,7 +324,7 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 	if(ca_idx)
 		data = 0xe;//a
 
-	data = 0xf;
+//	data = 0xf;
 	printf("portb h:%02x\n",data);
 	return data;
 }
@@ -389,24 +388,16 @@ INTERRUPT_GEN_MEMBER(wp75_state::wp75_timer_interrupt)
 {
 
 	uint8_t data = 0xfF;
-	//        if(kb_matrix == 8) data = 0xF7;
+//        if(kb_matrix == 8) data = 0xef;
 //        if(kb_matrix == 7) data = 0xFF;
-//        if(kb_matrix == 6) data = 0x7F;
-//        if(kb_matrix == 5) data = 0xF7;
-//        if(kb_matrix == 4) data = 0x7F;
-//        if(kb_matrix == 3) data = 0x7F;
-//        if(kb_matrix == 2) data = 0x7F;
-//        if(kb_matrix == 1) data = 0x7F;
-//        if(kb_matrix == 0) data = 0x7F;//8B?
-        if(kb_matrix == 8) data = 0xef;
-        if(kb_matrix == 7) data = 0xFF;
-        if(kb_matrix == 6) data = 0x7f;
-        if(kb_matrix == 5) data = 0xef;
-        if(kb_matrix == 4) data = 0x7f;
-        if(kb_matrix == 3) data = 0x7f;
-        if(kb_matrix == 2) data = 0x7f;
-        if(kb_matrix == 1) data = 0x7f;
-        if(kb_matrix == 0) data = 0x7f;//8B?
+//        if(kb_matrix == 6) data = 0x7f;
+//        if(kb_matrix == 5) data = 0xef;
+//        if(kb_matrix == 4) data = 0x7f;
+//        if(kb_matrix == 3) data = 0x7f;
+//        if(kb_matrix == 2) data = 0x7f;
+//        if(kb_matrix == 1) data = 0x7f;
+//        if(kb_matrix == 0) data = 0x7f;//8B?
+	data = 0xFF;
 	printf("kb_r m:%x h:%02x\n", kb_matrix,data);
 	return data;
 }
@@ -435,25 +426,25 @@ INTERRUPT_GEN_MEMBER(wp75_state::wp75_timer_interrupt)
 	WRITE8_MEMBER(wp75_state::window_w)
 {
 	uint8_t *rom = memregion("maincpu")->base();	
-	rom[0x60000 | offset] = data;
+	rom[0x60000 + offset] = data;
 	//printf("window_w a:%02x h:%02x\n",offset ,data);
 }
 	READ8_MEMBER(wp75_state::window_r)
 {
 	uint8_t *rom = memregion("maincpu")->base();
 	//printf("window_r a:%02x h:%02x\n",offset ,rom[0x60000 & offset]);
-	return rom[0x60000 | offset];
+	return rom[0x60000 + offset];
 }
 
 	READ8_MEMBER(wp75_state::rom_wind_r)
 {
 	uint8_t *rom = memregion("rom1")->base();
 	//printf("romwind__r a:%02x h:%02x\n",offset ,rom[offset & 0xFFFF]);
-	return rom[0x72000 | offset];// & 0x77FFF]; .
+	return rom[0x2000 + offset];// & 0x77FFF]; .
 	//0x2000 seems to relate to FDC, gets stuck
 	
 	//0x62000 runs off the rails quicky and reboots, doesn't seem to be correct
-	//0x72000
+	//0x72000 suceeds through sheer blind luck, crashes later
 
 }
 
