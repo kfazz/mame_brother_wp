@@ -167,9 +167,9 @@ void wp75_state::wp75_io(address_map &map)
 
 	map(0xC0, 0xC0).mirror(0xff00).w(FUNC(wp75_state::ca_w));
 	map(0xC8, 0xC8).mirror(0xff00).w(FUNC(wp75_state::wh_w));
-	map(0xD0, 0xD0).mirror(0xff00).w(FUNC(wp75_state::lf_w));	
+	map(0xD0, 0xD0).mirror(0xff00).w(FUNC(wp75_state::lf_w));
 
-	map(0xD8, 0xD8).mirror(0xff00).w(FUNC(wp75_state::pg_w)); //solenoids and dc motor control	
+	map(0xD8, 0xD8).mirror(0xff00).w(FUNC(wp75_state::pg_w)); //solenoids and dc motor control
 	map(0xF0, 0xF0).mirror(0xff00).w(FUNC(wp75_state::pk_w)); //buzzer and ?
 
 	map(0xB0, 0xB0).mirror(0xff00).r(FUNC(wp75_state::sys_r)); //spec strap
@@ -209,7 +209,7 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 	uint32_t *scanline;
 	int x, y;
 	uint8_t pixels;
-	static const uint32_t palette[2] = { 0xffCC00, 0x282828 };
+	static const uint32_t palette[2] = {0x282828, 0xffCC00 };
 
 	for (y = 0; y < 240; y++)
 	{
@@ -244,19 +244,19 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 {
 	vl = data & 0xff;
 	v_ptr = (vh << 8) | (vl & 0xff);
-	printf("vpl_w :%02x   inc:%x \n", vl, (v_ctl & 0xC) >> 2);
+//	printf("vpl_w :%02x   inc:%x \n", vl, (v_ctl & 0xC) >> 2);
 }
 	WRITE8_MEMBER(wp75_state::vph_w)
 {
 	vh = data & 0xFF;
 	v_ptr = (vh << 8) | (vl & 0xff);
-	printf("vph_w :%02x   inc:%x\n",vh, (v_ctl & 0xC) >> 2);
+//	printf("vph_w :%02x   inc:%x\n",vh, (v_ctl & 0xC) >> 2);
 }
 	WRITE8_MEMBER(wp75_state::vram_w)
 {
 	uint8_t *vram = memregion("vram")->base();
 	uint16_t index = (vh << 8) | (vl & 0xff);
-	printf("vram_w @:%02x :%02x\n",index, data);
+//	printf("vram_w @:%02x :%02x inc %d\n",index, data, (v_ctl & 0xC) >> 2);
 
 	if (index > 0x7FFF)
 	{
@@ -265,7 +265,7 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 	vram[index] = (data & 0xFF);
 	if (index < 0x7FFF)
 	{
-		if ((v_ctl & 0xC) != 0) { //if vram addr auto increment
+		if ((v_ctl & 0xC) == 0) { //if vram addr auto increment
 		v_ptr = index + 1;
 		vl = (v_ptr & 0xFF);
 		vh = (v_ptr >> 8);
@@ -290,7 +290,7 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 	data = vram[index];
 	if (index < 0x7FFF)
 	{
-		if ((v_ctl & 0xC) != 0) { //if vram addr auto increment
+		if ((v_ctl & 0xC) == 0) { //if vram addr auto increment
 		v_ptr = index + 1;
 		vl = (v_ptr & 0xFF);
 		vh = (v_ptr >> 8);
@@ -306,16 +306,16 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 	WRITE8_MEMBER(wp75_state::vctl_w)
 {
 	v_ctl = data;
-	printf("vctl:%02x\n",data);
+//	printf("vctl:%02x\n",data);
 }
 	WRITE8_MEMBER(wp75_state::vcrl_w)
 {
-	printf("cursr addr l:%02x\n",data);
+//	printf("cursr addr l:%02x\n",data);
 }
 
 	WRITE8_MEMBER(wp75_state::vcrh_w)
 {
-	printf("cursr addr h:%02x\n",data);
+//	printf("cursr addr h:%02x\n",data);
 }
 
 	READ8_MEMBER(wp75_state::sys_r)
@@ -387,13 +387,13 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 	READ8_MEMBER(wp75_state::unk_r)
 {
 	uint8_t data = 0x00;
-	printf("unk a:%02x h:%02x\n",offset,data);
+//	printf("unk a:%02x h:%02x\n",offset,data);
 	return data;
 }
 
 	WRITE8_MEMBER(wp75_state::unk_w)
 {
-	printf("unk a:%02x h:%02x\n",offset,data);
+//	printf("unk a:%02x h:%02x\n",offset,data);
 }
 
 WRITE8_MEMBER(wp75_state::irq1_clear_w)
@@ -559,7 +559,7 @@ MACHINE_CONFIG_START(wp75_state::wp75)
 	MCFG_DEVICE_PROGRAM_MAP(wp75_mem)
 	MCFG_DEVICE_IO_MAP(wp75_io)
 //	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", wp75_state, irq1_line_hold)
-	MCFG_DEVICE_PERIODIC_INT_DRIVER(wp75_state, wp75_timer_interrupt,100) //FUCKIT 
+	MCFG_DEVICE_PERIODIC_INT_DRIVER(wp75_state, wp75_timer_interrupt,60)
 
 	// FDC9266 location U43
 	UPD765A(config, m_fdc, XTAL(8'000'000), true, true);
