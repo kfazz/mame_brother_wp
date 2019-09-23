@@ -82,8 +82,14 @@ private:
 	bool ca_idx = false; //true when carriage is left homed or csol is true
 	bool rsol = false; //ribbon solenoid
 	bool csol = false; //correction solenoid
-	uint16_t carriage_position = 120 * 5; //120 steps per inch
-	
+
+	//carriage homing routine appears to go 40 steps left then decides 'check printer'
+	uint16_t carriage_position = 40; //120 steps per inch
+
+	//used to determing whether carriage is going left or right
+	uint8_t ca_prev = 0x00; //previous ca latch contents
+	uint8_t ca_now; //current ca latch contents
+
 
 //	b7	6	54	32	1	0
 //	crsr?	c.blnk  cr.sz   vr incr. disp.	reverse
@@ -329,7 +335,7 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 	if(ca_idx)
 		data = 0xe;//a
 
-//	data = 0xf;
+	if (data != 0xa)
 	printf("portb h:%02x\n",data);
 	return data;
 }
@@ -391,7 +397,7 @@ WRITE_LINE_MEMBER(wp75_state::drq_w)
 
 INTERRUPT_GEN_MEMBER(wp75_state::wp75_timer_interrupt)
 {
-	if (carriage_position <= 24 || csol)
+	if (carriage_position <= 1 || csol)
 	{
 	ca_idx = true;
 	}
@@ -429,11 +435,34 @@ INTERRUPT_GEN_MEMBER(wp75_state::wp75_timer_interrupt)
 
 	WRITE8_MEMBER(wp75_state::ca_w)
 {
-	//ca_idx = true;
-	if(carriage_position > 0)
-		carriage_position--;
+	int8_t dir = 0;
+	ca_now = data;
+	switch (data)
+	{  // 33-> 99 -> CC ->66 going left
+	  //  33 ->66 -> CC ->99 going right
+	case 0x33:
+	if (ca_prev == 0x66) dir = -1;
+	if (ca_prev == 0x99) dir = 1;
+	break;
+	case 0x66:
+	if (ca_prev == 0xCC) dir = -1;
+	if (ca_prev == 0x33) dir = 1;
+	break;
+	case 0x99:
+	if (ca_prev == 0x33) dir = -1;
+	if (ca_prev == 0xCC) dir = 1;
+	break;
+	case 0xCC:
+	if (ca_prev == 0x99) dir = -1;
+	if (ca_prev == 0x66) dir = 1;
+	break;
+	}
+	ca_prev = data;
+	if (dir == 1) carriage_position++;
+	if (dir == -1) carriage_position--;
+
 	if (data!=0xff)
-		printf("ca_w h:%02x\n",data);
+		printf("ca_w h:%02x  cpos: %d\n",data, carriage_position);
 }
 
 	WRITE8_MEMBER(wp75_state::wh_w)
