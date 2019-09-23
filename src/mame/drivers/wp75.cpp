@@ -244,30 +244,37 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 {
 	vl = data & 0xff;
 	v_ptr = (vh << 8) | (vl & 0xff);
-//	printf("vpl_w :%02x\n", vl);
+	printf("vpl_w :%02x   inc:%x \n", vl, (v_ctl & 0xC) >> 2);
 }
 	WRITE8_MEMBER(wp75_state::vph_w)
 {
 	vh = data & 0xFF;
 	v_ptr = (vh << 8) | (vl & 0xff);
-	//printf("vph_w :%02x\n",vh);
+	printf("vph_w :%02x   inc:%x\n",vh, (v_ctl & 0xC) >> 2);
 }
 	WRITE8_MEMBER(wp75_state::vram_w)
 {
 	uint8_t *vram = memregion("vram")->base();
 	uint16_t index = (vh << 8) | (vl & 0xff);
-//	printf("vram_w @:%02x :%02x\n",index, data);
+	printf("vram_w @:%02x :%02x\n",index, data);
 
 	if (index > 0x7FFF)
 	{
 		index = 0;
 	}
 	vram[index] = (data & 0xFF);
-	if (index < 0x7FFF && (v_ctl & (1<<2)))
+	if (index < 0x7FFF)
 	{
+		if ((v_ctl & 0xC) != 0) { //if vram addr auto increment
 		v_ptr = index + 1;
-		vl = (index & 0xFF);
-		vh = (index >> 8);
+		vl = (v_ptr & 0xFF);
+		vh = (v_ptr >> 8);
+		}
+	}
+	else {
+		v_ptr = 0;
+		vl = 0;
+		vh = 0;
 	}
 
 }
@@ -275,25 +282,40 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 {
 	uint8_t *vram = memregion("vram")->base();
 	uint16_t index = (vh << 8) | (vl & 0xff);
+	uint8_t data;
 	if (index > 0x7FFF)
 	{
 		index = 0;
 	}
-	return vram[index];
+	data = vram[index];
+	if (index < 0x7FFF)
+	{
+		if ((v_ctl & 0xC) != 0) { //if vram addr auto increment
+		v_ptr = index + 1;
+		vl = (v_ptr & 0xFF);
+		vh = (v_ptr >> 8);
+		}
+	}
+	else {
+		v_ptr = 0;
+		vl = 0;
+		vh = 0;
+	}
+	return data;
 }
 	WRITE8_MEMBER(wp75_state::vctl_w)
 {
 	v_ctl = data;
-//	printf("vctl:%02x\n",data);
+	printf("vctl:%02x\n",data);
 }
 	WRITE8_MEMBER(wp75_state::vcrl_w)
 {
-	//printf("cursr addr l:%02x\n",data);
+	printf("cursr addr l:%02x\n",data);
 }
 
 	WRITE8_MEMBER(wp75_state::vcrh_w)
 {
-	//printf("cursr addr h:%02x\n",data);
+	printf("cursr addr h:%02x\n",data);
 }
 
 	READ8_MEMBER(wp75_state::sys_r)
