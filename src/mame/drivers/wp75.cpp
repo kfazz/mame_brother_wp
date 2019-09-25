@@ -119,6 +119,8 @@ private:
 
 	void wp75_io(address_map &map);
 	void wp75_mem(address_map &map);
+
+	void wp5500ds_io(address_map &map);
 	void wp5500ds_mem(address_map &map);
 
 };
@@ -318,7 +320,7 @@ void wp75_state::wp5500ds_mem(address_map &map)
 {
 	map.unmap_value_high();
 	map(0x0000, 0x7FFFF).mirror(0x80000).rom();
-	map(0x2000,  0x5FFF).mirror(0x80000).ram().rw(FUNC(wp75_state::window_r), FUNC(wp75_state::window_w)).share("window");
+	map(0x2000, 0x5FFF).mirror(0x80000).ram().rw(FUNC(wp75_state::window_r), FUNC(wp75_state::window_w)).share("window");
 	map(0x60000,0x61FFF).mirror(0x81000).ram();
 	map(0x62000,0x65FFF).mirror(0x80000).ram(); // <== window points here
 	map(0x66000,0x6FFFF).mirror(0x80000).ram();
@@ -344,8 +346,8 @@ void wp75_state::wp70_io(address_map &map)
 //	map(0x78, 0x7b).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
 //	map(0x7c, 0x7F).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
 
-//	map(0x78, 0x7b).mirror(0xff00).r(FUNC(wp75_state::fdc_r));
-//	map(0x78, 0x7b).mirror(0xff00).w(FUNC(wp75_state::fdc_w));
+	map(0x78, 0x7b).mirror(0xff00).r(FUNC(wp75_state::fdc_r));
+	map(0x78, 0x7b).mirror(0xff00).w(FUNC(wp75_state::fdc_w));
 
 	map(0x90, 0x90).mirror(0xff00).r(FUNC(wp75_state::unk_r));
 	map(0x90, 0x90).mirror(0xff00).w(FUNC(wp75_state::unk_w));
@@ -385,8 +387,48 @@ void wp75_state::wp75_io(address_map &map)
 //	map(0x78, 0x7b).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
 //	map(0x7c, 0x7F).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
 
-//	map(0x78, 0x7b).mirror(0xff00).r(FUNC(wp75_state::fdc_r));
-//	map(0x78, 0x7b).mirror(0xff00).w(FUNC(wp75_state::fdc_w));
+	map(0x78, 0x7b).mirror(0xff00).r(FUNC(wp75_state::fdc_r));
+	map(0x78, 0x7b).mirror(0xff00).w(FUNC(wp75_state::fdc_w));
+
+	map(0xB8,0xB8).mirror(0xff00).r(FUNC(wp75_state::kb_r));
+	map(0xB8,0xB8).mirror(0xff00).w(FUNC(wp75_state::kb_w));
+
+	map(0xC0,0xC0).mirror(0xff00).w(FUNC(wp75_state::ca_w));
+	map(0xC8,0xC8).mirror(0xff00).w(FUNC(wp75_state::wh_w));
+	map(0xD0,0xD0).mirror(0xff00).w(FUNC(wp75_state::lf_w));
+
+	map(0xD8,0xD8).mirror(0xff00).w(FUNC(wp75_state::pg_w)); //solenoids and dc motor control
+	map(0xF0,0xF0).mirror(0xff00).w(FUNC(wp75_state::pk_w)); //buzzer and ?
+
+	map(0xB0,0xB0).mirror(0xff00).r(FUNC(wp75_state::sys_r)); //spec strap
+	//map(0xE0,0xE0).mirror(0xff00).w(FUNC(wp75_state::bank_w)); //rom1 bank switch control
+	map(0xA8,0xA8).mirror(0xff00).r(FUNC(wp75_state::portb_r));
+	map(0xF8,0xF8).mirror(0xff00).w(FUNC(wp75_state::irq1_clear_w));
+
+}
+
+
+
+void wp75_state::wp5500ds_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x003f).ram(); /* Z180 internal registers */
+
+	map(0x70, 0x70).mirror(0xff00).w(FUNC(wp75_state::vpl_w));
+	map(0x71, 0x71).mirror(0xff00).w(FUNC(wp75_state::vph_w));
+	map(0x72, 0x72).mirror(0xff00).w(FUNC(wp75_state::vram_w));
+	map(0x73, 0x73).mirror(0xff00).r(FUNC(wp75_state::vram_r));
+	map(0x74, 0x74).mirror(0xff00).w(FUNC(wp75_state::vctl_w));
+	map(0x75, 0x75).mirror(0xff00).w(FUNC(wp75_state::vcrl_w));
+	map(0x76, 0x76).mirror(0xff00).w(FUNC(wp75_state::vcrh_w));
+//	map(0x80, 0xA0).mirror(0xff00).r(FUNC(wp75_state::unk_r));
+//	map(0x80, 0xA0).mirror(0xff00).w(FUNC(wp75_state::unk_w));
+
+//	map(0x78, 0x7b).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
+//	map(0x7c, 0x7F).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
+
+	map(0x78, 0x7b).mirror(0xff00).r(FUNC(wp75_state::fdc_r));
+	map(0x78, 0x7b).mirror(0xff00).w(FUNC(wp75_state::fdc_w));
 
 	map(0xB8,0xB8).mirror(0xff00).r(FUNC(wp75_state::kb_r));
 	map(0xB8,0xB8).mirror(0xff00).w(FUNC(wp75_state::kb_w));
@@ -916,7 +958,7 @@ MACHINE_CONFIG_START(wp75_state::wp5500ds)
 	/* basic machine hardware */
 	MCFG_DEVICE_ADD("maincpu",Z180, XTAL(12'288'000) / 2) // location U17 HD64180
 	MCFG_DEVICE_PROGRAM_MAP(wp5500ds_mem)
-	MCFG_DEVICE_IO_MAP(wp75_io)
+	MCFG_DEVICE_IO_MAP(wp5500ds_io)
 	MCFG_DEVICE_PERIODIC_INT_DRIVER(wp75_state, wp75_timer_interrupt,1000)
 
 	// FDC9266 location U43
@@ -964,7 +1006,7 @@ ROM_START( wp2450ds ) /*also wp2510ds*/
 ROM_END
 
 ROM_START( wp5500ds )
-	ROM_REGION( 0x80000, "maincpu", ROMREGION_ERASEFF )
+	ROM_REGION( 0x100000, "maincpu", ROMREGION_ERASEFF )
 	ROM_LOAD( "UA8584001.BIN", 0x0000, 0x80000, CRC(99f29d66) SHA1(61947cd312b890cb3a8b6c1ab05f73833f36d6b2))
 	ROM_REGION( 0x8000, "vram", ROMREGION_ERASEFF )
 ROM_END
