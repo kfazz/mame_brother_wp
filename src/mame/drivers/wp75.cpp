@@ -44,10 +44,14 @@ private:
 	virtual void machine_reset() override;
 	virtual void video_start() override;
 	uint32_t screen_update_wp75(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
+	uint32_t screen_update_wp5500(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
+
 	DECLARE_WRITE8_MEMBER(vpl_w);
 	DECLARE_WRITE8_MEMBER(vph_w);
 	DECLARE_WRITE8_MEMBER(vram_w);
 	DECLARE_READ8_MEMBER(vram_r);
+	DECLARE_WRITE8_MEMBER(vram_5500_w);
+	DECLARE_READ8_MEMBER(vram_5500_r);
 	DECLARE_WRITE8_MEMBER(vctl_w);
 	DECLARE_WRITE8_MEMBER(vcrl_w);
 	DECLARE_WRITE8_MEMBER(vcrh_w);
@@ -327,7 +331,9 @@ void wp75_state::wp5500ds_mem(address_map &map)
 
 	//this window points at the rom that is shadowed by ram from 0x2000-0x5FFF
 	map(0x72000, 0x75FFF).mirror(0x80000).r(FUNC(wp75_state::rom_wind_r)).share("romwindow");
-	map(0xF8000, 0xFFFFF).rom().region("vram", 0); // I really wish this were vram on the 2450ds.. will test hardware soon
+	//map(0xF8000, 0xFFFFF).rom().region("vram", 0); // I really wish this were vram on the 2450ds.. will test hardware soon
+	map(0xF8000, 0xFFFFF).ram().rw(FUNC(wp75_state::vram_5500_r), FUNC(wp75_state::vram_5500_w)); // I really wish this were vram on the 2450ds.. will test hardware soon
+
 }
 
 void wp75_state::wp70_io(address_map &map)
@@ -499,6 +505,37 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 }
 
 
+
+uint32_t wp75_state::screen_update_wp5500(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
+{
+	uint8_t *vram = memregion("vram")->base();
+
+	uint32_t *scanline;
+	int x, y;
+	uint8_t pixels;
+	static const uint32_t palette[2] = {0x282828, 0xffCC00 };
+
+	for (y = 0; y < 480; y++)
+	{
+		scanline = &bitmap.pix32(y);
+		for (x = 0; x < 57; x++)//widescreen has 91 col /line
+		{
+			pixels = vram[(y * 57) + x + 16384];
+
+			*scanline++ = palette[(pixels>>7)&1];
+			*scanline++ = palette[(pixels>>6)&1];
+			*scanline++ = palette[(pixels>>5)&1];
+			*scanline++ = palette[(pixels>>4)&1];
+			*scanline++ = palette[(pixels>>3)&1];
+			*scanline++ = palette[(pixels>>2)&1];
+			*scanline++ = palette[(pixels>>1)&1];
+			*scanline++ = palette[(pixels>>0)&1];
+		}
+	}
+	return 0;
+}
+
+
 	WRITE8_MEMBER(wp75_state::bank_w)
 {
 	//FIXME is this correct?
@@ -650,13 +687,13 @@ uint32_t wp75_state::screen_update_wp75(screen_device &screen, bitmap_rgb32 &bit
 	case 2: data = 00; break;
 	case 3: data = 00; break;
 	}
-//        printf("unk a:%02x h:%02x\n",offset,data);
+        printf("fdc a:%02x h:%02x\n",offset,data);
         return data;
 }
 
         WRITE8_MEMBER(wp75_state::fdc_w)
 {
-//        printf("fdc a:%02x h:%02x\n",offset,data);
+        printf("fdc a:%02x h:%02x\n",offset,data);
 }
 
 
@@ -784,6 +821,20 @@ INTERRUPT_GEN_MEMBER(wp75_state::wp75_timer_interrupt)
 	uint8_t *rom = memregion("maincpu")->base();
 	//printf("window_r a:%02x h:%02x\n",offset ,rom[0x60000 + offset]);
 	return rom[0x60000 + offset];
+}
+
+
+	WRITE8_MEMBER(wp75_state::vram_5500_w)
+{
+	uint8_t *vram = memregion("vram")->base();	
+	vram[offset] = data;
+	printf("vram_w a:%02x h:%02x\n",offset ,data);
+}
+	READ8_MEMBER(wp75_state::vram_5500_r)
+{
+	uint8_t *vram = memregion("vram")->base();
+	printf("vram_r a:%02x h:%02x\n",offset ,vram[offset]);
+	return vram[offset];
 }
 
 	READ8_MEMBER(wp75_state::rom_wind_r)
@@ -919,8 +970,8 @@ MACHINE_CONFIG_START(wp75_state::wp75)
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MCFG_SCREEN_SIZE(819, 240)
-	MCFG_SCREEN_VISIBLE_AREA(0, 819-1, 0, 240-1)
+	MCFG_SCREEN_SIZE(513, 240)
+	MCFG_SCREEN_VISIBLE_AREA(0, 513, 0, 240)
 	MCFG_SCREEN_UPDATE_DRIVER(wp75_state, screen_update_wp75)
 	MCFG_SCREEN_PALETTE("palette")
 
@@ -975,9 +1026,8 @@ MACHINE_CONFIG_START(wp75_state::wp5500ds)
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MCFG_SCREEN_SIZE(819, 240)
-	MCFG_SCREEN_VISIBLE_AREA(0, 819-1, 0, 240-1)
-	MCFG_SCREEN_UPDATE_DRIVER(wp75_state, screen_update_wp75)
+	MCFG_SCREEN_SIZE(640, 480)
+	MCFG_SCREEN_UPDATE_DRIVER(wp75_state, screen_update_wp5500)
 	MCFG_SCREEN_PALETTE("palette")
 
 MACHINE_CONFIG_END
@@ -1014,9 +1064,9 @@ ROM_END
 
 /* Driver */
 		
-/*    YEAR  NAME    PARENT  COMPAT  MACHINE INPUT   CLASS         INIT        COMPANY                    FULLNAME   FLAGS */
+/*    YEAR  NAME     PARENT   COMPAT   MACHINE  INPUT  CLASS       INIT       COMPANY   FULLNAME       FLAGS */
 
-COMP( 1989, wp75,     0,      0,    wp75,     wp75, wp75_state, init_wp75, "Brother", "WP-75"    , MACHINE_NO_SOUND)
+COMP( 1989, wp75,     0,         0,    wp75,     wp75, wp75_state, init_wp75, "Brother", "WP-75"    , MACHINE_NO_SOUND)
 COMP( 1993, wp70,     wp75,      0,    wp70,     wp75, wp75_state, init_wp70, "Brother", "WP-70"    , MACHINE_NO_SOUND)
 COMP( 1993, wp2450ds, wp75,      0,    wp2450ds, wp75, wp75_state, init_wp75, "Brother", "WP-2540DS", MACHINE_NO_SOUND)
 COMP( 1993, wp5500ds, wp75,      0,    wp5500ds, wp75, wp75_state, init_wp75, "Brother", "WP-5500DS", MACHINE_NO_SOUND)
