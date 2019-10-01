@@ -3123,19 +3123,20 @@ READ8_MEMBER(hd63266_device::sr2_r)
 	//it should also be triggered by z180 /DEND
 	//we'll fake it with fi.sub_statw
 	//0x01 seems to be motor 0 on
-	//floppy_info &fi = flopi[0];
+	floppy_info &fi = flopi[0];
 	bool doit = false;
-	//switch(fi.sub_state)
-	//{
-	//case SECTOR_READ:
-	//case SECTOR_WRITTEN:
-	//	doit = true;
-	//}
-	doit = (main_phase == PHASE_EXEC) && drq && !dend_cb(); //active false
+	switch(fi.sub_state)
+	{
+	case SECTOR_READ:
+	case SECTOR_WRITTEN:
+		doit = true;
+	}
+	doit = doit && (main_phase == PHASE_EXEC) /* && drq */ && !dend_cb(); // ( fifo_expected <=16 );
+	tc_w(doit);
 //	if(dend)
 //		LOG("/dend0");
-	printf("fdc_r2 read phase:%d irq:%x  drq:%d internal_drq:%d  DOIT:%d \n ", main_phase, cur_irq, drq, internal_drq, doit);
-	return  /*(main_phase != 1) &&*/ ((/* doit ||*/ cur_irq) ? 0x40 | motor_on : motor_on);
+	printf("fdc_r2 read phase:%d irq:%x  drq:%d internal_drq:%d fifo_expected:%d:  DOIT:%d \n ", main_phase, cur_irq, drq, internal_drq,fifo_expected, doit);
+	return  /*(main_phase != 1) &&*/ ((doit || cur_irq) ? 0x40 | motor_on : motor_on);
 
 
 }
