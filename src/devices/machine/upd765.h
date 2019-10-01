@@ -552,6 +552,34 @@ private:
 	uint8_t m_cr1;
 };
 
+class hd63266_device : public upd765_family_device {
+public:
+	hd63266_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock, bool ready, bool select)
+		: hd63266_device(mconfig, tag, owner, clock)
+	{
+		set_ready_line_connected(ready);
+		set_select_lines_connected(select);
+	}
+
+	hd63266_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+	virtual void start_command(int cmd) override;
+	virtual void execute_command(int cmd) override;
+	virtual int  check_command() override;
+	virtual void map(address_map &map) override;
+
+	DECLARE_READ8_MEMBER(msr_r);
+	DECLARE_READ8_MEMBER(sr2_r);
+	DECLARE_WRITE8_MEMBER(atr_w);//abort? writes: 0xff and 0xd1
+
+
+protected:
+	virtual void device_start() override;
+
+private:
+	uint8_t m_sr2;
+};
+
 DECLARE_DEVICE_TYPE(UPD765A,        upd765a_device)
 DECLARE_DEVICE_TYPE(UPD765B,        upd765b_device)
 DECLARE_DEVICE_TYPE(I8272A,         i8272a_device)
@@ -565,5 +593,6 @@ DECLARE_DEVICE_TYPE(PC8477A,        pc8477a_device)
 DECLARE_DEVICE_TYPE(WD37C65C,       wd37c65c_device)
 DECLARE_DEVICE_TYPE(MCS3201,        mcs3201_device)
 DECLARE_DEVICE_TYPE(TC8566AF,       tc8566af_device)
+DECLARE_DEVICE_TYPE(HD63266,        hd63266_device)
 
 #endif // MAME_DEVICES_MACHINE_UPD765_H

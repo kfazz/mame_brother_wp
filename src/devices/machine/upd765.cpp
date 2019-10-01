@@ -19,7 +19,8 @@
 #define LOG_STATE   (1U << 11)  // State machine
 #define LOG_LIVE    (1U << 12)  // Live states
 
-#define VERBOSE (LOG_GENERAL | LOG_WARN )
+#define VERBOSE (LOG_GENERAL | LOG_WARN | LOG_SHIFT | LOG_HEADER | LOG_FORMAT | LOG_TCIRQ | LOG_REGS | LOG_FIFO | LOG_COMMAND | LOG_RW | LOG_MATCH | LOG_STATE | LOG_LIVE )
+
 
 #include "logmacro.h"
 
@@ -52,6 +53,8 @@ DEFINE_DEVICE_TYPE(PC8477A,        pc8477a_device,        "pc8477a",        "Nat
 DEFINE_DEVICE_TYPE(WD37C65C,       wd37c65c_device,       "wd37c65c",       "Western Digital WD37C65C FDC")
 DEFINE_DEVICE_TYPE(MCS3201,        mcs3201_device,        "mcs3201",        "Motorola MCS3201 FDC")
 DEFINE_DEVICE_TYPE(TC8566AF,       tc8566af_device,       "tc8566af",       "Toshiba TC8566AF FDC")
+DEFINE_DEVICE_TYPE(HD63266,        hd63266_device,        "hd63266",        "Hitachi HD63266 FDC")
+
 
 void upd765a_device::map(address_map &map)
 {
@@ -157,6 +160,14 @@ void tc8566af_device::map(address_map &map)
 	map(0x3, 0x3).w(FUNC(tc8566af_device::cr1_w));
 	map(0x4, 0x4).r(FUNC(tc8566af_device::msr_r));
 	map(0x5, 0x5).rw(FUNC(tc8566af_device::fifo_r), FUNC(tc8566af_device::fifo_w));
+}
+
+void hd63266_device::map(address_map &map)
+{
+	//map(0x0, 0x0).rw(FUNC(upd72065_device::msr_r), FUNC(upd72065_device::auxcmd_w));
+	map(0x0, 0x0).rw(FUNC(hd63266_device::msr_r), FUNC(hd63266_device::atr_w));
+	map(0x1, 0x1).rw(FUNC(hd63266_device::fifo_r), FUNC(hd63266_device::fifo_w));
+	map(0x2, 0x2).r(FUNC(hd63266_device::sr2_r));
 }
 
 
@@ -3008,3 +3019,133 @@ WRITE8_MEMBER(upd72065_device::auxcmd_w)
 		break;
 	}
 }
+
+hd63266_device::hd63266_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) : upd765_family_device(mconfig, UPD765A, tag, owner, clock)
+{
+	dor_reset = 0x0c;
+}
+
+
+READ8_MEMBER(hd63266_device::msr_r)
+{
+
+	uint8_t data = upd765_family_device::msr_r(space,offset, mem_mask);
+	//printf("fdc r0 r:%x\n", data);
+	return data;
+}
+
+READ8_MEMBER(hd63266_device::sr2_r)
+{
+	//brother WP2450ds firmware seems to want this to be 0x40 if happy
+
+	//printf("fdc_r2 read\n");
+	return 0x40;
+}
+
+WRITE8_MEMBER(hd63266_device::atr_w)
+{
+	//firmware writes 0xFF(abort) and 0xD1 (???) here
+	printf("fdc_r0 abort %x\n", data);
+	if (data == 0xff)
+		upd765_family_device::soft_reset();
+}
+
+void hd63266_device::device_start()
+{
+	upd765_family_device::device_start();
+}
+
+int hd63266_device::check_command()
+{
+	// ...00110 read data
+	// ...01100 read deleted data
+	// 0.001010 read id
+	// ..000101 write data
+	// ..001001 write deleted data
+	// 0.001101 format track
+	// 00001111 seek
+	// 00000111 recalibrate
+	// ...10001 scan equal
+	// ...11001 scan low or equal
+	// ...11101 scan high or equal
+	// 00000100 sense drive status
+	// 00001000 sense interrupt status
+	// 00000011 specify
+
+	// 0..01011 specify 2
+	// 00001110 sleep
+	// 11111111 abort
+	// ...10010 read long
+	// ..010110 write long
+	printf("fdc r1 cmd:%x\n", command[0]);
+
+	switch(command[0] & 0x1f) {
+	//Read erroneous data??
+	case 0x02:
+		return command_pos == 9 ? C_READ_TRACK         : C_INCOMPLETE;
+	case 0x06:
+	case 0x0c:
+		return command_pos == 9 ? C_READ_DATA          : C_INCOMPLETE;
+
+	case 0x0a:
+		return command_pos == 2 ? C_READ_ID            : C_INCOMPLETE;
+	case 0x05:
+	case 0x09:
+		return command_pos == 9 ? C_WRITE_DATA         : C_INCOMPLETE;
+	case 0x0f:
+		return command_pos == 3 ? C_SEEK               : C_INCOMPLETE;
+	case 0x07:
+		return command_pos == 2 ? C_RECALIBRATE        : C_INCOMPLETE;
+	case 0x11:
+		return command_pos == 9 ? C_SCAN_EQUAL         : C_INCOMPLETE;
+	case 0x19:
+		return command_pos == 9 ? C_SCAN_LOW           : C_INCOMPLETE;
+	case 0x1d:
+		return command_pos == 9 ? C_SCAN_HIGH          : C_INCOMPLETE;
+	case 0x04:
+		return command_pos == 2 ? C_SENSE_DRIVE_STATUS : C_INCOMPLETE;
+	case 0x08:
+		return C_SENSE_INTERRUPT_STATUS;
+	case 0x03:
+		return command_pos == 3 ? C_SPECIFY            : C_INCOMPLETE;
+	case 0x0d:
+		return command_pos == 6 ? C_FORMAT_TRACK       : C_INCOMPLETE;
+	case 0x1f:
+		upd765_family_device::soft_reset();
+		return C_INVALID;
+
+	case 0xb:
+	case 0xe:
+	case 0x12:
+	case 0x16:
+
+	// 0..01011 specify 2
+	// 00001110 sleep
+	// 11111111 abort
+	// ...10010 read long
+	// ..010110 write long
+	LOGCOMMAND("unhandled command %x\n", command[0] & 0x1f);
+	return C_INCOMPLETE;
+
+	default:
+		return C_INVALID;
+	}
+}
+
+
+void hd63266_device::start_command(int cmd)
+{
+	upd765_family_device::start_command(cmd);
+}
+
+void hd63266_device::execute_command(int cmd)
+{
+	switch(cmd) {
+	default:
+		upd765_family_device::execute_command(cmd);
+		break;
+	}
+}
+
+
+

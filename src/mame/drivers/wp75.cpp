@@ -1,4 +1,5 @@
 // license:BSD-3-Clause
+
 // copyright-holders:Ken Fazzone
 /***************************************************************************
 
@@ -12,6 +13,7 @@
 #include "cpu/z180/z180.h"
 #include "imagedev/floppy.h"
 #include "machine/upd765.h"
+#include "formats/pc_dsk.h"
 #include "emupal.h"
 #include "screen.h"
 
@@ -24,7 +26,7 @@ public:
 		: driver_device(mconfig, type, tag)
 		, m_maincpu(*this, "maincpu")
 		//, m_videoram(*this, "vram")
-		, m_fdc(*this, FDC9266_TAG)
+		, m_fdc(*this, "fdc")
 		, m_floppy0(*this, FDC9266_TAG ":0:35dd")
 		, m_y(*this, "Y%u", 0) //keyboard columns
 		//, m_screen(*this, "screen")
@@ -112,7 +114,7 @@ private:
 	uint8_t kb_matrix;
 
 	required_device<cpu_device> m_maincpu;
-	required_device<upd765a_device> m_fdc;
+	required_device<hd63266_device> m_fdc;
 	required_device<floppy_image_device> m_floppy0;
 	required_ioport_array<9> m_y;
 	//required_device<screen_device> m_screen;
@@ -349,9 +351,6 @@ void wp75_state::wp70_io(address_map &map)
 	map(0x75, 0x75).mirror(0xff00).w(FUNC(wp75_state::vcrl_w));
 	map(0x76, 0x76).mirror(0xff00).w(FUNC(wp75_state::vcrh_w));
 
-//	map(0x78, 0x7b).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
-//	map(0x7c, 0x7F).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
-
 	map(0x78, 0x7b).mirror(0xff00).r(FUNC(wp75_state::fdc_r));
 	map(0x78, 0x7b).mirror(0xff00).w(FUNC(wp75_state::fdc_w));
 
@@ -370,7 +369,7 @@ void wp75_state::wp70_io(address_map &map)
 	map(0xF0,0xF0).mirror(0xff00).w(FUNC(wp75_state::pk_w)); //buzzer and ?
 
 	map(0xB0,0xB0).mirror(0xff00).r(FUNC(wp75_state::wp70_sys_r)); //spec strap
-//	map(0xE0,0xE0).mirror(0xff00).w(FUNC(wp75_state::bank_w)); //rom1 bank switch control
+	map(0xE0,0xE0).mirror(0xff00).w(FUNC(wp75_state::bank_w)); //rom1 bank switch control
 	map(0xA8,0xA8).mirror(0xff00).r(FUNC(wp75_state::portb_r));
 	map(0xF8,0xF8).mirror(0xff00).w(FUNC(wp75_state::irq1_clear_w));
 }
@@ -390,11 +389,10 @@ void wp75_state::wp75_io(address_map &map)
 //	map(0x80, 0xA0).mirror(0xff00).r(FUNC(wp75_state::unk_r));
 //	map(0x80, 0xA0).mirror(0xff00).w(FUNC(wp75_state::unk_w));
 
-//	map(0x78, 0x7b).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
-//	map(0x7c, 0x7F).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
+//	map(0x78, 0x7b).mirror(0xff00).r(FUNC(wp75_state::fdc_r));
+//	map(0x78, 0x7b).mirror(0xff00).w(FUNC(wp75_state::fdc_w));
 
-	map(0x78, 0x7b).mirror(0xff00).r(FUNC(wp75_state::fdc_r));
-	map(0x78, 0x7b).mirror(0xff00).w(FUNC(wp75_state::fdc_w));
+        map(0x78,0x7b).mirror(0xff00).m(m_fdc, FUNC(hd63266_device::map)).umask16(0x00ff);
 
 	map(0xB8,0xB8).mirror(0xff00).r(FUNC(wp75_state::kb_r));
 	map(0xB8,0xB8).mirror(0xff00).w(FUNC(wp75_state::kb_w));
@@ -430,8 +428,6 @@ void wp75_state::wp5500ds_io(address_map &map)
 //	map(0x80, 0xA0).mirror(0xff00).r(FUNC(wp75_state::unk_r));
 //	map(0x80, 0xA0).mirror(0xff00).w(FUNC(wp75_state::unk_w));
 
-//	map(0x78, 0x7b).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
-//	map(0x7c, 0x7F).mirror(0xff00).m(m_fdc, FUNC(upd765a_device::map)).umask16(0x0Ff);
 
 	map(0x78, 0x7b).mirror(0xff00).r(FUNC(wp75_state::fdc_r));
 	map(0x78, 0x7b).mirror(0xff00).w(FUNC(wp75_state::fdc_w));
@@ -864,9 +860,7 @@ static void wp75_floppies(device_slot_interface &device)
 }
 
 static const floppy_format_type wp75_floppy_formats[] = {
-	FLOPPY_IMD_FORMAT,
-	FLOPPY_MFI_FORMAT,
-	FLOPPY_MFM_FORMAT,
+	FLOPPY_PC_FORMAT,
 	nullptr
 };
 
@@ -882,12 +876,12 @@ MACHINE_CONFIG_START(wp75_state::wp70)
 	MCFG_DEVICE_PROGRAM_MAP(wp70_mem)
 	MCFG_DEVICE_IO_MAP(wp70_io)
 //	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", wp75_state, irq1_line_hold)
-	MCFG_DEVICE_PERIODIC_INT_DRIVER(wp75_state, wp75_timer_interrupt,1000)
+	MCFG_DEVICE_PERIODIC_INT_DRIVER(wp75_state, wp75_timer_interrupt,100)
 
 	// FDC9266 location U43
-	UPD765A(config, m_fdc, XTAL(12'288'000), true, true);//not sure what this is clocked by 12.2Mhz cpu clock?
-	//m_fdc->intrq_wr_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ2);
-	//m_fdc->drq_wr_callback().set(FUNC(wp75_state::drq_w));
+
+	//FIXME: clock freq?
+	HD63266(config, m_fdc, 16_MHz_XTAL, false, false);
 	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
 
 	/* floppy drives */
@@ -935,8 +929,8 @@ MACHINE_CONFIG_START(wp75_state::wp75)
 //	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", wp75_state, irq1_line_hold)
 	MCFG_DEVICE_PERIODIC_INT_DRIVER(wp75_state, wp75_timer_interrupt,1000)
 
-	// FDC9266 location U43
-	UPD765A(config, m_fdc, XTAL(12'288'000), true, true);//not sure what this is clocked by 12.2Mhz cpu clock?
+	HD63266(config, m_fdc, 16_MHz_XTAL, true, true); 
+	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
 	//m_fdc->intrq_wr_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ2);
 	//m_fdc->drq_wr_callback().set(FUNC(wp75_state::drq_w));
 	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
@@ -985,7 +979,8 @@ MACHINE_CONFIG_START(wp75_state::wp2450ds)
 	MCFG_DEVICE_PERIODIC_INT_DRIVER(wp75_state, wp75_timer_interrupt,1000)
 
 	// FDC9266 location U43
-	UPD765A(config, m_fdc, XTAL(12'288'000), true, true);//not sure what this is clocked by 12.2Mhz cpu clock?
+	HD63266(config, m_fdc, 16_MHz_XTAL, true, true); 
+	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
 	//m_fdc->intrq_wr_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ2);
 	//m_fdc->drq_wr_callback().set(FUNC(wp75_state::drq_w));
 	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
@@ -1013,7 +1008,8 @@ MACHINE_CONFIG_START(wp75_state::wp5500ds)
 	MCFG_DEVICE_PERIODIC_INT_DRIVER(wp75_state, wp75_timer_interrupt,1000)
 
 	// FDC9266 location U43
-	UPD765A(config, m_fdc, XTAL(12'288'000), true, true);//not sure what this is clocked by 12.2Mhz cpu clock?
+	HD63266(config, m_fdc, 16_MHz_XTAL, true, true); 
+	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
 	//m_fdc->intrq_wr_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ2);
 	//m_fdc->drq_wr_callback().set(FUNC(wp75_state::drq_w));
 	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
