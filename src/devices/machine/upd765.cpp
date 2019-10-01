@@ -19,7 +19,7 @@
 #define LOG_STATE   (1U << 11)  // State machine
 #define LOG_LIVE    (1U << 12)  // Live states
 
-#define VERBOSE (LOG_GENERAL | LOG_WARN | LOG_SHIFT | LOG_HEADER | LOG_FORMAT | LOG_TCIRQ | LOG_REGS | LOG_FIFO | LOG_COMMAND | LOG_RW | LOG_MATCH | LOG_STATE | LOG_LIVE )
+#define VERBOSE (LOG_GENERAL | LOG_WARN | LOG_HEADER | LOG_FORMAT | LOG_TCIRQ | LOG_REGS | LOG_FIFO | LOG_COMMAND | LOG_RW | LOG_MATCH )
 
 
 #include "logmacro.h"
@@ -166,7 +166,11 @@ void hd63266_device::map(address_map &map)
 {
 	//map(0x0, 0x0).rw(FUNC(upd72065_device::msr_r), FUNC(upd72065_device::auxcmd_w));
 	map(0x0, 0x0).rw(FUNC(hd63266_device::msr_r), FUNC(hd63266_device::atr_w));
-	map(0x1, 0x1).rw(FUNC(hd63266_device::fifo_r), FUNC(hd63266_device::fifo_w));
+//	map(0x1, 0x1).rw(FUNC(hd63266_device::fifo_r), FUNC(hd63266_device::fifo_w));
+//	map(0x1, 0x1).rw(FUNC(hd63266_device::dma_r), FUNC(hd63266_device::dma_w));
+//	map(0x1, 0x1).rw(FUNC(hd63266_device::hd_r), FUNC(hd63266_device::hd_w));
+	map(0x1, 0x1).rw(FUNC(hd63266_device::hd_r), FUNC(hd63266_device::hd_w));
+
 	map(0x2, 0x2).r(FUNC(hd63266_device::sr2_r));
 }
 
@@ -179,7 +183,9 @@ upd765_family_device::upd765_family_device(const machine_config &mconfig, device
 	drq_cb(*this),
 	hdl_cb(*this),
 	idx_cb(*this),
+	dend_cb(*this),
 	us_cb(*this)
+
 {
 	ready_polled = true;
 	ready_connected = true;
@@ -210,6 +216,7 @@ void upd765_family_device::device_resolve_objects()
 	drq_cb.resolve_safe();
 	hdl_cb.resolve_safe();
 	idx_cb.resolve_safe();
+	dend_cb.resolve_safe(true);
 	us_cb.resolve_safe();
 }
 
@@ -462,7 +469,7 @@ uint8_t upd765_family_device::read_msr()
 		data_irq = false;
 		check_irq();
 	}
-
+	//LOGREGS("msr_r %02x (%s)\n", msr, machine().describe_context());
 	return msr;
 }
 
@@ -590,8 +597,11 @@ void upd765_family_device::enable_transfer()
 
 	} else {
 		// DMA
-		if(!drq)
+		if(!drq) {
+			//LOG("DRQ Set\n");
+			dend = false;
 			set_drq(true);
+		}	
 	}
 }
 
@@ -601,7 +611,10 @@ void upd765_family_device::disable_transfer()
 		internal_drq = false;
 		check_irq();
 	} else
+		{
+//		LOG("DRQ Released\n");
 		set_drq(false);
+		}
 }
 
 void upd765_family_device::fifo_push(uint8_t data, bool internal)
@@ -656,6 +669,7 @@ uint8_t upd765_family_device::fifo_pop(bool internal)
 
 void upd765_family_device::fifo_expect(int size, bool write)
 {
+	LOGFIFO("fifo_expect u: sz: %d write: %d", size, write);
 	fifo_expected = size;
 	fifo_write = write;
 	if(fifo_write)
@@ -1426,8 +1440,8 @@ void upd765_family_device::execute_command(int cmd)
 		if(fi.dev)
 			result[0] |=
 				(fi.dev->wpt_r() ? ST3_WP : 0x00) |
-				(fi.dev->trk00_r() ? 0x00 : ST3_T0) |
-				(fi.dev->twosid_r() ? 0x00 : ST3_TS);
+				(fi.dev->trk00_r() ? 0x00 : ST3_T0);// |
+				//(fi.dev->twosid_r() ? 0x00 : ST3_TS);
 		LOGCOMMAND("command sense drive status %d (%02x)\n", fi.id, result[0]);
 		result_pos = 1;
 		break;
@@ -1478,13 +1492,23 @@ void upd765_family_device::execute_command(int cmd)
 
 	case C_SPECIFY:
 		spec = (command[1] << 8) | command[2];
-		LOGCOMMAND("command specify %02x %02x: step_rate=%d ms, head_unload=%d ms, head_load=%d ms, non_dma=%s\n",
+		if (slow)
+			LOGCOMMAND("command specify (slow) %02x %02x: step_rate=%d ms, head_unload=%d ms, head_load=%d ms, non_dma=%s\n",
+			command[1], command[2], 32-((command[1]>>4)<< 1), (command[1]&0x0f)<<5, command[2]&0xfe<<1, ((command[2]&1)==1)? "true":"false");
+		else
+			LOGCOMMAND("command specify %02x %02x: step_rate=%d ms, head_unload=%d ms, head_load=%d ms, non_dma=%s\n",
 			command[1], command[2], 16-(command[1]>>4), (command[1]&0x0f)<<4, command[2]&0xfe, ((command[2]&1)==1)? "true":"false");
+
 		main_phase = PHASE_CMD;
 		break;
 
 	case C_WRITE_DATA:
 		write_data_start(flopi[command[1] & 3]);
+		break;
+
+	case C_SLEEP:
+		LOGCOMMAND("command sleep \n");
+		main_phase = PHASE_CMD;
 		break;
 
 	default:
@@ -1564,6 +1588,9 @@ void upd765_family_device::seek_continue(floppy_info &fi)
 					fi.pcn++;
 			}
 			fi.sub_state = SEEK_WAIT_STEP_TIME;
+			if (slow)
+			delay_cycles(fi.tm,500 *(32-((spec >> 12) <<1)));
+			else
 			delay_cycles(fi.tm, 500*(16-(spec >> 12)));
 			return;
 
@@ -1707,6 +1734,9 @@ void upd765_family_device::read_data_continue(floppy_info &fi)
 		switch(fi.sub_state) {
 		case HEAD_LOAD:
 			LOGSTATE("HEAD_LOAD\n");
+			if (slow)
+			delay_cycles(fi.tm, 500*((spec & 0x00fe) << 1));
+			else
 			delay_cycles(fi.tm, 500*(spec & 0x00fe));
 			fi.sub_state = HEAD_LOAD_DONE;
 			break;
@@ -1735,6 +1765,9 @@ void upd765_family_device::read_data_continue(floppy_info &fi)
 				fi.dev->stp_w(1);
 
 			fi.sub_state = SEEK_WAIT_STEP_TIME;
+			if (slow)
+			delay_cycles(fi.tm, 500*(32-((spec >> 12) <<1)));
+			else 
 			delay_cycles(fi.tm, 500*(16-(spec >> 12)));
 			return;
 
@@ -1916,6 +1949,9 @@ void upd765_family_device::write_data_continue(floppy_info &fi)
 		switch(fi.sub_state) {
 		case HEAD_LOAD:
 			LOGSTATE("HEAD_LOAD\n");
+			if (slow)
+			delay_cycles(fi.tm, 500*((spec & 0x00fe) <<1));
+			else
 			delay_cycles(fi.tm, 500*(spec & 0x00fe));
 			fi.sub_state = HEAD_LOAD_DONE;
 			break;
@@ -2052,6 +2088,9 @@ void upd765_family_device::read_track_continue(floppy_info &fi)
 		switch(fi.sub_state) {
 		case HEAD_LOAD:
 			LOGSTATE("HEAD_LOAD\n");
+			if (slow)
+			delay_cycles(fi.tm, 500*((spec & 0x00fe)<<1));
+			else
 			delay_cycles(fi.tm, 500*(spec & 0x00fe));
 			fi.sub_state = HEAD_LOAD_DONE;
 			break;
@@ -2080,6 +2119,9 @@ void upd765_family_device::read_track_continue(floppy_info &fi)
 				fi.dev->stp_w(1);
 
 			fi.sub_state = SEEK_WAIT_STEP_TIME;
+			if (slow)
+			delay_cycles(fi.tm, 500*(32-((spec >> 12) <<1)));
+			else
 			delay_cycles(fi.tm, 500*(16-(spec >> 12)));
 			return;
 
@@ -2232,6 +2274,9 @@ void upd765_family_device::format_track_continue(floppy_info &fi)
 		switch(fi.sub_state) {
 		case HEAD_LOAD:
 			LOGSTATE("HEAD_LOAD\n");
+			if(slow)
+			delay_cycles(fi.tm, 500*((spec & 0x00fe)<<1));
+			else
 			delay_cycles(fi.tm, 500*(spec & 0x00fe));
 			fi.sub_state = HEAD_LOAD_DONE;
 			break;
@@ -2314,6 +2359,9 @@ void upd765_family_device::read_id_continue(floppy_info &fi)
 		switch(fi.sub_state) {
 		case HEAD_LOAD:
 			LOGSTATE("HEAD_LOAD\n");
+			if (slow)
+			delay_cycles(fi.tm, 500*((spec & 0x00fe)<<1));
+			else
 			delay_cycles(fi.tm, 500*(spec & 0x00fe));
 			fi.sub_state = HEAD_LOAD_DONE;
 			break;
@@ -3022,9 +3070,42 @@ WRITE8_MEMBER(upd72065_device::auxcmd_w)
 
 hd63266_device::hd63266_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) : upd765_family_device(mconfig, UPD765A, tag, owner, clock)
 {
+	slow = true;
+	motor_on = false;
 	dor_reset = 0x0c;
+	//ready_polled = true;
+	ready_connected = true;
+	select_connected = true;
 }
 
+READ8_MEMBER(hd63266_device::hd_r)
+{
+
+//if(spec & SPEC_ND)
+//	return read_fifo();
+//else
+//	return dma_r();
+
+	if (drq)
+	  return dma_r();
+	else 
+	  return read_fifo();
+}
+
+WRITE8_MEMBER(hd63266_device::hd_w)
+{
+
+//if(spec & SPEC_ND)
+//	return write_fifo(data);
+//else
+//	return dma_w(data);
+
+	if (drq)
+		return dma_w(data);
+	else
+		return write_fifo(data);
+	
+}
 
 READ8_MEMBER(hd63266_device::msr_r)
 {
@@ -3038,16 +3119,88 @@ READ8_MEMBER(hd63266_device::sr2_r)
 {
 	//brother WP2450ds firmware seems to want this to be 0x40 if happy
 
-	//printf("fdc_r2 read\n");
-	return 0x40;
+	//0x40 seems to be an 'interrupt happened' flag
+	//it should also be triggered by z180 /DEND
+	//we'll fake it with fi.sub_statw
+	//0x01 seems to be motor 0 on
+	//floppy_info &fi = flopi[0];
+	bool doit = false;
+	//switch(fi.sub_state)
+	//{
+	//case SECTOR_READ:
+	//case SECTOR_WRITTEN:
+	//	doit = true;
+	//}
+	doit = (main_phase == PHASE_EXEC) && drq && !dend_cb(); //active false
+//	if(dend)
+//		LOG("/dend0");
+	printf("fdc_r2 read phase:%d irq:%x  drq:%d internal_drq:%d  DOIT:%d \n ", main_phase, cur_irq, drq, internal_drq, doit);
+	return  /*(main_phase != 1) &&*/ ((/* doit ||*/ cur_irq) ? 0x40 | motor_on : motor_on);
+
+
 }
 
 WRITE8_MEMBER(hd63266_device::atr_w)
 {
-	//firmware writes 0xFF(abort) and 0xD1 (???) here
+	LOGREGS("atr = %02x\n", data);
+
+	//firmware writes 0xFF(abort) and 0xD1/E1 (possibly MON SET/MON CLEAR?) here
 	printf("fdc_r0 abort %x\n", data);
 	if (data == 0xff)
 		upd765_family_device::soft_reset();
+
+	if(data == 0xd1)
+	{
+		
+		for(int i=0; i<4; i++) {
+			floppy_info &fi = flopi[i];
+			if(fi.dev)
+			{			
+			fi.dev->ds_w(i);
+			fi.dev->mon_w(1); //motor off
+			motor_on = 0;
+			bool ready = get_ready(i);
+			LOGCOMMAND("MON CLEAR %d :old_ready %d -> ready %d\n", i, flopi[i].ready, ready);
+			if (flopi[i].ready != ready) {
+				flopi[i].ready = ready;
+				if(!flopi[i].st0_filled) {
+					flopi[i].st0 = ST0_ABRT | i;
+					flopi[i].st0_filled = true;
+					other_irq = true;
+				}
+			}
+			}
+		}
+	//lets assume that this is 'MON CLEAR'
+	//run_drive_ready_polling();
+	//check_irq();
+	}
+	if(data == 0xe1)
+	{
+		
+		for(int i=0; i<4; i++) {
+			floppy_info &fi = flopi[i];
+			if(fi.dev)
+			{
+			fi.dev->ds_w(i);
+			fi.dev->mon_w(0); //motor on
+			motor_on = 1;
+			bool ready = get_ready(i);
+			LOGCOMMAND("MON SET %d :old_ready %d -> ready %d\n", i, flopi[i].ready, ready);
+			if (flopi[i].ready != ready) {
+				flopi[i].ready = ready;
+				if(!flopi[i].st0_filled) {
+					flopi[i].st0 = ST0_ABRT | i;
+					flopi[i].st0_filled = true;
+					other_irq = true;
+				}
+			}
+			}
+		}
+	//lets assume that this is 'MON SET' and the 1 is drive 0
+	//run_drive_ready_polling();
+	//check_irq();
+	}
 }
 
 void hd63266_device::device_start()
@@ -3085,12 +3238,14 @@ int hd63266_device::check_command()
 		return command_pos == 9 ? C_READ_TRACK         : C_INCOMPLETE;
 	case 0x06:
 	case 0x0c:
+	case 0x12:
 		return command_pos == 9 ? C_READ_DATA          : C_INCOMPLETE;
 
 	case 0x0a:
 		return command_pos == 2 ? C_READ_ID            : C_INCOMPLETE;
 	case 0x05:
 	case 0x09:
+	case 0x16:
 		return command_pos == 9 ? C_WRITE_DATA         : C_INCOMPLETE;
 	case 0x0f:
 		return command_pos == 3 ? C_SEEK               : C_INCOMPLETE;
@@ -3107,17 +3262,15 @@ int hd63266_device::check_command()
 	case 0x08:
 		return C_SENSE_INTERRUPT_STATUS;
 	case 0x03:
+		slow = true;
 		return command_pos == 3 ? C_SPECIFY            : C_INCOMPLETE;
 	case 0x0d:
 		return command_pos == 6 ? C_FORMAT_TRACK       : C_INCOMPLETE;
-	case 0x1f:
-		upd765_family_device::soft_reset();
-		return C_INVALID;
+	case 0xe:
+		return C_SLEEP;
+
 
 	case 0xb:
-	case 0xe:
-	case 0x12:
-	case 0x16:
 
 	// 0..01011 specify 2
 	// 00001110 sleep
@@ -3125,7 +3278,7 @@ int hd63266_device::check_command()
 	// ...10010 read long
 	// ..010110 write long
 	LOGCOMMAND("unhandled command %x\n", command[0] & 0x1f);
-	return C_INCOMPLETE;
+	return C_INVALID;
 
 	default:
 		return C_INVALID;
@@ -3146,6 +3299,16 @@ void hd63266_device::execute_command(int cmd)
 		break;
 	}
 }
+
+void hd63266_device::fifo_expect(int size, bool write)
+{
+	LOGFIFO("fifo_expect: sz: %d write: %d", size, write);
+	fifo_expected = size;
+	fifo_write = write;
+	if(fifo_write)
+		enable_transfer();
+}
+
 
 
 

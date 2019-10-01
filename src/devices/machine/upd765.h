@@ -47,6 +47,7 @@ public:
 	auto hdl_wr_callback() { return hdl_cb.bind(); }
 	auto us_wr_callback() { return us_cb.bind(); }
 	auto idx_wr_callback() { return idx_cb.bind(); }
+	auto dend_rd_callback() { return dend_cb.bind(); }
 
 	virtual void map(address_map &map) override = 0;
 
@@ -79,6 +80,8 @@ public:
 	bool get_drq() const;
 	void tc_w(bool val) override;
 	void ready_w(bool val);
+
+	bool slow = false; /* alternate specify timings selected with strap pin */
 
 	DECLARE_WRITE_LINE_MEMBER(tc_line_w) { tc_w(state == ASSERT_LINE); }
 
@@ -267,12 +270,14 @@ protected:
 	bool ready_connected, ready_polled, select_connected;
 
 	bool external_ready;
+	bool dend = false;
 
 	int mode;
 	int main_phase;
 
 	live_info cur_live, checkpoint_live;
 	devcb_write_line intrq_cb, drq_cb, hdl_cb, idx_cb;
+	devcb_read_line dend_cb;
 	devcb_write8 us_cb;
 	bool cur_irq, other_irq, data_irq, drq, internal_drq, tc, tc_done, locked, mfm, scan_done;
 	floppy_info flopi[4];
@@ -313,6 +318,7 @@ protected:
 		C_SCAN_LOW,
 		C_SCAN_HIGH,
 		C_MOTOR_ONOFF,
+		C_SLEEP,
 
 		C_INVALID,
 		C_INCOMPLETE
@@ -567,10 +573,15 @@ public:
 	virtual void execute_command(int cmd) override;
 	virtual int  check_command() override;
 	virtual void map(address_map &map) override;
+	void fifo_expect(int size, bool write);
+
+	bool motor_on = false;
 
 	DECLARE_READ8_MEMBER(msr_r);
 	DECLARE_READ8_MEMBER(sr2_r);
 	DECLARE_WRITE8_MEMBER(atr_w);//abort? writes: 0xff and 0xd1
+	DECLARE_READ8_MEMBER(hd_r);
+	DECLARE_WRITE8_MEMBER(hd_w);
 
 
 protected:

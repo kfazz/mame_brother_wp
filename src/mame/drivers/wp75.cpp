@@ -17,6 +17,9 @@
 #include "emupal.h"
 #include "screen.h"
 
+#define VERBOSE 1
+#include "logmacro.h"
+
 #define FDC9266_TAG "fdc"
 
 class wp75_state : public driver_device
@@ -27,7 +30,8 @@ public:
 		, m_maincpu(*this, "maincpu")
 		//, m_videoram(*this, "vram")
 		, m_fdc(*this, "fdc")
-		, m_floppy0(*this, FDC9266_TAG ":0:35dd")
+		, m_fdd0(*this, "fdc:0")
+//		, m_floppy0(*this, FDC9266_TAG ":0:35dd")
 		, m_y(*this, "Y%u", 0) //keyboard columns
 		//, m_screen(*this, "screen")
 		//, m_palette(*this, "palette")
@@ -87,6 +91,7 @@ private:
 	DECLARE_WRITE8_MEMBER(pk_w);
 
 	DECLARE_WRITE_LINE_MEMBER(drq_w);
+	DECLARE_READ_LINE_MEMBER(dend0_r);
 
 	uint8_t ga_irq_mask;
 
@@ -113,9 +118,10 @@ private:
 
 	uint8_t kb_matrix;
 
-	required_device<cpu_device> m_maincpu;
+	required_device<z180_device> m_maincpu;
 	required_device<hd63266_device> m_fdc;
-	required_device<floppy_image_device> m_floppy0;
+	required_device<floppy_connector> m_fdd0;
+//	required_device<floppy_image_device> m_floppy0;
 	required_ioport_array<9> m_y;
 	//required_device<screen_device> m_screen;
 	//required_device<palette_device> m_palette;
@@ -725,6 +731,14 @@ WRITE_LINE_MEMBER(wp75_state::drq_w)
 	}
 }
 
+READ_LINE_MEMBER(wp75_state::dend0_r)
+{
+	bool dend0 = m_maincpu->get_tend0(); 
+	if (!dend0)
+		printf("/dend0\n");
+	return dend0;
+}
+
 
 INTERRUPT_GEN_MEMBER(wp75_state::wp75_timer_interrupt)
 {
@@ -876,16 +890,18 @@ MACHINE_CONFIG_START(wp75_state::wp70)
 	MCFG_DEVICE_PROGRAM_MAP(wp70_mem)
 	MCFG_DEVICE_IO_MAP(wp70_io)
 //	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", wp75_state, irq1_line_hold)
-	MCFG_DEVICE_PERIODIC_INT_DRIVER(wp75_state, wp75_timer_interrupt,100)
+	MCFG_DEVICE_PERIODIC_INT_DRIVER(wp75_state, wp75_timer_interrupt,1000)
 
 	// FDC9266 location U43
 
-	//FIXME: clock freq?
-	HD63266(config, m_fdc, 16_MHz_XTAL, false, false);
+	HD63266(config, m_fdc, 16_MHz_XTAL, true, true);
 	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
+	m_fdc->dend_rd_callback().set(FUNC(wp75_state::dend0_r)); 
 
 	/* floppy drives */
-	MCFG_FLOPPY_DRIVE_ADD(FDC9266_TAG ":0", wp75_floppies, "35dd", wp75_floppy_formats)
+	//MCFG_FLOPPY_DRIVE_ADD(FDC9266_TAG ":0", wp75_floppies, "35dd", wp75_floppy_formats)
+	FLOPPY_CONNECTOR(config, "fdc:0", wp75_floppies, "35dd", floppy_image_device::default_floppy_formats).enable_sound(true);
+
 
 	/* video hardware */
 	//screen_device &m_screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
@@ -980,10 +996,12 @@ MACHINE_CONFIG_START(wp75_state::wp2450ds)
 
 	// FDC9266 location U43
 	HD63266(config, m_fdc, 16_MHz_XTAL, true, true); 
-	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
+	//m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
 	//m_fdc->intrq_wr_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ2);
 	//m_fdc->drq_wr_callback().set(FUNC(wp75_state::drq_w));
 	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
+	m_fdc->dend_rd_callback().set(FUNC(wp75_state::dend0_r)); 
+
 
 	/* floppy drives */
 	MCFG_FLOPPY_DRIVE_ADD(FDC9266_TAG ":0", wp75_floppies, "35dd", wp75_floppy_formats)
