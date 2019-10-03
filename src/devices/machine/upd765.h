@@ -81,7 +81,8 @@ public:
 	void tc_w(bool val) override;
 	void ready_w(bool val);
 
-	bool slow = false; /* alternate specify timings selected with strap pin */
+	bool slow = true; /* alternate specify timings selected with strap pin */
+	bool kill = false;
 
 	DECLARE_WRITE_LINE_MEMBER(tc_line_w) { tc_w(state == ASSERT_LINE); }
 

@@ -19,7 +19,7 @@
 #define LOG_STATE   (1U << 11)  // State machine
 #define LOG_LIVE    (1U << 12)  // Live states
 
-#define VERBOSE (LOG_GENERAL | LOG_WARN | LOG_HEADER | LOG_FORMAT | LOG_TCIRQ | LOG_REGS | LOG_FIFO | LOG_COMMAND | LOG_RW | LOG_MATCH )
+#define VERBOSE (LOG_GENERAL | LOG_WARN | LOG_HEADER | LOG_FORMAT | LOG_REGS | LOG_FIFO | LOG_COMMAND | LOG_RW | LOG_MATCH )
 
 
 #include "logmacro.h"
@@ -599,7 +599,6 @@ void upd765_family_device::enable_transfer()
 		// DMA
 		if(!drq) {
 			//LOG("DRQ Set\n");
-			dend = false;
 			set_drq(true);
 		}	
 	}
@@ -3118,25 +3117,18 @@ READ8_MEMBER(hd63266_device::msr_r)
 READ8_MEMBER(hd63266_device::sr2_r)
 {
 	//brother WP2450ds firmware seems to want this to be 0x40 if happy
-
 	//0x40 seems to be an 'interrupt happened' flag
-	//it should also be triggered by z180 /DEND
-	//we'll fake it with fi.sub_statw
+	//it should also be triggered by z180 /DEND??
 	//0x01 seems to be motor 0 on
-	floppy_info &fi = flopi[0];
-	bool doit = false;
-	switch(fi.sub_state)
-	{
-	case SECTOR_READ:
-	case SECTOR_WRITTEN:
-		doit = true;
+
+	if (fifo_expected == 1)
+		kill = dend_cb();
+	if (fifo_expected == 0 && kill) {
+		tc_w(kill);
+		kill = false;
 	}
-	doit = doit && (main_phase == PHASE_EXEC) /* && drq */ && !dend_cb(); // ( fifo_expected <=16 );
-	tc_w(doit);
-//	if(dend)
-//		LOG("/dend0");
-	printf("fdc_r2 read phase:%d irq:%x  drq:%d internal_drq:%d fifo_expected:%d:  DOIT:%d \n ", main_phase, cur_irq, drq, internal_drq,fifo_expected, doit);
-	return  /*(main_phase != 1) &&*/ ((doit || cur_irq) ? 0x40 | motor_on : motor_on);
+	printf("fdc ph:%d irq:%x drq:%d int_drq:%d fifo_exp:%d: kill:%d\n ", main_phase, cur_irq, drq, internal_drq,fifo_expected, kill);
+	return  /*(main_phase != 1) &&*/ (( /* (fifo_expected == 0 &&  dend_cb() )  ||*/ cur_irq) ? 0x40 | motor_on : motor_on);
 
 
 }
@@ -3263,7 +3255,7 @@ int hd63266_device::check_command()
 	case 0x08:
 		return C_SENSE_INTERRUPT_STATUS;
 	case 0x03:
-		slow = true;
+		slow = false;
 		return command_pos == 3 ? C_SPECIFY            : C_INCOMPLETE;
 	case 0x0d:
 		return command_pos == 6 ? C_FORMAT_TRACK       : C_INCOMPLETE;

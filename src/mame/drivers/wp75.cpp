@@ -733,9 +733,9 @@ WRITE_LINE_MEMBER(wp75_state::drq_w)
 
 READ_LINE_MEMBER(wp75_state::dend0_r)
 {
-	bool dend0 = m_maincpu->get_tend0(); 
-	if (!dend0)
-		printf("/dend0\n");
+	bool dend0 = m_maincpu->get_tend0();
+//	if (dend0)
+//		printf("dend0\n");
 	return dend0;
 }
 
@@ -892,8 +892,6 @@ MACHINE_CONFIG_START(wp75_state::wp70)
 //	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", wp75_state, irq1_line_hold)
 	MCFG_DEVICE_PERIODIC_INT_DRIVER(wp75_state, wp75_timer_interrupt,1000)
 
-	// FDC9266 location U43
-
 	HD63266(config, m_fdc, 16_MHz_XTAL, true, true);
 	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
 	m_fdc->dend_rd_callback().set(FUNC(wp75_state::dend0_r)); 
@@ -946,9 +944,9 @@ MACHINE_CONFIG_START(wp75_state::wp75)
 	MCFG_DEVICE_PERIODIC_INT_DRIVER(wp75_state, wp75_timer_interrupt,1000)
 
 	HD63266(config, m_fdc, 16_MHz_XTAL, true, true); 
-	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
+	//m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
 	//m_fdc->intrq_wr_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ2);
-	//m_fdc->drq_wr_callback().set(FUNC(wp75_state::drq_w));
+	m_fdc->drq_wr_callback().set(FUNC(wp75_state::drq_w));
 	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
 
 	/* floppy drives */
@@ -995,12 +993,10 @@ MACHINE_CONFIG_START(wp75_state::wp2450ds)
 	MCFG_DEVICE_PERIODIC_INT_DRIVER(wp75_state, wp75_timer_interrupt,1000)
 
 	// FDC9266 location U43
-	HD63266(config, m_fdc, 16_MHz_XTAL, true, true); 
-	//m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
-	//m_fdc->intrq_wr_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ2);
-	//m_fdc->drq_wr_callback().set(FUNC(wp75_state::drq_w));
+	HD63266(config, m_fdc, 16_MHz_XTAL, true, true);
 	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
-	m_fdc->dend_rd_callback().set(FUNC(wp75_state::dend0_r)); 
+	//m_fdc->drq_wr_callback().set(FUNC(wp75_state::drq_w));
+	m_fdc->dend_rd_callback().set(FUNC(wp75_state::dend0_r));
 
 
 	/* floppy drives */
