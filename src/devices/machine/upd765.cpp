@@ -3130,13 +3130,15 @@ READ8_MEMBER(hd63266_device::sr2_r)
 			//atr_w(space,offset,0xd1);
 		kill = dend_cb();//stretch??
 	}
+	else if ( fifo_expected == 0 && dend_cb())
+		kill = dend_cb();	//tc_w(!!dend_cb); 
 	if (moff_count == 1) {
 		atr_w(space,offset,0xd1);
 		moff_count = 0;
 	}
 	else if (moff_count !=0)
 		moff_count--;
-
+	if (dend_cb())
 	printf("fdc ph:%d irq:%x drq:%d int_drq:%d fifo_exp:%d: kill:%d moff_count:%d\n", main_phase, cur_irq, drq, internal_drq,fifo_expected, kill, moff_count);
 	return  /*(main_phase != 1) &&*/ (( /* (fifo_expected == 0 &&  dend_cb() )  ||*/ cur_irq) ? 0x40 | motor_on : motor_on);
 
