@@ -3125,9 +3125,19 @@ READ8_MEMBER(hd63266_device::sr2_r)
 		kill = dend_cb();
 	if (fifo_expected == 0 && kill) {
 		tc_w(kill);
-		kill = false;
+		 if (kill && !dend_cb())
+			moff_count=10;
+			//atr_w(space,offset,0xd1);
+		kill = dend_cb();//stretch??
 	}
-	printf("fdc ph:%d irq:%x drq:%d int_drq:%d fifo_exp:%d: kill:%d\n ", main_phase, cur_irq, drq, internal_drq,fifo_expected, kill);
+	if (moff_count == 1) {
+		atr_w(space,offset,0xd1);
+		moff_count = 0;
+	}
+	else if (moff_count !=0)
+		moff_count--;
+
+	printf("fdc ph:%d irq:%x drq:%d int_drq:%d fifo_exp:%d: kill:%d moff_count:%d\n", main_phase, cur_irq, drq, internal_drq,fifo_expected, kill, moff_count);
 	return  /*(main_phase != 1) &&*/ (( /* (fifo_expected == 0 &&  dend_cb() )  ||*/ cur_irq) ? 0x40 | motor_on : motor_on);
 
 
@@ -3144,11 +3154,11 @@ WRITE8_MEMBER(hd63266_device::atr_w)
 
 	if(data == 0xd1)
 	{
-		
+
 		for(int i=0; i<4; i++) {
 			floppy_info &fi = flopi[i];
 			if(fi.dev)
-			{			
+			{
 			fi.dev->ds_w(i);
 			fi.dev->mon_w(1); //motor off
 			motor_on = 0;
@@ -3255,7 +3265,7 @@ int hd63266_device::check_command()
 	case 0x08:
 		return C_SENSE_INTERRUPT_STATUS;
 	case 0x03:
-		slow = false;
+		slow = true;
 		return command_pos == 3 ? C_SPECIFY            : C_INCOMPLETE;
 	case 0x0d:
 		return command_pos == 6 ? C_FORMAT_TRACK       : C_INCOMPLETE;

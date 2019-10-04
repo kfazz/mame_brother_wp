@@ -83,6 +83,7 @@ public:
 
 	bool slow = true; /* alternate specify timings selected with strap pin */
 	bool kill = false;
+	uint8_t moff_count=0;
 
 	DECLARE_WRITE_LINE_MEMBER(tc_line_w) { tc_w(state == ASSERT_LINE); }
 
