@@ -105,6 +105,8 @@ enum {
 class z180_device : public cpu_device, public z80_daisy_chain_interface
 {
 public:
+	auto tend0_callback() { return m_tend0_cb.bind(); }
+	auto tend1_callback() { return m_tend1_cb.bind(); }
 	bool get_tend0();
 	bool get_tend1();
 
@@ -115,6 +117,7 @@ protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
+	virtual void device_resolve_objects() override;
 
 	// device_execute_interface overrides
 	virtual uint32_t execute_min_cycles() const override { return 1; }
@@ -157,6 +160,7 @@ private:
 	bool is_internal_io_address(uint16_t port) const { return ((port ^ m_iocr) & (m_extended_io ? 0xff80 : 0xffc0)) == 0; }
 
 	const bool m_extended_io;
+	devcb_write_line m_tend0_cb, m_tend1_cb;
 
 	PAIR      m_PREPC,m_PC,m_SP,m_AF,m_BC,m_DE,m_HL,m_IX,m_IY;
 	PAIR      m_AF2,m_BC2,m_DE2,m_HL2;
