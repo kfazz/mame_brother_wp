@@ -55,6 +55,7 @@ DEFINE_DEVICE_TYPE(PC8477A,        pc8477a_device,        "pc8477a",        "Nat
 DEFINE_DEVICE_TYPE(WD37C65C,       wd37c65c_device,       "wd37c65c",       "Western Digital WD37C65C FDC")
 DEFINE_DEVICE_TYPE(MCS3201,        mcs3201_device,        "mcs3201",        "Motorola MCS3201 FDC")
 DEFINE_DEVICE_TYPE(TC8566AF,       tc8566af_device,       "tc8566af",       "Toshiba TC8566AF FDC")
+DEFINE_DEVICE_TYPE(HD63266,        hd63266_device,        "hd63266",        "Hitachi HD63266F FDC")
 
 void upd765a_device::map(address_map &map)
 {
@@ -161,6 +162,15 @@ void tc8566af_device::map(address_map &map)
 	map(0x4, 0x4).r(FUNC(tc8566af_device::msr_r));
 	map(0x5, 0x5).rw(FUNC(tc8566af_device::fifo_r), FUNC(tc8566af_device::fifo_w));
 }
+
+void hd63266_device::map(address_map &map)
+{
+	map(0x0, 0x0).rw(FUNC(hd63266_device::msr_r), FUNC(hd63266_device::atr_w));
+//	map(0x1, 0x1).rw(FUNC(hd63266_device::fifo_r), FUNC(hd63266_device::fifo_w));
+	map(0x1, 0x1).rw(FUNC(hd63266_device::hd_r), FUNC(hd63266_device::hd_w));
+	map(0x2, 0x2).r(FUNC(hd63266_device::sr2_r));
+}
+
 
 
 constexpr int upd765_family_device::rates[4];
@@ -1409,8 +1419,8 @@ void upd765_family_device::execute_command(int cmd)
 		if(fi.dev)
 			result[0] |=
 				(fi.dev->wpt_r() ? ST3_WP : 0x00) |
-				(fi.dev->trk00_r() ? 0x00 : ST3_T0) |
-				(fi.dev->twosid_r() ? 0x00 : ST3_TS);
+				(fi.dev->trk00_r() ? 0x00 : ST3_T0) /* |
+				(fi.dev->twosid_r() ? 0x00 : ST3_TS) */ ;
 		LOGCOMMAND("command sense drive status %d (%02x)\n", fi.id, result[0]);
 		result_pos = 1;
 		break;
@@ -1469,6 +1479,11 @@ void upd765_family_device::execute_command(int cmd)
 	case C_WRITE_DATA:
 		write_data_start(flopi[command[1] & 3]);
 		break;
+
+       case C_SLEEP:
+               LOGCOMMAND("command sleep\n");
+               main_phase = PHASE_CMD;
+               break;
 
 	default:
 		LOGWARN("Unknown command %02x\n", cmd);
@@ -3038,3 +3053,206 @@ void upd72065_device::auxcmd_w(uint8_t data)
 		break;
 	}
 }
+
+
+hd63266_device::hd63266_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) : upd765_family_device(mconfig, UPD765A, tag, owner, clock)
+{
+	slow = true;
+	motor_on = false;
+	dor_reset = 0x0c;
+	//ready_polled = true;
+	ready_connected = true;
+	select_connected = true;
+}
+
+READ8_MEMBER(hd63266_device::hd_r)
+{
+
+	if (drq)
+	  return dma_r();
+	else 
+	  return fifo_r();
+}
+
+WRITE8_MEMBER(hd63266_device::hd_w)
+{
+	if (drq)
+		return dma_w(data);
+	else
+		return fifo_w(data);
+	
+}
+
+READ8_MEMBER(hd63266_device::sr2_r)
+{
+	//brother WP2450ds firmware seems to want this to be 0x40 if happy
+	//0x40 seems to be an 'interrupt happened' flag
+	//it should also be triggered by z180 /DEND??
+	//0x01 seems to be motor 0 on
+	bool dend = false;
+
+	if (fifo_expected == 1)
+		kill = dend;
+	if (fifo_expected == 0 && kill) {
+		tc_w(kill);
+		 if (kill && !dend)
+			moff_count=10;
+			//atr_w(space,offset,0xd1);
+		kill = dend;//stretch??
+	}
+	else if ( fifo_expected == 0 && dend)
+		kill = dend;	//tc_w(!!dend_cb); 
+	if (moff_count == 1) {
+		atr_w(space,offset,0xd1);
+		moff_count = 0;
+	}
+	else if (moff_count !=0)
+		moff_count--;
+	if (dend)
+	printf("fdc ph:%d irq:%x drq:%d int_drq:%d fifo_exp:%d: kill:%d moff_count:%d\n", main_phase, cur_irq, drq, internal_drq,fifo_expected, kill, moff_count);
+	return  /*(main_phase != 1) &&*/ (( /* (fifo_expected == 0 &&  dend_cb() )  ||*/ cur_irq) ? 0x40 | motor_on : motor_on);
+
+
+}
+
+WRITE8_MEMBER(hd63266_device::atr_w)
+{
+	LOGREGS("atr = %02x\n", data);
+
+	//firmware writes 0xFF(abort) and 0xD1/E1 (possibly MON SET/MON CLEAR?) here
+	printf("fdc_r0 abort %x\n", data);
+	if (data == 0xff)
+		upd765_family_device::soft_reset();
+
+	if(data == 0xd1)
+	{
+
+		for(int i=0; i<4; i++) {
+			floppy_info &fi = flopi[i];
+			if(fi.dev)
+			{
+			fi.dev->ds_w(i);
+			fi.dev->mon_w(1); //motor off
+			motor_on = 0;
+			bool ready = get_ready(i);
+			LOGCOMMAND("MON CLEAR %d :old_ready %d -> ready %d\n", i, flopi[i].ready, ready);
+			if (flopi[i].ready != ready) {
+				flopi[i].ready = ready;
+				if(!flopi[i].st0_filled) {
+					flopi[i].st0 = ST0_ABRT | i;
+					flopi[i].st0_filled = true;
+					other_irq = true;
+				}
+			}
+			}
+		}
+	//lets assume that this is 'MON CLEAR'
+	//run_drive_ready_polling();
+	//check_irq();
+	}
+	if(data == 0xe1)
+	{
+		
+		for(int i=0; i<4; i++) {
+			floppy_info &fi = flopi[i];
+			if(fi.dev)
+			{
+			fi.dev->ds_w(i);
+			fi.dev->mon_w(0); //motor on
+			motor_on = 1;
+			bool ready = get_ready(i);
+			LOGCOMMAND("MON SET %d :old_ready %d -> ready %d\n", i, flopi[i].ready, ready);
+			if (flopi[i].ready != ready) {
+				flopi[i].ready = ready;
+				if(!flopi[i].st0_filled) {
+					flopi[i].st0 = ST0_ABRT | i;
+					flopi[i].st0_filled = true;
+					other_irq = true;
+				}
+			}
+			}
+		}
+	//lets assume that this is 'MON SET' and the 1 is drive 0
+	//run_drive_ready_polling();
+	//check_irq();
+	}
+}
+
+int hd63266_device::check_command()
+{
+	// ...00110 read data
+	// ...01100 read deleted data
+	// 0.001010 read id
+	// ..000101 write data
+	// ..001001 write deleted data
+	// 0.001101 format track
+	// 00001111 seek
+	// 00000111 recalibrate
+	// ...10001 scan equal
+	// ...11001 scan low or equal
+	// ...11101 scan high or equal
+	// 00000100 sense drive status
+	// 00001000 sense interrupt status
+	// 00000011 specify
+
+	// 0..01011 specify 2
+	// 00001110 sleep
+	// 11111111 abort
+	// ...10010 read long
+	// ..010110 write long
+	printf("fdc r1 cmd:%x\n", command[0]);
+
+	switch(command[0] & 0x1f) {
+	//Read erroneous data??
+	case 0x02:
+		return command_pos == 9 ? C_READ_TRACK         : C_INCOMPLETE;
+	case 0x06:
+	case 0x0c:
+	case 0x12:
+		return command_pos == 9 ? C_READ_DATA          : C_INCOMPLETE;
+
+	case 0x0a:
+		return command_pos == 2 ? C_READ_ID            : C_INCOMPLETE;
+	case 0x05:
+	case 0x09:
+	case 0x16:
+		return command_pos == 9 ? C_WRITE_DATA         : C_INCOMPLETE;
+	case 0x0f:
+		return command_pos == 3 ? C_SEEK               : C_INCOMPLETE;
+	case 0x07:
+		return command_pos == 2 ? C_RECALIBRATE        : C_INCOMPLETE;
+	case 0x11:
+		return command_pos == 9 ? C_SCAN_EQUAL         : C_INCOMPLETE;
+	case 0x19:
+		return command_pos == 9 ? C_SCAN_LOW           : C_INCOMPLETE;
+	case 0x1d:
+		return command_pos == 9 ? C_SCAN_HIGH          : C_INCOMPLETE;
+	case 0x04:
+		return command_pos == 2 ? C_SENSE_DRIVE_STATUS : C_INCOMPLETE;
+	case 0x08:
+		return C_SENSE_INTERRUPT_STATUS;
+	case 0x03:
+		slow = true;
+		return command_pos == 3 ? C_SPECIFY            : C_INCOMPLETE;
+	case 0x0d:
+		return command_pos == 6 ? C_FORMAT_TRACK       : C_INCOMPLETE;
+	case 0xe:
+		return C_SLEEP;
+
+
+	case 0xb:
+
+	// 0..01011 specify 2
+	// 00001110 sleep
+	// 11111111 abort
+	// ...10010 read long
+	// ..010110 write long
+	LOGCOMMAND("unhandled command %x\n", command[0] & 0x1f);
+	return C_INVALID;
+
+	default:
+		return C_INVALID;
+	}
+}
+
+
