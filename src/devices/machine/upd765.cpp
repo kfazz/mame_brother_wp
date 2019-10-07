@@ -21,6 +21,7 @@
 #define LOG_DONE    (1U << 13)  // Command done
 
 #define VERBOSE (LOG_GENERAL | LOG_WARN )
+//#define VERBOSE (LOG_GENERAL | LOG_WARN | LOG_HEADER | LOG_FORMAT | LOG_REGS | LOG_FIFO | LOG_COMMAND | LOG_RW | LOG_MATCH | LOG_TCIRQ | LOG_STATE | LOG_DONE)
 
 #include "logmacro.h"
 
@@ -1471,8 +1472,13 @@ void upd765_family_device::execute_command(int cmd)
 
 	case C_SPECIFY:
 		spec = (command[1] << 8) | command[2];
-		LOGCOMMAND("command specify %02x %02x: step_rate=%d ms, head_unload=%d ms, head_load=%d ms, non_dma=%s\n",
-			command[1], command[2], 16-(command[1]>>4), (command[1]&0x0f)<<4, command[2]&0xfe, ((command[2]&1)==1)? "true":"false");
+		if (slow)
+			LOGCOMMAND("command specify (slow) %02x %02x: step_rate=%d ms, head_unload=%d ms, head_load=%d ms, non_dma=%s\n",
+			command[1], command[2], 32-((command[1]>>4)<< 1), (command[1]&0x0f)<<5, command[2]&0xfe<<1, ((command[2]&1)==1)? "true":"false");
+		else
+ 		LOGCOMMAND("command specify %02x %02x: step_rate=%d ms, head_unload=%d ms, head_load=%d ms, non_dma=%s\n",
+ 			command[1], command[2], 16-(command[1]>>4), (command[1]&0x0f)<<4, command[2]&0xfe, ((command[2]&1)==1)? "true":"false");
+
 		main_phase = PHASE_CMD;
 		break;
 
@@ -1562,6 +1568,9 @@ void upd765_family_device::seek_continue(floppy_info &fi)
 					fi.pcn++;
 			}
 			fi.sub_state = SEEK_WAIT_STEP_TIME;
+			if (slow)
+			delay_cycles(fi.tm,500 *(32-((spec >> 12) <<1)));
+			else
 			delay_cycles(fi.tm, 500*(16-(spec >> 12)));
 			return;
 
@@ -1705,6 +1714,9 @@ void upd765_family_device::read_data_continue(floppy_info &fi)
 		switch(fi.sub_state) {
 		case HEAD_LOAD:
 			LOGSTATE("HEAD_LOAD\n");
+			if (slow)
+			delay_cycles(fi.tm, 500*((spec & 0x00fe) << 1));
+			else
 			delay_cycles(fi.tm, 500*(spec & 0x00fe));
 			fi.sub_state = HEAD_LOAD_DONE;
 			break;
@@ -1733,6 +1745,9 @@ void upd765_family_device::read_data_continue(floppy_info &fi)
 				fi.dev->stp_w(1);
 
 			fi.sub_state = SEEK_WAIT_STEP_TIME;
+			if (slow)
+			delay_cycles(fi.tm,500 *(32-((spec >> 12) <<1)));
+			else
 			delay_cycles(fi.tm, 500*(16-(spec >> 12)));
 			return;
 
@@ -1919,6 +1934,9 @@ void upd765_family_device::write_data_continue(floppy_info &fi)
 		switch(fi.sub_state) {
 		case HEAD_LOAD:
 			LOGSTATE("HEAD_LOAD\n");
+			if (slow)
+			delay_cycles(fi.tm, 500*((spec & 0x00fe) << 1));
+			else
 			delay_cycles(fi.tm, 500*(spec & 0x00fe));
 			fi.sub_state = HEAD_LOAD_DONE;
 			break;
@@ -2060,6 +2078,9 @@ void upd765_family_device::read_track_continue(floppy_info &fi)
 		switch(fi.sub_state) {
 		case HEAD_LOAD:
 			LOGSTATE("HEAD_LOAD\n");
+			if (slow)
+			delay_cycles(fi.tm, 500*((spec & 0x00fe) << 1));
+			else
 			delay_cycles(fi.tm, 500*(spec & 0x00fe));
 			fi.sub_state = HEAD_LOAD_DONE;
 			break;
@@ -2088,6 +2109,9 @@ void upd765_family_device::read_track_continue(floppy_info &fi)
 				fi.dev->stp_w(1);
 
 			fi.sub_state = SEEK_WAIT_STEP_TIME;
+			if (slow)
+			delay_cycles(fi.tm,500 *(32-((spec >> 12) <<1)));
+			else
 			delay_cycles(fi.tm, 500*(16-(spec >> 12)));
 			return;
 
@@ -2240,6 +2264,9 @@ void upd765_family_device::format_track_continue(floppy_info &fi)
 		switch(fi.sub_state) {
 		case HEAD_LOAD:
 			LOGSTATE("HEAD_LOAD\n");
+			if (slow)
+			delay_cycles(fi.tm, 500*((spec & 0x00fe) << 1));
+			else
 			delay_cycles(fi.tm, 500*(spec & 0x00fe));
 			fi.sub_state = HEAD_LOAD_DONE;
 			break;
@@ -2325,6 +2352,9 @@ void upd765_family_device::read_id_continue(floppy_info &fi)
 		switch(fi.sub_state) {
 		case HEAD_LOAD:
 			LOGSTATE("HEAD_LOAD\n");
+			if (slow)
+			delay_cycles(fi.tm, 500*((spec & 0x00fe) << 1));
+			else
 			delay_cycles(fi.tm, 500*(spec & 0x00fe));
 			fi.sub_state = HEAD_LOAD_DONE;
 			break;
@@ -3089,33 +3119,12 @@ READ8_MEMBER(hd63266_device::sr2_r)
 	//0x40 seems to be an 'interrupt happened' flag
 	//it should also be triggered by z180 /DEND??
 	//0x01 seems to be motor 0 on
-	bool dend = false;
+	printf("fdc ph:%d irq:%x drq:%d int_drq:%d fifo_exp:%d\n", main_phase, cur_irq, drq, internal_drq,fifo_expected);
 
-	if (fifo_expected == 1)
-		kill = dend;
-	if (fifo_expected == 0 && kill) {
-		tc_w(kill);
-		 if (kill && !dend)
-			moff_count=10;
-			//atr_w(space,offset,0xd1);
-		kill = dend;//stretch??
-	}
-	else if ( fifo_expected == 0 && dend)
-		kill = dend;	//tc_w(!!dend_cb); 
-	if (moff_count == 1) {
-		atr_w(space,offset,0xd1);
-		moff_count = 0;
-	}
-	else if (moff_count !=0)
-		moff_count--;
-	if (dend)
-	printf("fdc ph:%d irq:%x drq:%d int_drq:%d fifo_exp:%d: kill:%d moff_count:%d\n", main_phase, cur_irq, drq, internal_drq,fifo_expected, kill, moff_count);
-	return  /*(main_phase != 1) &&*/ (( /* (fifo_expected == 0 &&  dend_cb() )  ||*/ cur_irq) ? 0x40 | motor_on : motor_on);
-
-
+	return (cur_irq ? (0x40 | motor_on) : motor_on);
 }
 
-WRITE8_MEMBER(hd63266_device::atr_w)
+void hd63266_device::atr_w(uint8_t data)
 {
 	LOGREGS("atr = %02x\n", data);
 

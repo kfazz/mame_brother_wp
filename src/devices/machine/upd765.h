@@ -588,7 +588,7 @@ public:
 	bool motor_on = false;
 
 	DECLARE_READ8_MEMBER(sr2_r);
-	DECLARE_WRITE8_MEMBER(atr_w);//abort/cmd2 reg
+	void atr_w(uint8_t data);//abort/cmd2 reg
 	DECLARE_READ8_MEMBER(hd_r);
 	DECLARE_WRITE8_MEMBER(hd_w);
 
