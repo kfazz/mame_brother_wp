@@ -381,14 +381,16 @@ void wp_state::wp75_mem(address_map &map)
 	map(0x0000, 0x3FFFF).rom();
 	map(0x2000, 0x5FFF).ram().rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
 
-	//map(0x40000,0x4FFFF).rom();
-	//map(0x50000,0x5FFFF).ram(); //the missing 64k?
+//	map(0x40000,0x5FFFF).rom();
+//	map(0x50000,0x5FFFF).ram(); //the missing 64k?
 
 	map(0x60000,0x61FFF).mirror(0x10000).ram();
 	map(0x62000,0x65FFF).ram(); // <== window points here
 	map(0x66000,0x6FFFF).ram();
 	//this window points at the rom that is shadowed by ram from 0x2000-0x5FFF
 	map(0x72000, 0x75FFF).r(FUNC(wp_state::rom_wind_r)).share("romwindow");
+	map(0x78000, 0x7FFFF).ram();//there seems to be ram here
+
 }
 
 
@@ -397,9 +399,10 @@ void wp_state::wp5500ds_mem(address_map &map)
 	map.unmap_value_high();
 	map(0x0000, 0x7FFFF).mirror(0x80000).rom();
 	map(0x2000, 0x5FFF).mirror(0x80000).ram().rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
-	map(0x60000,0x61FFF).mirror(0x81000).ram();
+	map(0x60000,0x61FFF).mirror(0x90000).ram();
 	map(0x62000,0x65FFF).mirror(0x80000).ram(); // <== window points here
 	map(0x66000,0x6FFFF).mirror(0x80000).ram();
+	map(0x78000,0x7FFFF).ram(); //speculative
 
 	//this window points at the rom that is shadowed by ram from 0x2000-0x5FFF
 	map(0x72000, 0x75FFF).mirror(0x80000).r(FUNC(wp_state::rom_wind_r)).share("romwindow");
