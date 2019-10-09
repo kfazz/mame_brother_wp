@@ -64,8 +64,8 @@
 		//62,200 too short
 		//62,225 too long
 //383 cyces =	  62,337 too long
-//#define DMADELAY 62212 //in ns	
-#define DMADELAY 16200 //in ns	
+//#define DMADELAY 62212 //in ns
+#define DMADELAY 8000 //in ns
 
 
 //24 *16???
@@ -381,7 +381,7 @@ void wp_state::wp75_mem(address_map &map)
 	map(0x0000, 0x3FFFF).rom();
 	map(0x2000, 0x5FFF).ram().rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
 
-//	map(0x40000,0x5FFFF).rom();
+	map(0x40000,0x5FFFF).rom();
 //	map(0x50000,0x5FFFF).ram(); //the missing 64k?
 
 	map(0x60000,0x61FFF).mirror(0x10000).ram();
