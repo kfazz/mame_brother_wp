@@ -38,27 +38,27 @@
 #define VERBOSE (LOG_BANK )
 #include "logmacro.h"
 
-#define LOGDMA(...)     LOGMASKED(LOG_DMA, __VA_ARGS__)
-#define LOGBANK(...)     LOGMASKED(LOG_BANK, __VA_ARGS__)
-#define LOGVID(...)     LOGMASKED(LOG_VID, __VA_ARGS__)
-#define LOGSYS(...)     LOGMASKED(LOG_SYS, __VA_ARGS__)
-#define LOGPG(...)     LOGMASKED(LOG_PG, __VA_ARGS__)
-#define LOGPK(...)     LOGMASKED(LOG_PK, __VA_ARGS__)
-#define LOGKB(...)     LOGMASKED(LOG_KB, __VA_ARGS__)
-#define LOGCA(...)     LOGMASKED(LOG_CA, __VA_ARGS__)
-#define LOGWH(...)     LOGMASKED(LOG_WH, __VA_ARGS__)
-#define LOGLF(...)     LOGMASKED(LOG_LF, __VA_ARGS__)
+#define LOGDMA(...)	LOGMASKED(LOG_DMA, __VA_ARGS__)
+#define LOGBANK(...)	LOGMASKED(LOG_BANK, __VA_ARGS__)
+#define LOGVID(...)	LOGMASKED(LOG_VID, __VA_ARGS__)
+#define LOGSYS(...)	LOGMASKED(LOG_SYS, __VA_ARGS__)
+#define LOGPG(...)	LOGMASKED(LOG_PG, __VA_ARGS__)
+#define LOGPK(...)	LOGMASKED(LOG_PK, __VA_ARGS__)
+#define LOGKB(...)	LOGMASKED(LOG_KB, __VA_ARGS__)
+#define LOGCA(...)	LOGMASKED(LOG_CA, __VA_ARGS__)
+#define LOGWH(...)	LOGMASKED(LOG_WH, __VA_ARGS__)
+#define LOGLF(...)	LOGMASKED(LOG_LF, __VA_ARGS__)
 
-#define LOGFDC(...)     LOGMASKED(LOG_FDC, __VA_ARGS__)
-#define LOGUNK(...)     LOGMASKED(LOG_UNK, __VA_ARGS__)
-#define LOGWINDOW(...)     LOGMASKED(LOG_WINDOW, __VA_ARGS__)
+#define LOGFDC(...)	LOGMASKED(LOG_FDC, __VA_ARGS__)
+#define LOGUNK(...)	LOGMASKED(LOG_UNK, __VA_ARGS__)
+#define LOGWINDOW(...)	LOGMASKED(LOG_WINDOW, __VA_ARGS__)
 
-#define LOGPH(...)     LOGMASKED(LOG_PH, __VA_ARGS__)
-#define LOGPJ(...)     LOGMASKED(LOG_PJ, __VA_ARGS__)
-#define LOGPB(...)     LOGMASKED(LOG_PB, __VA_ARGS__)
-#define LOGIRQ(...)     LOGMASKED(LOG_IRQ, __VA_ARGS__)
+#define LOGPH(...)	LOGMASKED(LOG_PH, __VA_ARGS__)
+#define LOGPJ(...)	LOGMASKED(LOG_PJ, __VA_ARGS__)
+#define LOGPB(...)	LOGMASKED(LOG_PB, __VA_ARGS__)
+#define LOGIRQ(...)	LOGMASKED(LOG_IRQ, __VA_ARGS__)
 
-//FIXME
+//FIXME this works but is it correct?
 #define DMADELAY 8000 //in ns
 #define FDC_TAG "hd63266f"
 
@@ -135,6 +135,11 @@ private:
 	TIMER_CALLBACK_MEMBER(dmaend_off_callback);
 	TIMER_CALLBACK_MEMBER(motor_off_callback);
 
+	DECLARE_WRITE8_MEMBER(dict_bank);
+	DECLARE_WRITE8_MEMBER(dict_w);
+	DECLARE_READ8_MEMBER(dict_r);
+
+
 	uint8_t ga_irq_mask;
 
 	uint16_t v_ptr; //addr vram io window points at
@@ -152,23 +157,24 @@ private:
 	emu_timer   *m_motor_off_timer;
 
 	//carriage homing routine appears to go 40 steps left then decides 'check printer'
-	int32_t carriage_position = 600; //120 steps per inch
+	int32_t carriage_position = 50; //120 steps per inch
 
 	//used to determing whether carriage is going left or right
 	uint8_t ca_prev = 0x00; //previous ca latch contents
 	uint8_t ca_now; //current ca latch contents
 
+	uint32_t dict_base = 0;
 
 //	b7	6	54	32	1	0
 //	crsr?	c.blnk  cr.sz   vr incr. disp.	reverse
 	
 	uint8_t v_ctl;
 	uint8_t kb_matrix;
+	uint8_t bank_select;
 
 	required_device<z180_device> m_maincpu;
 	required_device<hd63266_device> m_fdc;
 	required_device<floppy_connector> m_fdd0;
-//	required_device<floppy_image_device> m_floppy0;
 	required_device_array<stepper_device, 3> m_steppers;
 	required_ioport_array<9> m_y;
 	required_device<palette_device> m_palette;
@@ -192,6 +198,7 @@ private:
 A1 1
 A9 9
 A10 0
+A11 - _ %
 
 A13 Q
 A14 W
@@ -247,7 +254,7 @@ static INPUT_PORTS_START( wp75 )
 	PORT_START("Y0")
 /*A22*/ PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_P) PORT_CHAR('p') PORT_CHAR('P') /*P Code:Print*/
 /*A11*/	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_MINUS) PORT_CHAR('_') PORT_CHAR('%')
-/*A10*/	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_0) PORT_CHAR(0)
+/*A10*/	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_0) PORT_CHAR('0')
 /*A21*/	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_O) PORT_CHAR('O') PORT_CHAR('o')
 /*N/A*/ PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_UNUSED)
 /*AA5*/	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_COMMA)
@@ -288,56 +295,53 @@ static INPUT_PORTS_START( wp75 )
 /*A14*/	PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_W) PORT_CHAR('w') PORT_CHAR('W')
 /*A4*/	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_4) PORT_CHAR('4')
 /*A3*/	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_3) PORT_CHAR('3')
-/*A15*/	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_B) PORT_CHAR('e') PORT_CHAR('E')
+/*A15*/	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_E) PORT_CHAR('e') PORT_CHAR('E')
 /*N/A*/ PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_UNUSED)
-/*A33*/	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_T) PORT_CHAR('x') PORT_CHAR('X')
-/*A25*/	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_6) PORT_CHAR('d') PORT_CHAR('D')
+/*A33*/	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_X) PORT_CHAR('x') PORT_CHAR('X')
+/*A25*/	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_D) PORT_CHAR('d') PORT_CHAR('D')
 /*F6*/	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_TAB) PORT_CHAR(UCHAR_MAMEKEY(TAB))
 
 	PORT_START("Y5")
 	/*Degree symbol, +_ == and ^*/
 /*A0*/	PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_TILDE) PORT_CHAR('=') PORT_CHAR('^')
-/*A12*/	//PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_PLUS) PORT_CHAR('+') /*FIXME*/
+/*A12*/	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_EQUALS) PORT_CHAR('+')
 /*A31*/	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_L) PORT_CHAR('l') PORT_CHAR('L')
 /*A30*/	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_K) PORT_CHAR('k') PORT_CHAR('K')
-
-/*FIXME CHECK THESE*/
 /*AA4*/	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_QUOTE) PORT_CHAR('"') PORT_CHAR('\'')
-/*AA6*/	//PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_PERIOD) PORT_CHAR('.')
-/*A39*/	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_COMMA) PORT_CHAR(',')
-	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_UNUSED)
+/*AA6*/	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_SLASH) PORT_CHAR('/') PORT_CHAR('?')
+/*A39*/	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_STOP) PORT_CHAR('.')
+/*N/A*/	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_UNUSED)
 
 	PORT_START("Y6")
-	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_QUOTE) PORT_CHAR('@') PORT_CHAR('`')
-	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_P) PORT_CHAR('p') PORT_CHAR('P')
-	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_C) PORT_CHAR('c') PORT_CHAR('C')
-	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_D) PORT_CHAR('d') PORT_CHAR('D')
-	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_E) PORT_CHAR('e') PORT_CHAR('E')
-	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_4) PORT_CHAR('4') PORT_CHAR('$')
-	PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_F3) PORT_CHAR(UCHAR_MAMEKEY(F3))
+/*A13*/	PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_Q) PORT_CHAR('Q') PORT_CHAR('q')
+/*A1*/	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_1) PORT_CHAR('1') PORT_CHAR('!')
+/*A2*/	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_2) PORT_CHAR('2') PORT_CHAR('@')
+/*A32*/	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_Z) PORT_CHAR('Z') PORT_CHAR('z')
+/*N/A*/ PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_UNUSED)
+/*A24*/	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_S) PORT_CHAR('S') PORT_CHAR('s')
+/*A23*/	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_A) PORT_CHAR('A') PORT_CHAR('a')
+/*F8*/	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_CAPSLOCK) PORT_CHAR(UCHAR_MAMEKEY(CAPSLOCK))
 
 	PORT_START("Y7")
 /*F9*/	PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_ENTER) PORT_CHAR(UCHAR_MAMEKEY(ENTER))
-	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_MINUS) PORT_CHAR('-') PORT_CHAR('=')
-	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_BACKSLASH) PORT_CHAR('\\') PORT_CHAR('|')
-	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_X) PORT_CHAR('x')  PORT_CHAR('X')
-/**/	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_BACKSPACE)
-	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_DEL) /*Cancel /P Down*/
-	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_3) PORT_CHAR('3') PORT_CHAR('#')
+/*F1*/	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_F11) PORT_CHAR(UCHAR_MAMEKEY(F11))  /*TW/WP*/
+/*F4*/	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_DEL) /*Cancel /P Down*/
+/*F7*/	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_BACKSPACE)
+/*F16*/	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_SPACE) PORT_CHAR(' ')
+/*F18*/	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_RCONTROL)  PORT_CHAR(UCHAR_MAMEKEY(RCONTROL)) //WORD OUT
+/*F17*/	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_RALT) PORT_CHAR(UCHAR_MAMEKEY(RALT)) //CORRECT
 /*F11*/	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_LSHIFT) PORT_CHAR(UCHAR_MAMEKEY(LSHIFT))
 
 	PORT_START("Y8")
-/*N/A*/	
-/*F12*/	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_LEFT) PORT_CHAR(UCHAR_MAMEKEY(LEFT))
-/*F13*/	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_DOWN) PORT_CHAR(UCHAR_MAMEKEY(DOWN))
-/*F15*/	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_LCONTROL) PORT_CHAR(UCHAR_MAMEKEY(LCONTROL))
-
 	/* 1/4    1/2   umlaut  and `  */
-/*AA1*/	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_OPENBRACE) PORT_CHAR('[') PORT_CHAR('{')
-/*AA3*/	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_L) PORT_CHAR('l') PORT_CHAR('L')
-/*F2*/	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_F12) PORT_CHAR(UCHAR_MAMEKEY(F12))  /*File*/
 /*AA2*/	PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_CLOSEBRACE) PORT_CHAR('`') PORT_CHAR('|') PORT_CHAR('[') PORT_CHAR(']')
-
+/*F2*/	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_F12) PORT_CHAR(UCHAR_MAMEKEY(F12))  /*File*/
+/*AA3*/	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_COLON) PORT_CHAR(';') PORT_CHAR(':')
+/*AA1*/	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_OPENBRACE) PORT_CHAR('[') PORT_CHAR('{')
+/*F15*/	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_LCONTROL) PORT_CHAR(UCHAR_MAMEKEY(LCONTROL))
+/*F13*/	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_DOWN) PORT_CHAR(UCHAR_MAMEKEY(DOWN))
+/*F12*/	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_LEFT) PORT_CHAR(UCHAR_MAMEKEY(LEFT))
+/*N/A*/	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_C) PORT_CHAR('c') PORT_CHAR('C')
 
 INPUT_PORTS_END
 
@@ -364,13 +368,10 @@ void wp_state::wp70_mem(address_map &map)
 
 void wp_state::wp75_mem(address_map &map)
 {
-	/*This is almost certainly 80% wrong*/
 	map.unmap_value_high();
 	map(0x0000, 0x3FFFF).rom();
 	map(0x2000, 0x5FFF).rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
-
-	map(0x40000,0x5FFFF).rom();//FIXME tis is banked
-//	map(0x50000,0x5FFFF).ram(); //the missing 64k?
+	map(0x40000,0x5FFFF).rw(FUNC(wp_state::dict_r), FUNC(wp_state::dict_w)); //dictionary & bank program
 
 	map(0x60000,0x61FFF).mirror(0x10000).ram();
 	map(0x62000,0x65FFF).ram().region("maincpu", 0x62000); // <== window points here
@@ -438,7 +439,7 @@ void wp_state::wp75_io(address_map &map)
 {
 	map.unmap_value_high();
 	map(0x0000, 0x003f).ram(); /* Z180 internal registers */
-
+	/*Video Registers*/
 	map(0x70, 0x70).mirror(0xff00).w(FUNC(wp_state::vpl_w));
 	map(0x71, 0x71).mirror(0xff00).w(FUNC(wp_state::vph_w));
 	map(0x72, 0x72).mirror(0xff00).w(FUNC(wp_state::vram_w));
@@ -446,29 +447,21 @@ void wp_state::wp75_io(address_map &map)
 	map(0x74, 0x74).mirror(0xff00).w(FUNC(wp_state::vctl_w));
 	map(0x75, 0x75).mirror(0xff00).w(FUNC(wp_state::vcrl_w));
 	map(0x76, 0x76).mirror(0xff00).w(FUNC(wp_state::vcrh_w));
-//	map(0x80, 0xA0).mirror(0xff00).r(FUNC(wp_state::unk_r));
-//	map(0x80, 0xA0).mirror(0xff00).w(FUNC(wp_state::unk_w));
-
-//	map(0x78, 0x7b).mirror(0xff00).r(FUNC(wp_state::fdc_r));
-//	map(0x78, 0x7b).mirror(0xff00).w(FUNC(wp_state::fdc_w));
 
         map(0x78,0x7b).mirror(0xff00).m(m_fdc, FUNC(hd63266_device::map)).umask16(0x00ff);
 
+	/*ports & timer*/
+	map(0xA8,0xA8).mirror(0xff00).r(FUNC(wp_state::portb_r));
+	map(0xB0,0xB0).mirror(0xff00).r(FUNC(wp_state::sys_r)); //spec strap
 	map(0xB8,0xB8).mirror(0xff00).r(FUNC(wp_state::kb_r));
 	map(0xB8,0xB8).mirror(0xff00).w(FUNC(wp_state::kb_w));
-
 	map(0xC0,0xC0).mirror(0xff00).w(FUNC(wp_state::ca_w));
 	map(0xC8,0xC8).mirror(0xff00).w(FUNC(wp_state::wh_w));
 	map(0xD0,0xD0).mirror(0xff00).w(FUNC(wp_state::lf_w));
-
 	map(0xD8,0xD8).mirror(0xff00).w(FUNC(wp_state::pg_w)); //solenoids and dc motor control
+	map(0xE0,0xE0).mirror(0xff00).w(FUNC(wp_state::dict_bank)); //rom1 bank switch control
 	map(0xF0,0xF0).mirror(0xff00).w(FUNC(wp_state::pk_w)); //buzzer and ?
-
-	map(0xB0,0xB0).mirror(0xff00).r(FUNC(wp_state::sys_r)); //spec strap
-	//map(0xE0,0xE0).mirror(0xff00).w(FUNC(wp_state::bank_w)); //rom1 bank switch control
-	map(0xA8,0xA8).mirror(0xff00).r(FUNC(wp_state::portb_r));
 	map(0xF8,0xF8).mirror(0xff00).w(FUNC(wp_state::irq1_clear_w));
-
 }
 
 
@@ -555,7 +548,7 @@ void wp_state::init_wp75()
 	m_dmaend_on_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(wp_state::dmaend_on_callback),this));
 	m_dmaend_off_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(wp_state::dmaend_off_callback),this));
 	m_motor_off_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(wp_state::motor_off_callback),this));
-
+	dict_base = 0;
 }
 
 uint32_t wp_state::screen_update_wp(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
@@ -623,8 +616,8 @@ uint32_t wp_state::screen_update_wp5500(screen_device &screen, bitmap_rgb32 &bit
 {
 	//FIXME is this correct?
 	LOGBANK("Rom1 bank dat:%02x\n",data ); //, (data >>1) & 3);
-	membank("rom1")->set_entry((data >> 1) & 3 ); //(data >> 1) & 3);
-	//membank("rom1")->set_entry(data);
+	//membank("rom1")->set_entry((data >> 1) & 3 ); //(data >> 1) & 3);
+	membank("rom1")->set_entry(data);
 
 }
 
@@ -737,29 +730,22 @@ uint32_t wp_state::screen_update_wp5500(screen_device &screen, bitmap_rgb32 &bit
 	WRITE8_MEMBER(wp_state::pk_w)
 {
 	if (data & 1)
-	{
-	LOGPK("pg_w BEEP h:%02x\n",data);
-	}
-	else {
-	LOGPK("pg_w h:%02x\n",data);
-	}
-	
+	{ LOGPK("pg_w BEEP h:%02x\n",data); }
+	else { LOGPK("pg_w h:%02x\n",data); }
 }
 
 
 	READ8_MEMBER(wp_state::portb_r)
 {
+	uint8_t data = 0xe;
 	if (carriage_position <= 1 || csol)
 	{
 	ca_idx = true;
+	data = 0xa;
 	}
 	else {
 	ca_idx = false;
 	}
-	uint8_t data = 0xe;//e
-	if(ca_idx)
-		data = 0xa;//a
-
 	LOGPB("portb h:%02x\n",data);
 	return data;
 }
@@ -815,7 +801,7 @@ WRITE_LINE_MEMBER(wp_state::tend0_w)
 	if  (state)
 		m_dmaend_on_timer->adjust( attotime::from_nsec(DMADELAY) );
 	else
-		m_dmaend_off_timer->adjust( attotime::from_nsec(DMADELAY) );	
+		m_dmaend_off_timer->adjust( attotime::from_nsec(DMADELAY) );
 	old_tend = state;
 	}
 }
@@ -824,11 +810,11 @@ WRITE_LINE_MEMBER(wp_state::drq_w)
 {
 	if (state)
 	{
-		m_maincpu->set_input_line(Z180_INPUT_LINE_DREQ0, ASSERT_LINE);	
+		m_maincpu->set_input_line(Z180_INPUT_LINE_DREQ0, ASSERT_LINE);
 	}
 	else
 	{
-		m_maincpu->set_input_line(Z180_INPUT_LINE_DREQ0, CLEAR_LINE);	
+		m_maincpu->set_input_line(Z180_INPUT_LINE_DREQ0, CLEAR_LINE);
 	}
 }
 
@@ -862,43 +848,15 @@ INTERRUPT_GEN_MEMBER(wp_state::wp_timer_interrupt)
 	uint8_t swap = 0x00;
 	switch (data)
 	{
-		//0x33 is index position for limit_sw test//65a9 is backwards
+		//0x33 is index position for limit_sw test
 		case 0x33:  swap = 0xA; break;
 		case 0x66:  swap = 0x9; break;
 		case 0x99:  swap = 0x6; break;
 		case 0xCC:  swap = 0x5; break;
 	}
 	m_steppers[0]->update(swap &0xf);
-	carriage_position = 600 + m_steppers[0]->get_absolute_position();
+	carriage_position = 50 + m_steppers[0]->get_absolute_position();
 	LOGCA("ca_w h:%02x  cpos: %d\n",data, carriage_position);
-
-/*	int8_t dir = 0;
-	ca_now = data;
-	switch (data)
-	{  // 33-> 99 -> CC ->66 going left
-	  //  33 ->66 -> CC ->99 going right
-	case 0x33:
-	if (ca_prev == 0x66) dir = -1;
-	if (ca_prev == 0x99) dir = 1;
-	break;
-	case 0x66:
-	if (ca_prev == 0xCC) dir = -1;
-	if (ca_prev == 0x33) dir = 1;
-	break;
-	case 0x99:
-	if (ca_prev == 0x33) dir = -1;
-	if (ca_prev == 0xCC) dir = 1;
-	break;
-	case 0xCC:
-	if (ca_prev == 0x99) dir = -1;
-	if (ca_prev == 0x66) dir = 1;
-	break;
-	}
-	ca_prev = data;
-	if (dir == 1) carriage_position++;
-	if (dir == -1) carriage_position--;
-*/
-
 }
 
 	WRITE8_MEMBER(wp_state::wh_w)
@@ -911,6 +869,36 @@ INTERRUPT_GEN_MEMBER(wp_state::wp_timer_interrupt)
 	LOGLF("lf_w h:%02x\n",data);
 }
 
+
+	WRITE8_MEMBER(wp_state::dict_bank)
+{
+	switch (data)
+	{
+	case 0: dict_base = 0x40000; break;
+	case 1: dict_base = 0x40000; break;
+	case 2: dict_base = 0x40000; break;
+	case 3: dict_base = 0x40000; break;
+	case 4: dict_base = 0x40000; break;
+	case 5: dict_base = 0x40000; break;
+	case 6: dict_base = 0x40000; break;
+	case 7: dict_base = 0x50000; break;
+
+	}
+	LOGBANK("bank %d base %02x\n", data, dict_base);
+}
+
+	WRITE8_MEMBER(wp_state::dict_w)
+{
+	uint8_t *rom = memregion("maincpu")->base();
+	rom[dict_base + offset] = data;
+	LOGWINDOW("dict_w a:%02x h:%02x\n",offset ,data);
+}
+	READ8_MEMBER(wp_state::dict_r)
+{
+	uint8_t *rom = memregion("maincpu")->base();
+	LOGWINDOW("dict_r a:%02x h:%02x\n",offset ,rom[dict_base + offset]);
+	return rom[dict_base + offset];
+}
 
 
 
@@ -1086,13 +1074,13 @@ void wp_state::wp5500ds(machine_config &config)
 
 	/* video hardware */
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
-	screen.set_physical_aspect(9, 5); // runs on a TV, not an LCD
+	screen.set_physical_aspect(4, 3);
 	screen.set_refresh_hz(60);
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500));
 	screen.set_screen_update(FUNC(wp_state::screen_update_wp));
 	screen.set_palette(m_palette);
 	screen.set_size(819, 240);
-	screen.set_visarea(0, 819, 0, 240);
+	screen.set_visarea(0, 819-1, 0, 240-1);
 }
 
 /* ROM definition */
@@ -1134,4 +1122,3 @@ COMP( 1993, wp2450ds, 0,      0,    wp2450ds, wp75, wp_state, init_wp75, "Brothe
 COMP( 1993, wp5500ds, 0,      0,    wp5500ds, wp75, wp_state, init_wp75, "Brother", "WP-5500DS", MACHINE_NO_SOUND)
 
 
-//COMP( 1989, wp70, 0,   wp75,      wp75,  wp75, wp_state, init_wp75, "Brother", "WP-70", MACHINE_NOT_WORKING | MACHINE_NO_SOUND)
