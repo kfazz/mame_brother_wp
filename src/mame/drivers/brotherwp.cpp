@@ -58,20 +58,8 @@
 #define LOGPB(...)     LOGMASKED(LOG_PB, __VA_ARGS__)
 #define LOGIRQ(...)     LOGMASKED(LOG_IRQ, __VA_ARGS__)
 
-//6.144mhz =  162.76041666667 period
-//382 too short, 383 too long (in z180 cycles @ 6.1441Mhz)
-//382 cycles =	  62,174 too short
-		//62,200 too short
-		//62,225 too long
-//383 cyces =	  62,337 too long
-//#define DMADELAY 62212 //in ns	
-#define DMADELAY 16200 //in ns	
-
-
-//24 *16???
-//15 has 4 status reads between dend0 and tc
-//20 has 6 status reads between dend0 and tc
-
+//FIXME
+#define DMADELAY 8000 //in ns
 #define FDC_TAG "hd63266f"
 
 class wp_state : public driver_device
@@ -88,7 +76,7 @@ public:
 	{
 	}
 
-	void init_wp70();	
+	void init_wp70();
 	void init_wp75();
 
 	void wp75(machine_config &config);
@@ -379,18 +367,17 @@ void wp_state::wp75_mem(address_map &map)
 	/*This is almost certainly 80% wrong*/
 	map.unmap_value_high();
 	map(0x0000, 0x3FFFF).rom();
-	map(0x2000, 0x5FFF).ram().rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
+	map(0x2000, 0x5FFF).rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
 
-//	map(0x40000,0x5FFFF).rom();
+	map(0x40000,0x5FFFF).rom();//FIXME tis is banked
 //	map(0x50000,0x5FFFF).ram(); //the missing 64k?
 
 	map(0x60000,0x61FFF).mirror(0x10000).ram();
-	map(0x62000,0x65FFF).ram(); // <== window points here
+	map(0x62000,0x65FFF).ram().region("maincpu", 0x62000); // <== window points here
 	map(0x66000,0x6FFFF).ram();
 	//this window points at the rom that is shadowed by ram from 0x2000-0x5FFF
 	map(0x72000, 0x75FFF).r(FUNC(wp_state::rom_wind_r)).share("romwindow");
 	map(0x78000, 0x7FFFF).ram();//there seems to be ram here
-
 }
 
 
@@ -929,21 +916,21 @@ INTERRUPT_GEN_MEMBER(wp_state::wp_timer_interrupt)
 
 	WRITE8_MEMBER(wp_state::window_w)
 {
-	uint8_t *rom = memregion("maincpu")->base();	
-	rom[0x60000 + offset] = data;
+	uint8_t *rom = memregion("maincpu")->base();
+	rom[0x62000 + offset] = data;
 	LOGWINDOW("window_w a:%02x h:%02x\n",offset ,data);
 }
 	READ8_MEMBER(wp_state::window_r)
 {
 	uint8_t *rom = memregion("maincpu")->base();
-	LOGWINDOW("window_r a:%02x h:%02x\n",offset ,rom[0x60000 + offset]);
-	return rom[0x60000 + offset];
+	LOGWINDOW("window_r a:%02x h:%02x\n",offset ,rom[0x62000 + offset]);
+	return rom[0x62000 + offset];
 }
 
 
 	WRITE8_MEMBER(wp_state::vram_5500_w)
 {
-	uint8_t *vram = memregion("vram")->base();	
+	uint8_t *vram = memregion("vram")->base();
 	vram[offset] = data;
 	LOGVID("vram_w a:%02x h:%02x\n",offset ,data);
 }
