@@ -186,6 +186,9 @@ private:
 	void wp75_io(address_map &map);
 	void wp75_mem(address_map &map);
 
+	void wp2450ds_io(address_map &map);
+	void wp2450ds_mem(address_map &map);
+
 	void wp5500ds_io(address_map &map);
 	void wp5500ds_mem(address_map &map);
 
@@ -350,10 +353,8 @@ void wp_state::wp70_mem(address_map &map)
 
 	map.unmap_value_high();
 	map(0x0000, 0x1FFF).rom();
-	map(0x2000, 0x5FFF).ram().rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
+	map(0x2000, 0x5FFF).rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
 	map(0x6000,0x3FFFF).rom();
-
-//	map(0x40000, 0x5FFFF).rom(); // is the main rom shadowed here accessible anywhere???
 
 	map(0x40000, 0x5FFFF).bankr("rom1"); //dictionary & bank program
 
@@ -363,10 +364,27 @@ void wp_state::wp70_mem(address_map &map)
 
 	//this window points at the rom that is shadowed by ram from 0x2000-0x5FFF
 	map(0x72000, 0x75FFF).r(FUNC(wp_state::rom_wind_r)).share("romwindow");
+	map(0x78000, 0x7FFFF).ram();//there seems to be ram here
+
 }
 
 
 void wp_state::wp75_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x3FFFF).rom();
+	map(0x2000, 0x5FFF).ram(); //rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
+	//map(0x40000,0x5FFFF).rw(FUNC(wp_state::dict_r), FUNC(wp_state::dict_w)); //dictionary & bank program
+
+	//map(0x60000,0x61FFF).mirror(0x10000).ram();
+	//map(0x62000,0x65FFF).ram().region("maincpu", 0x62000); // <== window points here
+	//map(0x66000,0x6FFFF).ram();
+	//this window points at the rom that is shadowed by ram from 0x2000-0x5FFF
+	//map(0x72000, 0x75FFF).r(FUNC(wp_state::rom_wind_r)).share("romwindow");
+	//map(0x78000, 0x7FFFF).ram();//there seems to be ram here
+}
+
+void wp_state::wp2450ds_mem(address_map &map)
 {
 	map.unmap_value_high();
 	map(0x0000, 0x3FFFF).rom();
@@ -435,7 +453,17 @@ void wp_state::wp70_io(address_map &map)
 	map(0xF8,0xF8).mirror(0xff00).w(FUNC(wp_state::irq1_clear_w));
 }
 
+
 void wp_state::wp75_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x003f).ram(); /* Z180 internal registers */
+	/*Video Registers*/
+}
+
+
+
+void wp_state::wp2450ds_io(address_map &map)
 {
 	map.unmap_value_high();
 	map(0x0000, 0x003f).ram(); /* Z180 internal registers */
@@ -464,8 +492,6 @@ void wp_state::wp75_io(address_map &map)
 	map(0xF8,0xF8).mirror(0xff00).w(FUNC(wp_state::irq1_clear_w));
 }
 
-
-
 void wp_state::wp5500ds_io(address_map &map)
 {
 	map.unmap_value_high();
@@ -473,7 +499,7 @@ void wp_state::wp5500ds_io(address_map &map)
 
 	map(0x70, 0x70).mirror(0xff00).w(FUNC(wp_state::vpl_w));
 	map(0x71, 0x71).mirror(0xff00).w(FUNC(wp_state::vph_w));
-	map(0x72, 0x72).mirror(0xff00).w(FUNC(wp_state::vram_w));
+	//map(0x72, 0x72).mirror(0xff00).w(FUNC(wp_state::vram_w));
 	map(0x73, 0x73).mirror(0xff00).r(FUNC(wp_state::vram_r));
 	map(0x74, 0x74).mirror(0xff00).w(FUNC(wp_state::vctl_w));
 	map(0x75, 0x75).mirror(0xff00).w(FUNC(wp_state::vcrl_w));
@@ -481,9 +507,7 @@ void wp_state::wp5500ds_io(address_map &map)
 //	map(0x80, 0xA0).mirror(0xff00).r(FUNC(wp_state::unk_r));
 //	map(0x80, 0xA0).mirror(0xff00).w(FUNC(wp_state::unk_w));
 
-
-	map(0x78, 0x7b).mirror(0xff00).r(FUNC(wp_state::fdc_r));
-	map(0x78, 0x7b).mirror(0xff00).w(FUNC(wp_state::fdc_w));
+        map(0x78,0x7b).mirror(0xff00).m(m_fdc, FUNC(hd63266_device::map)).umask16(0x00ff);
 
 	map(0xB8,0xB8).mirror(0xff00).r(FUNC(wp_state::kb_r));
 	map(0xB8,0xB8).mirror(0xff00).w(FUNC(wp_state::kb_w));
@@ -594,9 +618,9 @@ uint32_t wp_state::screen_update_wp5500(screen_device &screen, bitmap_rgb32 &bit
 	for (y = 0; y < 480; y++)
 	{
 		scanline = &bitmap.pix32(y);
-		for (x = 0; x < 57; x++)//widescreen has 91 col /line
+		for (x = 0; x < 79; x++)//widescreen has 91 col /line
 		{
-			pixels = vram[(y * 57) + x + 16384];
+			pixels = vram[(y * 79) + x ];//+ 16384];
 
 			*scanline++ = palette[(pixels>>7)&1];
 			*scanline++ = palette[(pixels>>6)&1];
@@ -616,8 +640,8 @@ uint32_t wp_state::screen_update_wp5500(screen_device &screen, bitmap_rgb32 &bit
 {
 	//FIXME is this correct?
 	LOGBANK("Rom1 bank dat:%02x\n",data ); //, (data >>1) & 3);
-	//membank("rom1")->set_entry((data >> 1) & 3 ); //(data >> 1) & 3);
-	membank("rom1")->set_entry(data);
+	membank("rom1")->set_entry((data >> 1) & 3 ); //(data >> 1) & 3);
+	//membank("rom1")->set_entry(data);
 
 }
 
@@ -881,7 +905,7 @@ INTERRUPT_GEN_MEMBER(wp_state::wp_timer_interrupt)
 	case 4: dict_base = 0x40000; break;
 	case 5: dict_base = 0x40000; break;
 	case 6: dict_base = 0x40000; break;
-	case 7: dict_base = 0x50000; break;
+	case 7: dict_base = 0x48000; break;
 
 	}
 	LOGBANK("bank %d base %02x\n", data, dict_base);
@@ -982,6 +1006,15 @@ void wp_state::wp70(machine_config &config)
 	/* floppy drives */
 	FLOPPY_CONNECTOR(config, "fdc:0", wp75_floppies, "35dd", floppy_image_device::default_floppy_formats).enable_sound(true);
 
+	/* Stepper motors */
+	uint8_t init_phase = 0;
+	STEPPER(config, m_steppers[0],init_phase);
+	STEPPER(config, m_steppers[1],init_phase);
+	STEPPER(config, m_steppers[2],init_phase);
+
+	PALETTE(config, m_palette, palette_device::MONOCHROME_HIGHLIGHT);
+
+
 	/* video hardware */
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
 	screen.set_physical_aspect(18, 5);
@@ -990,7 +1023,7 @@ void wp_state::wp70(machine_config &config)
 	screen.set_screen_update(FUNC(wp_state::screen_update_wp));
 	screen.set_palette(m_palette);
 	screen.set_size(819, 240);
-	screen.set_visarea(0, 819, 0, 240);
+	screen.set_visarea(0, 819-1, 0, 240-1);
 }
 
 void wp_state::wp75(machine_config &config)
@@ -1011,23 +1044,31 @@ void wp_state::wp75(machine_config &config)
 	/* floppy drives */
 	//MCFG_FLOPPY_DRIVE_ADD(FDC_TAG ":0", wp75_floppies, "35dd", wp75_floppy_formats)
 
+	/* Stepper motors */
+	uint8_t init_phase = 0;
+	STEPPER(config, m_steppers[0],init_phase);
+	STEPPER(config, m_steppers[1],init_phase);
+	STEPPER(config, m_steppers[2],init_phase);
+
+	PALETTE(config, m_palette, palette_device::MONOCHROME_HIGHLIGHT);
+
 	/* video hardware */
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
-	screen.set_physical_aspect(9, 5); // runs on a TV, not an LCD
+	screen.set_physical_aspect(18, 5);
 	screen.set_refresh_hz(60);
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500));
 	screen.set_screen_update(FUNC(wp_state::screen_update_wp));
 	screen.set_palette(m_palette);
 	screen.set_size(819, 240);
-	screen.set_visarea(0, 819, 0, 240);
+	screen.set_visarea(0, 819-1, 0, 240-1);
 }
 
 
 void wp_state::wp2450ds(machine_config &config)
 {
 	Z80180(config, m_maincpu, 12.288_MHz_XTAL);
-	m_maincpu->set_addrmap(AS_PROGRAM, &wp_state::wp75_mem);
-	m_maincpu->set_addrmap(AS_IO, &wp_state::wp75_io);
+	m_maincpu->set_addrmap(AS_PROGRAM, &wp_state::wp2450ds_mem);
+	m_maincpu->set_addrmap(AS_IO, &wp_state::wp2450ds_io);
 
 	m_maincpu->set_periodic_int(FUNC(wp_state::wp_timer_interrupt), attotime::from_hz(1000)); //1000hz = 1ms period
 
@@ -1035,19 +1076,19 @@ void wp_state::wp2450ds(machine_config &config)
 	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
 	m_maincpu->tend0_callback().set(FUNC(wp_state::tend0_w));
 
+	/* floppy drives */
+	FLOPPY_CONNECTOR(config, "fdc:0", wp75_floppies, "35dd", wp75_floppy_formats).enable_sound(true);
+
 	/* Stepper motors */
 	uint8_t init_phase = 0;
 	STEPPER(config, m_steppers[0],init_phase);
 	STEPPER(config, m_steppers[1],init_phase);
 	STEPPER(config, m_steppers[2],init_phase);
 
-	/* floppy drives */
-	FLOPPY_CONNECTOR(config, "fdc:0", wp75_floppies, "35dd", wp75_floppy_formats).enable_sound(true);
-
 	PALETTE(config, m_palette, palette_device::MONOCHROME_HIGHLIGHT);
 
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
-	screen.set_physical_aspect(9, 5);
+	screen.set_physical_aspect(18, 5);
 	screen.set_refresh_hz(60);
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500));
 	screen.set_screen_update(FUNC(wp_state::screen_update_wp));
@@ -1065,22 +1106,30 @@ void wp_state::wp5500ds(machine_config &config)
 
 	m_maincpu->set_periodic_int(FUNC(wp_state::wp_timer_interrupt), attotime::from_hz(1000)); //1000hz = 1ms period
 
-	HD63266(config, m_fdc, 16_MHz_XTAL, true, true); 
+	HD63266(config, m_fdc, 16_MHz_XTAL, true, true);
 	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
+	m_maincpu->tend0_callback().set(FUNC(wp_state::tend0_w));
 
 	/* floppy drives */
 	FLOPPY_CONNECTOR(config, "fdc:0", wp75_floppies, "35dd", wp75_floppy_formats).enable_sound(true);
+
 	PALETTE(config, m_palette, palette_device::MONOCHROME_HIGHLIGHT);
+
+	/* Stepper motors */
+	uint8_t init_phase = 0;
+	STEPPER(config, m_steppers[0],init_phase);
+	STEPPER(config, m_steppers[1],init_phase);
+	STEPPER(config, m_steppers[2],init_phase);
 
 	/* video hardware */
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
 	screen.set_physical_aspect(4, 3);
 	screen.set_refresh_hz(60);
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500));
-	screen.set_screen_update(FUNC(wp_state::screen_update_wp));
+	screen.set_screen_update(FUNC(wp_state::screen_update_wp5500));
 	screen.set_palette(m_palette);
-	screen.set_size(819, 240);
-	screen.set_visarea(0, 819-1, 0, 240-1);
+	screen.set_size(828, 480);
+	screen.set_visarea(0, 828-1, 0, 480-1);
 }
 
 /* ROM definition */
@@ -1113,7 +1162,7 @@ ROM_END
 
 
 /* Driver */
-		
+
 /*    YEAR  NAME     PARENT   COMPAT   MACHINE  INPUT  CLASS       INIT       COMPANY   FULLNAME       FLAGS */
 
 COMP( 1989, wp75,     0,      0,    wp75,     wp75, wp_state, init_wp75, "Brother", "WP-75"    , MACHINE_NO_SOUND)
