@@ -350,7 +350,6 @@ INPUT_PORTS_END
 
 void wp_state::wp70_mem(address_map &map)
 {
-
 	map.unmap_value_high();
 	map(0x0000, 0x1FFF).rom();
 	map(0x2000, 0x5FFF).rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
@@ -387,16 +386,18 @@ void wp_state::wp75_mem(address_map &map)
 void wp_state::wp2450ds_mem(address_map &map)
 {
 	map.unmap_value_high();
-	map(0x0000, 0x3FFFF).rom();
-	map(0x2000, 0x5FFF).rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
+	map( 0x0000,0x3FFFF).rom();
+	map( 0x2000,0x5FFF ).rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
+
 	map(0x40000,0x5FFFF).rw(FUNC(wp_state::dict_r), FUNC(wp_state::dict_w)); //dictionary & bank program
 
 	map(0x60000,0x61FFF).mirror(0x10000).ram();
 	map(0x62000,0x65FFF).ram().region("maincpu", 0x62000); // <== window points here
 	map(0x66000,0x6FFFF).ram();
 	//this window points at the rom that is shadowed by ram from 0x2000-0x5FFF
-	map(0x72000, 0x75FFF).r(FUNC(wp_state::rom_wind_r)).share("romwindow");
-	map(0x78000, 0x7FFFF).ram();//there seems to be ram here
+	map(0x72000,0x75FFF).r(FUNC(wp_state::rom_wind_r)).share("romwindow");
+	map(0x76000,0x77FFF).ram();//???
+	map(0x78000,0x7FFFF).ram();//there seems to be ram here
 }
 
 
@@ -532,7 +533,6 @@ void wp_state::machine_reset()
 	m_steppers[0]->set_max_steps(96);
 	m_steppers[1]->set_max_steps(96);
 	m_steppers[2]->set_max_steps(96);
-
 }
 
 void wp_state::video_start()
@@ -573,6 +573,9 @@ void wp_state::init_wp75()
 	m_dmaend_off_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(wp_state::dmaend_off_callback),this));
 	m_motor_off_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(wp_state::motor_off_callback),this));
 	dict_base = 0;
+	//DREQ1 is tied to ground for mem-to-vram transfers
+	m_maincpu->set_input_line(Z180_INPUT_LINE_DREQ1, ASSERT_LINE);
+
 }
 
 uint32_t wp_state::screen_update_wp(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
@@ -615,12 +618,12 @@ uint32_t wp_state::screen_update_wp5500(screen_device &screen, bitmap_rgb32 &bit
 	uint8_t pixels;
 	static const uint32_t palette[2] = {0x282828, 0xffCC00 };
 
-	for (y = 0; y < 480; y++)
+	for (y = 0; y < 320; y++)
 	{
 		scanline = &bitmap.pix32(y);
-		for (x = 0; x < 79; x++)//widescreen has 91 col /line
+		for (x = 0; x < 80; x++)//widescreen has 91 col /line
 		{
-			pixels = vram[(y * 79) + x ];//+ 16384];
+			pixels = vram[(y * 80) + x + 0xC80 ];
 
 			*scanline++ = palette[(pixels>>7)&1];
 			*scanline++ = palette[(pixels>>6)&1];
@@ -1128,8 +1131,8 @@ void wp_state::wp5500ds(machine_config &config)
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500));
 	screen.set_screen_update(FUNC(wp_state::screen_update_wp5500));
 	screen.set_palette(m_palette);
-	screen.set_size(828, 480);
-	screen.set_visarea(0, 828-1, 0, 480-1);
+	screen.set_size(720, 320);
+	screen.set_visarea(0, 720-1, 0, 320-1);
 }
 
 /* ROM definition */
