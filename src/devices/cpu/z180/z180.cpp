@@ -59,7 +59,7 @@ Hitachi HD647180 series:
 #include "z180dasm.h"
 #include "debugger.h"
 
-#define VERBOSE 1
+//#define VERBOSE 1
 #include "logmacro.h"
 
 /* interrupt priorities */

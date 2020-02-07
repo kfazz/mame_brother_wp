@@ -1088,8 +1088,8 @@ void wp_state::wp2450ds(machine_config &config)
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500));
 	screen.set_screen_update(FUNC(wp_state::screen_update_wp));
 	screen.set_palette(m_palette);
-	screen.set_size(819, 240);
-	screen.set_visarea(0, 819-1, 0, 240-1);
+	screen.set_size(728, 240);
+	screen.set_visarea(0, 728-1, 0, 240-1);
 }
 
 void wp_state::wp5500ds(machine_config &config)
