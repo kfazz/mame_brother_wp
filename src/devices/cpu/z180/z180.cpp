@@ -59,7 +59,7 @@ Hitachi HD647180 series:
 #include "z180dasm.h"
 #include "debugger.h"
 
-//#define VERBOSE 1
+#define VERBOSE 1
 #include "logmacro.h"
 
 /* interrupt priorities */
@@ -1448,15 +1448,20 @@ int z180_device::z180_dma1()
 		bcr1 = 0x10000;
 	}
 
+	int count = bcr1;
 	int cycles = 0;
 
-	if ((m_iol & Z180_DREQ1) == 0)
-		return 0;
+//	if ((m_iol & Z180_DREQ1) == 0)
+//		return 0;
 
 	if (!(m_dstat & Z180_DSTAT_DE1))
 	{
 		return 0;
 	}
+
+	while (count > 0) //and DREQ1 is low in level mode
+	{
+	m_extra_cycles = 0;
 
 	/* last transfer happening now? */
 	if (bcr1 == 1)
@@ -1465,26 +1470,30 @@ int z180_device::z180_dma1()
 		m_tend1_cb(1);
 	}
 
-	m_extra_cycles = 0;
-
 	switch (m_dcntl & (Z180_DCNTL_DIM1 | Z180_DCNTL_DIM0))
 	{
 	case 0x00:  /* memory MAR1+1 to I/O IAR1 fixed */
 		m_iospace->write_byte(iar1, z180_read_memory(mar1++));
+		bcr1--;
 		break;
 	case 0x01:  /* memory MAR1-1 to I/O IAR1 fixed */
 		m_iospace->write_byte(iar1, z180_read_memory(mar1--));
+		bcr1--;
 		break;
 	case 0x02:  /* I/O IAR1 fixed to memory MAR1+1 */
 		z180_write_memory(mar1++, m_iospace->read_byte(iar1));
+		bcr1--;
 		break;
 	case 0x03:  /* I/O IAR1 fixed to memory MAR1-1 */
 		z180_write_memory(mar1--, m_iospace->read_byte(iar1));
+		bcr1--;
 		break;
 	}
 
+	count--;
 	cycles += memory_wait_states();
-	cycles += m_extra_cycles; // use extra_cycles for I/O wait states
+	cycles += 6 + m_extra_cycles; // use extra_cycles for I/O wait states
+	}
 
 	/* edge sensitive DREQ1 ? */
 	if (m_dcntl & Z180_DCNTL_DIM1)
@@ -1504,7 +1513,7 @@ int z180_device::z180_dma1()
 	}
 
 	/* six cycles per transfer (minimum) */
-	return 6 + cycles;
+	return cycles;
 }
 
 void z180_device::z180_write_iolines(uint32_t data)
