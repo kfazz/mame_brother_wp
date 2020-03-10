@@ -1,5 +1,8 @@
 <?xml version="1.0"?>
 <!DOCTYPE softwarelist SYSTEM "softwarelist.dtd">
+<!--
+license:CC0
+-->
 <softwarelist name="ibm5170" description="IBM PC/AT disk images">
 
 	<software name="advdiags">
@@ -464,7 +467,7 @@
 			</dataarea>
 		</part>
 		<part name="flop2" interface="floppy_3_5">
-			<dataarea name="rom" size = "1474560">
+			<dataarea name="flop" size = "1474560">
 				<rom name="blueflops-2.0.14-bf-2.img" size="1474560" crc="622b1adc" sha1="c413aea75c4696da41dfc95b71503eb25e3e8a0f"/>
 			</dataarea>
 		</part>
@@ -2113,7 +2116,6 @@
 		</part>
 	</software>
 
-	<!-- IBM Extended Density Format not supported -->
 	<software name="pcdos7fr" cloneof="pcdos7" supported="no">
 		<description>PC DOS 7.0 (French)</description>
 		<year>1995</year>
@@ -2145,7 +2147,6 @@
 		</part>
 	</software>
 
-	<!-- IBM Extended Density Format not supported -->
 	<software name="pcdos7ja" cloneof="pcdos7" supported="no">
 		<description>PC DOS 7.0 (Japanese)</description>
 		<year>1995</year>
@@ -2198,7 +2199,6 @@
 		</part>
 	</software>
 
-	<!-- IBM Extended Density Format not supported -->
 	<software name="pcdos7ko" cloneof="pcdos7" supported="no">
 		<description>PC DOS 7.0 (Korean)</description>
 		<year>1995</year>
@@ -2246,7 +2246,6 @@
 		</part>
 	</software>
 
-	<!-- IBM Extended Density Format not supported -->
 	<software name="pcdos7ru" cloneof="pcdos7" supported="no">
 		<description>PC DOS 7.0 (Russian)</description>
 		<year>1995</year>
@@ -2279,7 +2278,6 @@
 		</part>
 	</software>
 
-	<!-- IBM Extended Density Format not supported -->
 	<software name="pcdos7engb" cloneof="pcdos7" supported="no">
 		<description>PC DOS 7.0 (UK English)</description>
 		<year>1995</year>
@@ -2570,7 +2568,6 @@
 		</part>
 	</software>
 
-	<!-- IBM Extended Density Format not supported -->
 	<software name="pcdos2kzhs" cloneof="pcdos2k" supported="no">
 		<description>IBM PC DOS 2000 (Simplified Chinese)</description>
 		<year>1998</year>
@@ -5090,6 +5087,67 @@
 		</part>
 	</software>
 
+	<software name="asuscd" supported="no">
+		<description>ASUS DVD / CD-ROM Drive Installation Disk Rev 1.5</description>
+		<year>1999</year>
+		<publisher>ASUSTek Computer</publisher>
+		<info name="version" value="1.5" />
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size = "1474560">
+				<rom name="ASUSCD150.img" size="1474560" crc="c020bf23" sha1="5bc80b05edec41a8523d59711498f8c64ddd0778"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="cdrom20" supported="no">
+		<description>CD-ROM Device Driver Version 2.00</description>
+		<year>1995</year>
+		<publisher>&lt;unknown&gt;</publisher>
+		<info name="version" value="2.00" />
+		<info name="serial" value="PART NO: 53.00037.001" />
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size = "737280">
+				<rom name="CD-ROM Device Driver.img" size="737280" crc="c7651d24" sha1="729a7cf901ad58990201da39a7bbd0967b6d2b20"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="cdrom22">
+		<description>CD-ROM/DVD-ROM drive IDE/ATAPI interface V2.2</description>
+		<year>1999</year>
+		<publisher>&lt;unknown&gt;</publisher>
+		<info name="version" value="2.2" />
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size = "1474560">
+				<rom name="CD-ROM_DVD-ROM_DRIVE_IDE_ATAPI_INTERFACE_v2.2.img" size="1474560" crc="a26cbdcb" sha1="e35eeb62c1b2c144defd3fbf0cd5ade5655e6505"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="cdrom32" supported="no">
+		<description>CD-ROM driver ATAPI (Version 3.2)</description>
+		<year>1999</year>
+		<publisher>CD Tech?</publisher>
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size="1474560">
+				<rom name="cdtech cd-rom driver atapi (version 3.2).img" size="1474560" crc="d41648aa" sha1="82728df751577e77591b544d4b77d781ad1457ba"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<!-- Contains drivers for various makes and models; the MAME ATAPI CD-ROM device is compatible with e.g. the "COMPAQ", "NEC", and "TATUNG" drivers -->
+	<software name="cdgod55">
+		<description>CD-ROM God Boot Disk Version 5.5 BETA2</description>
+		<year>1998</year>
+		<publisher>Kristopher Marciniak</publisher>
+		<info name="version" value="5.5 BETA2" />
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size = "1474560">
+				<rom name="cdgod55.img" size="1474560" crc="f31ebbea" sha1="76af4556a48abe31eb6eaec83ab6131ea79f788a"/>
+			</dataarea>
+		</part>
+	</software>
+
 	<software name="gd542x">
 		<!-- from Acer CPR 1.2 recovery CD-ROM -->
 		<description>CL GD542X Video</description>
@@ -5187,17 +5245,6 @@
 		<part name="flop1" interface="floppy_3_5">
 			<dataarea name="flop" size="1474560">
 				<rom name="crystal semiconductor corp cs4237b (version 1.80) (37bxx3d-141296-34).img" size="1474560" crc="adc33367" sha1="ead63de3a30fcf996a4c8cd2b9c6f914363ee7c3"/>
-			</dataarea>
-		</part>
-	</software>
-
-	<software name="cdrom32">
-		<description>CD-ROM driver ATAPI (Version 3.2)</description>
-		<year>1999</year>
-		<publisher>CD Tech?</publisher>
-		<part name="flop1" interface="floppy_3_5">
-			<dataarea name="flop" size="1474560">
-				<rom name="cdtech cd-rom driver atapi (version 3.2).img" size="1474560" crc="d41648aa" sha1="82728df751577e77591b544d4b77d781ad1457ba"/>
 			</dataarea>
 		</part>
 	</software>
@@ -5302,7 +5349,7 @@
 		</part>
 	</software>
 
-	<software name="hscd414">
+	<software name="hscd414" supported="no">
 		<description>High-Speed CD-ROM Driver (Version 4.14)</description>
 		<year>199?</year>
 		<publisher>Philips</publisher>
@@ -5505,6 +5552,20 @@
 		</part>
 	</software>
 
+	<software name="lgcdrom">
+		<description>MS-DOS CD-ROM Extensions With Device Driver - Installation Disk Ver 1.25</description>
+		<year>1997</year>
+		<publisher>LG</publisher>
+		<info name="version" value="1.25" />
+		<info name="serial" value="P/N. 3171H-1011A / S0050802" />
+		<part name="flop1" interface="floppy_3_5">
+			<!-- 1024-byte footer removed from 1475584-byte image -->
+			<dataarea name="flop" size = "1474560">
+				<rom name="cd-driver-1.25.img" size="1474560" crc="2ae76e35" sha1="ddf5f96010cb183188af2dbc1e7f6a4e5e2c3f4d"/>
+			</dataarea>
+		</part>
+	</software>
+
 	<software name="fastart">
 		<description>MS-DOS FASTART/SYSTEM - The Compaq Personal Computer FASTART/SYSTEM Diskette</description>
 		<year>1992</year>
@@ -5533,7 +5594,7 @@
 		</part>
 	</software>
 
-	<software name="neccd110">
+	<software name="neccd110" supported="no">
 		<description>NEC Atapi-IDE CD-Rom Driver (Rev D011V110.ENG019)</description>
 		<year>1995</year>
 		<publisher>NEC</publisher>
@@ -7587,6 +7648,17 @@
 		</part>
 	</software>
 
+	<software name="tagplus">
+		<description>Tågplusguiden - Vinter–Våren 1998</description>
+		<year>1998</year>
+		<publisher>Förlags AB Sveriges Kommunikationer</publisher>
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size = "1474560">
+				<rom name="tagplus.img" size="1474560" crc="0791df49" sha1="9e6135848f43a84909d49bb147a300ef22c5611c"/>
+			</dataarea>
+		</part>
+	</software>
+
 	<!-- Bundled with "TMS320C5x DSK - Applications Guide" by Texas Instruments. TI ID: BPRA063 -->
 	<software name="tms320c5x">
 		<description>TMS320C5x DSK - Applications Guide - Application Software</description>
@@ -8838,6 +8910,18 @@
 		</part>
 	</software>
 
+	<software name="anotherw">
+		<description>Another World</description>
+		<year>1991</year>
+		<publisher>U.S. Gold</publisher>
+		<info name="developer" value="Delphine Software" />
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size = "1474560">
+				<rom name="Another World [U.S. Gold] [1991] [3.5HD] [Disk 1 of 1].img" size="1474560" crc="4eb64a42" sha1="b04f581b6c14c4b592b89f1875e645f7c03a90d6"/>
+			</dataarea>
+		</part>
+	</software>
+	
 	<software name="amd80gad">
 		<description>AMD 80C287 Game and Demo</description>
 		<year>199?</year>
@@ -9121,6 +9205,23 @@
 		<part name="flop1" interface="floppy_3_5">
 			<dataarea name="flop" size = "1474560">
 				<rom name="bytesize_149.img" size="1474560" crc="210fc964" sha1="93ed421c783e55f8030cf3074568aabe5c8a3fb1"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="cfodder2">
+		<description>Cannon Fodder 2</description>
+		<year>1994</year>
+		<publisher>Virgin</publisher>
+		<info name="developer" value="Sensible Software" />
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size = "1474560">
+				<rom name="Cannon Fodder 2 [Virgin Interactive Entertainment] [1994] [3.5HD] [Disk 1 of 2].img" size="1474560" crc="d81d4719" sha1="c597e10cbf4573726ad60d8a3ecd0566f3ae34c4"/>
+			</dataarea>
+		</part>
+		<part name="flop2" interface="floppy_3_5">
+			<dataarea name="flop" size = "1474560">
+				<rom name="Cannon Fodder 2 [Virgin Interactive Entertainment] [1994] [3.5HD] [Disk 2 of 2].img" size="1474560" crc="d4e2aa4b" sha1="119e74068858e5a409fa79ef3302a2012d843ac2"/>
 			</dataarea>
 		</part>
 	</software>
@@ -9422,7 +9523,7 @@
 	</software>
 
 	<software name="crystalc">
-		<description>Crystal Caves</description>
+		<description>Crystal Caves (1.0a)</description>
 		<year>1991</year>
 		<publisher>Apogee Software</publisher>
 		<info name="developer" value="Apogee Software" />
@@ -10044,6 +10145,30 @@
 		</part>
 	</software>
 
+	<software name="epcrashb">
+		<description>Epic Pinball: Crash and Burn</description>
+		<year>1994</year>
+		<publisher>The B&amp;N Companies</publisher>
+		<info name="developer" value="Epic Megagames" />
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size = "737280">
+				<rom name="Epic Pinball - Crash and Burn [The B&amp;N Companies] [1994] [3.5DD] [Disk 1 of 1].img" size="737280" crc="f56c626d" sha1="a4c564a77d0da32d93a053d6bcfd33864b043e69"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="epcyborg">
+		<description>Epic Pinball: Cyborgirl</description>
+		<year>1994</year>
+		<publisher>The B&amp;N Companies</publisher>
+		<info name="developer" value="Epic Megagames" />
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size = "737280">
+				<rom name="Epic Pinball - Cyborgirl [The B&amp;N Companies] [1994] [3.5DD] [Disk 1 of 1].img" size="737280" crc="7370af3e" sha1="6ae169ff06c03da063ac72cb3318b76facbf0559"/>
+			</dataarea>
+		</part>
+	</software>
+
 	<software name="epdeepsea">
 		<description>Epic Pinball: Deep Sea</description>
 		<year>1994</year>
@@ -10053,6 +10178,31 @@
 		<part name="flop1" interface="floppy_3_5">
 			<dataarea name="flop" size = "737280">
 				<rom name="Pinball Deep Sea [B&amp;N Companies] [1994] [3.5DD] [Disk 1 of 1].img" size="737280" crc="caae0723" sha1="625694111fc8cf946d2009caa3c6ca927e0c6779"/>
+			</dataarea>
+		</part>
+	</software>
+
+
+	<software name="epenigma">
+		<description>Epic Pinball: Enigma</description>
+		<year>1994</year>
+		<publisher>The B&amp;N Companies</publisher>
+		<info name="developer" value="Epic Megagames" />
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size = "1474560">
+				<rom name="Epic Pinball - Enigma [The B&amp;N Companies] [1994] [3.5HD] [Disk 1 of 1].img" size="1474560" crc="f603258e" sha1="4e8e9f8ea096979faeb5a0f5c316ee15227d3758"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="epsharew">
+		<description>Epic Pinball (shareware version - Mr. Disk release)</description>
+		<year>1993</year>
+		<publisher>The B&amp;N Companies</publisher>
+		<info name="developer" value="Epic Megagames" />
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size = "737280">
+				<rom name="Epic Pinball (shareware version - Mr. Disk release) [The B&amp;N Companies] [1993] [3.5DD] [Disk 1 of 1].img" size="737280" crc="16488379" sha1="1c94029d3ab7913e353d96e1d2aa4c2a20129bb4"/>
 			</dataarea>
 		</part>
 	</software>
@@ -10691,6 +10841,53 @@
 		</part>
 	</software>
 
+	<software name="humans" supported="no">
+		<description>The Humans (3.5" DD)</description>
+		<year>1993</year>
+		<publisher>GameTek</publisher>
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size = "737280">
+				<rom name="The Humans [GameTek] [1992] [3.5DD] [Disk 1 of 4].img" size="737280" crc="c495a6cc" sha1="a052eecea85a433e32af3b95502ac5d4ff9e8dd6"/>
+			</dataarea>
+		</part>
+		<part name="flop2" interface="floppy_3_5">
+			<dataarea name="flop" size = "737280">
+				<rom name="The Humans [GameTek] [1992] [3.5DD] [Disk 2 of 4].img" size="737280" crc="da7599e7" sha1="d18b191a07a820620d173deff0fd40c7f8d3a8f0"/>
+			</dataarea>
+		</part>
+		<part name="flop3" interface="floppy_3_5">
+			<dataarea name="flop" size = "737280">
+				<rom name="The Humans [GameTek] [1992] [3.5DD] [Disk 3 of 4].img" size="737280" crc="5d567b00" sha1="964a7d5814a91a830e66376b1960575d3ed82935"/>
+			</dataarea>
+		</part>
+		<part name="flop4" interface="floppy_3_5">
+			<dataarea name="flop" size = "737280">
+				<rom name="The Humans [GameTek] [1992] [3.5DD] [Disk 4 of 4].img" size="737280" crc="07c709d5" sha1="49cbff728b2f7eabb08b6fd909c9e9bce14f241f"/>
+			</dataarea>
+		</part>
+	</software>
+	
+	<software name="humans_525" cloneof="humans">
+		<description>The Humans (5.25" HD)</description>
+		<year>1993</year>
+		<publisher>GameTek</publisher>
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size = "1228800">
+				<rom name="The Humans [GameTek] [1992] [5.25HD] [Disk 1 of 3].img" size="1228800" crc="2dc56954" sha1="25877a02d07686f71e9bfc74a6e507a02a859c56"/>
+			</dataarea>
+		</part>
+		<part name="flop2" interface="floppy_3_5">
+			<dataarea name="flop" size = "1228800">
+				<rom name="The Humans [GameTek] [1992] [5.25HD] [Disk 2 of 3].img" size="1228800" crc="f376ef79" sha1="7a7f3b829edba812e88a81a958549eb4099bd9cd"/>
+			</dataarea>
+		</part>
+		<part name="flop3" interface="floppy_3_5">
+			<dataarea name="flop" size = "1228800">
+				<rom name="The Humans [GameTek] [1992] [5.25HD] [Disk 3 of 3].img" size="1228800" crc="1e0e73ed" sha1="e0fcd8422b91c8d3ea00e5706be871e9a4cf408c"/>
+			</dataarea>
+		</part>
+	</software>
+	
 	<software name="incait">
 		<description>Inca (Italian)</description>
 		<year>1992</year>
@@ -12124,7 +12321,7 @@
 	</software>
 
 	<software name="monkeyit" cloneof="monkeyk">
-		<description>The Secret of Monkey Island (Italian)</description>
+		<description>The Secret of Monkey Island (Italy)</description>
 		<year>1991</year>
 		<publisher>Lucasfilm Games</publisher>
 		<info name="developer" value="Lucasfilm Games" />
@@ -12132,22 +12329,22 @@
 		<info name="version" value="(VGA) Italian 1.0, 24 May 1991" />
 		<part name="flop1" interface="floppy_3_5">
 			<dataarea name="flop" size = "1474560">
-				<rom name="The Secret of Monkey Island (Italian) [Lucasfilm Games] [1991] [3.5HD] [Disk 1 of 4].img" size="1474560" crc="855256e3" sha1="045f3698543055e11ce6dd570f39e7233feca51a"/>
+				<rom name="The Secret of Monkey Island (Italy) [Lucasfilm Games] [1991] [3.5HD] [Disk 1 of 4].img" size="1474560" crc="855256e3" sha1="045f3698543055e11ce6dd570f39e7233feca51a"/>
 			</dataarea>
 		</part>
 		<part name="flop2" interface="floppy_3_5">
 			<dataarea name="flop" size = "1474560">
-				<rom name="The Secret of Monkey Island (Italian) [Lucasfilm Games] [1991] [3.5HD] [Disk 2 of 4].img" size="1474560" crc="56320b7b" sha1="e4c6ac3d5409b4b2d6a397d96a45c0c40b558c5f"/>
+				<rom name="The Secret of Monkey Island (Italy) [Lucasfilm Games] [1991] [3.5HD] [Disk 2 of 4].img" size="1474560" crc="56320b7b" sha1="e4c6ac3d5409b4b2d6a397d96a45c0c40b558c5f"/>
 			</dataarea>
 		</part>
 		<part name="flop3" interface="floppy_3_5">
 			<dataarea name="flop" size = "1474560">
-				<rom name="The Secret of Monkey Island (Italian) [Lucasfilm Games] [1991] [3.5HD] [Disk 3 of 4].img" size="1474560" crc="456bfda5" sha1="14f1075199e39f9a033c073ba4dbed85c8937ebf"/>
+				<rom name="The Secret of Monkey Island (Italy) [Lucasfilm Games] [1991] [3.5HD] [Disk 3 of 4].img" size="1474560" crc="456bfda5" sha1="14f1075199e39f9a033c073ba4dbed85c8937ebf"/>
 			</dataarea>
 		</part>
 		<part name="flop4" interface="floppy_3_5">
 			<dataarea name="flop" size = "1474560">
-				<rom name="The Secret of Monkey Island (Italian) [Lucasfilm Games] [1991] [3.5HD] [Disk 4 of 4].img" size="1474560" crc="2aab0101" sha1="689d2958ec39ab1dbdee508c66b4d8aedde71126"/>
+				<rom name="The Secret of Monkey Island (Italy) [Lucasfilm Games] [1991] [3.5HD] [Disk 4 of 4].img" size="1474560" crc="2aab0101" sha1="689d2958ec39ab1dbdee508c66b4d8aedde71126"/>
 			</dataarea>
 		</part>
 	</software>

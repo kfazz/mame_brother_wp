@@ -138,6 +138,8 @@ CPUS["HPC"] = true
 --CPUS["BCP"] = true
 --CPUS["CR16B"] = true
 CPUS["FR"] = true
+CPUS["UPD78K"] = true
+CPUS["KS0164"] = true
 
 --------------------------------------------------
 -- specify available sound cores
@@ -287,6 +289,7 @@ VIDEOS["SEGA315_5124"] = true
 VIDEOS["SEGA315_5313"] = true
 --VIDEOS["AM8052"] = true
 VIDEOS["BUFSPRITE"] = true
+VIDEOS["BT45X"] = true
 --VIDEOS["CDP1861"] = true
 --VIDEOS["CDP1862"] = true
 VIDEOS["CESBLIT"] = true
@@ -522,7 +525,6 @@ MACHINES["MB89371"] = true
 MACHINES["MB89374"] = true
 --MACHINES["MC14411"] = true
 MACHINES["MC146818"] = true
-MACHINES["MC2661"] = true
 MACHINES["MC6843"] = true
 MACHINES["MC6846"] = true
 MACHINES["MC6852"] = true
@@ -599,6 +601,7 @@ MACHINES["S3C24XX"] = true
 --MACHINES["S3C44B0"] = true
 MACHINES["SATURN"] = true
 MACHINES["SCC68070"] = true
+MACHINES["SCN_PCI"] = true
 MACHINES["SCSI"] = true
 MACHINES["SCUDSP"] = true
 MACHINES["SDA2006"] = true
@@ -648,7 +651,6 @@ MACHINES["X2212"] = true
 MACHINES["X76F041"] = true
 MACHINES["X76F100"] = true
 MACHINES["Z80CTC"] = true
-MACHINES["Z80DART"] = true
 MACHINES["Z80SIO"] = true
 MACHINES["Z80SCC"] = true
 MACHINES["Z80DMA"] = true
@@ -807,6 +809,7 @@ FORMATS["NASLITE_DSK"] = true
 FORMATS["UPD765_DSK"] = true
 FORMATS["PC_DSK"] = true
 FORMATS["BASICDSK"] = true
+FORMATS["IBMXDF_DSK"] = true
 
 --------------------------------------------------
 -- this is the list of driver libraries that
@@ -3391,6 +3394,8 @@ files {
 	MAME_DIR .. "src/mame/drivers/y2.cpp",
 	MAME_DIR .. "src/mame/video/powervr2.cpp",
 	MAME_DIR .. "src/mame/video/powervr2.h",
+	MAME_DIR .. "src/mame/machine/gunsense.cpp",
+	MAME_DIR .. "src/mame/machine/gunsense.h",
 	MAME_DIR .. "src/mame/machine/naomi.cpp",
 	MAME_DIR .. "src/mame/machine/naomig1.cpp",
 	MAME_DIR .. "src/mame/machine/naomig1.h",
@@ -5007,8 +5012,6 @@ files {
 	MAME_DIR .. "src/mame/drivers/wms.cpp",
 	MAME_DIR .. "src/mame/drivers/xtom3d.cpp",
 	MAME_DIR .. "src/mame/drivers/xyonix.cpp",
-	MAME_DIR .. "src/mame/includes/xyonix.h",
-	MAME_DIR .. "src/mame/video/xyonix.cpp",
 	MAME_DIR .. "src/mame/drivers/yuvomz80.cpp",
 }
 end

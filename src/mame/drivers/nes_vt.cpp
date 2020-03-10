@@ -71,7 +71,7 @@
 #include "machine/bankdev.h"
 #include "video/ppu2c0x_vt.h"
 #include "machine/m6502_vtscr.h"
-#include "machine/m6502_vh2009.h"
+#include "machine/m6502_swap_op_d5_d6.h"
 #include "screen.h"
 #include "speaker.h"
 
@@ -103,6 +103,7 @@ public:
 	{ }
 
 	void nes_vt_base(machine_config& config);
+	void nes_vt_base_pal(machine_config& config);
 
 	void nes_vt(machine_config& config);
 
@@ -190,10 +191,10 @@ private:
 
 	/* Extra IO */
 	DECLARE_WRITE8_MEMBER(extra_io_control_w);
-	DECLARE_READ8_MEMBER(extrain_01_r);
-	DECLARE_READ8_MEMBER(extrain_23_r);
-	DECLARE_WRITE8_MEMBER(extraout_01_w);
-	DECLARE_WRITE8_MEMBER(extraout_23_w);
+	virtual DECLARE_READ8_MEMBER(extrain_01_r);
+	virtual DECLARE_READ8_MEMBER(extrain_23_r);
+	virtual DECLARE_WRITE8_MEMBER(extraout_01_w);
+	virtual DECLARE_WRITE8_MEMBER(extraout_23_w);
 
 
 	DECLARE_WRITE8_MEMBER(chr_w);
@@ -274,6 +275,16 @@ protected:
 	virtual void machine_reset() override;
 };
 
+class nes_vt_timetp36_state : public nes_vt_state
+{
+public:
+	nes_vt_timetp36_state(const machine_config& mconfig, device_type type, const char* tag) :
+		nes_vt_state(mconfig, type, tag)
+	{ }
+
+protected:
+};
+
 class nes_vt_hum_state : public nes_vt_state
 {
 public:
@@ -349,7 +360,7 @@ public:
 		m_latch0_bit(0),
 		m_latch1_bit(0)
 	{ }
-	
+
 protected:
 	virtual DECLARE_READ8_MEMBER(in0_r) override;
 	virtual DECLARE_READ8_MEMBER(in1_r) override;
@@ -419,8 +430,6 @@ public:
 		m_ablpinb_in0_val(0),
 		m_plunger(*this, "PLUNGER")
 	{ }
-
-	void nes_vt_ablpinb(machine_config& config);
 
 protected:
 	virtual void machine_start() override;
@@ -536,7 +545,7 @@ WRITE8_MEMBER(nes_vt_cy_lexibook_state::in0_w)
 		m_latch1_bit = m_latch1 & 0x01;
 		m_latch1 >>= 1;
 	}
-	
+
 	m_previous_port0 = data;
 }
 
@@ -1571,13 +1580,13 @@ READ8_MEMBER(nes_vt_state::extrain_23_r)
 WRITE8_MEMBER(nes_vt_state::extraout_01_w)
 {
 	// TODO: use callbacks for this as output can be hooked up to anything
-	logerror("%s: extraout_01_w %02x\n", data);
+	logerror("%s: extraout_01_w %02x\n", machine().describe_context(), data);
 }
 
 WRITE8_MEMBER(nes_vt_state::extraout_23_w)
 {
 	// TODO: use callbacks for this as output can be hooked up to anything
-	logerror("%s: extraout_23_w %02x\n", data);
+	logerror("%s: extraout_23_w %02x\n", machine().describe_context(), data);
 }
 
 READ8_MEMBER(nes_vt_state::rs232flags_region_r)
@@ -1706,8 +1715,8 @@ void nes_vt_state::nes_vt_map(address_map &map)
 	map(0x4100, 0x410b).r(FUNC(nes_vt_state::vt03_410x_r)).w(FUNC(nes_vt_state::vt03_410x_w));
 	// 0x410c unused
 	map(0x410d, 0x410d).w(FUNC(nes_vt_state::extra_io_control_w));
-	map(0x410e, 0x410e).r(FUNC(nes_vt_state::extrain_01_r));
-	map(0x410f, 0x410f).r(FUNC(nes_vt_state::extrain_23_r));
+	map(0x410e, 0x410e).rw(FUNC(nes_vt_state::extrain_01_r), FUNC(nes_vt_state::extraout_01_w));
+	map(0x410f, 0x410f).rw(FUNC(nes_vt_state::extrain_23_r), FUNC(nes_vt_state::extraout_23_w));
 	// 0x4114 RS232 timer (low)
 	// 0x4115 RS232 timer (high)
 	// 0x4116 unused
@@ -1924,7 +1933,7 @@ void nes_vt_state::nes_vt_base(machine_config &config)
 	m_apu->add_route(ALL_OUTPUTS, "mono", 0.50);
 }
 
-void nes_vt_ablpinb_state::nes_vt_ablpinb(machine_config &config)
+void nes_vt_state::nes_vt_base_pal(machine_config &config)
 {
 	nes_vt_base(config);
 
@@ -1943,6 +1952,8 @@ void nes_vt_ablpinb_state::nes_vt_ablpinb(machine_config &config)
 	m_screen->set_size(32 * 8, 312);
 	m_screen->set_visarea(0 * 8, 32 * 8 - 1, 0 * 8, 30 * 8 - 1);
 }
+
+
 
 void nes_vt_sudoku_state::nes_vt_sudoku(machine_config &config)
 {
@@ -1965,7 +1976,7 @@ void nes_vt_waixing_state::machine_reset()
 	nes_vt_state::machine_reset();
 
 	m_ppu->set_201x_descramble(0x3, 0x2, 0x7, 0x6, 0x5, 0x4); // reasonable
-//	set_8000_scramble(0x5, 0x4, 0x3, 0x2, 0x7, 0x6, 0x7, 0x8);
+//  set_8000_scramble(0x5, 0x4, 0x3, 0x2, 0x7, 0x6, 0x7, 0x8);
 }
 
 void nes_vt_hum_state::machine_reset()
@@ -2117,7 +2128,7 @@ void nes_vt_vh2009_state::nes_vt_vh2009(machine_config &config)
 {
 	nes_vt(config);
 
-	M6502_VH2009(config.replace(), m_maincpu, NTSC_APU_CLOCK);
+	M6502_SWAP_OP_D5_D6(config.replace(), m_maincpu, NTSC_APU_CLOCK);
 	m_maincpu->set_addrmap(AS_PROGRAM, &nes_vt_vh2009_state::nes_vt_map);
 
 	//m_ppu->set_palette_mode(PAL_MODE_NEW_VG); // gives better title screens, but worse ingame, must be able to switch
@@ -2201,6 +2212,51 @@ static INPUT_PORTS_START( majgnc )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_BUTTON5 ) PORT_NAME("5 / BET")
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_BUTTON4 ) PORT_NAME("4")
 INPUT_PORTS_END
+
+static INPUT_PORTS_START( timetp36 )
+	PORT_INCLUDE(nes_vt)
+
+	PORT_MODIFY("IO0")
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_BUTTON1 ) PORT_PLAYER(1) PORT_NAME("A")
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_BUTTON2 ) PORT_PLAYER(1) PORT_NAME("B")
+
+	PORT_MODIFY("IO1") // no 2nd player
+	PORT_BIT( 0xff, IP_ACTIVE_HIGH, IPT_UNUSED )
+
+	// where does the 'Y' button map? no games use it?
+	PORT_START("EXTRAIN0") // see code at 8084, stored at 0x66  
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_BUTTON3 ) PORT_NAME("X") // used in the NAM-1975 rip-off 'Army Strike'
+	PORT_DIPNAME( 0x02, 0x02, "Unknown Bit 0" )
+	PORT_DIPSETTING(    0x02, DEF_STR( Off ) )
+	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
+
+	PORT_DIPNAME( 0x04, 0x04, "Unknown Bit 1" ) // see code at 808D, stored at 0x68 (never read?)
+	PORT_DIPSETTING(    0x04, DEF_STR( Off ) )
+	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x08, 0x08, "Unknown Bit 2" )
+	PORT_DIPSETTING(    0x08, DEF_STR( Off ) )
+	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
+
+	PORT_START("EXTRAIN1") // code at 809A reads this in, stored at 0x156
+	PORT_DIPNAME( 0x01, 0x01, "Unknown Bit 3" )
+	PORT_DIPSETTING(    0x01, DEF_STR( Off ) )
+	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x06, 0x04, DEF_STR( Difficulty ) ) // 3 possible slider positions
+	PORT_DIPSETTING(    0x06, DEF_STR( Easy ) ) // 3 minutes timer in Bombs Away
+	PORT_DIPSETTING(    0x04, DEF_STR( Normal ) ) // 2 minute 30
+	PORT_DIPSETTING(    0x02, DEF_STR( Hard ) ) // 2 minute
+	PORT_DIPSETTING(    0x00, "Hard (duplicate)" )
+	PORT_DIPNAME( 0x08, 0x08, "Unknown Bit 4" ) //  ... code at 8064 instead seems to be reading 8 bits with a shifter? stored at 0x67 (investigate)
+	PORT_DIPSETTING(    0x08, DEF_STR( Off ) )
+	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
+
+	PORT_START("EXTRAIN2")
+	PORT_BIT( 0x0f, IP_ACTIVE_HIGH, IPT_UNUSED )
+
+	PORT_START("EXTRAIN3")
+	PORT_BIT( 0x0f, IP_ACTIVE_HIGH, IPT_UNUSED )
+INPUT_PORTS_END
+
 
 void nes_vt_sudoku_state::init_sudoku()
 {
@@ -2296,6 +2352,18 @@ ROM_START( dgun2561 )
 	ROM_LOAD( "dgun2561.bin", 0x00000, 0x4000000, CRC(a6e627b4) SHA1(2667d2feb02de349387f9dcfa5418e7ed3afeef6) )
 ROM_END
 
+ROM_START( dgun2593 )
+	ROM_REGION( 0x8000000, "mainrom", 0 )
+	ROM_LOAD( "dreamgear300.bin", 0x00000, 0x8000000, CRC(4fe0ed02) SHA1(a55590557bacca65ed9a17c5bcf0a4e5cb223126) )
+ROM_END
+
+ROM_START( rtvgc300 )
+	ROM_REGION( 0x8000000, "mainrom", 0 )
+	// some of the higher address lines might be swapped
+	ROM_LOAD( "lexibook300.bin", 0x00000, 0x4000000, CRC(015c4067) SHA1(a12986c4a366a23c4c7ca7b3d33e421a8dfdffc0) )
+ROM_END
+
+
 
 // The maximum address space a VT chip can see is 32MB, so these 64MB roms are actually 2 programs (there are vectors in the first half and the 2nd half)
 // there must be a bankswitch bit that switches the whole 32MB space.  Loading the 2nd half in Star Wars does actually boot straight to a game.
@@ -2316,13 +2384,22 @@ ROM_START( lxcmcyfz )
 	ROM_LOAD( "jl2365_frozen.u1", 0x00000, 0x4000000, CRC(64d4c708) SHA1(1bc2d161326ce3039ab9ba46ad62695060cfb2e1) )
 ROM_END
 
+ROM_START( lxcmcydp )
+	ROM_REGION( 0x4000000, "mainrom", 0 )
+	// sub-board was marked for 2GB capacity (A0-A26 address lines), but only address lines A0-A24 are connected to the chip
+	ROM_LOAD( "cyberarcade-disneyprincess.bin", 0x00000, 0x4000000, CRC(05946f81) SHA1(33eea2b70f5427e7613c836b8a08148731fac231) )
+ROM_END
+
 ROM_START( lxcmc250 )
 	ROM_REGION( 0x4000000, "mainrom", 0 )
 	// sub-board was marked for 2GB capacity (A0-A26 address lines), but only address lines A0-A24 are connected to the chip
 	ROM_LOAD( "cca250in1.u1", 0x00000, 0x4000000, CRC(6ccd6ad6) SHA1(fafed339097c3d1538faa306021a8373c1b799b3) )
 ROM_END
 
-
+ROM_START( red5mam )
+	ROM_REGION( 0x8000000, "mainrom", 0 )
+	ROM_LOAD( "mam.u3", 0x00000, 0x8000000, CRC(0c0a0ecd) SHA1(2dfd8437de17fc9975698f1933dd81fbac78466d) )
+ROM_END
 
 ROM_START( cybar120 )
 	ROM_REGION( 0x2000000, "mainrom", 0 )
@@ -2490,6 +2567,11 @@ ROM_START( megapad )
 	ROM_LOAD( "megapad.bin", 0x00000, 0x200000, CRC(1eb603a8) SHA1(3de6f0620a0db0558daa7fd7ccf08d9d5607a6af) )
 ROM_END
 
+ROM_START( timetp36 )
+	ROM_REGION( 0x400000, "mainrom", 0 )
+	ROM_LOAD( "36in1.bin", 0x00000, 0x400000, CRC(e2fb8a6c) SHA1(163d257dd0e6dc19c8fab19cc363ea8be659c40a) )
+ROM_END
+
 ROM_START( ddrstraw )
 	ROM_REGION( 0x200000, "mainrom", 0 )
 	ROM_LOAD( "straws-ddr.bin", 0x00000, 0x200000, CRC(ce94e53a) SHA1(10c6970205a4df28086029c0a348225f57bf0cc5) ) // 26LV160 Flash
@@ -2589,6 +2671,11 @@ ROM_START( unkra200 ) // "Winbond 25Q64FVSIG 1324" SPI ROM
 	ROM_LOAD( "retro_machine_rom", 0x00000, 0x800000, CRC(0e824aa7) SHA1(957e98868559ecc22b3fa42c76692417b76bf132) )
 ROM_END
 
+ROM_START( ppgc200g )
+	ROM_REGION( 0x800000, "mainrom", 0 )
+	ROM_LOAD( "m29dw641.u2", 0x00000, 0x800000, CRC(b16dc677) SHA1(c1984fde4caf9345d41d127db946d1c21ec43ae0) )
+ROM_END
+
 ROM_START( fcpocket )
 	ROM_REGION( 0x8000000, "mainrom", 0 )
 	ROM_LOAD( "s29gl01gp.bin", 0x00000, 0x8000000, CRC(8703b18a) SHA1(07943443294e80ca93f83181c8bdbf950b87c52f) )
@@ -2608,6 +2695,15 @@ ROM_START( zdog )
 	ROM_REGION( 0x400000, "mainrom", 0 )
 	ROM_LOAD( "zdog.bin", 0x00000, 0x400000, CRC(5ed3485b) SHA1(5ab0e9370d4ed1535205deb0456878c4e400dd81) )
 ROM_END
+
+ROM_START( otrail )
+	ROM_REGION( 0x2000000, "mainrom", 0 )
+	ROM_LOAD( "g25q80cw.bin", 0x00000, 0x100000, CRC(b20a03ba) SHA1(c4ca8e590b07baaebed747537bc8f92e44bdd219) ) // dumped as QD25Q80C
+
+	ROM_REGION( 0x200, "seeprom", 0 )
+	ROM_LOAD( "t24c04a.bin", 0x000, 0x200, CRC(ce1fad6f) SHA1(82878996765739edba42042b6336460d5c8f8096) )
+ROM_END
+
 
 
 
@@ -2631,7 +2727,7 @@ CONS( 200?, vtboxing,     0,  0,  nes_vt, nes_vt, nes_vt_state, empty_init, "VRT
 
 // Menu system clearly started off as 'vtpinball'  Many elements seem similar to Family Pinball for the Famicom.
 // 050329 (29th March 2005) date on PCB
-CONS( 2005, ablpinb, 0,  0,  nes_vt_ablpinb,    ablpinb, nes_vt_ablpinb_state, empty_init, "Advance Bright Ltd", "Pinball (P8002, ABL TV Game)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_SOUND )
+CONS( 2005, ablpinb, 0,  0,  nes_vt_base_pal,    ablpinb, nes_vt_ablpinb_state, empty_init, "Advance Bright Ltd", "Pinball (P8002, ABL TV Game)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_SOUND )
 
 
 // Black pad marked 'SUDOKU' with tails on the S and U characters looping over the logo.  Box says "Plug and Play Sudoku"
@@ -2650,13 +2746,15 @@ CONS( 2006, vgtablet,  0, 0,  nes_vt_vg,        nes_vt, nes_vt_hh_state, empty_i
 // There is a 2004 Majesco Frogger "TV game" that appears to contain the same version of Frogger as above but with no other games, so probably fits here.
 CONS( 2004, majkon,    0, 0,  nes_vt_vg_baddma, nes_vt, nes_vt_hh_state, empty_init, "Majesco (licensed from Konami)", "Konami Collector's Series Arcade Advanced", MACHINE_NOT_WORKING ) // raster timing is broken for Frogger, palette issues
 
-CONS( 200?, majgnc,    0, 0,  nes_vt_majgnc, majgnc, nes_vt_majgnc_state, empty_init, "Majesco", "Golden Nugget Casino", MACHINE_NOT_WORKING )
+CONS( 200?, majgnc,    0, 0,  nes_vt_majgnc, majgnc, nes_vt_majgnc_state,  empty_init, "Majesco", "Golden Nugget Casino", MACHINE_NOT_WORKING )
 
 // small black unit, dpad on left, 4 buttons (A,B,X,Y) on right, Start/Reset/Select in middle, unit text "Sudoku Plug & Play TV Game"
-CONS( 200?, sudopptv,    0, 0,  nes_vt, nes_vt, nes_vt_waixing_state, empty_init, "Smart Planet", "Sudoku Plug & Play TV Game '6 Intelligent Games'", MACHINE_NOT_WORKING )
+CONS( 200?, sudopptv,  0, 0,  nes_vt,        nes_vt, nes_vt_waixing_state, empty_init, "Smart Planet", "Sudoku Plug & Play TV Game '6 Intelligent Games'", MACHINE_NOT_WORKING )
 
-CONS( 200?, megapad,   0,        0,  nes_vt, nes_vt, nes_vt_waixing_state, empty_init, "Waixing",         "Megapad 31-in-1", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_SOUND ) // Happy Biqi has broken sprites, investigate before promoting
+CONS( 200?, megapad,   0, 0,  nes_vt,        nes_vt, nes_vt_waixing_state, empty_init, "Waixing", "Megapad 31-in-1", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_SOUND ) // Happy Biqi has broken sprites, investigate before promoting
 
+ // needs PCM samples, Y button is not mapped (not used by any of the games?)
+CONS( 200?, timetp36,  0, 0,  nes_vt_base_pal,        timetp36, nes_vt_timetp36_state,        empty_init, "TimeTop", "Super Game 36-in-1 (TimeTop SuperGame) (PAL)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_SOUND )
 
 // this is VT09 based
 // it boots, most games correct, but palette issues in some games still (usually they appear greyscale)
@@ -2674,13 +2772,17 @@ CONS( 200?, vgpmini,   0,  0,  nes_vt_vg, nes_vt, nes_vt_hh_state, empty_init, "
 CONS( 200?, dgun2500,  0,  0,  nes_vt_dg, nes_vt, nes_vt_dg_state, empty_init, "dreamGEAR", "dreamGEAR Wireless Motion Control with 130 games (DGUN-2500)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_SOUND)
 
 // don't even get to menu. very enhanced chipset, VT368/9?
-CONS( 2012, dgun2561,  0,  0,  nes_vt_cy, nes_vt, nes_vt_cy_lexibook_state, empty_init, "dreamGEAR", "dreamGEAR My Arcade Portable Gaming System (DGUN-2561)", MACHINE_NOT_WORKING )
+CONS( 2012, dgun2561,  0,  0,  nes_vt_cy, nes_vt, nes_vt_cy_lexibook_state, empty_init, "dreamGEAR", "My Arcade Portable Gaming System (DGUN-2561)", MACHINE_NOT_WORKING )
+CONS( 2016, dgun2593,  0,  0,  nes_vt_fp, nes_vt, nes_vt_hh_state, empty_init, "dreamGEAR", "My Arcade Retro Arcade Machine - 300 Handheld Video Games (DGUN-2593)", MACHINE_NOT_WORKING )
+
 CONS( 200?, lxcmcy,    0,  0,  nes_vt_cy, nes_vt, nes_vt_cy_lexibook_state, empty_init, "Lexibook", "Lexibook Compact Cyber Arcade", MACHINE_NOT_WORKING )
 CONS( 200?, lxcmc250,  0,  0,  nes_vt_cy, nes_vt, nes_vt_cy_lexibook_state, empty_init, "Lexibook", "Lexibook Compact Cyber Arcade - 250-in-1 (JL2375)", MACHINE_NOT_WORKING )
 CONS( 200?, lxcmcysw,  0,  0,  nes_vt_cy, nes_vt, nes_vt_cy_lexibook_state, empty_init, "Lexibook", "Lexibook Compact Cyber Arcade - Star Wars Rebels", MACHINE_NOT_WORKING )
 CONS( 200?, lxcmcyfz,  0,  0,  nes_vt_cy, nes_vt, nes_vt_cy_lexibook_state, empty_init, "Lexibook", "Lexibook Compact Cyber Arcade - Frozen", MACHINE_NOT_WORKING )
-// Also Lexibook Compact Cyber Arcade - Disney Princesses
-//      Lexibook Compact Cyber Arcade - Cars
+CONS( 200?, lxcmcydp,  0,  0,  nes_vt_cy, nes_vt, nes_vt_cy_lexibook_state, empty_init, "Lexibook", "Lexibook Compact Cyber Arcade - Disney Princess", MACHINE_NOT_WORKING )
+CONS( 2016, rtvgc300,  0,  0,  nes_vt_cy, nes_vt, nes_vt_cy_lexibook_state, empty_init, "Lexibook", "Lexibook Retro TV Game Console - 300 Games", MACHINE_NOT_WORKING )
+
+// Also Lexibook Compact Cyber Arcade - Cars
 //      Lexibook Compact Cyber Arcade - Paw Patrol
 //      Lexibook Compact Cyber Arcade - Barbie
 //      Lexibook Compact Cyber Arcade - Finding Dory
@@ -2688,13 +2790,15 @@ CONS( 200?, lxcmcyfz,  0,  0,  nes_vt_cy, nes_vt, nes_vt_cy_lexibook_state, empt
 //      Lexibook Compact Cyber Arcade - PJ Masks
 // more?
 
+// intial code isn't valid? scrambled?
+CONS( 201?, red5mam,  0,  0,  nes_vt_cy, nes_vt, nes_vt_cy_lexibook_state, empty_init, "Red5", "Mini Arcade Machine (Red5)", MACHINE_NOT_WORKING )
 
 
 // boots, same platform with scrambled opcodes as FC pocket
 // palette issues in some games because they actually use the old VT style palette
 // but no way to switch?
 // some menu gfx broken, probably because this is a bad dump
-CONS( 2015, dgun2573,  0,  0,  nes_vt_fp, nes_vt, nes_vt_hh_state, empty_init, "dreamGEAR", "dreamGEAR My Arcade Gamer V Portable Gaming System (DGUN-2573)",  MACHINE_WRONG_COLORS | MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_SOUND )
+CONS( 2015, dgun2573,  0,  0,  nes_vt_fp, nes_vt, nes_vt_hh_state, empty_init, "dreamGEAR", "My Arcade Gamer V Portable Gaming System (DGUN-2573)",  MACHINE_WRONG_COLORS | MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_SOUND )
 
 
 
@@ -2780,6 +2884,12 @@ CONS( 201?, dvnimbus,   0,        0,  nes_vt_vg, nes_vt, nes_vt_hh_state, empty_
 CONS( 201?, mc_tv200,   0,        0,  nes_vt,    nes_vt, nes_vt_state, empty_init, "Thumbs Up", "200 in 1 Retro TV Game", MACHINE_IMPERFECT_GRAPHICS )
  // probably another Thumbs Up product? cursor doesn't work unless nes_vt_hh machine is used? possibly newer than VT02 as it runs from an SPI ROM, might just not use enhanced features.  Some minor game name changes to above (eg Smackdown just becomes Wrestling)
 CONS( 201?, unkra200,   mc_tv200, 0,  nes_vt_hh, nes_vt, nes_vt_hh_state, empty_init, "<unknown>", "200 in 1 Retro Arcade", MACHINE_IMPERFECT_GRAPHICS )
+
+
+// available in a number of colours, with various brands, but likely all the same.
+// This was a red coloured pad, contains various unlicensed bootleg reskinned NES game eg Blob Buster is a hack of Dig Dug 2 and there are also hacks of Xevious, Donkey Kong Jr, Donkey Kong 3 and many others.
+CONS( 201?, ppgc200g,   0, 0,  nes_vt, nes_vt, nes_vt_state, empty_init, "<unknown>", "Plug & Play Game Controller with 200 Games (Supreme 200)", MACHINE_IMPERFECT_GRAPHICS )
+
 // New platform with scrambled opcodes, same as DGUN-2561. Runs fine with minor GFX and sound issues in menu
 // Use DIP switch to select console or cartridge, as cartridge is fake and just toggles a GPIO
 CONS( 2016, fcpocket,   0,        0,  nes_vt_fp, nes_vt_fp, nes_vt_hh_state, empty_init, "<unknown>",   "FC Pocket 600 in 1", MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_SOUND )
@@ -2790,4 +2900,7 @@ CONS( 2017, fapocket,   0,        0,  nes_vt_fa, nes_vt_fa, nes_vt_dg_state, emp
 
 // Plays intro music but then crashes. same hardware as SY-88x but uses more features
 CONS( 2016, mog_m320,   0,        0,  nes_vt_hh, nes_vt, nes_vt_hh_state, empty_init, "MOGIS",    "MOGIS M320 246 in 1 Handheld", MACHINE_NOT_WORKING )
+
+CONS( 2017, otrail,     0,        0,  nes_vt_dg, nes_vt, nes_vt_dg_state, empty_init, "Basic Fun", "The Oregon Trail", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_GRAPHICS )
+
 
