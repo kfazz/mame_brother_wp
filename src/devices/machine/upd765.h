@@ -592,8 +592,8 @@ public:
 	DECLARE_READ8_MEMBER(hd_r);
 	DECLARE_WRITE8_MEMBER(hd_w);
 
-private:
-	uint8_t m_sr2;
+//private:
+	//uint8_t m_sr2;
 };
 
 DECLARE_DEVICE_TYPE(UPD765A,        upd765a_device)

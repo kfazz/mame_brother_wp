@@ -147,7 +147,7 @@ private:
 	uint8_t vh; //addr vram io window points at
 
 	bool ca_idx = false; //true when carriage is left homed or csol is true
-	bool rsol = false; //ribbon solenoid
+	//bool rsol = false; //ribbon solenoid
 	bool csol = false; //correction solenoid
 
 	//for fdc dma
@@ -160,8 +160,8 @@ private:
 	int32_t carriage_position = 50; //120 steps per inch
 
 	//used to determing whether carriage is going left or right
-	uint8_t ca_prev = 0x00; //previous ca latch contents
-	uint8_t ca_now; //current ca latch contents
+	//uint8_t ca_prev = 0x00; //previous ca latch contents
+	//uint8_t ca_now; //current ca latch contents
 
 	uint32_t dict_base = 0;
 
@@ -170,7 +170,7 @@ private:
 	
 	uint8_t v_ctl;
 	uint8_t kb_matrix;
-	uint8_t bank_select;
+	//uint8_t bank_select;
 
 	required_device<z180_device> m_maincpu;
 	required_device<hd63266_device> m_fdc;
@@ -1132,7 +1132,7 @@ ROM_START( wp70 )	/*German WP-2b family derivative, 240kb floppy */
 	ROM_REGION( 0x80000, "maincpu", ROMREGION_ERASEFF )
 	ROM_LOAD( "ua6386.bin", 0x0000, 0x80000, CRC(6d61e49d) SHA1(4f2ee2b479e8b630dad9abeb82aa86ac3ab63ef7))
 	ROM_REGION( 0x80000, "rom1", ROMREGION_ERASEFF )
-	ROM_LOAD( "UA2849-dict-ger.BIN", 0x0000, 0x80000, CRC(fa8712eb) SHA1(2d3454138c79e75604b30229c05ed8fb8e7d15fe))
+	ROM_LOAD( "ua2849-dict-ger.bin", 0x0000, 0x80000, CRC(fa8712eb) SHA1(2d3454138c79e75604b30229c05ed8fb8e7d15fe))
 	ROM_REGION( 0x8000, "vram", ROMREGION_ERASEFF )
 ROM_END
 
@@ -1145,13 +1145,13 @@ ROM_END
 
 ROM_START( wp2450ds ) /*also wp2510ds*/
 	ROM_REGION( 0x80000, "maincpu", ROMREGION_ERASEFF )
-	ROM_LOAD( "UA8504001.BIN", 0x0000, 0x80000, CRC(c515ab07) SHA1(2e99eb22e9e8ed613d1490f56b2a9296474db2e0))
+	ROM_LOAD( "ua8504001.bin", 0x0000, 0x80000, CRC(c515ab07) SHA1(2e99eb22e9e8ed613d1490f56b2a9296474db2e0))
 	ROM_REGION( 0x8000, "vram", ROMREGION_ERASEFF )
 ROM_END
 
 ROM_START( wp5500ds )
 	ROM_REGION( 0x100000, "maincpu", ROMREGION_ERASEFF )
-	ROM_LOAD( "UA8584001.BIN", 0x0000, 0x80000, CRC(99f29d66) SHA1(61947cd312b890cb3a8b6c1ab05f73833f36d6b2))
+	ROM_LOAD( "ua8584001.bin", 0x0000, 0x80000, CRC(99f29d66) SHA1(61947cd312b890cb3a8b6c1ab05f73833f36d6b2))
 	ROM_REGION( 0x8000, "vram", ROMREGION_ERASEFF )
 ROM_END
 
