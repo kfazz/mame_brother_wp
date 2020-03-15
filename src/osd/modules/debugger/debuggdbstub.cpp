@@ -270,6 +270,30 @@ static const gdb_register_map gdb_register_map_z80 =
 	}
 };
 
+static const gdb_register_map gdb_register_map_z180 =
+{
+	"z180",
+	"mame.z180",
+	{
+		{ "AF",  "af",  false, TYPE_INT },
+		{ "BC",  "bc",  false, TYPE_INT },
+		{ "DE",  "de",  false, TYPE_INT },
+		{ "HL",  "hl",  false, TYPE_INT },
+		{ "AF2", "af'", false, TYPE_INT },
+		{ "BC2", "bc'", false, TYPE_INT },
+		{ "DE2", "de'", false, TYPE_INT },
+		{ "HL2", "hl'", false, TYPE_INT },
+		{ "IX",  "ix",  false, TYPE_INT },
+		{ "IY",  "iy",  false, TYPE_INT },
+		{ "SP",  "sp",  true,  TYPE_DATA_POINTER },
+		{ "PC",  "pc",  true,  TYPE_CODE_POINTER },
+		{ "CBR",  "cbr",  false, TYPE_INT },
+		{ "BBR",  "bbr",  false, TYPE_INT },
+		{ "CBAR",  "cbar",  false, TYPE_INT },
+
+	}
+};
+
 //-------------------------------------------------------------------------
 static const gdb_register_map gdb_register_map_m6502 =
 {
@@ -293,6 +317,7 @@ static const std::map<std::string, const gdb_register_map &> gdb_register_maps =
 	{ "ppc601",     gdb_register_map_ppc601 },
 	{ "m68020pmmu", gdb_register_map_m68020pmmu },
 	{ "z80",        gdb_register_map_z80 },
+	{ "z80180",     gdb_register_map_z180 },
 	{ "m6502",      gdb_register_map_m6502 },
 };
 
