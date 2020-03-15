@@ -14,13 +14,15 @@
 #include "formats/pc_dsk.h"
 #include "emupal.h"
 #include "screen.h"
+#include "sound/beep.h"
+#include "speaker.h"
 
 #define LOG_DMA     (1U << 1)	//dma delay assert/deassert
 #define LOG_BANK    (1U << 2)	//port H hard bank control
 #define LOG_VID     (1U << 3)	//CRTC
 #define LOG_SYS     (1U << 4)	//READ system strapping pins
 #define LOG_PG      (1U << 5)
-#define LOG_PK      (1U << 6)
+#define LOG_PK      (1U << 6)	//BEEPER
 #define LOG_KB      (1U << 7)	//keybd write = matrix select
 #define LOG_CA      (1U << 8) 	//carriage stepper
 #define LOG_WH      (1U << 9)	//daisy wheel
@@ -35,7 +37,7 @@
 #define LOG_PB      (1U << 16)	//limit switches
 #define LOG_IRQ     (1U << 17)
 
-#define VERBOSE (LOG_BANK )
+#define VERBOSE (LOG_BANK)
 #include "logmacro.h"
 
 #define LOGDMA(...)	LOGMASKED(LOG_DMA, __VA_ARGS__)
@@ -73,6 +75,7 @@ public:
 		, m_steppers(*this, "stepper%u", 0U)
 		, m_y(*this, "Y%u", 0) //keyboard columns
 		, m_palette(*this, "palette")
+		, m_beeper(*this, "beeper")
 	{
 	}
 
@@ -178,6 +181,7 @@ private:
 	required_device_array<stepper_device, 3> m_steppers;
 	required_ioport_array<9> m_y;
 	required_device<palette_device> m_palette;
+	required_device<beep_device> m_beeper;
 	//required_device<screen_device> m_screen;
 
 	void wp70_io(address_map &map); //has ioport dict rom bank control
@@ -306,7 +310,8 @@ static INPUT_PORTS_START( wp75 )
 
 	PORT_START("Y5")
 	/*Degree symbol, +_ == and ^*/
-/*A0*/	PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_TILDE) PORT_CHAR('=') PORT_CHAR('^')
+	//Don't Hijack teh mame break key, for gdbstub testing
+/*A0*/	//PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_TILDE) PORT_CHAR('=') PORT_CHAR('^')
 /*A12*/	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_EQUALS) PORT_CHAR('+')
 /*A31*/	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_L) PORT_CHAR('l') PORT_CHAR('L')
 /*A30*/	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_K) PORT_CHAR('k') PORT_CHAR('K')
@@ -529,6 +534,7 @@ void wp_state::machine_reset()
 	m_steppers[0]->set_max_steps(96);
 	m_steppers[1]->set_max_steps(96);
 	m_steppers[2]->set_max_steps(96);
+	m_beeper->set_state(0);
 }
 
 void wp_state::video_start()
@@ -750,9 +756,23 @@ uint32_t wp_state::screen_update_wp5500(screen_device &screen, bitmap_rgb32 &bit
 
 	WRITE8_MEMBER(wp_state::pk_w)
 {
-	if (data & 1)
-	{ LOGPK("pg_w BEEP h:%02x\n",data); }
-	else { LOGPK("pg_w h:%02x\n",data); }
+	//if (data & 1)
+	//{ LOGPK("pg_w BEEP h:%02x\n",data); }
+	//else { 
+		LOGPK("pg_w h:%02x\n",data); 
+		//}
+
+	//0xfd beeping, 0xFF not beeping???
+
+	switch (data) {
+		case 0:
+		case 0xFF:
+		m_beeper->set_state(0);
+		break;
+		default:
+		m_beeper->set_state(1);
+	}	
+	//m_beeper->set_state((data >>1) ^ 1);
 }
 
 
@@ -1019,6 +1039,10 @@ void wp_state::wp70(machine_config &config)
 	screen.set_palette(m_palette);
 	screen.set_size(819, 240);
 	screen.set_visarea(0, 819-1, 0, 240-1);
+
+	SPEAKER(config, "mono").front_center();
+	BEEP(config, m_beeper, 4000);
+	m_beeper->add_route(ALL_OUTPUTS, "mono", 0.25);
 }
 
 void wp_state::wp75(machine_config &config)
@@ -1056,6 +1080,10 @@ void wp_state::wp75(machine_config &config)
 	screen.set_palette(m_palette);
 	screen.set_size(819, 240);
 	screen.set_visarea(0, 819-1, 0, 240-1);
+
+	SPEAKER(config, "mono").front_center();
+	BEEP(config, m_beeper, 4000);
+	m_beeper->add_route(ALL_OUTPUTS, "mono", 0.25);
 }
 
 
@@ -1090,6 +1118,12 @@ void wp_state::wp2450ds(machine_config &config)
 	screen.set_palette(m_palette);
 	screen.set_size(728, 240);
 	screen.set_visarea(0, 728-1, 0, 240-1);
+
+
+		/* sound hardware */
+	SPEAKER(config, "mono").front_center();
+	BEEP(config, m_beeper, 4000);
+	m_beeper->add_route(ALL_OUTPUTS, "mono", 0.25);
 }
 
 void wp_state::wp5500ds(machine_config &config)
@@ -1125,6 +1159,10 @@ void wp_state::wp5500ds(machine_config &config)
 	screen.set_palette(m_palette);
 	screen.set_size(720, 320);
 	screen.set_visarea(0, 720-1, 0, 320-1);
+
+	SPEAKER(config, "mono").front_center();
+	BEEP(config, m_beeper, 4000);
+	m_beeper->add_route(ALL_OUTPUTS, "mono", 0.25);
 }
 
 /* ROM definition */
