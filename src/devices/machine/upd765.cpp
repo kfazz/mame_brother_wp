@@ -22,7 +22,7 @@
 
 //#define VERBOSE (LOG_GENERAL | LOG_WARN )
 //#define VERBOSE (LOG_GENERAL | LOG_WARN | LOG_HEADER | LOG_FORMAT | LOG_REGS | LOG_FIFO | LOG_COMMAND | LOG_RW | LOG_MATCH | LOG_TCIRQ | LOG_STATE | LOG_DONE)
-#define VERBOSE (LOG_GENERAL | LOG_WARN | LOG_HEADER | LOG_RW  | LOG_COMMAND | LOG_FIFO | LOG_TCIRQ | LOG_DONE)
+#define VERBOSE (LOG_GENERAL | LOG_WARN | LOG_HEADER )
 
 #include "logmacro.h"
 
@@ -3151,16 +3151,6 @@ void hd63266_device::atr_w(uint8_t data)
 			fi.dev->ds_w(i);
 			fi.dev->mon_w(1); //motor off
 			motor_on = 0;
-			bool ready = get_ready(i);
-			LOGCOMMAND("MON CLEAR %d :old_ready %d -> ready %d\n", i, flopi[i].ready, ready);
-			if (flopi[i].ready != ready) {
-				flopi[i].ready = ready;
-				if(!flopi[i].st0_filled) {
-					flopi[i].st0 = ST0_ABRT | i;
-					flopi[i].st0_filled = true;
-					other_irq = true;
-				}
-			}
 			}
 		}
 	//lets assume that this is 'MON CLEAR'
@@ -3177,16 +3167,6 @@ void hd63266_device::atr_w(uint8_t data)
 			fi.dev->ds_w(i);
 			fi.dev->mon_w(0); //motor on
 			motor_on = 1;
-			bool ready = get_ready(i);
-			LOGCOMMAND("MON SET %d :old_ready %d -> ready %d\n", i, flopi[i].ready, ready);
-			if (flopi[i].ready != ready) {
-				flopi[i].ready = ready;
-				if(!flopi[i].st0_filled) {
-					flopi[i].st0 = ST0_ABRT | i;
-					flopi[i].st0_filled = true;
-					other_irq = true;
-				}
-			}
 			}
 		}
 	//lets assume that this is 'MON SET' and the 1 is drive 0
