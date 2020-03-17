@@ -20,8 +20,9 @@
 #define LOG_LIVE    (1U << 12)  // Live states
 #define LOG_DONE    (1U << 13)  // Command done
 
-#define VERBOSE (LOG_GENERAL | LOG_WARN )
+//#define VERBOSE (LOG_GENERAL | LOG_WARN )
 //#define VERBOSE (LOG_GENERAL | LOG_WARN | LOG_HEADER | LOG_FORMAT | LOG_REGS | LOG_FIFO | LOG_COMMAND | LOG_RW | LOG_MATCH | LOG_TCIRQ | LOG_STATE | LOG_DONE)
+#define VERBOSE (LOG_GENERAL | LOG_WARN | LOG_HEADER | LOG_RW  | LOG_COMMAND | LOG_FIFO | LOG_TCIRQ | LOG_DONE)
 
 #include "logmacro.h"
 
@@ -629,9 +630,13 @@ void upd765_family_device::fifo_push(uint8_t data, bool internal)
 
 	int thr = (fifocfg & FIF_THR)+1;
 	if(!fifo_write && (!fifo_expected || fifo_pos >= thr || (fifocfg & FIF_DIS)))
+	{
 		enable_transfer();
-	if(fifo_write && (fifo_pos == 16 || !fifo_expected))
+	}
+	if(fifo_write && (fifo_pos == 16 || !fifo_expected || (fifocfg & FIF_DIS) ))
+	{
 		disable_transfer();
+	}
 }
 
 
@@ -648,11 +653,13 @@ uint8_t upd765_family_device::fifo_pop(bool internal)
 	uint8_t r = fifo[0];
 	fifo_pos--;
 	memmove(fifo, fifo+1, fifo_pos);
-	if(!fifo_write && !fifo_pos)
+	if(!fifo_write && ( !fifo_pos || (fifocfg & FIF_DIS) ) ) {
 		disable_transfer();
+	}
 	int thr = fifocfg & 15;
-	if(fifo_write && fifo_expected && (fifo_pos <= thr || (fifocfg & 0x20)))
+	if(fifo_write && fifo_expected && (fifo_pos <= thr || (fifocfg & FIF_DIS))) {
 		enable_transfer();
+	}
 	return r;
 }
 
@@ -3106,8 +3113,9 @@ READ8_MEMBER(hd63266_device::hd_r)
 
 WRITE8_MEMBER(hd63266_device::hd_w)
 {
-	if (drq)
+	if (drq) {
 		return dma_w(data);
+	}
 	else
 		return fifo_w(data);
 	
@@ -3224,7 +3232,7 @@ int hd63266_device::check_command()
 		return command_pos == 2 ? C_READ_ID            : C_INCOMPLETE;
 	case 0x05:
 	case 0x09:
-	case 0x16:
+	case 0x16:	
 		return command_pos == 9 ? C_WRITE_DATA         : C_INCOMPLETE;
 	case 0x0f:
 		return command_pos == 3 ? C_SEEK               : C_INCOMPLETE;

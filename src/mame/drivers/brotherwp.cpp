@@ -37,7 +37,7 @@
 #define LOG_PB      (1U << 16)	//limit switches
 #define LOG_IRQ     (1U << 17)
 
-#define VERBOSE (LOG_BANK)
+#define VERBOSE (LOG_BANK | LOG_FDC | LOG_DMA )
 #include "logmacro.h"
 
 #define LOGDMA(...)	LOGMASKED(LOG_DMA, __VA_ARGS__)
