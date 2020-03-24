@@ -16,6 +16,7 @@
 #include "screen.h"
 #include "sound/beep.h"
 #include "speaker.h"
+#include "video/mc6845.h"
 
 #define LOG_DMA     (1U << 1)	//dma delay assert/deassert
 #define LOG_BANK    (1U << 2)	//port H hard bank control
@@ -76,6 +77,8 @@ public:
 		, m_y(*this, "Y%u", 0) //keyboard columns
 		, m_palette(*this, "palette")
 		, m_beeper(*this, "beeper")
+		, m_p_chargen(*this, "chargen")
+		, m_p_videoram(*this, "vram")
 	{
 	}
 
@@ -92,6 +95,8 @@ private:
 	virtual void video_start() override;
 	uint32_t screen_update_wp(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	uint32_t screen_update_wp5500(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
+
+    MC6845_UPDATE_ROW(crtc_update_row);
 
 	DECLARE_WRITE8_MEMBER(vpl_w);
 	DECLARE_WRITE8_MEMBER(vph_w);
@@ -176,13 +181,15 @@ private:
 	//uint8_t bank_select;
 
 	required_device<z180_device> m_maincpu;
-	required_device<hd63266_device> m_fdc;
-	required_device<floppy_connector> m_fdd0;
+	optional_device<hd63266_device> m_fdc;
+	optional_device<floppy_connector> m_fdd0;
 	required_device_array<stepper_device, 3> m_steppers;
 	required_ioport_array<9> m_y;
 	required_device<palette_device> m_palette;
 	required_device<beep_device> m_beeper;
 	//required_device<screen_device> m_screen;
+	optional_region_ptr<u8> m_p_chargen;
+	optional_shared_ptr<u8> m_p_videoram;
 
 	void wp70_io(address_map &map); //has ioport dict rom bank control
 	void wp70_mem(address_map &map);//has dict rom banked at 0x40000
@@ -380,7 +387,7 @@ void wp_state::wp75_mem(address_map &map)
 
 	//map(0x60000,0x61FFF).mirror(0x10000).ram();
 	//map(0x62000,0x65FFF).ram().region("maincpu", 0x62000); // <== window points here
-	//map(0x66000,0x6FFFF).ram();
+	map(0x66000,0x72000).ram();
 	//this window points at the rom that is shadowed by ram from 0x2000-0x5FFF
 	//map(0x72000, 0x75FFF).r(FUNC(wp_state::rom_wind_r)).share("romwindow");
 	//map(0x78000, 0x7FFFF).ram();//there seems to be ram here
@@ -460,6 +467,8 @@ void wp_state::wp75_io(address_map &map)
 	map.unmap_value_high();
 	map(0x0000, 0x003f).ram(); /* Z180 internal registers */
 	/*Video Registers*/
+    map(0x70, 0x70).rw("crtc", FUNC(mc6845_device::status_r), FUNC(mc6845_device::address_w));
+	map(0x71, 0x71).rw("crtc", FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
 }
 
 
@@ -1035,14 +1044,66 @@ void wp_state::wp70(machine_config &config)
 	screen.set_refresh_hz(60);
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500));
 	screen.set_screen_update(FUNC(wp_state::screen_update_wp));
-	screen.set_palette(m_palette);
-	screen.set_size(819, 240);
-	screen.set_visarea(0, 819-1, 0, 240-1);
+	//screen.set_palette(m_palette);
+	screen.set_size(728, 240);
+	screen.set_visarea(0, 728-1, 0, 240-1);
 
 	SPEAKER(config, "mono").front_center();
 	BEEP(config, m_beeper, 4000);
 	m_beeper->add_route(ALL_OUTPUTS, "mono", 0.25);
 }
+
+MC6845_UPDATE_ROW( wp_state::crtc_update_row )
+{
+	const rgb_t *palette = m_palette->palette()->entry_list_raw();
+	uint32_t *p = &bitmap.pix32(y);
+	uint8_t *vram = memregion("vram")->base();
+
+	for (uint16_t x = 0; x < x_count; x++)
+	{
+		uint8_t inv = (x == cursor_x) ? 0xff : 0;
+
+		uint8_t chr = vram[(ma + x) & 0x7ff]; // m_p_videoram[(ma + x) & 0x7ff];
+
+		if (chr & 0x80)
+		{
+			inv ^= 0xff;
+			chr &= 0x7f;
+		}
+
+		/* get pattern of pixels for that character scanline */
+		uint8_t gfx = m_p_chargen[(chr<<4) | ra] ^ inv;
+
+		/* Display a scanline of a character (8 pixels) */
+		*p++ = palette[BIT(gfx, 7)];
+		*p++ = palette[BIT(gfx, 6)];
+		*p++ = palette[BIT(gfx, 5)];
+		*p++ = palette[BIT(gfx, 4)];
+		*p++ = palette[BIT(gfx, 3)];
+		*p++ = palette[BIT(gfx, 2)];
+		*p++ = palette[BIT(gfx, 1)];
+		*p++ = palette[BIT(gfx, 0)];
+	}
+}
+
+/* F4 Character Displayer */
+static const gfx_layout charlayout =
+{
+	8, 16,                  /* 8 x 16 characters */
+	128,                    /* 128 characters */
+	1,                  /* 1 bits per pixel */
+	{ 0 },                  /* no bitplanes */
+	/* x offsets */
+	{0, 1, 2, 3, 4, 5, 6, 7 },
+	/* y offsets */
+	{ 0, 8, 2*8, 3*8, 4*8, 5*8, 6*8, 7*8, 8*8, 9*8 },
+	8*16                    /* every char takes 16 bytes */
+};
+
+static GFXDECODE_START( gfx_f4disp )
+	GFXDECODE_ENTRY( "chargen", 0x0000, charlayout, 0, 1 )
+GFXDECODE_END
+
 
 void wp_state::wp75(machine_config &config)
 {
@@ -1051,7 +1112,7 @@ void wp_state::wp75(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &wp_state::wp75_mem);
 	m_maincpu->set_addrmap(AS_IO, &wp_state::wp75_io);
 
-	m_maincpu->set_periodic_int(FUNC(wp_state::wp_timer_interrupt), attotime::from_hz(1000)); //1000hz = 1ms period
+	//m_maincpu->set_periodic_int(FUNC(wp_state::wp_timer_interrupt), attotime::from_hz(1000)); //1000hz = 1ms period
 
 	HD63266(config, m_fdc, 16_MHz_XTAL, true, true); 
 	//m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
@@ -1068,17 +1129,36 @@ void wp_state::wp75(machine_config &config)
 	STEPPER(config, m_steppers[1],init_phase);
 	STEPPER(config, m_steppers[2],init_phase);
 
-	PALETTE(config, m_palette, palette_device::MONOCHROME_HIGHLIGHT);
+	//PALETTE(config, m_palette, palette_device::MONOCHROME_HIGHLIGHT);
 
 	/* video hardware */
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
-	screen.set_physical_aspect(18, 5);
+	//screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	//screen.set_physical_aspect(18, 5);
+	//screen.set_refresh_hz(60);
+	//screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500));
+	//screen.set_screen_update(FUNC(wp_state::screen_update_wp));
+	//screen.set_palette(m_palette);
+	//screen.set_size(728, 240);
+	//screen.set_visarea(0, 728-1, 0, 240-1);
+
+		/* video hardware */
+	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER, rgb_t::green()));
 	screen.set_refresh_hz(60);
-	screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500));
-	screen.set_screen_update(FUNC(wp_state::screen_update_wp));
-	screen.set_palette(m_palette);
-	screen.set_size(819, 240);
-	screen.set_visarea(0, 819-1, 0, 240-1);
+	screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500)); // not correct
+	screen.set_screen_update("crtc", FUNC(mc6845_device::screen_update));
+	screen.set_size(728, 240);
+	screen.set_visarea(0, 727, 0, 239);
+	GFXDECODE(config, "gfxdecode", m_palette, gfx_f4disp);
+	PALETTE(config, m_palette, palette_device::MONOCHROME);
+
+	/* Devices */
+	mc6845_device &crtc(HD6345(config, "crtc", 2'000'000)); // clk unknown
+	crtc.set_screen("screen");
+	crtc.set_show_border_area(false);
+	crtc.set_char_width(8);
+	crtc.set_update_row_callback(FUNC(wp_state::crtc_update_row));
+	crtc.out_vsync_callback().set_inputline(m_maincpu, INPUT_LINE_NMI); // frame pulse
+
 
 	SPEAKER(config, "mono").front_center();
 	BEEP(config, m_beeper, 4000);
@@ -1114,7 +1194,7 @@ void wp_state::wp2450ds(machine_config &config)
 	screen.set_refresh_hz(60);
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500));
 	screen.set_screen_update(FUNC(wp_state::screen_update_wp));
-	screen.set_palette(m_palette);
+	//screen.set_palette(m_palette);
 	screen.set_size(728, 240);
 	screen.set_visarea(0, 728-1, 0, 240-1);
 
@@ -1155,7 +1235,7 @@ void wp_state::wp5500ds(machine_config &config)
 	screen.set_refresh_hz(60);
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500));
 	screen.set_screen_update(FUNC(wp_state::screen_update_wp5500));
-	screen.set_palette(m_palette);
+	//screen.set_palette(m_palette);
 	screen.set_size(720, 320);
 	screen.set_visarea(0, 720-1, 0, 320-1);
 
@@ -1173,10 +1253,13 @@ ROM_START( wp70 )	/*German WP-2b family derivative, 240kb floppy */
 	ROM_REGION( 0x8000, "vram", ROMREGION_ERASEFF )
 ROM_END
 
-ROM_START( wp75 )	/* 240kb floppy, 3 roms, not dumped yet */
+ROM_START( wp75 )	/* 240kb floppy */
 	ROM_REGION( 0x80000, "maincpu", ROMREGION_ERASEFF ) //prog rom
+	ROM_LOAD("ua1732001.bin", 0x0000, 0x40000,SHA1(e1ab84ba220de3a683a2b8de82c3f140f8582134))
 	ROM_REGION( 0x80000, "rom1", ROMREGION_ERASEFF ) //dict rom
+	ROM_LOAD("u17996001.bin", 0x0000, 0x40000, SHA1(4915ae12e2a17636292f7006dab2c511bce6290d)	)
 	ROM_REGION( 0x8000, "chargen", ROMREGION_ERASEFF ) //character generator
+	ROM_LOAD("ua2712002.bin", 0x0000, 0x8000, SHA1(88e77ecc228d218002994d4dd0f432013286640b))
 	ROM_REGION( 0x8000, "vram", ROMREGION_ERASEFF )
 ROM_END
 
