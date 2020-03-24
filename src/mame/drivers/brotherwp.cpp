@@ -385,6 +385,8 @@ void wp_state::wp75_mem(address_map &map)
 	map(0x2000, 0x5FFF).ram(); //rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
 	//map(0x40000,0x5FFFF).rw(FUNC(wp_state::dict_r), FUNC(wp_state::dict_w)); //dictionary & bank program
 
+	map(0x40000, 0x48000).ram().share("vram");
+
 	//map(0x60000,0x61FFF).mirror(0x10000).ram();
 	//map(0x62000,0x65FFF).ram().region("maincpu", 0x62000); // <== window points here
 	map(0x66000,0x72000).ram();
@@ -469,6 +471,16 @@ void wp_state::wp75_io(address_map &map)
 	/*Video Registers*/
     map(0x70, 0x70).rw("crtc", FUNC(mc6845_device::status_r), FUNC(mc6845_device::address_w));
 	map(0x71, 0x71).rw("crtc", FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
+
+	map(0xA8,0xA8).mirror(0xff00).r(FUNC(wp_state::portb_r));
+
+	map(0xB8,0xB8).mirror(0xff00).r(FUNC(wp_state::kb_r));
+	map(0xB8,0xB8).mirror(0xff00).w(FUNC(wp_state::kb_w));
+
+	map(0xD8,0xD8).mirror(0xff00).w(FUNC(wp_state::pg_w)); //solenoids and dc motor control
+
+	map(0xF8,0xF8).mirror(0xff00).w(FUNC(wp_state::irq1_clear_w));
+
 }
 
 
@@ -1057,13 +1069,14 @@ MC6845_UPDATE_ROW( wp_state::crtc_update_row )
 {
 	const rgb_t *palette = m_palette->palette()->entry_list_raw();
 	uint32_t *p = &bitmap.pix32(y);
-	uint8_t *vram = memregion("vram")->base();
+	//uint8_t *vram = memregion("vram")->base();
 
 	for (uint16_t x = 0; x < x_count; x++)
 	{
 		uint8_t inv = (x == cursor_x) ? 0xff : 0;
 
-		uint8_t chr = vram[(ma + x) & 0x7ff]; // m_p_videoram[(ma + x) & 0x7ff];
+		//uint8_t chr = vram[(ma + x) & 0x7ff]; // m_p_videoram[(ma + x) & 0x7ff];
+		uint8_t chr = m_p_videoram[(ma + x) & 0x7ff];
 
 		if (chr & 0x80)
 		{
@@ -1112,7 +1125,7 @@ void wp_state::wp75(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &wp_state::wp75_mem);
 	m_maincpu->set_addrmap(AS_IO, &wp_state::wp75_io);
 
-	//m_maincpu->set_periodic_int(FUNC(wp_state::wp_timer_interrupt), attotime::from_hz(1000)); //1000hz = 1ms period
+	m_maincpu->set_periodic_int(FUNC(wp_state::wp_timer_interrupt), attotime::from_hz(1000)); //1000hz = 1ms period
 
 	HD63266(config, m_fdc, 16_MHz_XTAL, true, true); 
 	//m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
@@ -1157,7 +1170,7 @@ void wp_state::wp75(machine_config &config)
 	crtc.set_show_border_area(false);
 	crtc.set_char_width(8);
 	crtc.set_update_row_callback(FUNC(wp_state::crtc_update_row));
-	crtc.out_vsync_callback().set_inputline(m_maincpu, INPUT_LINE_NMI); // frame pulse
+	//crtc.out_vsync_callback().set_inputline(m_maincpu, INPUT_LINE_NMI); // frame pulse
 
 
 	SPEAKER(config, "mono").front_center();
@@ -1260,7 +1273,7 @@ ROM_START( wp75 )	/* 240kb floppy */
 	ROM_LOAD("u17996001.bin", 0x0000, 0x40000, SHA1(4915ae12e2a17636292f7006dab2c511bce6290d)	)
 	ROM_REGION( 0x8000, "chargen", ROMREGION_ERASEFF ) //character generator
 	ROM_LOAD("ua2712002.bin", 0x0000, 0x8000, SHA1(88e77ecc228d218002994d4dd0f432013286640b))
-	ROM_REGION( 0x8000, "vram", ROMREGION_ERASEFF )
+	//ROM_REGION( 0x8000, "vram", ROMREGION_ERASEFF )
 ROM_END
 
 ROM_START( wp2450ds ) /*also wp2510ds*/
