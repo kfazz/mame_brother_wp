@@ -111,6 +111,7 @@ private:
 	INTERRUPT_GEN_MEMBER(wp_timer_interrupt);
 	DECLARE_READ8_MEMBER(portb_r); //limit switches
 	DECLARE_READ8_MEMBER(wp70_sys_r); //port c
+	DECLARE_READ8_MEMBER(wp75_sys_r); //port c
 	DECLARE_READ8_MEMBER(sys_r); //port c
 	DECLARE_WRITE8_MEMBER(irq1_clear_w);
 
@@ -382,17 +383,16 @@ void wp_state::wp75_mem(address_map &map)
 {
 	map.unmap_value_high();
 	map(0x0000, 0x3FFFF).rom();
-	map(0x2000, 0x5FFF).ram(); //rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
+	map(0x2000, 0x5FFF).rw(FUNC(wp_state::window_r), FUNC(wp_state::window_w)).share("window");
 	//map(0x40000,0x5FFFF).rw(FUNC(wp_state::dict_r), FUNC(wp_state::dict_w)); //dictionary & bank program
 
 	map(0x40000, 0x48000).ram().share("vram");
 
-	//map(0x60000,0x61FFF).mirror(0x10000).ram();
-	//map(0x62000,0x65FFF).ram().region("maincpu", 0x62000); // <== window points here
-	map(0x66000,0x72000).ram();
+	map(0x60000,0x61FFF).mirror(0x10000).ram();
+	map(0x62000,0x65FFF).ram().region("maincpu", 0x62000); // <== window points here
+	map(0x66000,0x70000).ram();
 	//this window points at the rom that is shadowed by ram from 0x2000-0x5FFF
-	//map(0x72000, 0x75FFF).r(FUNC(wp_state::rom_wind_r)).share("romwindow");
-	//map(0x78000, 0x7FFFF).ram();//there seems to be ram here
+	map(0x72000, 0x75FFF).r(FUNC(wp_state::rom_wind_r)).share("romwindow");
 }
 
 void wp_state::wp2450ds_mem(address_map &map)
@@ -473,6 +473,8 @@ void wp_state::wp75_io(address_map &map)
 	map(0x71, 0x71).rw("crtc", FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
 
 	map(0xA8,0xA8).mirror(0xff00).r(FUNC(wp_state::portb_r));
+
+	map(0xB0,0xB0).mirror(0xff00).r(FUNC(wp_state::wp75_sys_r)); //spec strap
 
 	map(0xB8,0xB8).mirror(0xff00).r(FUNC(wp_state::kb_r));
 	map(0xB8,0xB8).mirror(0xff00).w(FUNC(wp_state::kb_w));
@@ -597,7 +599,8 @@ void wp_state::init_wp75()
 	dict_base = 0;
 
 	//DREQ1 is tied to ground for mem-to-vram transfers
-	m_maincpu->set_input_line(Z180_INPUT_LINE_DREQ1, ASSERT_LINE);
+	//m_maincpu->set_input_line(Z180_INPUT_LINE_DREQ0, ASSERT_LINE);
+	//m_maincpu->set_input_line(Z180_INPUT_LINE_DREQ1, ASSERT_LINE);
 }
 
 uint32_t wp_state::screen_update_wp(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
@@ -754,6 +757,16 @@ uint32_t wp_state::screen_update_wp5500(screen_device &screen, bitmap_rgb32 &bit
 	LOGSYS("sysr h:%02x\n",data);
 	return data;
 }
+
+	READ8_MEMBER(wp_state::wp75_sys_r)
+{
+	//wp75 complains about spec strap being incorrect
+	//11 = s5 70 or 66 line s4 0, s3,2,1,0 country code 
+	uint8_t data = 0x2c; //??
+	LOGSYS("sysr h:%02x\n",data);
+	return data;
+}
+
 	READ8_MEMBER(wp_state::sys_r)
 {
 	//11 = s5 70 or 66 line s4 0, s3,2,1,0 country code 
@@ -1127,11 +1140,11 @@ void wp_state::wp75(machine_config &config)
 
 	m_maincpu->set_periodic_int(FUNC(wp_state::wp_timer_interrupt), attotime::from_hz(1000)); //1000hz = 1ms period
 
-	HD63266(config, m_fdc, 16_MHz_XTAL, true, true); 
+	//HD63266(config, m_fdc, 16_MHz_XTAL, true, true); 
 	//m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
 	//m_fdc->intrq_wr_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ2);
-	m_fdc->drq_wr_callback().set(FUNC(wp_state::drq_w));
-	m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
+	//m_fdc->drq_wr_callback().set(FUNC(wp_state::drq_w));
+	//m_fdc->drq_wr_callback().set_inputline(m_maincpu, Z180_INPUT_LINE_DREQ0);
 
 	/* floppy drives */
 	//MCFG_FLOPPY_DRIVE_ADD(FDC_TAG ":0", wp75_floppies, "35dd", wp75_floppy_formats)
@@ -1170,7 +1183,7 @@ void wp_state::wp75(machine_config &config)
 	crtc.set_show_border_area(false);
 	crtc.set_char_width(8);
 	crtc.set_update_row_callback(FUNC(wp_state::crtc_update_row));
-	//crtc.out_vsync_callback().set_inputline(m_maincpu, INPUT_LINE_NMI); // frame pulse
+	crtc.out_vsync_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ2); // frame pulse
 
 
 	SPEAKER(config, "mono").front_center();
