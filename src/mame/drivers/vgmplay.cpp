@@ -393,6 +393,11 @@ enum vgmplay_inputs : uint8_t
 	VGMPLAY_PLAY,
 	VGMPLAY_RESTART,
 	VGMPLAY_LOOP,
+	VGMPLAY_VIZ,
+	VGMPLAY_RATE_DOWN,
+	VGMPLAY_RATE_UP,
+	VGMPLAY_RATE_RST,
+	VGMPLAY_HOLD,
 };
 
 class vgmplay_state : public driver_device
@@ -446,6 +451,9 @@ public:
 	template<int Index> void ga20_map(address_map &map);
 
 private:
+	virtual void machine_start() override;
+
+	uint32_t m_held_clock;
 	std::vector<uint8_t> m_file_data;
 	required_device<vgmplay_device> m_vgmplay;
 	required_device<vgmviz_device> m_mixer;
@@ -956,14 +964,15 @@ void vgmplay_device::execute_run()
 			uint32_t version = m_file->read_dword(8);
 			m_pc = 0x34 + m_file->read_dword(0x34);
 
-			if ((version < 0x150 && m_pc != 0x34) ||
-				(version >= 0x150 && m_pc == 0x34))
+			if ((version < 0x150 && m_pc != 0x34) || (version >= 0x150 && m_pc == 0x34))
 			{
 				osd_printf_error("bad rip detected, v%x invalid header size 0x%x\n", version, m_pc);
 				m_pc = 0x40;
 			}
 			else if (version < 0x150)
+			{
 				m_pc = 0x40;
+			}
 
 			m_state = RUN;
 			break;
@@ -2600,6 +2609,11 @@ vgmplay_state::vgmplay_state(const machine_config &mconfig, device_type type, co
 	std::fill(std::begin(m_upd7759_drq), std::end(m_upd7759_drq), 0);
 }
 
+void vgmplay_state::machine_start()
+{
+	save_item(NAME(m_held_clock));
+}
+
 uint32_t vgmplay_state::r32(int off) const
 {
 	if (off + 3 < int(m_file_data.size()))
@@ -2757,6 +2771,8 @@ QUICKLOAD_LOAD_MEMBER(vgmplay_state::load_file)
 			device.set_unscaled_clock(c & ~0xc0000000);
 			if (device.unscaled_clock() != 0)
 				dynamic_cast<device_sound_interface *>(&device)->set_output_gain(ALL_OUTPUTS, chip_volume);
+			else
+				dynamic_cast<device_sound_interface *>(&device)->set_output_gain(ALL_OUTPUTS, 0);
 
 			return (c & 0x80000000) != 0;
 		});
@@ -3133,11 +3149,10 @@ WRITE8_MEMBER(vgmplay_state::scc_w)
 
 INPUT_CHANGED_MEMBER(vgmplay_state::key_pressed)
 {
-	if (!newval)
+	if (!newval && param != VGMPLAY_HOLD)
 		return;
 
-	int val = (uint8_t)param;
-	switch (val)
+	switch (param)
 	{
 	case VGMPLAY_STOP:
 		m_vgmplay->stop();
@@ -3154,16 +3169,43 @@ INPUT_CHANGED_MEMBER(vgmplay_state::key_pressed)
 	case VGMPLAY_LOOP:
 		m_vgmplay->toggle_loop();
 		break;
+	case VGMPLAY_VIZ:
+		m_mixer->cycle_viz_mode();
+		break;
+	case VGMPLAY_RATE_DOWN:
+		m_vgmplay->set_unscaled_clock((uint32_t)(m_vgmplay->clock() * 0.95f));
+		break;
+	case VGMPLAY_RATE_UP:
+		m_vgmplay->set_unscaled_clock((uint32_t)(m_vgmplay->clock() / 0.95f));
+		break;
+	case VGMPLAY_RATE_RST:
+		m_vgmplay->set_unscaled_clock(44100);
+		break;
+	case VGMPLAY_HOLD:
+		if (newval)
+		{
+			m_held_clock = m_vgmplay->clock();
+			m_vgmplay->set_unscaled_clock(0);
+		}
+		else
+		{
+			m_vgmplay->set_unscaled_clock(m_held_clock);
+		}
 	}
 }
 
 static INPUT_PORTS_START( vgmplay )
 	PORT_START("CONTROLS")
-	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_STOP)        PORT_NAME("Stop")
-	PORT_BIT(0x0002, IP_ACTIVE_HIGH, IPT_BUTTON2) PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_PAUSE)       PORT_NAME("Pause")
-	PORT_BIT(0x0004, IP_ACTIVE_HIGH, IPT_BUTTON3) PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_PLAY)        PORT_NAME("Play")
-	PORT_BIT(0x0008, IP_ACTIVE_HIGH, IPT_BUTTON4) PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_RESTART)     PORT_NAME("Restart")
-	PORT_BIT(0x0010, IP_ACTIVE_HIGH, IPT_BUTTON5) PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_LOOP)        PORT_NAME("Loop")
+	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_BUTTON1)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_STOP)        PORT_NAME("Stop")
+	PORT_BIT(0x0002, IP_ACTIVE_HIGH, IPT_BUTTON2)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_PAUSE)       PORT_NAME("Pause")
+	PORT_BIT(0x0004, IP_ACTIVE_HIGH, IPT_BUTTON3)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_PLAY)        PORT_NAME("Play")
+	PORT_BIT(0x0008, IP_ACTIVE_HIGH, IPT_BUTTON4)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_RESTART)     PORT_NAME("Restart")
+	PORT_BIT(0x0010, IP_ACTIVE_HIGH, IPT_BUTTON5)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_LOOP)        PORT_NAME("Loop")
+	PORT_BIT(0x0020, IP_ACTIVE_HIGH, IPT_BUTTON6)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_VIZ)         PORT_NAME("Visualization Mode")
+	PORT_BIT(0x0040, IP_ACTIVE_HIGH, IPT_BUTTON7)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_RATE_DOWN)   PORT_CODE(KEYCODE_R) PORT_NAME("Rate Down")
+	PORT_BIT(0x0080, IP_ACTIVE_HIGH, IPT_BUTTON8)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_RATE_UP)     PORT_CODE(KEYCODE_T) PORT_NAME("Rate Up")
+	PORT_BIT(0x0100, IP_ACTIVE_HIGH, IPT_BUTTON9)  PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_RATE_RST)    PORT_CODE(KEYCODE_Y) PORT_NAME("Rate Reset")
+	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_BUTTON10) PORT_CHANGED_MEMBER(DEVICE_SELF, vgmplay_state, key_pressed, VGMPLAY_HOLD)        PORT_CODE(KEYCODE_U) PORT_NAME("Rate Hold")
 INPUT_PORTS_END
 
 void vgmplay_state::file_map(address_map &map)
@@ -3184,8 +3226,8 @@ void vgmplay_state::soundchips_map(address_map &map)
 	map(vgmplay_device::A_YM2612_1, vgmplay_device::A_YM2612_1 + 3).w(m_ym2612[1], FUNC(ym2612_device::write));
 	map(vgmplay_device::A_YM2151_0, vgmplay_device::A_YM2151_0 + 1).w(m_ym2151[0], FUNC(ym2151_device::write));
 	map(vgmplay_device::A_YM2151_1, vgmplay_device::A_YM2151_1 + 1).w(m_ym2151[1], FUNC(ym2151_device::write));
-	map(vgmplay_device::A_SEGAPCM_0, vgmplay_device::A_SEGAPCM_0 + 0x7ff).w(m_segapcm[0], FUNC(segapcm_device::sega_pcm_w));
-	map(vgmplay_device::A_SEGAPCM_1, vgmplay_device::A_SEGAPCM_1 + 0x7ff).w(m_segapcm[1], FUNC(segapcm_device::sega_pcm_w));
+	map(vgmplay_device::A_SEGAPCM_0, vgmplay_device::A_SEGAPCM_0 + 0x7ff).w(m_segapcm[0], FUNC(segapcm_device::write));
+	map(vgmplay_device::A_SEGAPCM_1, vgmplay_device::A_SEGAPCM_1 + 0x7ff).w(m_segapcm[1], FUNC(segapcm_device::write));
 	map(vgmplay_device::A_RF5C68, vgmplay_device::A_RF5C68 + 0xf).w(m_rf5c68, FUNC(rf5c68_device::rf5c68_w));
 	map(vgmplay_device::A_RF5C68_RAM, vgmplay_device::A_RF5C68_RAM + 0xffff).w(m_rf5c68, FUNC(rf5c68_device::rf5c68_mem_w));
 	map(vgmplay_device::A_YM2203_0, vgmplay_device::A_YM2203_0 + 1).w(m_ym2203[0], FUNC(ym2203_device::write));
@@ -3286,8 +3328,8 @@ void vgmplay_state::soundchips_map(address_map &map)
 	// TODO: es5505
 	map(vgmplay_device::A_X1_010_0, vgmplay_device::A_X1_010_0 + 0x1fff).w(m_x1_010[0], FUNC(x1_010_device::write));
 	map(vgmplay_device::A_X1_010_1, vgmplay_device::A_X1_010_1 + 0x1fff).w(m_x1_010[1], FUNC(x1_010_device::write));
-	map(vgmplay_device::A_GA20_0, vgmplay_device::A_GA20_0 + 0x1f).w(m_ga20[0], FUNC(iremga20_device::irem_ga20_w));
-	map(vgmplay_device::A_GA20_1, vgmplay_device::A_GA20_1 + 0x1f).w(m_ga20[1], FUNC(iremga20_device::irem_ga20_w));
+	map(vgmplay_device::A_GA20_0, vgmplay_device::A_GA20_0 + 0x1f).w(m_ga20[0], FUNC(iremga20_device::write));
+	map(vgmplay_device::A_GA20_1, vgmplay_device::A_GA20_1 + 0x1f).w(m_ga20[1], FUNC(iremga20_device::write));
 }
 
 void vgmplay_state::soundchips16_map(address_map &map)

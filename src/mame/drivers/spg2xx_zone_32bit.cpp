@@ -28,9 +28,9 @@ protected:
 
 	required_region_ptr<uint16_t> m_romregion;
 
-	DECLARE_READ16_MEMBER(porta_r);
-	DECLARE_READ16_MEMBER(portb_r);
-	DECLARE_READ16_MEMBER(portc_r);
+	virtual DECLARE_READ16_MEMBER(porta_r);
+	virtual DECLARE_READ16_MEMBER(portb_r);
+	virtual DECLARE_READ16_MEMBER(portc_r);
 
 	virtual DECLARE_WRITE16_MEMBER(porta_w) override;
 	virtual DECLARE_WRITE16_MEMBER(portb_w) override;
@@ -57,6 +57,41 @@ protected:
 	virtual DECLARE_WRITE16_MEMBER(porta_w) override;
 
 	virtual void machine_reset() override;
+};
+
+class oplayer_100in1_state : public mywicodx_state
+{
+public:
+	oplayer_100in1_state(const machine_config& mconfig, device_type type, const char* tag) :
+		mywicodx_state(mconfig, type, tag)
+	{ }
+
+	void init_oplayer();
+
+
+protected:
+	virtual DECLARE_READ16_MEMBER(porta_r) override;
+	virtual DECLARE_READ16_MEMBER(portb_r) override;
+	virtual DECLARE_READ16_MEMBER(portc_r) override;
+};
+
+class denver_200in1_state : public mywicodx_state
+{
+public:
+	denver_200in1_state(const machine_config& mconfig, device_type type, const char* tag) :
+		mywicodx_state(mconfig, type, tag)
+	{ }
+
+	void init_denver();
+
+protected:
+	virtual void machine_reset() override;
+
+	virtual DECLARE_READ16_MEMBER(porta_r) override;
+	virtual DECLARE_READ16_MEMBER(portb_r) override;
+	virtual DECLARE_READ16_MEMBER(portc_r) override;
+
+	virtual DECLARE_WRITE16_MEMBER(porta_w) override;
 };
 
 void zon32bit_state::device_post_load()
@@ -126,6 +161,7 @@ WRITE16_MEMBER(mywicodx_state::porta_w)
 			(mem_mask & 0x0002) ? ((data & 0x0002) ? '1' : '0') : 'x',
 			(mem_mask & 0x0001) ? ((data & 0x0001) ? '1' : '0') : 'x');
 
+
 	m_porta_dat = data;
 
 	int oldbank = m_basebank;
@@ -148,6 +184,80 @@ WRITE16_MEMBER(mywicodx_state::porta_w)
 
 	if (oldbank != m_basebank)
 		m_maincpu->invalidate_cache();
+
+
+}
+
+
+WRITE16_MEMBER(denver_200in1_state::porta_w)
+{
+	if (0)
+	{
+		if (m_maincpu->pc() < 0x10000)
+		{
+			logerror("%s: porta_w %04x (%04x) %c %c %c %c | %c %c %c %c | %c %c %c %c | %c %c %c %c  \n", machine().describe_context(), data, mem_mask,
+				(mem_mask & 0x8000) ? ((data & 0x8000) ? '1' : '0') : 'x',
+				(mem_mask & 0x4000) ? ((data & 0x4000) ? '1' : '0') : 'x',
+				(mem_mask & 0x2000) ? ((data & 0x2000) ? '1' : '0') : 'x',
+				(mem_mask & 0x1000) ? ((data & 0x1000) ? '1' : '0') : 'x',
+				(mem_mask & 0x0800) ? ((data & 0x0800) ? '1' : '0') : 'x',
+				(mem_mask & 0x0400) ? ((data & 0x0400) ? '1' : '0') : 'x',
+				(mem_mask & 0x0200) ? ((data & 0x0200) ? '1' : '0') : 'x',
+				(mem_mask & 0x0100) ? ((data & 0x0100) ? '1' : '0') : 'x',
+				(mem_mask & 0x0080) ? ((data & 0x0080) ? '1' : '0') : 'x',
+				(mem_mask & 0x0040) ? ((data & 0x0040) ? '1' : '0') : 'x',
+				(mem_mask & 0x0020) ? ((data & 0x0020) ? '1' : '0') : 'x',
+				(mem_mask & 0x0010) ? ((data & 0x0010) ? '1' : '0') : 'x',
+				(mem_mask & 0x0008) ? ((data & 0x0008) ? '1' : '0') : 'x',
+				(mem_mask & 0x0004) ? ((data & 0x0004) ? '1' : '0') : 'x',
+				(mem_mask & 0x0002) ? ((data & 0x0002) ? '1' : '0') : 'x',
+				(mem_mask & 0x0001) ? ((data & 0x0001) ? '1' : '0') : 'x');
+		}
+	}
+
+	if (m_maincpu->pc() < 0x10000)
+	{
+		int oldbank = m_basebank;
+
+		if (mem_mask & 0x0200)
+		{
+			if (data & 0x0200)
+			{
+				m_basebank |= 4;
+			}
+			else
+			{
+				m_basebank &= ~4;
+			}
+		}
+
+		if (mem_mask & 0x0400)
+		{
+			if (data & 0x0400)
+			{
+				m_basebank |= 1;
+			}
+			else
+			{
+				m_basebank &= ~1;
+			}
+		}
+
+		if (mem_mask & 0x0800)
+		{
+			if (data & 0x0800)
+			{
+				m_basebank |= 2;
+			}
+			else
+			{
+				m_basebank &= ~2;
+			}
+		}
+
+		if (oldbank != m_basebank)
+			m_maincpu->invalidate_cache();
+	}
 }
 
 
@@ -219,13 +329,28 @@ WRITE16_MEMBER(zon32bit_state::portc_w)
 		else
 			m_upperbank &= ~0x0800;
 	}
-		 
+
 	if (oldbank != m_basebank)
 		m_maincpu->invalidate_cache();
 
 	m_portc_dat = data;
 }
 
+
+READ16_MEMBER(oplayer_100in1_state::portc_r)
+{
+	return m_io_p3->read();
+}
+
+READ16_MEMBER(oplayer_100in1_state::portb_r)
+{
+	return m_io_p2->read();
+}
+
+READ16_MEMBER(oplayer_100in1_state::porta_r)
+{
+	return 0x0ff8 | (machine().rand()&1);
+}
 
 void zon32bit_state::mem_map_zon32bit(address_map &map)
 {
@@ -235,13 +360,14 @@ void zon32bit_state::mem_map_zon32bit(address_map &map)
 READ16_MEMBER(zon32bit_state::z32_rom_r)
 {
 	/*
-		This has upper and lower bank, which can be changed independently.
-		Banking hookup is currently very hacky as bank values are written
-		to ports then erased at the moment, maybe they latch somehow?
+	    This has upper and lower bank, which can be changed independently.
+	    Banking hookup is currently very hacky as bank values are written
+	    to ports then erased at the moment, maybe they latch somehow?
 	*/
 
 	int base = 0x0000000;
 
+	if (m_basebank & 4)  base |= 0x4000000;
 	if (m_basebank & 2)  base |= 0x2000000;
 	if (m_basebank & 1)  base |= 0x1000000;
 
@@ -261,6 +387,22 @@ READ16_MEMBER(zon32bit_state::z32_rom_r)
 
 	return 0x0000;// m_romregion[offset];
 }
+
+READ16_MEMBER(denver_200in1_state::portc_r)
+{
+	return m_io_p3->read();
+}
+
+READ16_MEMBER(denver_200in1_state::portb_r)
+{
+	return m_io_p2->read();
+}
+
+READ16_MEMBER(denver_200in1_state::porta_r)
+{
+	return 0x0ff8 | (machine().rand()&1);
+}
+
 
 void zon32bit_state::machine_start()
 {
@@ -292,6 +434,14 @@ void mywicodx_state::machine_reset()
 	m_basebank = 3;
 	m_maincpu->invalidate_cache();
 }
+
+void denver_200in1_state::machine_reset()
+{
+	zon32bit_state::machine_reset();
+	m_basebank = 6;
+	m_maincpu->invalidate_cache();
+}
+
 
 
 static INPUT_PORTS_START( zon32bit )
@@ -428,6 +578,120 @@ static INPUT_PORTS_START( zon32bit )
 	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
 INPUT_PORTS_END
 
+
+static INPUT_PORTS_START( oplayer )
+	PORT_START("P1")
+	PORT_DIPNAME( 0x0001, 0x0001, "P1" )
+	PORT_DIPSETTING(      0x0001, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0002, 0x0002, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0002, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0004, 0x0004, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0004, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0008, 0x0008, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0008, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0010, 0x0010, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0010, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0020, 0x0020, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0020, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0040, 0x0040, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0040, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0080, 0x0080, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0080, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0100, 0x0100, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0100, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0200, 0x0200, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0200, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0400, 0x0400, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0400, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0800, 0x0800, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0800, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x1000, 0x1000, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x1000, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x2000, 0x2000, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x2000, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x4000, 0x4000, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x4000, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x8000, 0x8000, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x8000, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+
+	PORT_START("P2")
+	PORT_BIT( 0x0001, IP_ACTIVE_HIGH, IPT_JOYSTICK_UP )
+	PORT_BIT( 0x0002, IP_ACTIVE_HIGH, IPT_JOYSTICK_DOWN )
+	PORT_BIT( 0x0004, IP_ACTIVE_HIGH, IPT_JOYSTICK_LEFT )
+	PORT_BIT( 0x0008, IP_ACTIVE_HIGH, IPT_JOYSTICK_RIGHT )
+	PORT_BIT( 0x0010, IP_ACTIVE_HIGH, IPT_BUTTON1 )
+	PORT_BIT( 0x0020, IP_ACTIVE_HIGH, IPT_BUTTON2 )
+	PORT_BIT( 0x0040, IP_ACTIVE_HIGH, IPT_BUTTON3 )
+	PORT_BIT( 0xff80, IP_ACTIVE_HIGH, IPT_UNUSED )
+
+	PORT_START("P3")
+	PORT_DIPNAME( 0x0001, 0x0001, "P3" )
+	PORT_DIPSETTING(      0x0001, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0002, 0x0002, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0002, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0004, 0x0004, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0004, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0008, 0x0008, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0008, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0010, 0x0010, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0010, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0020, 0x0020, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0020, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0040, 0x0040, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0040, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0080, 0x0080, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0080, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0100, 0x0100, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0100, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0200, 0x0200, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0200, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0400, 0x0400, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0400, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x0800, 0x0800, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x0800, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x1000, 0x1000, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x1000, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x2000, 0x2000, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x2000, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x4000, 0x4000, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x4000, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_DIPNAME( 0x8000, 0x8000, DEF_STR( Unknown ) )
+	PORT_DIPSETTING(      0x8000, DEF_STR( Off ) )
+	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+INPUT_PORTS_END
+
+
 void zon32bit_state::zon32bit(machine_config &config)
 {
 	SPG24X(config, m_maincpu, XTAL(27'000'000), m_screen);
@@ -460,10 +724,124 @@ ROM_START( zon32bit )
 ROM_END
 
 
+/*
+    Following pinout was used for dumping
+
+      +------------------+
+  VCC -|01              70|- VCC
+  A23 -|02              69|- A21
+  VCC -|03              68|- A22
+  A18 -|04              67|- A08
+  A24 -|05              66|- A09
+  A07 -|06              65|- A10
+  A06 -|07              64|- A11
+  A05 -|08              63|- A12
+  A04 -|09              62|- A13
+  A03 -|10              61|- A14
+  A02 -|11              60|- A15
+  A01 -|12              59|- A16
+  A00 -|13              58|- A17
+   NC -|14              57|- A20
+   NC -|15              56|- A19
+  /CE -|16              55|- VCC (/BYTE)
+   NC -|17              54|- NC
+  GND -|18   55LV512    53|- GND
+   NC -|19              52|- NC
+   NC -|20              51|- NC
+   NC -|21              50|- NC
+   NC -|22              49|- NC
+   NC -|23              48|- NC
+  /OE -|24              47|- NC
+   NC -|25              46|- NC
+  D08 -|26              45|- NC
+  D09 -|27              44|- D00
+  D10 -|28              43|- D01
+  D11 -|29              42|- D02
+   NC -|30              41|- D03
+  D12 -|31              40|- D04
+  D13 -|32              39|- D05
+  D14 -|33              38|- D06
+  D15 -|34              37|- D07
+  GND -|35              36|- VCC
+       +------------------+
+*/
+
+// Sunplus QL8041C die
+ROM_START( oplayer )
+	ROM_REGION( 0x4000000, "maincpu", ROMREGION_ERASE00 )
+	ROM_LOAD16_WORD_SWAP( "oplayer.bin", 0x0000000, 0x4000000, CRC(aa09c358) SHA1(df2855cdfdf2b693636cace8768e579b9d5bc657) )
+ROM_END
+
+ROM_START( dnv200fs )
+	ROM_REGION( 0x8000000, "maincpu", ROMREGION_ERASE00 )
+	ROM_LOAD16_WORD_SWAP( "famsport200in1.u2", 0x0000000, 0x8000000, CRC(f59221e2) SHA1(d532cf5a80ffe9d527efcccbf380a7a860f0fbd9) )
+ROM_END
+
+
+
+
+void oplayer_100in1_state::init_oplayer()
+{
+	// TODO: remove these hacks
+	uint16_t* rom = (uint16_t*)memregion("maincpu")->base();
+	// port a checks when starting a game in any given bank / starting the system
+	rom[0x0f851 + (0x0000000 / 2)] = 0xf165;
+	rom[0xaad1e + (0x1000000 / 2)] = 0xf165;
+	rom[0x47d2d + (0x2000000 / 2)] = 0xf165;
+	rom[0x1fb00 + (0x3000000 / 2)] = 0xf165;
+	// port a checks when exiting a game in any given bank
+	rom[0x7a506 + (0x0000000 / 2)] = 0xf165;
+	rom[0xad051 + (0x1000000 / 2)] = 0xf165;
+	rom[0xc351e + (0x3000000 / 2)] = 0xf165;
+}
+
+void denver_200in1_state::init_denver()
+{
+	// TODO: remove these hacks
+
+	// patch checks when booting each bank, similar to oplayer
+	uint16_t* rom = (uint16_t*)memregion("maincpu")->base();
+	rom[0x175f7 + (0x0000000 / 2)] = 0xf165;
+	rom[0x18f47 + (0x1000000 / 2)] = 0xf165;
+	rom[0x33488 + (0x2000000 / 2)] = 0xf165;
+	rom[0x87f81 + (0x3000000 / 2)] = 0xf165;
+	rom[0x764d9 + (0x4000000 / 2)] = 0xf165;
+	rom[0xb454e + (0x5000000 / 2)] = 0xf165;
+	rom[0x43c30 + (0x6000000 / 2)] = 0xf165; // boot
+	rom[0x1fb00 + (0x7000000 / 2)] = 0xf165;
+
+	// no exit patches required?
+}
+
+
+
 // Box advertises this as '40 Games Included' but the cartridge, which was glued directly to the PCB, not removable, is a 41-in-1.  Maybe some versions exist with a 40 game selection.
 CONS( 200?, zon32bit,  0, 0, zon32bit, zon32bit, zon32bit_state,  empty_init,      "Jungle Soft / Ultimate Products (HK) Ltd",    "Zone 32-bit Gaming Console System (Family Sport 41-in-1)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
 // My Wico Deluxe was also available under the MiWi brand (exact model unknown, but it was a cart there instead of built in)
 // Box claimed 53 Arcade Games + 8 Sports games + 24 Music games, although it's unclear where 24 Music Games comes from, there are 3, which are identical aside from the title screen.
 // The Mi Guitar menu contains 24 games, but they're dupes, and just counting those would exclude the other Mi Fit and Mi Papacon menus (which also contain dupes)
 CONS( 200?, mywicodx,  0, 0, zon32bit, zon32bit, mywicodx_state,  empty_init,      "<unknown>",                                   "My Wico Deluxe (Family Sport 85-in-1)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
+
+// issues with 'low battery' always showing, but otherwise functional
+CONS( 200?, oplayer,   0, 0, zon32bit, oplayer, oplayer_100in1_state, init_oplayer, "OPlayer", "OPlayer Mobile Game Console (MGS03-white) (Family Sport 100-in-1)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
+
+/*
+DENVER(r)
+
+PO:9075
+Model: GMP-270CMK2
+OPERATED BY 3 X AAA-BATTERIES (NOT INCL)
+OR MINI-USB POWER SOURCE
+Power consumption:0.6W/hour
+Standby consumption:0.25mW/hour
+Imported by:
+DENVER ELECTRONICS A/S
+Stavneagervej 22
+DK-8250 EGAA
+DENMARK
+
+*/
+
+CONS( 200?, dnv200fs,   0, 0, zon32bit, oplayer, denver_200in1_state, init_denver, "Denver", "Denver (GMP-270CMK2) (Family Sport 200-in-1)", MACHINE_IMPERFECT_SOUND | MACHINE_IMPERFECT_GRAPHICS )
+
 

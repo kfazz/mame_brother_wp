@@ -399,7 +399,7 @@ void m92_state::sound_map(address_map &map)
 {
 	map(0x00000, 0x1ffff).rom();
 	map(0xa0000, 0xa3fff).ram();
-	map(0xa8000, 0xa803f).rw("irem", FUNC(iremga20_device::irem_ga20_r), FUNC(iremga20_device::irem_ga20_w)).umask16(0x00ff);
+	map(0xa8000, 0xa803f).rw("irem", FUNC(iremga20_device::read), FUNC(iremga20_device::write)).umask16(0x00ff);
 	map(0xa8040, 0xa8043).rw("ymsnd", FUNC(ym2151_device::read), FUNC(ym2151_device::write)).umask16(0x00ff);
 	map(0xa8044, 0xa8044).rw("soundlatch", FUNC(generic_latch_8_device::read), FUNC(generic_latch_8_device::acknowledge_w));
 	map(0xa8046, 0xa8046).w("soundlatch2", FUNC(generic_latch_8_device::write));
@@ -1884,7 +1884,10 @@ Chips used are...
 Nanao 08J27504A1
 Nanao 08J27291A5  @ 14.31818MHz
 
-Are these hacks?  Why is there a localized and World versions if they are hacks?
+The general consensus surrounding The Alpha Renewal version is: The US / World versions of Undercover Cops were originally released
+unfinished with lots of incomplete elements and different character names.  The Japanese version was much more complete. As a result
+the US / World versions were re-released with all the missing features from the Japanese version under the 'Alpha Renewal' title. So
+basically the subtitle might have been a "playful" reminder "this renews the alpha version to be the final version"  ;-)
 
 */
 

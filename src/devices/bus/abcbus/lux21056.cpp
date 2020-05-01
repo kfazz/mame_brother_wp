@@ -150,7 +150,7 @@ void luxor_55_21056_device::luxor_55_21056_io(address_map &map)
 {
 	map.unmap_value_high();
 	map.global_mask(0xf8);
-	map(0x00, 0x00).mirror(0xf0).rw(Z80DMA_TAG, FUNC(z80dma_device::bus_r), FUNC(z80dma_device::bus_w));
+	map(0x00, 0x00).mirror(0xf0).rw(Z80DMA_TAG, FUNC(z80dma_device::read), FUNC(z80dma_device::write));
 	map(0x08, 0x08).r(FUNC(luxor_55_21056_device::sasi_status_r));
 	map(0x18, 0x18).w(FUNC(luxor_55_21056_device::stat_w));
 	map(0x28, 0x28).r(FUNC(luxor_55_21056_device::out_r));
@@ -204,7 +204,7 @@ WRITE_LINE_MEMBER( luxor_55_21056_device::write_sasi_bsy )
 
 	if (m_sasi_bsy)
 	{
-		m_sasibus->write_sel(!m_sasi_bsy);
+		m_sasibus->write_sel(0);
 	}
 }
 
@@ -228,7 +228,8 @@ WRITE_LINE_MEMBER( luxor_55_21056_device::write_sasi_req )
 
 	if (m_sasi_req)
 	{
-		m_sasibus->write_ack(!m_sasi_req);
+		m_req = 0;
+		m_sasibus->write_ack(!m_req);
 	}
 }
 
@@ -511,8 +512,8 @@ READ8_MEMBER( luxor_55_21056_device::sasi_status_r )
 
 	data |= m_rdy ^ STAT_DIR;
 
-	data |= !m_sasi_req << 1;
-	data |= !m_sasi_io << 2;
+	data |= (m_req || m_sasi_req) << 1;
+	data |= m_sasi_io << 2;
 	data |= !m_sasi_cd << 3;
 	data |= !m_sasi_msg << 4;
 	data |= !m_sasi_bsy << 5;
@@ -567,7 +568,8 @@ READ8_MEMBER( luxor_55_21056_device::sasi_data_r )
 {
 	uint8_t data = m_sasi_data_in->read();
 
-	m_sasibus->write_ack(!m_sasi_req);
+	m_req = !m_sasi_req;
+	m_sasibus->write_ack(!m_req);
 
 	return data;
 }
@@ -586,7 +588,8 @@ WRITE8_MEMBER( luxor_55_21056_device::sasi_data_w )
 		m_sasi_data_out->write(m_sasi_data);
 	}
 
-	m_sasibus->write_ack(!m_sasi_req);
+	m_req = !m_sasi_req;
+	m_sasibus->write_ack(!m_req);
 }
 
 

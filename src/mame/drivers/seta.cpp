@@ -2491,28 +2491,28 @@ CUSTOM_INPUT_MEMBER( setaroul_state::coin_sensors_r )
 
 WRITE16_MEMBER(setaroul_state::spritecode_w)
 {
-	if ((offset & 1) == 1) m_seta001->spritecodelow_w8(space, offset >> 1, (data & 0xff00) >> 8);
-	if ((offset & 1) == 0) m_seta001->spritecodehigh_w8(space, offset >> 1, (data & 0xff00) >> 8);
+	if ((offset & 1) == 1) m_seta001->spritecodelow_w8(offset >> 1, (data & 0xff00) >> 8);
+	if ((offset & 1) == 0) m_seta001->spritecodehigh_w8(offset >> 1, (data & 0xff00) >> 8);
 }
 
 READ16_MEMBER(setaroul_state::spritecode_r)
 {
 	u16 ret;
 	if ((offset & 1) == 1)
-		ret = m_seta001->spritecodelow_r8(space, offset >> 1);
+		ret = m_seta001->spritecodelow_r8(offset >> 1);
 	else
-		ret = m_seta001->spritecodehigh_r8(space, offset >> 1);
+		ret = m_seta001->spritecodehigh_r8(offset >> 1);
 	return ret << 8;
 }
 
 WRITE16_MEMBER(setaroul_state::spriteylow_w)
 {
-	if ((offset & 1) == 0) m_seta001->spriteylow_w8(space, offset >> 1, (data & 0xff00) >> 8);
+	if ((offset & 1) == 0) m_seta001->spriteylow_w8(offset >> 1, (data & 0xff00) >> 8);
 }
 
 WRITE16_MEMBER(setaroul_state::spritectrl_w)
 {
-	if ((offset & 1) == 0) m_seta001->spritectrl_w8(space, offset >> 1, (data & 0xff00) >> 8);
+	if ((offset & 1) == 0) m_seta001->spritectrl_w8(offset >> 1, (data & 0xff00) >> 8);
 }
 
 // RTC (To do: write a D4911C device)
@@ -2522,7 +2522,7 @@ READ16_MEMBER(setaroul_state::rtc_r)
 		++offset;
 	if (offset / 2 >= 7)
 		return 0;
-	return (m_rtc->read(space, offset / 2, mem_mask) >> ((offset & 1) * 4)) & 0xf;
+	return (m_rtc->read(offset / 2) >> ((offset & 1) * 4)) & 0xf;
 }
 
 WRITE16_MEMBER(setaroul_state::rtc_w)
@@ -3200,7 +3200,7 @@ READ16_MEMBER(jockeyc_state::rtc_r)
 		++offset;
 	if (offset / 2 >= 7)
 		return 0;
-	return (m_rtc->read(space, offset / 2, mem_mask) >> ((offset & 1) * 4)) & 0xf;
+	return (m_rtc->read(offset / 2) >> ((offset & 1) * 4)) & 0xf;
 }
 
 WRITE16_MEMBER(jockeyc_state::rtc_w)
@@ -6347,6 +6347,9 @@ static INPUT_PORTS_START( twineagl )
 	// default taken off original Japanese DIP sheet
 	// Cabinet is user choice
 	// We use Licensor Option 2 instead of 1 just to avoid the "For use in Japan"
+	// TODO: the copyright dips actually don't have any effect on a real (European) PCB
+	// Most likely these are overwritten by the lead JPs that the board has
+	// (4x3 near SW2 at J2, 2x3 near two empty ROM sockets U31/U37 at C10).
 	PORT_START("DSW") //2 DSWs - $600001 & 3.b
 	PORT_DIPNAME( 0x0001, 0x0001, "Copyright / License" )   PORT_DIPLOCATION("SW1:1") /* Always "Seta" if sim. players = 1 */
 	PORT_DIPSETTING(      0x0000, "Taito America / Romstar" )   PORT_CONDITION("DSW",0x4000,NOTEQUALS,0x4000)
@@ -8570,7 +8573,7 @@ void setaroul_state::setaroul(machine_config &config)
 	NVRAM(config, "nvram", nvram_device::DEFAULT_RANDOM);
 
 	/* devices */
-	UPD4992(config, m_rtc); // ! Actually D4911C !
+	UPD4992(config, m_rtc, 32'768); // ! Actually D4911C !
 	ACIA6850(config, "acia0", 0);
 	TICKET_DISPENSER(config, "hopper", attotime::from_msec(150), TICKET_MOTOR_ACTIVE_HIGH, TICKET_STATUS_ACTIVE_LOW);
 
@@ -9822,7 +9825,7 @@ void jockeyc_state::jockeyc(machine_config &config)
 
 	MCFG_MACHINE_START_OVERRIDE(jockeyc_state, jockeyc)
 	/* devices */
-	UPD4992(config, m_rtc); // ! Actually D4911C !
+	UPD4992(config, m_rtc, 32'768); // ! Actually D4911C !
 	ACIA6850(config, "acia0", 0);
 	TICKET_DISPENSER(config, "hopper1", attotime::from_msec(150), TICKET_MOTOR_ACTIVE_HIGH, TICKET_STATUS_ACTIVE_LOW);
 	TICKET_DISPENSER(config, "hopper2", attotime::from_msec(150), TICKET_MOTOR_ACTIVE_HIGH, TICKET_STATUS_ACTIVE_LOW);

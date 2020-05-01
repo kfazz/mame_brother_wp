@@ -18,23 +18,23 @@ namespace netlist
 	// -----------------------------------------------------------------------------
 
 	nld_base_proxy::nld_base_proxy(netlist_state_t &anetlist, const pstring &name,
-		logic_t *inout_proxied)
+		const logic_t *inout_proxied)
 		: device_t(anetlist, name)
 		, m_tp(nullptr)
 		, m_tn(nullptr)
 	{
-		m_logic_family = inout_proxied->logic_family();
+		set_logic_family(inout_proxied->logic_family());
 
 		const std::vector<std::pair<pstring, pstring>> power_syms = { {"VCC", "VEE"}, {"VCC", "GND"}, {"VDD", "VSS"}};
 
 		bool f = false;
-		for (auto & pwr_sym : power_syms)
+		for (const auto & pwr_sym : power_syms)
 		{
 			pstring devname = inout_proxied->device().name();
 
-			auto tp_ct(anetlist.setup().find_terminal(devname + "." + pwr_sym.first,
+			auto *tp_ct(anetlist.setup().find_terminal(devname + "." + pwr_sym.first,
 					/*detail::terminal_type::INPUT,*/ false));
-			auto tp_cn(anetlist.setup().find_terminal(devname + "." + pwr_sym.second,
+			auto *tp_cn(anetlist.setup().find_terminal(devname + "." + pwr_sym.second,
 				/*detail::terminal_type::INPUT,*/ false));
 			if (tp_ct && tp_cn)
 			{
@@ -43,8 +43,8 @@ namespace netlist
 				if (tp_cn && !tp_cn->is_analog())
 					throw nl_exception(plib::pfmt("Not an analog terminal: {1}")(tp_cn->name()));
 
-				auto tp_t = static_cast<analog_t* >(tp_ct);
-				auto tn_t = static_cast<analog_t *>(tp_cn);
+				auto *tp_t = static_cast<analog_t* >(tp_ct);
+				auto *tn_t = static_cast<analog_t *>(tp_cn);
 				if (f && (tp_t != nullptr && tn_t != nullptr))
 					log().warning(MI_MULTIPLE_POWER_TERMINALS_ON_DEVICE(inout_proxied->device().name(),
 						m_tp->name(), m_tn->name(),
@@ -69,12 +69,12 @@ namespace netlist
 	// ----------------------------------------------------------------------------------------
 
 	nld_base_a_to_d_proxy::nld_base_a_to_d_proxy(netlist_state_t &anetlist, const pstring &name,
-			logic_input_t *in_proxied)
+			const logic_input_t *in_proxied)
 	: nld_base_proxy(anetlist, name, in_proxied)
 	{
 	}
 
-	nld_a_to_d_proxy::nld_a_to_d_proxy(netlist_state_t &anetlist, const pstring &name, logic_input_t *in_proxied)
+	nld_a_to_d_proxy::nld_a_to_d_proxy(netlist_state_t &anetlist, const pstring &name, const logic_input_t *in_proxied)
 	: nld_base_a_to_d_proxy(anetlist, name, in_proxied)
 	, m_Q(*this, "Q")
 	, m_I(*this, "I")
@@ -106,20 +106,19 @@ namespace netlist
 	// ----------------------------------------------------------------------------------------
 
 	nld_base_d_to_a_proxy::nld_base_d_to_a_proxy(netlist_state_t &anetlist, const pstring &name,
-			logic_output_t *out_proxied)
+			const logic_output_t *out_proxied)
 	: nld_base_proxy(anetlist, name, out_proxied)
 	{
 	}
 
-	nld_d_to_a_proxy::nld_d_to_a_proxy(netlist_state_t &anetlist, const pstring &name, logic_output_t *out_proxied)
+	nld_d_to_a_proxy::nld_d_to_a_proxy(netlist_state_t &anetlist, const pstring &name, const logic_output_t *out_proxied)
 	: nld_base_d_to_a_proxy(anetlist, name, out_proxied)
 	, m_I(*this, "I")
 	, m_RP(*this, "RP")
 	, m_RN(*this, "RN")
 	, m_last_state(*this, "m_last_var", -1)
-	, m_is_timestep(false)
 	{
-		register_subalias("Q", m_RN.m_P);
+		register_subalias("Q", m_RN.P());
 
 		log().verbose("D/A Proxy: Found power terminals on device {1}", out_proxied->device().name());
 		if (anetlist.is_extended_validation())
@@ -127,14 +126,14 @@ namespace netlist
 			// During validation, don't connect to terminals found
 			// This will cause terminals not connected to a rail net to
 			// fail connection stage.
-			connect(m_RN.m_N, m_RP.m_P);
+			connect(m_RN.N(), m_RP.P());
 		}
 		else
 		{
-			connect(m_RN.m_N, *m_tn);
-			connect(m_RP.m_P, *m_tp);
+			connect(m_RN.N(), *m_tn);
+			connect(m_RP.P(), *m_tp);
 		}
-		connect(m_RN.m_P, m_RP.m_N);
+		connect(m_RN.P(), m_RP.N());
 		//printf("vcc: %f\n", logic_family()->fixed_V());
 	}
 
@@ -145,7 +144,6 @@ namespace netlist
 		m_last_state = -1;
 		m_RN.reset();
 		m_RP.reset();
-		m_is_timestep = m_RN.m_P.net().solver()->has_timestep_devices();
 		m_RN.set_G_V_I(plib::reciprocal(logic_family()->R_low()),
 				logic_family()->low_offset_V(), nlconst::zero());
 		m_RP.set_G_V_I(G_OFF,
@@ -158,28 +156,27 @@ namespace netlist
 		const auto state = static_cast<int>(m_I());
 		if (state != m_last_state)
 		{
-			// We only need to update the net first if this is a time stepping net
-			if (m_is_timestep)
+			// RN, RP are connected ...
+			m_RN.change_state([this, &state]()
 			{
-				m_RN.update(); // RN, RP are connected ...
-			}
-			if (state)
-			{
-				m_RN.set_G_V_I(G_OFF,
-					nlconst::zero(),
-					nlconst::zero());
-				m_RP.set_G_V_I(plib::reciprocal(logic_family()->R_high()),
-						logic_family()->high_offset_V(), nlconst::zero());
-			}
-			else
-			{
-				m_RN.set_G_V_I(plib::reciprocal(logic_family()->R_low()),
-						logic_family()->low_offset_V(), nlconst::zero());
-				m_RP.set_G_V_I(G_OFF,
-					nlconst::zero(),
-					nlconst::zero());
-			}
-			m_RN.solve_later(); // RN, RP are connected ...
+				if (state)
+				{
+
+					m_RN.set_G_V_I(G_OFF,
+						nlconst::zero(),
+						nlconst::zero());
+					m_RP.set_G_V_I(plib::reciprocal(logic_family()->R_high()),
+							logic_family()->high_offset_V(), nlconst::zero());
+				}
+				else
+				{
+					m_RN.set_G_V_I(plib::reciprocal(logic_family()->R_low()),
+							logic_family()->low_offset_V(), nlconst::zero());
+					m_RP.set_G_V_I(G_OFF,
+						nlconst::zero(),
+						nlconst::zero());
+				}
+			});
 			m_last_state = state;
 		}
 	}

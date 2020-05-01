@@ -30,7 +30,10 @@
     Bytes 0x1a(0x34) to 0x1e(0x3c) - unused/unknown
     Bytes 0x1f(0x3e) - 2nd tilemap chip, 'tilemap_1' alpha control, used at shadowing
 
-    0 = opaque, 0x10 = 50% transparent, 0x20 = fully transparent, 0x21/0x22/0x1000 = used,unknown
+    0 = opaque, 0x10 = 50% transparent,
+    0x20 = fully transparent (doesn't make sense bitwise -AS),
+    0x22 = stage 1 boss dark effect in Boogie Wings (incorrectly emulated, reverses source pixel + shifts down by 1? -AS)
+    0x21/0x1000 = used,unknown (by what!? -AS)
 
     Byte 0x00: ACEO000P0
                         P8
@@ -120,18 +123,18 @@ void deco_ace_device::device_post_load()
 only updated on a DMA call */
 
 // nslasher
-READ32_MEMBER( deco_ace_device::buffered_palette_r )
+uint32_t deco_ace_device::buffered_palette_r(offs_t offset)
 {
 	return m_paletteram[offset];
 }
 
-WRITE32_MEMBER( deco_ace_device::buffered_palette_w )
+void deco_ace_device::buffered_palette_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	COMBINE_DATA(&m_paletteram[offset]);
 }
 
 // boogwing has 16 bit cpu data bus(M68000 Based)
-READ16_MEMBER( deco_ace_device::buffered_palette16_r )
+uint16_t deco_ace_device::buffered_palette16_r(offs_t offset)
 {
 	if ((offset & 1) == 0)
 		return (m_paletteram[offset >> 1] >> 16) & 0xffff;
@@ -139,7 +142,7 @@ READ16_MEMBER( deco_ace_device::buffered_palette16_r )
 		return m_paletteram[offset >> 1] & 0xffff;
 }
 
-WRITE16_MEMBER( deco_ace_device::buffered_palette16_w )
+void deco_ace_device::buffered_palette16_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	if ((offset & 1) == 0)
 		m_paletteram[offset >> 1] = (m_paletteram[offset >> 1] & ~(mem_mask<<16)) | ((data & mem_mask)<<16);
@@ -147,12 +150,12 @@ WRITE16_MEMBER( deco_ace_device::buffered_palette16_w )
 		m_paletteram[offset >> 1] = (m_paletteram[offset >> 1] & ~mem_mask) | (data & mem_mask);
 }
 
-READ16_MEMBER( deco_ace_device::ace_r )
+uint16_t deco_ace_device::ace_r(offs_t offset)
 {
 	return m_ace_ram[offset];
 }
 
-WRITE16_MEMBER( deco_ace_device::ace_w )
+void deco_ace_device::ace_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	COMBINE_DATA(&m_ace_ram[offset]);
 	if ((offset >= 0x20) && (offset <= 0x26))
@@ -234,7 +237,7 @@ uint16_t deco_ace_device::get_aceram(uint8_t val)
 	return m_ace_ram[val];
 }
 
-WRITE16_MEMBER( deco_ace_device::palette_dma_w )
+void deco_ace_device::palette_dma_w(uint16_t data)
 {
 	std::copy(&m_paletteram[0], &m_paletteram[2048], &m_paletteram_buffered[0]);
 	palette_update();

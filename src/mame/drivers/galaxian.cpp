@@ -7999,19 +7999,37 @@ ROM_START( galaxrf )
 ROM_END
 
 ROM_START( galaxianrp )
-    ROM_REGION( 0x4000, "maincpu", 0 )
-    ROM_LOAD( "4.7k", 0x0000, 0x0800, CRC(e8f3aa67) SHA1(a0e9576784dbe602dd9780e667f01f31defd7c00) ) // All eproms are Fujitsu MB8516 eproms
-    ROM_LOAD( "5.7j", 0x0800, 0x0800, CRC(f58283e3) SHA1(edc6e72516c50fd3402281d9936574d276581ce9) )
-    ROM_LOAD( "6.7h", 0x1000, 0x0800, CRC(4c7031c0) SHA1(97f7ab0cedcd8eba1c8f6f516d84d672a2108258) )
-    ROM_LOAD( "7.7f", 0x1800, 0x0800, CRC(097d92a2) SHA1(63ef86657286a4e1fae4f795e0e6b410ca2ef06b) )
-    ROM_LOAD( "3.7l", 0x2000, 0x0800, CRC(5341d75a) SHA1(40bc8fcc598f58c6ff944e2a4a9288463e75a09d) )
+	ROM_REGION( 0x4000, "maincpu", 0 )
+	ROM_LOAD( "4.7k", 0x0000, 0x0800, CRC(e8f3aa67) SHA1(a0e9576784dbe602dd9780e667f01f31defd7c00) ) // All eproms are Fujitsu MB8516 eproms
+	ROM_LOAD( "5.7j", 0x0800, 0x0800, CRC(f58283e3) SHA1(edc6e72516c50fd3402281d9936574d276581ce9) )
+	ROM_LOAD( "6.7h", 0x1000, 0x0800, CRC(4c7031c0) SHA1(97f7ab0cedcd8eba1c8f6f516d84d672a2108258) )
+	ROM_LOAD( "7.7f", 0x1800, 0x0800, CRC(097d92a2) SHA1(63ef86657286a4e1fae4f795e0e6b410ca2ef06b) )
+	ROM_LOAD( "3.7l", 0x2000, 0x0800, CRC(5341d75a) SHA1(40bc8fcc598f58c6ff944e2a4a9288463e75a09d) )
 
-    ROM_REGION( 0x1000, "gfx1", 0 )
-    ROM_LOAD( "2.1j", 0x0000, 0x0800, CRC(b8629cc6) SHA1(d529e9434f497a80953fe3768d34c805d072f88b) )
-    ROM_LOAD( "1.1l", 0x0800, 0x0800, CRC(6d42351c) SHA1(2193deadcbee109c5c14b0c31d1e113f747744a3) )
+	ROM_REGION( 0x1000, "gfx1", 0 )
+	ROM_LOAD( "2.1j", 0x0000, 0x0800, CRC(b8629cc6) SHA1(d529e9434f497a80953fe3768d34c805d072f88b) )
+	ROM_LOAD( "1.1l", 0x0800, 0x0800, CRC(6d42351c) SHA1(2193deadcbee109c5c14b0c31d1e113f747744a3) )
 
-    ROM_REGION( 0x0020, "proms", 0 )
-    ROM_LOAD( "6l.bpr", 0x0000, 0x0020, BAD_DUMP CRC(c3ac9467) SHA1(f382ad5a34d282056c78a5ec00c30ec43772bae2) )     // Taken from the parent set
+	ROM_REGION( 0x0020, "proms", 0 )
+	ROM_LOAD( "6l.bpr", 0x0000, 0x0020, BAD_DUMP CRC(c3ac9467) SHA1(f382ad5a34d282056c78a5ec00c30ec43772bae2) )     // Taken from the parent set
+ROM_END
+
+// PCB is a bootleg Galaxian, with ROMs 1-4 on a large daughterboard mounted on PCB stilts. The game plays just like regular Galaxian, but the PCB
+// has no on-board audio amplifier. The markings 'SGx' were all written in pencil on the ceramic body of the EPROMs. This is of European origin.
+ROM_START( galaxyx )
+	ROM_REGION( 0x4000, "maincpu", 0 )
+	ROM_LOAD( "sg1",    0x0000, 0x0800, CRC(d493cfd1) SHA1(a93e2aa7e179fb8adbc26f19f3319236b22f882f) )
+	ROM_LOAD( "sg2",    0x0800, 0x0800, CRC(f58283e3) SHA1(edc6e72516c50fd3402281d9936574d276581ce9) )
+	ROM_LOAD( "sg3",    0x1000, 0x0800, CRC(4c7031c0) SHA1(97f7ab0cedcd8eba1c8f6f516d84d672a2108258) )
+	ROM_LOAD( "sg4",    0x1800, 0x0800, CRC(04329e33) SHA1(a85256a7fcfb84d8fdc4830171092c6061f8a979) )
+	ROM_LOAD( "sg5.7l", 0x2000, 0x0800, CRC(878de26d) SHA1(baf6a1cec80596453f8fef4d24d6985d9d859412) )
+
+	ROM_REGION( 0x1000, "gfx1", 0 )
+	ROM_LOAD( "sg6.1h", 0x0000, 0x0800, CRC(39fb43a4) SHA1(4755609bd974976f04855d51e08ec0d62ab4bc07) )
+	ROM_LOAD( "sg7.1k", 0x0800, 0x0800, CRC(7e3f56a2) SHA1(a9795d8b7388f404f3b0e2c6ce15d713a4c5bafa) )
+
+	ROM_REGION( 0x0020, "proms", 0 )
+	ROM_LOAD( "sgprom.6l", 0x0000, 0x0020, CRC(c3ac9467) SHA1(f382ad5a34d282056c78a5ec00c30ec43772bae2) )
 ROM_END
 
 ROM_START( galaxrfgg )
@@ -9714,7 +9732,29 @@ ROM_START( mooncrstuku )
 	ROM_LOAD( "mmi6331.6l", 0x0000, 0x0020, CRC(6a0c7d87) SHA1(140335d85c67c75b65689d4e76d29863c209cf32) ) /* Compatible with 82s123 prom */
 ROM_END
 
+// CPU-1 board has the CPU, a 7486, a 74153, a 74125 and a 7408
 ROM_START( mooncrstu )
+	ROM_REGION( 0x8000, "maincpu", 0 )
+	ROM_LOAD( "mcue_mc1.bin",      0x0000, 0x0800, CRC(2ff840d1) SHA1(c7232972cab1696be25a0b617ce9d0fa501b57d4) )
+	ROM_LOAD( "mcue_mc2.bin",      0x0800, 0x0800, CRC(44bb7cfa) SHA1(349c2e23a9fce73f95bb8168d369082fa129fe3d) )
+	ROM_LOAD( "mcue_mc3.bin",      0x1000, 0x0800, CRC(9c412104) SHA1(1b40054ebb1ace965a8522119bb23f09797bc5f6) )
+	ROM_LOAD( "mcue_mc4.bin",      0x1800, 0x0800, CRC(7e9b1ab5) SHA1(435f603c0c3e788a509dd144a7916a34e791ae44) )
+	ROM_LOAD( "mcue_mc5.bin",      0x2000, 0x0800, CRC(16c759af) SHA1(3b48050411f65f9d3fb41ff22901e22d82bf1cf6) )
+	ROM_LOAD( "mcue_mc6.bin",      0x2800, 0x0800, CRC(69bcafdb) SHA1(939c8c6ed1cd4660a3d99b8f17ed99cbd7e1352a) )
+	ROM_LOAD( "mcue_mc7.bin",      0x3000, 0x0800, CRC(b50dbc46) SHA1(4fa084fd1ba5f78e7703e684c57af15ca7a844e4) )
+	ROM_LOAD( "mcue_mc8.bin",      0x3800, 0x0800, CRC(414678b4) SHA1(84050c9ceb337fd748c6a3f18c86b28f07573cc9) )
+
+	ROM_REGION( 0x2000, "gfx1", 0 )
+	ROM_LOAD( "mcs_b",        0x0000, 0x0800, CRC(fb0f1f81) SHA1(38a6679a8b69bc1870a0e67e692131c42f9535c8) )
+	ROM_LOAD( "mcs_d",        0x0800, 0x0800, CRC(13932a15) SHA1(b8885c555c6ad7021be55c6925a0a0872c1b6abd) )
+	ROM_LOAD( "mcs_a",        0x1000, 0x0800, CRC(631ebb5a) SHA1(5bc9493afa76c55858b8c8849524cbc77dc838fc) )
+	ROM_LOAD( "mcs_c",        0x1800, 0x0800, CRC(24cfd145) SHA1(08c6599db170dd6ee364c44f70a0f5c0f881b6ef) )
+
+	ROM_REGION( 0x0020, "proms", 0 )
+	ROM_LOAD( "mmi6331.6l", 0x0000, 0x0020, CRC(6a0c7d87) SHA1(140335d85c67c75b65689d4e76d29863c209cf32) ) /* Compatible with 82s123 prom */
+ROM_END
+
+ROM_START( mooncrstuu )
 	ROM_REGION( 0x8000, "maincpu", 0 )
 	ROM_LOAD( "smc1f",        0x0000, 0x0800, CRC(389ca0d6) SHA1(51cf6d190a0ebf23b70c2bcf1ccaa4705e29cd09) )
 	ROM_LOAD( "smc2f",        0x0800, 0x0800, CRC(410ab430) SHA1(d89abff6ac4afbf69377a1d63043d629a634aab7) )
@@ -10770,7 +10810,7 @@ ROM_START( mshuttle )
 	ROM_REGION( 0x0020, "proms", 0 )
 	ROM_LOAD( "mscprom1.bin", 0x0000, 0x0020, CRC(ea0d1af0) SHA1(cb59e04c02307dfe847e3170cf0a7f62829b6094) )
 
-	ROM_REGION( 0x2000, "samples", 0 )  /* samples */
+	ROM_REGION( 0x2000, "cclimber_audio:samples", 0 )
 	ROM_LOAD( "my07",         0x0000, 0x1000, CRC(522a2920) SHA1(a64d821a8ff6bd6e2b0bdb1e632181e65a97363b) )
 	ROM_LOAD( "my06",         0x1000, 0x1000, CRC(466415f2) SHA1(a05f8238cdcebe926a564ef6268b3cd677987fa2) ) // sldh
 ROM_END
@@ -10792,7 +10832,7 @@ ROM_START( mshuttle2 )
 	ROM_REGION( 0x0020, "proms", 0 )
 	ROM_LOAD( "mscprom1.bin", 0x0000, 0x0020, CRC(ea0d1af0) SHA1(cb59e04c02307dfe847e3170cf0a7f62829b6094) )
 
-	ROM_REGION( 0x2000, "samples", 0 )  /* samples */
+	ROM_REGION( 0x2000, "cclimber_audio:samples", 0 )
 	ROM_LOAD( "my07",         0x0000, 0x1000, CRC(522a2920) SHA1(a64d821a8ff6bd6e2b0bdb1e632181e65a97363b) )
 	ROM_LOAD( "my06",         0x1000, 0x1000, CRC(6d2dd711) SHA1(82e7c7b10258f651943173c968c7fa2bdf937ca9) )
 ROM_END
@@ -10814,7 +10854,7 @@ ROM_START( mshuttlea ) // PCB MY-01 + MY-02
 	ROM_REGION( 0x0020, "proms", 0 )
 	ROM_LOAD( "mscprom1.bin", 0x0000, 0x0020, CRC(ea0d1af0) SHA1(cb59e04c02307dfe847e3170cf0a7f62829b6094) )
 
-	ROM_REGION( 0x2000, "samples", 0 )  /* samples */
+	ROM_REGION( 0x2000, "cclimber_audio:samples", 0 )
 	ROM_LOAD( "my07.4p",       0x0000, 0x1000, CRC(522a2920) SHA1(a64d821a8ff6bd6e2b0bdb1e632181e65a97363b) )
 	ROM_LOAD( "my06.4s",       0x1000, 0x1000, CRC(466415f2) SHA1(a05f8238cdcebe926a564ef6268b3cd677987fa2) ) // sldh
 ROM_END
@@ -10837,7 +10877,7 @@ ROM_START( mshuttlej )
 	ROM_REGION( 0x0020, "proms", 0 )
 	ROM_LOAD( "mscprom1.bin", 0x0000, 0x0020, CRC(ea0d1af0) SHA1(cb59e04c02307dfe847e3170cf0a7f62829b6094) )
 
-	ROM_REGION( 0x2000, "samples", 0 )  /* samples */
+	ROM_REGION( 0x2000, "cclimber_audio:samples", 0 )
 	ROM_LOAD( "my07",         0x0000, 0x1000, CRC(522a2920) SHA1(a64d821a8ff6bd6e2b0bdb1e632181e65a97363b) )
 	ROM_LOAD( "my06",         0x1000, 0x1000, CRC(6d2dd711) SHA1(82e7c7b10258f651943173c968c7fa2bdf937ca9) )
 ROM_END
@@ -10860,7 +10900,7 @@ ROM_START( mshuttlej2 )
 	ROM_REGION( 0x0020, "proms", 0 )
 	ROM_LOAD( "mscprom1.bin", 0x0000, 0x0020, CRC(ea0d1af0) SHA1(cb59e04c02307dfe847e3170cf0a7f62829b6094) )
 
-	ROM_REGION( 0x2000, "samples", 0 )  /* samples */
+	ROM_REGION( 0x2000, "cclimber_audio:samples", 0 )
 	ROM_LOAD( "my07",         0x0000, 0x1000, CRC(522a2920) SHA1(a64d821a8ff6bd6e2b0bdb1e632181e65a97363b) )
 	ROM_LOAD( "my06.4r",      0x1000, 0x1000, CRC(4162be4d) SHA1(84fa8651796e498a37893ea90ef51b274c70e568) )
 ROM_END
@@ -12938,6 +12978,7 @@ GAME( 1980, galaxrf,     galaxian, galaxian,   galaxrf,    galaxian_state, init_
 GAME( 1980, galaxrfgg,   galaxian, galaxian,   galaxrf,    galaxian_state, init_galaxian,   ROT90,  "bootleg (Recreativos Franco S.A.)",          "Galaxian Growing Galaxip / Galaxian Nave Creciente (Recreativos Franco S.A. Spanish bootleg)", MACHINE_SUPPORTS_SAVE )
 GAME( 1980, galaxrcgg,   galaxian, galaxian,   galaxrf,    galaxian_state, init_galaxian,   ROT90,  "bootleg (Recreativos Covadonga)",            "Galaxian Growing Galaxip / Galaxian Nave Creciente (Recreativos Covadonga Spanish bootleg)",   MACHINE_SUPPORTS_SAVE )
 GAME( 1979, galaxianrp,  galaxian, galaxian,   superg,     galaxian_state, init_galaxian,   ROT90,  "bootleg (Valadon Automation / Rene Pierre)", "Galaxian (Rene Pierre bootleg)",                                                               MACHINE_SUPPORTS_SAVE )
+GAME( 1979, galaxyx,     galaxian, galaxian,   superg,     galaxian_state, init_galaxian,   ROT90,  "bootleg",                                    "Galaxy X (bootleg of Galaxian)",                                                               MACHINE_SUPPORTS_SAVE )
 
 // These have the extra 'linescroll effect' title screens, like Moon Alien 2 but made out of a random tile, they lack an energy bar.
 GAME( 1979, moonaln,     galaxian, galaxian,   superg,     galaxian_state, init_galaxian,   ROT90,  "Namco / Nichibutsu (Karateco license?)", "Moon Alien",                     MACHINE_SUPPORTS_SAVE ) // or bootleg?
@@ -13043,7 +13084,8 @@ GAME( 2001, videight,    0,        videight,   warofbug,   galaxian_state, init_
 GAME( 1980, mooncrst,    0,        mooncrst,   mooncrst,   galaxian_state, init_mooncrst,   ROT90,  "Nichibutsu",                   "Moon Cresta (Nichibutsu)",                               MACHINE_SUPPORTS_SAVE )
 GAME( 1980, mooncrstuk,  mooncrst, mooncrst,   mooncrst,   galaxian_state, init_mooncrst,   ROT90,  "Nichibutsu UK",                "Moon Cresta (Nichibutsu UK)",                            MACHINE_SUPPORTS_SAVE )
 GAME( 1980, mooncrstuku, mooncrst, mooncrst,   mooncrst,   galaxian_state, init_mooncrsu,   ROT90,  "Nichibutsu UK",                "Moon Cresta (Nichibutsu UK, unencrypted)",               MACHINE_SUPPORTS_SAVE )
-GAME( 1980, mooncrstu,   mooncrst, mooncrst,   mooncrst,   galaxian_state, init_mooncrsu,   ROT90,  "Nichibutsu USA",               "Moon Cresta (Nichibutsu USA, unencrypted)",              MACHINE_SUPPORTS_SAVE )
+GAME( 1980, mooncrstu,   mooncrst, mooncrst,   mooncrst,   galaxian_state, init_mooncrst,   ROT90,  "Nichibutsu USA",               "Moon Cresta (Nichibutsu USA, encrypted)",                MACHINE_SUPPORTS_SAVE )
+GAME( 1980, mooncrstuu,  mooncrst, mooncrst,   mooncrst,   galaxian_state, init_mooncrsu,   ROT90,  "Nichibutsu USA",               "Moon Cresta (Nichibutsu USA, unencrypted)",              MACHINE_SUPPORTS_SAVE )
 GAME( 1980, mooncrsto,   mooncrst, mooncrst,   mooncrsa,   galaxian_state, init_mooncrst,   ROT90,  "Nichibutsu",                   "Moon Cresta (Nichibutsu, old rev)",                      MACHINE_SUPPORTS_SAVE )
 GAME( 1980, mooncrstg,   mooncrst, mooncrst,   mooncrsg,   galaxian_state, init_mooncrsu,   ROT90,  "Nichibutsu (Gremlin license)", "Moon Cresta (Gremlin)",                                  MACHINE_SUPPORTS_SAVE )
 

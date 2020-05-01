@@ -10,7 +10,7 @@ Hardware notes:
 - 256 bytes RAM(2*2112-1)
 - 8-digit 7seg led panel
 
-Two versions exists, a blue one(seen with SC80265P) and a brown one(seen with
+Two versions exist, a blue one(seen with SC80265P) and a brown one(seen with
 either MCU). The one emulated here is from a brown version with the SC80265P.
 Motorola SC80265P is a 3870 clone, it's assumed that the program is the same
 as SL90259.
@@ -57,15 +57,15 @@ private:
 	void main_io(address_map &map);
 
 	void update_display();
-	DECLARE_WRITE8_MEMBER(digit_w);
-	DECLARE_READ8_MEMBER(input_r);
-	DECLARE_WRITE8_MEMBER(matrix_w);
+	void digit_w(u8 data);
+	u8 input_r();
+	void matrix_w(u8 data);
 
 	// 256 bytes data RAM accessed via I/O ports
-	DECLARE_READ8_MEMBER(ram_address_r) { return m_ram_address; }
-	DECLARE_WRITE8_MEMBER(ram_address_w) { m_ram_address = data; }
-	DECLARE_READ8_MEMBER(ram_data_r) { return m_ram[m_ram_address]; }
-	DECLARE_WRITE8_MEMBER(ram_data_w) { m_ram[m_ram_address] = data; }
+	u8 ram_address_r() { return m_ram_address; }
+	void ram_address_w(u8 data) { m_ram_address = data; }
+	u8 ram_data_r() { return m_ram[m_ram_address]; }
+	void ram_data_w(u8 data) { m_ram[m_ram_address] = data; }
 
 	std::unique_ptr<u8[]> m_ram;
 	u8 m_ram_address;
@@ -101,21 +101,21 @@ void borisdpl_state::update_display()
 	m_display->matrix(1 << (m_matrix & 7), m_digit_data);
 }
 
-WRITE8_MEMBER(borisdpl_state::digit_w)
+void borisdpl_state::digit_w(u8 data)
 {
 	// digit segments
 	m_digit_data = ~data & 0x7f;
 	update_display();
 }
 
-WRITE8_MEMBER(borisdpl_state::matrix_w)
+void borisdpl_state::matrix_w(u8 data)
 {
 	// d0-d2: MC14028B to input/digit select
 	m_matrix = data;
 	update_display();
 }
 
-READ8_MEMBER(borisdpl_state::input_r)
+u8 borisdpl_state::input_r()
 {
 	// d4-d7: multiplexed inputs (only one lane can be selected at the same time)
 	u8 data = m_matrix;

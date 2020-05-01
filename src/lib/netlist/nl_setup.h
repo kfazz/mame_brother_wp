@@ -53,7 +53,7 @@
 		setup.register_link_arr( # term1 ", " # __VA_ARGS__);
 
 #define PARAM(name, val)                                                       \
-		setup.register_param(# name, # val);
+		setup.register_param(NET_STR(name), NET_STR(val));
 
 #define HINT(name, val)                                                        \
 		setup.register_param(# name ".HINT_" # val, "1");
@@ -68,12 +68,13 @@
 
 #define NETLIST_START(name)                                                    \
 void NETLIST_NAME(name)(netlist::nlparse_t &setup)                             \
-{
+{																			   \
+	plib::unused_var(setup);
 
 #define NETLIST_END()  }
 
 #define LOCAL_SOURCE(name)                                                     \
-		setup.register_source(plib::make_unique<netlist::source_proc_t>(# name, &NETLIST_NAME(name)));
+		setup.register_source<netlist::source_proc_t>(# name, &NETLIST_NAME(name));
 
 #define LOCAL_LIB_ENTRY(name)                                                  \
 		LOCAL_SOURCE(name)                                                     \
@@ -186,7 +187,7 @@ namespace netlist
 
 		source_netlist_t() = default;
 
-		COPYASSIGNMOVE(source_netlist_t, delete)
+		PCOPYASSIGNMOVE(source_netlist_t, delete)
 		~source_netlist_t() noexcept override = default;
 
 		virtual bool parse(nlparse_t &setup, const pstring &name);
@@ -200,7 +201,7 @@ namespace netlist
 
 		source_data_t() = default;
 
-		COPYASSIGNMOVE(source_data_t, delete)
+		PCOPYASSIGNMOVE(source_data_t, delete)
 		~source_data_t() noexcept override = default;
 	};
 
@@ -254,31 +255,29 @@ namespace netlist
 
 		void register_link(const pstring &sin, const pstring &sout);
 		void register_link_arr(const pstring &terms);
+
 		void register_param(const pstring &param, const pstring &value);
 
 		// FIXME: quick hack
 		void register_param_x(const pstring &param, nl_fptype value);
 
 		template <typename T>
-		typename std::enable_if<std::is_floating_point<T>::value || std::is_integral<T>::value>::type
+		typename std::enable_if<plib::is_floating_point<T>::value || plib::is_integral<T>::value>::type
 		register_param_val(const pstring &param, T value)
 		{
 			register_param_x(param, static_cast<nl_fptype>(value));
 		}
 
-#if PUSE_FLOAT128
-		void register_param(const pstring &param, __float128 value)
-		{
-			register_param_x(param, static_cast<nl_fptype>(value));
-		}
-#endif
-
 		void register_lib_entry(const pstring &name, const pstring &sourcefile);
 		void register_frontier(const pstring &attach, const pstring &r_IN, const pstring &r_OUT);
 
 		// register a source
-		void register_source(plib::unique_ptr<plib::psource_t> &&src)
+		template <typename S, typename... Args>
+		void register_source(Args&&... args)
 		{
+			static_assert(std::is_base_of<plib::psource_t, S>::value, "S must inherit from plib::psource_t");
+
+			auto src(plib::make_unique<S>(std::forward<Args>(args)...));
 			m_sources.add_source(std::move(src));
 		}
 
@@ -305,9 +304,13 @@ namespace netlist
 		// FIXME: used by source_t - need a different approach at some time
 		bool parse_stream(plib::psource_t::stream_ptr &&istrm, const pstring &name);
 
-		void add_include(plib::unique_ptr<plib::psource_t> &&inc)
+		template <typename S, typename... Args>
+		void add_include(Args&&... args)
 		{
-			m_includes.add_source(std::move(inc));
+			static_assert(std::is_base_of<plib::psource_t, S>::value, "S must inherit from plib::psource_t");
+
+			auto src(plib::make_unique<S>(std::forward<Args>(args)...));
+			m_includes.add_source(std::move(src));
 		}
 
 		void add_define(const pstring &def, const pstring &val)
@@ -336,16 +339,12 @@ namespace netlist
 		models_t &models() noexcept { return m_models; }
 		const models_t &models() const noexcept { return m_models; }
 
+		plib::psource_t::stream_ptr get_data_stream(const pstring &name);
+
 	protected:
-		models_t                                    m_models;
-		std::stack<pstring>                         m_namespace_stack;
 		std::unordered_map<pstring, pstring>        m_alias;
 		std::vector<link_t>                         m_links;
 		std::unordered_map<pstring, pstring>        m_param_values;
-
-		plib::psource_collection_t<>                m_sources;
-
-		factory::list_t                             m_factory;
 
 		// need to preserve order of device creation ...
 		std::vector<std::pair<pstring, factory::element_t *>> m_device_factory;
@@ -354,6 +353,10 @@ namespace netlist
 	private:
 		plib::ppreprocessor::defines_map_type       m_defines;
 		plib::psource_collection_t<>                m_includes;
+		models_t                                    m_models;
+		std::stack<pstring>                         m_namespace_stack;
+		plib::psource_collection_t<>                m_sources;
+		factory::list_t                             m_factory;
 
 		setup_t  &m_setup;
 		log_type &m_log;
@@ -371,64 +374,52 @@ namespace netlist
 		explicit setup_t(netlist_state_t &nlstate);
 		~setup_t() noexcept = default;
 
-		COPYASSIGNMOVE(setup_t, delete)
+		PCOPYASSIGNMOVE(setup_t, delete)
 
 		netlist_state_t &nlstate() { return m_nlstate; }
 		const netlist_state_t &nlstate() const { return m_nlstate; }
 
+		// called from param_t creation
 		void register_param_t(const pstring &name, param_t &param);
-
 		pstring get_initial_param_val(const pstring &name, const pstring &def) const;
 
 		void register_term(detail::core_terminal_t &term);
 		void register_term(terminal_t &term, terminal_t &other_term);
 
+		// called from net_splitter
 		terminal_t *get_connected_terminal(const terminal_t &term) const noexcept
 		{
 			auto ret(m_connected_terminals.find(&term));
 			return (ret != m_connected_terminals.end()) ? ret->second : nullptr;
 		}
 
-		void remove_connections(const pstring &pin);
-
-		bool connect(detail::core_terminal_t &t1, detail::core_terminal_t &t2);
-
-		param_t *find_param(const pstring &param_in, bool required = true) const;
-
-		// get family
+		// get family -> truthtable
 		const logic_family_desc_t *family_from_model(const pstring &model);
 
+		// tools use this -> FIXME: needs another place
 		void register_dynamic_log_devices(const std::vector<pstring> &loglist);
-		void resolve_inputs();
-
-		plib::psource_t::stream_ptr get_data_stream(const pstring &name);
-
-		factory::list_t &factory() { return m_factory; }
-		const factory::list_t &factory() const { return m_factory; }
-
-		// helper - also used by nltool
-		pstring resolve_alias(const pstring &name) const;
-		pstring de_alias(const pstring &alias) const;
-
+		param_t *find_param(const pstring &param_in, bool required = true) const;
 		// needed by nltool
 		std::vector<pstring> get_terminals_for_device_name(const pstring &devname) const;
 
-		log_type &log();
-		const log_type &log() const;
-
-		// needed by proxy
+		// needed by proxy device to check power terminals -> FIXME: this should be a setup_t task
 		detail::core_terminal_t *find_terminal(const pstring &terminal_in, detail::terminal_type atype, bool required = true) const;
 		detail::core_terminal_t *find_terminal(const pstring &terminal_in, bool required = true) const;
-
-		// core net handling
-
-		void delete_empty_nets();
+		pstring de_alias(const pstring &alias) const;
+		// FIXME: only needed by solver code outside of setup_t
+		bool connect(detail::core_terminal_t &t1, detail::core_terminal_t &t2);
 
 		// run preparation
 
 		void prepare_to_run();
 
 	private:
+		// FIXME: stale? - remove later
+		void remove_connections(const pstring &pin);
+
+		void resolve_inputs();
+		pstring resolve_alias(const pstring &name) const;
+		void delete_empty_nets();
 
 		void merge_nets(detail::net_t &thisnet, detail::net_t &othernet);
 
@@ -441,7 +432,7 @@ namespace netlist
 		// helpers
 		static pstring termtype_as_str(detail::core_terminal_t &in);
 
-		devices::nld_base_proxy *get_d_a_proxy(detail::core_terminal_t &out);
+		devices::nld_base_proxy *get_d_a_proxy(const detail::core_terminal_t &out);
 		devices::nld_base_proxy *get_a_d_proxy(detail::core_terminal_t &inp);
 		detail::core_terminal_t &resolve_proxy(detail::core_terminal_t &term);
 
@@ -451,7 +442,7 @@ namespace netlist
 		netlist_state_t                             &m_nlstate;
 		devices::nld_netlistparams                  *m_netlist_params;
 		std::unordered_map<pstring, param_ref_t>    m_params;
-		std::unordered_map<detail::core_terminal_t *,
+		std::unordered_map<const detail::core_terminal_t *,
 			devices::nld_base_proxy *>              m_proxies;
 
 		unsigned m_proxy_cnt;

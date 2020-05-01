@@ -196,7 +196,7 @@ TILE_GET_INFO_MEMBER(panicr_state::get_bgtile_info)
 	code=memregion("user1")->base()[tile_index];
 	attr=memregion("user2")->base()[tile_index];
 	code+=((attr&7)<<8);
-	SET_TILE_INFO_MEMBER(1,
+	tileinfo.set(1,
 		code,
 		(attr & 0xf0) >> 4,
 		0);
@@ -211,7 +211,7 @@ TILE_GET_INFO_MEMBER(panicr_state::get_infotile_info_2)
 	code=memregion("user1")->base()[tile_index];
 	attr=memregion("user2")->base()[tile_index];
 	code+=((attr&7)<<8);
-	SET_TILE_INFO_MEMBER(3,
+	tileinfo.set(3,
 		code,
 		0,
 		0);
@@ -228,7 +228,7 @@ TILE_GET_INFO_MEMBER(panicr_state::get_txttile_info)
 
 	tileinfo.group = color;
 
-	SET_TILE_INFO_MEMBER(0,
+	tileinfo.set(0,
 		code + ((attr & 8) << 5),
 		color,
 		0);
@@ -410,7 +410,7 @@ WRITE8_MEMBER(panicr_state::output_w)
 READ8_MEMBER(panicr_state::t5182shared_r)
 {
 	if ((offset & 1) == 0)
-		return m_t5182->sharedram_r(space, offset/2);
+		return m_t5182->sharedram_r(offset/2);
 	else
 		return 0;
 }
@@ -418,7 +418,7 @@ READ8_MEMBER(panicr_state::t5182shared_r)
 WRITE8_MEMBER(panicr_state::t5182shared_w)
 {
 	if ((offset & 1) == 0)
-		m_t5182->sharedram_w(space, offset/2, data);
+		m_t5182->sharedram_w(offset/2, data);
 }
 
 

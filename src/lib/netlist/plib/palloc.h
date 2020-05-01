@@ -13,12 +13,12 @@
 #include "pstring.h"
 #include "ptypes.h"
 
+#include <algorithm>
 #include <cstddef>      // for std::max_align_t (usually long long)
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <algorithm>
 
 #if defined(_WIN32) || defined(_WIN64) || defined(_MSC_VER)
 #include <malloc.h>
@@ -225,7 +225,7 @@ namespace plib {
 
 		T* allocate(std::size_t n)
 		{
-			return reinterpret_cast<T *>(m_a.allocate(ALIGN, sizeof(T) * n));
+			return reinterpret_cast<T *>(m_a.allocate(ALIGN, sizeof(T) * n)); //NOLINT
 		}
 
 		void deallocate(T* p, std::size_t n) noexcept
@@ -234,7 +234,7 @@ namespace plib {
 		}
 
 		template <class AR1, class T1, std::size_t A1, class AR2, class T2, std::size_t A2>
-		friend bool operator==(const arena_allocator<AR1, T1, A1>& lhs,
+		friend bool operator==(const arena_allocator<AR1, T1, A1>& lhs, // NOLINT
 			const arena_allocator<AR2, T2, A2>& rhs) noexcept;
 
 		template <class AU, class U, std::size_t A>
@@ -311,7 +311,7 @@ namespace plib {
 			m_stat_cur_alloc() -= size;
 			#if (PUSE_ALIGNED_ALLOCATION)
 				// NOLINTNEXTLINE(cppcoreguidelines-no-malloc)
-				free(ptr);
+				::free(ptr);
 			#else
 				::operator delete(ptr);
 			#endif

@@ -28,6 +28,7 @@ project "netlist"
 
 	defines {
 		"__STDC_CONSTANT_MACROS",
+		"NL_USE_ACADEMIC_SOLVERS=0",
 	}
 
 	includedirs {
@@ -202,6 +203,8 @@ project "netlist"
 		MAME_DIR .. "src/lib/netlist/devices/nld_dm9334.h",
 		MAME_DIR .. "src/lib/netlist/devices/nld_ne555.cpp",
 		MAME_DIR .. "src/lib/netlist/devices/nld_ne555.h",
+		MAME_DIR .. "src/lib/netlist/devices/nld_ne566.cpp",
+		MAME_DIR .. "src/lib/netlist/devices/nld_ne566.h",
 		MAME_DIR .. "src/lib/netlist/devices/nld_mm5837.cpp",
 		MAME_DIR .. "src/lib/netlist/devices/nld_mm5837.h",
 		MAME_DIR .. "src/lib/netlist/devices/nld_r2r_dac.cpp",
@@ -233,4 +236,6 @@ project "netlist"
 		MAME_DIR .. "src/lib/netlist/macro/nlm_opamp.h",
 		MAME_DIR .. "src/lib/netlist/macro/nlm_other.cpp",
 		MAME_DIR .. "src/lib/netlist/macro/nlm_other.h",
+
+		MAME_DIR .. "src/lib/netlist/generated/static_solvers.cpp",
 	}

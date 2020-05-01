@@ -14,8 +14,10 @@
 
 namespace plib {
 
+	static constexpr const std::size_t MAX_STACK = 32;
+
 	template <typename NT>
-	void pfunction<NT>::compile(const pstring &expr, const std::vector<pstring> &inputs) noexcept(false)
+	void pfunction<NT>::compile(const pstring &expr, const inputs_container &inputs) noexcept(false)
 	{
 		if (plib::startsWith(expr, "rpn:"))
 			compile_postfix(expr.substr(4), inputs);
@@ -24,14 +26,14 @@ namespace plib {
 	}
 
 	template <typename NT>
-	void pfunction<NT>::compile_postfix(const pstring &expr, const std::vector<pstring> &inputs) noexcept(false)
+	void pfunction<NT>::compile_postfix(const pstring &expr, const inputs_container &inputs) noexcept(false)
 	{
 		std::vector<pstring> cmds(plib::psplit(expr, " "));
 		compile_postfix(inputs, cmds, expr);
 	}
 
 	template <typename NT>
-	void pfunction<NT>::compile_postfix(const std::vector<pstring> &inputs,
+	void pfunction<NT>::compile_postfix(const inputs_container &inputs,
 			const std::vector<pstring> &cmds, const pstring &expr) noexcept(false)
 	{
 		m_precompiled.clear();
@@ -86,6 +88,8 @@ namespace plib {
 			}
 			if (stk < 1)
 				throw pexception(plib::pfmt("pfunction: stack underflow on token <{1}> in <{2}>")(cmd)(expr));
+			if (stk >= static_cast<int>(MAX_STACK))
+				throw pexception(plib::pfmt("pfunction: stack overflow on token <{1}> in <{2}>")(cmd)(expr));
 			m_precompiled.push_back(rc);
 		}
 		if (stk != 1)
@@ -118,7 +122,7 @@ namespace plib {
 	}
 
 	template <typename NT>
-	void pfunction<NT>::compile_infix(const pstring &expr, const std::vector<pstring> &inputs)
+	void pfunction<NT>::compile_infix(const pstring &expr, const inputs_container &inputs)
 	{
 		// Shunting-yard infix parsing
 		std::vector<pstring> sep = {"(", ")", ",", "*", "/", "+", "-", "^"};
@@ -236,24 +240,24 @@ namespace plib {
 	}
 
 	template <typename NT>
-	static inline typename std::enable_if<std::is_floating_point<NT>::value, NT>::type
+	static inline typename std::enable_if<plib::is_floating_point<NT>::value, NT>::type
 	lfsr_random(std::uint16_t &lfsr) noexcept
 	{
 		std::uint16_t lsb = lfsr & 1;
 		lfsr >>= 1;
 		if (lsb)
-			lfsr ^= 0xB400U; // taps 15, 13, 12, 10
-		return static_cast<NT>(lfsr) / static_cast<NT>(0xffffU);
+			lfsr ^= 0xB400U; // NOLINT: taps 15, 13, 12, 10
+		return static_cast<NT>(lfsr) / static_cast<NT>(0xffffU); // NOLINT
 	}
 
 	template <typename NT>
-	static inline typename std::enable_if<std::is_integral<NT>::value, NT>::type
+	static inline typename std::enable_if<plib::is_integral<NT>::value, NT>::type
 	lfsr_random(std::uint16_t &lfsr) noexcept
 	{
 		std::uint16_t lsb = lfsr & 1;
 		lfsr >>= 1;
 		if (lsb)
-			lfsr ^= 0xB400U; // taps 15, 13, 12, 10
+			lfsr ^= 0xB400U; // NOLINT: taps 15, 13, 12, 10
 		return static_cast<NT>(lfsr);
 	}
 
@@ -267,11 +271,11 @@ namespace plib {
 		break;
 
 	template <typename NT>
-	NT pfunction<NT>::evaluate(const std::vector<NT> &values) noexcept
+	NT pfunction<NT>::evaluate(const values_container &values) noexcept
 	{
-		std::array<NT, 20> stack = { plib::constants<NT>::zero() };
+		std::array<value_type, MAX_STACK> stack = { plib::constants<value_type>::zero() };
 		unsigned ptr = 0;
-		stack[0] = plib::constants<NT>::zero();
+		stack[0] = plib::constants<value_type>::zero();
 		for (auto &rc : m_precompiled)
 		{
 			switch (rc.m_cmd)
@@ -287,7 +291,7 @@ namespace plib {
 				OP(MIN,  1, std::min(ST2, ST1))
 				OP(TRUNC,  0, plib::trunc(ST2))
 				case RAND:
-					stack[ptr++] = lfsr_random<NT>(m_lfsr);
+					stack[ptr++] = lfsr_random<value_type>(m_lfsr);
 					break;
 				case PUSH_INPUT:
 					stack[ptr++] = values[static_cast<unsigned>(rc.m_param)];
@@ -304,7 +308,7 @@ namespace plib {
 	template class pfunction<double>;
 	template class pfunction<long double>;
 #if (PUSE_FLOAT128)
-	template class pfunction<__float128>;
+	template class pfunction<FLOAT128>;
 #endif
 
 } // namespace plib

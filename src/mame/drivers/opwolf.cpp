@@ -727,7 +727,7 @@ WRITE_LINE_MEMBER(opwolf_state::msm5205_vck_w)
 {
 	if (m_adpcm_data[N] != -1)
 	{
-		m_msm[N]->write_data(m_adpcm_data[N] & 0x0f);
+		m_msm[N]->data_w(m_adpcm_data[N] & 0x0f);
 		m_adpcm_data[N] = -1;
 		if (m_adpcm_pos[N] == m_adpcm_end[N])
 		{
@@ -739,7 +739,7 @@ WRITE_LINE_MEMBER(opwolf_state::msm5205_vck_w)
 	{
 		m_adpcm_data[N] = memregion("adpcm")->base()[m_adpcm_pos[N]];
 		m_adpcm_pos[N] = (m_adpcm_pos[N] + 1) & 0x7ffff;
-		m_msm[N]->write_data(m_adpcm_data[N] >> 4);
+		m_msm[N]->data_w(m_adpcm_data[N] >> 4);
 	}
 }
 
@@ -922,7 +922,7 @@ void opwolf_state::opwolf(machine_config &config)
 	screen.set_palette("palette");
 
 	GFXDECODE(config, "gfxdecode", "palette", gfx_opwolf);
-	PALETTE(config, "palette").set_format(palette_device::xRGB_444, 2048);
+	PALETTE(config, "palette").set_format(palette_device::xRGBRRRRGGGGBBBB_bit0, 2048);
 
 	PC080SN(config, m_pc080sn, 0);
 	m_pc080sn->set_gfx_region(0);
@@ -996,7 +996,7 @@ void opwolf_state::opwolfb(machine_config &config) /* OSC clocks unknown for the
 	screen.set_palette("palette");
 
 	GFXDECODE(config, "gfxdecode", "palette", gfx_opwolf);
-	PALETTE(config, "palette").set_format(palette_device::xRGB_444, 2048);
+	PALETTE(config, "palette").set_format(palette_device::xRGBRRRRGGGGBBBB_bit0, 2048);
 
 	PC080SN(config, m_pc080sn, 0);
 	m_pc080sn->set_gfx_region(0);

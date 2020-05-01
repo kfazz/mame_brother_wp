@@ -314,13 +314,12 @@ WRITE8_MEMBER(metro_state::sound_data_w)
 {
 	machine().scheduler().synchronize(timer_expired_delegate(FUNC(metro_state::sound_data_sync), this), data);
 	m_audiocpu->pulse_input_line(INPUT_LINE_NMI, attotime::zero); // seen rxd_r
-	m_maincpu->spin_until_interrupt();
-	m_busy_sndcpu = 1;
 }
 
 TIMER_CALLBACK_MEMBER(metro_state::sound_data_sync)
 {
 	m_sound_data = param;
+	m_busy_sndcpu = 1;
 }
 
 
@@ -363,7 +362,7 @@ WRITE8_MEMBER(metro_state::upd7810_portb_w)
 	   6
 	   5 !clock YM2413 I/O
 	   4 !clock MSM6295 I/O
-	   3
+	   3 !enable read from 6295
 	   2 !enable write to YM2413/6295
 	   1 select YM2413 register or data port
 	   0
@@ -392,6 +391,13 @@ WRITE8_MEMBER(metro_state::upd7810_portb_w)
 		/* write */
 		if (!BIT(data, 4))
 			m_oki->write(m_porta);
+	}
+
+	if (BIT(m_portb, 3) && !BIT(data, 3))   /* clock 1->0 */
+	{
+		/* read */
+		if (!BIT(data, 4))
+			m_porta = m_oki->read();
 	}
 
 	m_portb = data;
@@ -3156,7 +3162,7 @@ void metro_state::batlbubl(machine_config &config)
 
 void metro_state::metro_upd7810_sound(machine_config &config)
 {
-	upd7810_device &upd(UPD7810(config, m_audiocpu, 24_MHz_XTAL/2));
+	upd78c10_device &upd(UPD78C10(config, m_audiocpu, 24_MHz_XTAL/2));
 	upd.rxd_func().set(FUNC(metro_state::rxd_r));
 	upd.set_addrmap(AS_PROGRAM, &metro_state::upd7810_map);
 	upd.pa_in_cb().set(FUNC(metro_state::upd7810_porta_r));
@@ -3167,7 +3173,7 @@ void metro_state::metro_upd7810_sound(machine_config &config)
 
 void metro_state::daitorid_upd7810_sound(machine_config &config)
 {
-	upd7810_device &upd(UPD7810(config, m_audiocpu, 12_MHz_XTAL));
+	upd78c10_device &upd(UPD78C10(config, m_audiocpu, 12_MHz_XTAL));
 	upd.rxd_func().set(FUNC(metro_state::rxd_r));
 	upd.set_addrmap(AS_PROGRAM, &metro_state::upd7810_map);
 	upd.pa_in_cb().set(FUNC(metro_state::upd7810_porta_r));

@@ -6,11 +6,7 @@
 #error Somehow nl_base.h made it into the include chain.
 #endif
 
-#ifndef NLTOOL_VERSION
 #define USE_FRONTIERS 1
-#else
-#define USE_FRONTIERS 1
-#endif
 
 /* if we use frontiers, use fixed STV for smaller matrix sizes */
 #if (USE_FRONTIERS)
@@ -78,7 +74,7 @@
  *  Kidniki schematics
  * ---------------------------------------------------------------------------*/
 
-NETLIST_START(kidniki_schematics)
+static NETLIST_START(kidniki_schematics)
 	//  EESCHEMA NETLIST VERSION 1.1 (SPICE FORMAT) CREATION DATE: SAT 06 JUN 2015 01:06:26 PM CEST
 	//  TO EXCLUDE A COMPONENT FROM THE SPICE NETLIST ADD [SPICE_NETLIST_ENABLED] USER FIELD SET TO: N
 	//  TO REORDER THE COMPONENT SPICE NODE SEQUENCE ADD [SPICE_NODE_SEQUENCE] USER FIELD AND DEFINE SEQUENCE: 2,1,0
@@ -361,7 +357,7 @@ NETLIST_END()
 
 NETLIST_START(kidniki)
 
-#if (0 || USE_FRONTIERS)
+#if (1 || USE_FRONTIERS)
 	SOLVER(Solver, 48000)
 	PARAM(Solver.ACCURACY, 1e-7)
 	PARAM(Solver.NR_LOOPS, 300)

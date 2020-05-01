@@ -75,7 +75,7 @@ TILE_GET_INFO_MEMBER(contra_state::get_fg_tile_info)
 
 	bank = (bank & ~(mask << 1)) | ((ctrl_4 & mask) << 1);
 
-	SET_TILE_INFO_MEMBER(0,
+	tileinfo.set(0,
 			m_fg_vram[tile_index] + bank * 256,
 			((ctrl_6 & 0x30) * 2 + 16) + (attr & 7),
 			0);
@@ -103,7 +103,7 @@ TILE_GET_INFO_MEMBER(contra_state::get_bg_tile_info)
 	// 2009-12 FP: TO BE VERIFIED - old code used ctrl4 from chip 0?!?
 	bank = (bank & ~(mask << 1)) | ((ctrl_4 & mask) << 1);
 
-	SET_TILE_INFO_MEMBER(1,
+	tileinfo.set(1,
 			m_bg_vram[tile_index] + bank * 256,
 			((ctrl_6 & 0x30) * 2 + 16) + (attr & 7),
 			0);
@@ -124,7 +124,7 @@ TILE_GET_INFO_MEMBER(contra_state::get_tx_tile_info)
 			((attr >> (bit2    )) & 0x08) |
 			((attr >> (bit3 - 1)) & 0x10);
 
-	SET_TILE_INFO_MEMBER(0,
+	tileinfo.set(0,
 			m_tx_vram[tile_index] + bank * 256,
 			((ctrl_6 & 0x30) * 2 + 16) + (attr & 7),
 			0);
@@ -225,7 +225,7 @@ WRITE8_MEMBER(contra_state::contra_K007121_ctrl_0_w)
 	if (offset == 7)
 		m_fg_tilemap->set_flip((data & 0x08) ? (TILEMAP_FLIPY | TILEMAP_FLIPX) : 0);
 
-	m_k007121_1->ctrl_w(space, offset, data);
+	m_k007121_1->ctrl_w(offset, data);
 }
 
 WRITE8_MEMBER(contra_state::contra_K007121_ctrl_1_w)
@@ -247,7 +247,7 @@ WRITE8_MEMBER(contra_state::contra_K007121_ctrl_1_w)
 	if (offset == 7)
 		m_bg_tilemap->set_flip((data & 0x08) ? (TILEMAP_FLIPY | TILEMAP_FLIPX) : 0);
 
-	m_k007121_2->ctrl_w(space, offset, data);
+	m_k007121_2->ctrl_w(offset, data);
 }
 
 

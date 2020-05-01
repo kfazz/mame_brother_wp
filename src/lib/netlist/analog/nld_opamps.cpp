@@ -7,6 +7,13 @@
 #include "nlid_fourterm.h"
 #include "nlid_twoterm.h"
 
+//
+// Set to 1 to model output impedance as a series resistor.
+// The default is that the VCVS already has an internal impedance.
+// This needs more investigation.
+//
+#define TEST_ALT_OUTPUT (0)
+
 namespace netlist
 {
 	namespace analog
@@ -130,7 +137,9 @@ namespace netlist
 			{
 				create_and_register_subdevice("CP1", m_CP);
 				create_and_register_subdevice("EBUF", m_EBUF);
-
+#if TEST_ALT_OUTPUT
+				create_and_register_subdevice("RO", m_RO);
+#endif
 				register_subalias("PLUS", "G1.IP");
 				register_subalias("MINUS", "G1.IN");
 
@@ -147,7 +156,12 @@ namespace netlist
 			}
 			if (m_type == 2)
 			{
+#if TEST_ALT_OUTPUT
+				connect("EBUF.OP", "RO.1");
+				register_subalias("OUT", "RO.2");
+#else
 				register_subalias("OUT", "EBUF.OP");
+#endif
 			}
 			if (m_type == 3)
 			{
@@ -159,8 +173,12 @@ namespace netlist
 				connect("VL", "DN.A");
 				connect("DP.A", "DN.K");
 				connect("DN.K", "RP1.1");
-
+#if TEST_ALT_OUTPUT
+				connect("EBUF.OP", "RO.1");
+				register_subalias("OUT", "RO.2");
+#else
 				register_subalias("OUT", "EBUF.OP");
+#endif
 			}
 
 		}
@@ -176,6 +194,9 @@ namespace netlist
 		analog::NETLIB_SUB(R_base) m_RP;
 		analog::NETLIB_SUB(VCCS) m_G1;
 		NETLIB_SUB_UPTR(analog, C) m_CP;
+#if TEST_ALT_OUTPUT
+		NETLIB_SUB_UPTR(analog, R_base) m_RO;
+#endif
 		NETLIB_SUB_UPTR(analog, VCVS) m_EBUF;
 		NETLIB_SUB_UPTR(analog, D) m_DP;
 		NETLIB_SUB_UPTR(analog, D) m_DN;
@@ -205,14 +226,14 @@ namespace netlist
 
 	NETLIB_UPDATE_PARAM(opamp)
 	{
-		m_G1.m_RI.setTo(m_model.m_RI);
+		m_G1.m_RI.set(m_model.m_RI);
 
 		if (m_type == 1)
 		{
 			nl_fptype RO = m_model.m_RO;
 			nl_fptype G = m_model.m_UGF / m_model.m_FPF / RO;
 			m_RP.set_R(RO);
-			m_G1.m_G.setTo(G);
+			m_G1.m_G.set(G);
 		}
 		if (m_type == 3 || m_type == 2)
 		{
@@ -221,23 +242,33 @@ namespace netlist
 			nl_fptype G = m_model.m_UGF / m_model.m_FPF / RP;
 
 			//printf("OPAMP %s: %g %g %g\n", name().c_str(), CP, RP, G);
-			if (m_model.m_SLEW / (nlconst::four() * nlconst::pi() * nlconst::magic(0.0258)) < m_model.m_UGF)
+			if (m_model.m_SLEW / (nlconst::four() * nlconst::pi() * nlconst::np_VT()) < m_model.m_UGF)
 				log().warning(MW_OPAMP_FAIL_CONVERGENCE(this->name()));
 
-			m_CP->m_C.setTo(CP);
+			m_CP->set_cap_embedded(CP);
 			m_RP.set_R(RP);
-			m_G1.m_G.setTo(G);
+			m_G1.m_G.set(G);
 
 		}
 		if (m_type == 2)
 		{
-			m_EBUF->m_G.setTo(nlconst::one());
-			m_EBUF->m_RO.setTo(m_model.m_RO);
+			m_EBUF->m_G.set(nlconst::one());
+#if TEST_ALT_OUTPUT
+			m_EBUF->m_RO.set(0.001);
+			m_RO->set_R(m_model.m_RO);
+#else
+			m_EBUF->m_RO.set(m_model.m_RO);
+#endif
 		}
 		if (m_type == 3)
 		{
-			m_EBUF->m_G.setTo(nlconst::one());
-			m_EBUF->m_RO.setTo(m_model.m_RO);
+			m_EBUF->m_G.set(nlconst::one());
+#if TEST_ALT_OUTPUT
+			m_EBUF->m_RO.set(0.001);
+			m_RO->set_R(m_model.m_RO);
+#else
+			m_EBUF->m_RO.set(m_model.m_RO);
+#endif
 		}
 	}
 
