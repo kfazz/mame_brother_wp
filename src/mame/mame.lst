@@ -41868,6 +41868,7 @@ simpr8210                       // Pioneer PR-8210
 
 
 @source:brotherwp.cpp
+wp55                           // Brother WP-55
 wp70                           // Brother WP-70
 wp75                           // Brother WP-75
 wp2450ds                       // Brother WP-2450ds
