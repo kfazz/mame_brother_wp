@@ -17,7 +17,7 @@
 
 #pragma once
 
-namespace bus { namespace hp_dio {
+namespace bus::hp_dio {
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -77,14 +77,14 @@ public:
 	auto irq6_out_cb() { return m_irq6_out_cb.bind(); }
 	auto irq7_out_cb() { return m_irq7_out_cb.bind(); }
 
-	void install_memory(offs_t start, offs_t end, read16_delegate rhandler, write16_delegate whandler);
+	template<typename R, typename W> void install_memory(offs_t start, offs_t end, R rhandler, W whandler);
 
 	// DANGER: these will currently produce different results for a DIO-I card on DIO-I and DIO-II systems
 	//         due to the varying bus widths.  Using all install_memory() shields you from this problem.
 	//         Either know what you're doing (m_prgwidth is available to cards for this purpose) or
 	//         only use these for 32-bit DIO-II cards.
-	void install_bank(offs_t start, offs_t end, const char *tag, uint8_t *data);
-	void install_rom(offs_t start, offs_t end, const char *tag, uint8_t *data);
+	void install_bank(offs_t start, offs_t end, uint8_t *data);
+	void install_rom(offs_t start, offs_t end, uint8_t *data);
 
 	void unmap_bank(offs_t start, offs_t end);
 	void unmap_rom(offs_t start, offs_t end);
@@ -93,27 +93,27 @@ public:
 	// IRQs 1, 2, and 7 are reserved for non-bus usage.
 
 	// input lines
-	DECLARE_WRITE_LINE_MEMBER(dmar0_in) { set_dmar(m_bus_index, 0, state); }
-	DECLARE_WRITE_LINE_MEMBER(dmar1_in) { set_dmar(m_bus_index, 1, state); }
-	DECLARE_WRITE_LINE_MEMBER(irq1_in) { set_irq(m_bus_index, 0, state); }
-	DECLARE_WRITE_LINE_MEMBER(irq2_in) { set_irq(m_bus_index, 1, state); }
-	DECLARE_WRITE_LINE_MEMBER(irq3_in) { set_irq(m_bus_index, 2, state); }
-	DECLARE_WRITE_LINE_MEMBER(irq4_in) { set_irq(m_bus_index, 3, state); }
-	DECLARE_WRITE_LINE_MEMBER(irq5_in) { set_irq(m_bus_index, 4, state); }
-	DECLARE_WRITE_LINE_MEMBER(irq6_in) { set_irq(m_bus_index, 5, state); }
-	DECLARE_WRITE_LINE_MEMBER(irq7_in) { set_irq(m_bus_index, 6, state); }
-	DECLARE_WRITE_LINE_MEMBER(reset_in);
+	void dmar0_in(int state) { set_dmar(m_bus_index, 0, state); }
+	void dmar1_in(int state) { set_dmar(m_bus_index, 1, state); }
+	void irq1_in(int state) { set_irq(m_bus_index, 0, state); }
+	void irq2_in(int state) { set_irq(m_bus_index, 1, state); }
+	void irq3_in(int state) { set_irq(m_bus_index, 2, state); }
+	void irq4_in(int state) { set_irq(m_bus_index, 3, state); }
+	void irq5_in(int state) { set_irq(m_bus_index, 4, state); }
+	void irq6_in(int state) { set_irq(m_bus_index, 5, state); }
+	void irq7_in(int state) { set_irq(m_bus_index, 6, state); }
+	void reset_in(int state);
 
 	// output lines
-	DECLARE_READ_LINE_MEMBER(irq1_out) const { return (m_irq[0] & ~m_bus_index) ? 1 : 0; }
-	DECLARE_READ_LINE_MEMBER(irq2_out) const { return (m_irq[1] & ~m_bus_index) ? 1 : 0; }
-	DECLARE_READ_LINE_MEMBER(irq3_out) const { return (m_irq[2] & ~m_bus_index) ? 1 : 0; }
-	DECLARE_READ_LINE_MEMBER(irq4_out) const { return (m_irq[3] & ~m_bus_index) ? 1 : 0; }
-	DECLARE_READ_LINE_MEMBER(irq5_out) const { return (m_irq[4] & ~m_bus_index) ? 1 : 0; }
-	DECLARE_READ_LINE_MEMBER(irq6_out) const { return (m_irq[5] & ~m_bus_index) ? 1 : 0; }
-	DECLARE_READ_LINE_MEMBER(irq7_out) const { return (m_irq[6] & ~m_bus_index) ? 1 : 0; }
-	DECLARE_READ_LINE_MEMBER(dmar0_out) const { return dmar0_r(); }
-	DECLARE_READ_LINE_MEMBER(dmar1_out) const { return dmar1_r(); }
+	int irq1_out() const { return (m_irq[0] & ~m_bus_index) ? 1 : 0; }
+	int irq2_out() const { return (m_irq[1] & ~m_bus_index) ? 1 : 0; }
+	int irq3_out() const { return (m_irq[2] & ~m_bus_index) ? 1 : 0; }
+	int irq4_out() const { return (m_irq[3] & ~m_bus_index) ? 1 : 0; }
+	int irq5_out() const { return (m_irq[4] & ~m_bus_index) ? 1 : 0; }
+	int irq6_out() const { return (m_irq[5] & ~m_bus_index) ? 1 : 0; }
+	int irq7_out() const { return (m_irq[6] & ~m_bus_index) ? 1 : 0; }
+	int dmar0_out() const { return dmar0_r(); }
+	int dmar1_out() const { return dmar1_r(); }
 
 	bool dmar0_r() const { return (m_dmar[0] & ~m_bus_index) ? 1 : 0; }
 	bool dmar1_r() const { return (m_dmar[1] & ~m_bus_index) ? 1 : 0; }
@@ -184,35 +184,35 @@ protected:
 
 	virtual void interface_pre_start() override;
 
-	int get_index() { return m_index; };
+	int get_index() { return m_index; }
 	address_space &program_space() { return m_dio_dev->program_space(); }
 
-	DECLARE_WRITE_LINE_MEMBER(irq1_out) { m_dio_dev->set_irq(m_index, 0, state); }
-	DECLARE_WRITE_LINE_MEMBER(irq2_out) { m_dio_dev->set_irq(m_index, 1, state); }
-	DECLARE_WRITE_LINE_MEMBER(irq3_out) { m_dio_dev->set_irq(m_index, 2, state); }
-	DECLARE_WRITE_LINE_MEMBER(irq4_out) { m_dio_dev->set_irq(m_index, 3, state); }
-	DECLARE_WRITE_LINE_MEMBER(irq5_out) { m_dio_dev->set_irq(m_index, 4, state); }
-	DECLARE_WRITE_LINE_MEMBER(irq6_out) { m_dio_dev->set_irq(m_index, 5, state); }
-	DECLARE_WRITE_LINE_MEMBER(irq7_out) { m_dio_dev->set_irq(m_index, 6, state); }
-	DECLARE_WRITE_LINE_MEMBER(dmar0_out) { m_dio_dev->set_dmar(m_index, 0, state); }
-	DECLARE_WRITE_LINE_MEMBER(dmar1_out) { m_dio_dev->set_dmar(m_index, 1, state); }
+	void irq1_out(int state) { m_dio_dev->set_irq(m_index, 0, state); }
+	void irq2_out(int state) { m_dio_dev->set_irq(m_index, 1, state); }
+	void irq3_out(int state) { m_dio_dev->set_irq(m_index, 2, state); }
+	void irq4_out(int state) { m_dio_dev->set_irq(m_index, 3, state); }
+	void irq5_out(int state) { m_dio_dev->set_irq(m_index, 4, state); }
+	void irq6_out(int state) { m_dio_dev->set_irq(m_index, 5, state); }
+	void irq7_out(int state) { m_dio_dev->set_irq(m_index, 6, state); }
+	void dmar0_out(int state) { m_dio_dev->set_dmar(m_index, 0, state); }
+	void dmar1_out(int state) { m_dio_dev->set_dmar(m_index, 1, state); }
 
-	virtual DECLARE_WRITE_LINE_MEMBER(irq1_in) {}
-	virtual DECLARE_WRITE_LINE_MEMBER(irq2_in) {}
-	virtual DECLARE_WRITE_LINE_MEMBER(irq3_in) {}
-	virtual DECLARE_WRITE_LINE_MEMBER(irq4_in) {}
-	virtual DECLARE_WRITE_LINE_MEMBER(irq5_in) {}
-	virtual DECLARE_WRITE_LINE_MEMBER(irq6_in) {}
-	virtual DECLARE_WRITE_LINE_MEMBER(irq7_in) {}
-	virtual DECLARE_WRITE_LINE_MEMBER(dmar0_in) {}
-	virtual DECLARE_WRITE_LINE_MEMBER(dmar1_in) {}
+	virtual void irq1_in(int state) {}
+	virtual void irq2_in(int state) {}
+	virtual void irq3_in(int state) {}
+	virtual void irq4_in(int state) {}
+	virtual void irq5_in(int state) {}
+	virtual void irq6_in(int state) {}
+	virtual void irq7_in(int state) {}
+	virtual void dmar0_in(int state) {}
+	virtual void dmar1_in(int state) {}
 
 	virtual uint8_t dmack_r_out(int channel) { return m_dio_dev->dmack_r_out(m_index, channel); }
 	virtual void dmack_w_out(int channel, uint8_t data) { m_dio_dev->dmack_w_out(m_index, channel, data); }
 	virtual uint8_t dmack_r_in(int channel) { return 0xff; }
 	virtual void dmack_w_in(int channel, uint8_t data) {}
 
-	virtual DECLARE_WRITE_LINE_MEMBER(reset_in) {}
+	virtual void reset_in(int state) {}
 
 	bool dmar0_r() const { return m_dio_dev->dmar0_r(); }
 	bool dmar1_r() const { return m_dio_dev->dmar1_r(); }
@@ -280,7 +280,7 @@ protected:
 	dio32_device &dio() { assert(m_dio_dev); return downcast<dio32_device &>(*m_dio_dev); }
 };
 
-} } // namespace bus::hp_dio
+} // namespace bus::hp_dio
 
 // device type definition
 DECLARE_DEVICE_TYPE_NS(DIO16_SLOT, bus::hp_dio, dio16_slot_device)

@@ -20,14 +20,14 @@ public:
 	mb3773_device( const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock = 0);
 
 	// I/O operations
-	WRITE_LINE_MEMBER( write_line_ck );
+	void write_line_ck(int state);
 
 protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
 
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+	TIMER_CALLBACK_MEMBER(watchdog_expired);
 
 private:
 	void reset_timer();

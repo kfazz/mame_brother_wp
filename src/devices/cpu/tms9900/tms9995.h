@@ -3,7 +3,7 @@
 /*
   tms9995.h
 
-  See tms9995.c for documentation
+  See tms9995.cpp for documentation
   Also see tms9900.h for types of TMS99xx processors.
 */
 
@@ -12,7 +12,6 @@
 
 #pragma once
 
-#include "debugger.h"
 #include "tms99com.h"
 
 // device type definition
@@ -37,16 +36,16 @@ public:
 	// READY input line. When asserted (high), the memory is ready for data exchange.
 	// We chose to use a direct method instead of a delegate to keep performance
 	// footprint low; this method may be called very frequently.
-	DECLARE_WRITE_LINE_MEMBER( ready_line );
+	void ready_line(int state);
 
 	// HOLD input line. When asserted (low), the CPU is requested to release the
 	// data and address bus and enter the HOLD state. The entrance of this state
 	// is acknowledged by the HOLDA output line.
-	DECLARE_WRITE_LINE_MEMBER( hold_line );
+	void hold_line(int state);
 
 	// RESET input line. Unlike the standard set_input_line, this input method
 	// is synchronous and will immediately lead to a reset of the CPU.
-	DECLARE_WRITE_LINE_MEMBER( reset_line );
+	void reset_line(int state);
 
 	// Callbacks
 	auto extop_cb() { return m_external_operation.bind(); }
@@ -54,7 +53,8 @@ public:
 	auto holda_cb() { return m_holda_line.bind(); }
 
 	// For debugger access
-	uint8_t debug_read_onchip_memory(offs_t addr) { return m_onchip_memory[addr & 0xff]; };
+	uint8_t debug_read_onchip_memory(offs_t addr) { return m_onchip_memory[addr & 0xff]; }
+	void debug_write_onchip_memory(offs_t addr, uint8_t data) { m_onchip_memory[addr & 0xff] = data; }
 	bool is_onchip(offs_t addrb) { return (((addrb & 0xff00)==0xf000 && (addrb < 0xf0fc)) || ((addrb & 0xfffc)==0xfffc)) && !m_mp9537; }
 
 	void set_overflow_interrupt( int enable ) { m_check_overflow = (enable!=0); }
@@ -66,9 +66,9 @@ protected:
 	virtual void        device_start() override;
 
 	// device_execute_interface overrides
-	virtual uint32_t      execute_min_cycles() const noexcept override;
-	virtual uint32_t      execute_max_cycles() const noexcept override;
-	virtual uint32_t      execute_input_lines() const noexcept override;
+	virtual uint32_t    execute_min_cycles() const noexcept override;
+	virtual uint32_t    execute_max_cycles() const noexcept override;
+	virtual uint32_t    execute_input_lines() const noexcept override;
 	virtual void        execute_set_input(int irqline, int state) override;
 	virtual void        execute_run() override;
 

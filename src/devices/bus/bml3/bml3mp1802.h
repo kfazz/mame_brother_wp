@@ -16,6 +16,7 @@
 
 #include "bml3bus.h"
 #include "imagedev/floppy.h"
+#include "machine/input_merger.h"
 #include "machine/wd_fdc.h"
 
 
@@ -31,8 +32,8 @@ public:
 	// construction/destruction
 	bml3bus_mp1802_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(bml3_mp1802_r);
-	DECLARE_WRITE8_MEMBER(bml3_mp1802_w);
+	uint8_t bml3_mp1802_r();
+	void bml3_mp1802_w(uint8_t data);
 
 protected:
 	virtual void device_start() override;
@@ -42,16 +43,17 @@ protected:
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual const tiny_rom_entry *device_rom_region() const override;
 
+	virtual void map_exrom(address_space_installer &space) override;
+	virtual void map_io(address_space_installer &space) override;
+
 private:
-	DECLARE_WRITE_LINE_MEMBER(bml3_wd17xx_intrq_w);
+	void nmi_w(int state);
 
 	required_device<mb8866_device> m_fdc;
-	required_device<floppy_connector> m_floppy0;
-	required_device<floppy_connector> m_floppy1;
-	required_device<floppy_connector> m_floppy2;
-	required_device<floppy_connector> m_floppy3;
+	required_device_array<floppy_connector, 4> m_floppy;
+	required_device<input_merger_device> m_nmigate;
 
-	uint8_t *m_rom;
+	required_region_ptr<uint8_t> m_rom;
 };
 
 // device type definition

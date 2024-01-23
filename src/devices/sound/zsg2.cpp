@@ -120,7 +120,7 @@ zsg2_device::zsg2_device(const machine_config &mconfig, const char *tag, device_
 	, device_sound_interface(mconfig, *this)
 	, m_mem_base(*this, DEVICE_SELF)
 	, m_read_address(0)
-	, m_ext_read_handler(*this)
+	, m_ext_read_handler(*this, 0)
 {
 }
 
@@ -130,8 +130,6 @@ zsg2_device::zsg2_device(const machine_config &mconfig, const char *tag, device_
 
 void zsg2_device::device_start()
 {
-	m_ext_read_handler.resolve();
-
 	memset(&m_chan, 0, sizeof(m_chan));
 
 	m_stream = stream_alloc(0, 4, clock() / 768);
@@ -227,7 +225,7 @@ uint32_t zsg2_device::read_memory(uint32_t offset)
 	if (offset >= m_mem_blocks)
 		return 0;
 
-	if (m_ext_read_handler.isnull())
+	if (m_ext_read_handler.isunset())
 		return m_mem_base[offset];
 
 	return m_ext_read_handler(offset);
@@ -275,7 +273,7 @@ void zsg2_device::filter_samples(zchan *ch)
 		ch->emphasis_filter_state += raw_samples[i]-((ch->emphasis_filter_state+EMPHASIS_ROUNDING)>>EMPHASIS_FILTER_SHIFT);
 
 		int32_t sample = ch->emphasis_filter_state >> EMPHASIS_OUTPUT_SHIFT;
-		ch->samples[i+1] = std::min<int32_t>(std::max<int32_t>(sample, -32768), 32767);
+		ch->samples[i+1] = std::clamp<int32_t>(sample, -32768, 32767);
 	}
 }
 
@@ -283,9 +281,9 @@ void zsg2_device::filter_samples(zchan *ch)
 //  sound_stream_update - handle a stream update
 //-------------------------------------------------
 
-void zsg2_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void zsg2_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
-	for (int i = 0; i < samples; i++)
+	for (int i = 0; i < outputs[0].samples(); i++)
 	{
 		int32_t mix[4] = {};
 
@@ -355,8 +353,7 @@ void zsg2_device::sound_stream_update(sound_stream &stream, stream_sample_t **in
 		}
 
 		for(int output=0; output<4; output++)
-			outputs[output][i] = std::min<int32_t>(std::max<int32_t>(mix[output], -32768), 32767);
-
+			outputs[output].put_int_clamp(i, mix[output], 32768);
 	}
 	m_sample_count++;
 }
@@ -609,7 +606,7 @@ uint16_t zsg2_device::control_r(int reg)
 
 /******************************************************************************/
 
-WRITE16_MEMBER(zsg2_device::write)
+void zsg2_device::write(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	// we only support full 16-bit accesses
 	if (mem_mask != 0xffff)
@@ -633,7 +630,7 @@ WRITE16_MEMBER(zsg2_device::write)
 	}
 }
 
-READ16_MEMBER(zsg2_device::read)
+uint16_t zsg2_device::read(offs_t offset, uint16_t mem_mask)
 {
 	// we only support full 16-bit accesses
 	if (mem_mask != 0xffff)

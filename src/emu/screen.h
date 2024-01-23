@@ -7,10 +7,13 @@
     Core MAME screen device.
 
 ***************************************************************************/
+
 #ifndef MAME_EMU_SCREEN_H
 #define MAME_EMU_SCREEN_H
 
 #pragma once
+
+#include "rendertypes.h"
 
 #include <type_traits>
 #include <utility>
@@ -28,16 +31,6 @@ enum screen_type_enum
 	SCREEN_TYPE_VECTOR,
 	SCREEN_TYPE_LCD,
 	SCREEN_TYPE_SVG
-};
-
-// texture formats
-enum texture_format
-{
-	TEXFORMAT_UNDEFINED = 0,                            // require a format to be specified
-	TEXFORMAT_PALETTE16,                                // 16bpp palettized, no alpha
-	TEXFORMAT_RGB32,                                    // 32bpp 8-8-8 RGB
-	TEXFORMAT_ARGB32,                                   // 32bpp 8-8-8-8 ARGB
-	TEXFORMAT_YUY16                                     // 16bpp 8-8 Y/Cb, Y/Cr in sequence
 };
 
 // screen_update callback flags
@@ -232,18 +225,22 @@ public:
 	screen_device &set_raw(u32 pixclock, u16 htotal, u16 hbend, u16 hbstart, u16 vtotal, u16 vbend, u16 vbstart)
 	{
 		assert(pixclock != 0);
-		m_clock = pixclock;
+		set_clock(pixclock);
 		m_refresh = HZ_TO_ATTOSECONDS(pixclock) * htotal * vtotal;
 		m_vblank = m_refresh / vtotal * (vtotal - (vbstart - vbend));
 		m_width = htotal;
 		m_height = vtotal;
-		m_visarea.set(hbend, hbstart - 1, vbend, vbstart - 1);
+		m_visarea.set(hbend, hbstart ? hbstart - 1 : htotal - 1, vbend, vbstart - 1);
 		return *this;
 	}
 	screen_device &set_raw(const XTAL &xtal, u16 htotal, u16 hbend, u16 hbstart, u16 vtotal, u16 vbend, u16 vbstart)
 	{
 		xtal.validate(std::string("Configuring screen ") + tag());
 		return set_raw(xtal.value(), htotal, hbend, hbstart, vtotal, vbend, vbstart);
+	}
+	screen_device &set_raw(const XTAL &xtal, u16 htotal, u16 vtotal, rectangle visarea)
+	{
+		return set_raw(xtal, htotal, visarea.left(), visarea.right() + 1, vtotal, visarea.top(), visarea.bottom() + 1);
 	}
 	void set_refresh(attoseconds_t rate) { m_refresh = rate; }
 
@@ -319,7 +316,7 @@ public:
 
 	/// \brief Set visible area to full area
 	///
-	/// Set visible screen area to the full screen area (i.e. noi
+	/// Set visible screen area to the full screen area (i.e. no
 	/// horizontal or vertical blanking period).  This is generally not
 	/// possible for raster displays, but is useful for other display
 	/// simulations.  Must be called after calling #set_size.
@@ -388,8 +385,8 @@ public:
 	// beam positioning and state
 	int vpos() const;
 	int hpos() const;
-	DECLARE_READ_LINE_MEMBER(vblank) const { return (machine().time() < m_vblank_end_time) ? 1 : 0; }
-	DECLARE_READ_LINE_MEMBER(hblank) const { int const curpos = hpos(); return (curpos < m_visarea.left() || curpos > m_visarea.right()) ? 1 : 0; }
+	int vblank() const { return (machine().time() < m_vblank_end_time) ? 1 : 0; }
+	int hblank() const { int const curpos = hpos(); return (curpos < m_visarea.left() || curpos > m_visarea.right()) ? 1 : 0; }
 
 	// timing
 	attotime time_until_pos(int vpos, int hpos = 0) const;
@@ -397,6 +394,7 @@ public:
 	attotime time_until_vblank_end() const;
 	attotime time_until_update() const { return (m_video_attributes & VIDEO_UPDATE_AFTER_VBLANK) ? time_until_vblank_end() : time_until_vblank_start(); }
 	attotime scan_period() const { return attotime(0, m_scantime); }
+	attotime pixel_period() const { return attotime(0, m_pixeltime); }
 	attotime frame_period() const { return attotime(0, m_frame_period); }
 	u64 frame_number() const { return m_frame_number; }
 
@@ -406,6 +404,7 @@ public:
 
 	// updating
 	int partial_updates() const { return m_partial_updates_this_frame; }
+	int partial_scan_hpos() const { return m_partial_scan_hpos; }
 	bool update_partial(int scanline);
 	void update_now();
 	void reset_partial_updates();
@@ -425,15 +424,6 @@ public:
 private:
 	class svg_renderer;
 
-	// timer IDs
-	enum
-	{
-		TID_VBLANK_START,
-		TID_VBLANK_END,
-		TID_SCANLINE0,
-		TID_SCANLINE
-	};
-
 	// device-level overrides
 	virtual void device_validity_check(validity_checker &valid) const override;
 	virtual void device_config_complete() override;
@@ -442,13 +432,14 @@ private:
 	virtual void device_reset() override;
 	virtual void device_stop() override;
 	virtual void device_post_load() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// internal helpers
 	void set_container(render_container &container) { m_container = &container; }
 	void realloc_screen_bitmaps();
-	void vblank_begin();
-	void vblank_end();
+	TIMER_CALLBACK_MEMBER(vblank_begin);
+	TIMER_CALLBACK_MEMBER(vblank_end);
+	TIMER_CALLBACK_MEMBER(first_scanline_tick);
+	TIMER_CALLBACK_MEMBER(scanline_tick);
 	void finalize_burnin();
 	void load_effect_overlay(const char *filename);
 	void update_scan_bitmap_size(int y);
@@ -547,15 +538,6 @@ private:
 DECLARE_DEVICE_TYPE(SCREEN, screen_device)
 
 // iterator helper
-typedef device_type_iterator<screen_device> screen_device_iterator;
-
-/*!
- @defgroup Screen device configuration functions
- @{
- @def set_type
-  Modify the screen device type
-  @see screen_type_enum
- @}
- */
+typedef device_type_enumerator<screen_device> screen_device_enumerator;
 
 #endif // MAME_EMU_SCREEN_H

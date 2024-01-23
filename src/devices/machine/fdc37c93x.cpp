@@ -9,14 +9,16 @@ SMSC FDC37C93x Plug and Play Compatible Ultra I/O Controller
 ***************************************************************************/
 
 #include "emu.h"
-#include "bus/isa/isa.h"
-#include "machine/ds128x.h"
 #include "machine/fdc37c93x.h"
 
-DEFINE_DEVICE_TYPE(FDC37C93X, fdc37c93x_device, "fdc37c93x", "SMSC FDC37C93X")
+#include "machine/pckeybrd.h"
 
-fdc37c93x_device::fdc37c93x_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, FDC37C93X, tag, owner, clock)
+#include "formats/naslite_dsk.h"
+
+DEFINE_DEVICE_TYPE(FDC37C93X, fdc37c93x_device, "fdc37c93x", "SMSC FDC37C93X Super I/O")
+
+fdc37c93x_device::fdc37c93x_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
+	: device_t(mconfig, type, tag, owner, clock)
 	, device_isa16_card_interface(mconfig, *this)
 	, mode(OperatingMode::Run)
 	, config_key_step(0)
@@ -68,6 +70,13 @@ fdc37c93x_device::fdc37c93x_device(const machine_config &mconfig, const char *ta
 		enabled_logical[n] = false;
 	for (int n = 0; n < 4; n++)
 		dreq_mapping[n] = -1;
+}
+
+fdc37c93x_device::fdc37c93x_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: fdc37c93x_device(mconfig, FDC37C93X, tag, owner, clock)
+{
+	m_device_id = 0x02;
+	m_device_rev = 0x01;
 }
 
 /*
@@ -235,10 +244,11 @@ static void pc_hd_floppies(device_slot_interface &device)
 	device.option_add("35dd", FLOPPY_35_DD);
 }
 
-FLOPPY_FORMATS_MEMBER(fdc37c93x_device::floppy_formats)
-	FLOPPY_PC_FORMAT,
-	FLOPPY_NASLITE_FORMAT
-FLOPPY_FORMATS_END
+void fdc37c93x_device::floppy_formats(format_registration &fr)
+{
+	fr.add_pc_formats();
+	fr.add(FLOPPY_NASLITE_FORMAT);
+}
 
 void fdc37c93x_device::device_add_mconfig(machine_config &config)
 {
@@ -254,13 +264,13 @@ void fdc37c93x_device::device_add_mconfig(machine_config &config)
 	pc_lpt_lptdev->irq_handler().set(FUNC(fdc37c93x_device::irq_parallel_w));
 
 	// serial ports
-	NS16450(config, pc_serial1_comdev, XTAL(1'843'200)); // or NS16550 ?
+	NS16550(config, pc_serial1_comdev, XTAL(1'843'200));
 	pc_serial1_comdev->out_int_callback().set(FUNC(fdc37c93x_device::irq_serial1_w));
 	pc_serial1_comdev->out_tx_callback().set(FUNC(fdc37c93x_device::txd_serial1_w));
 	pc_serial1_comdev->out_dtr_callback().set(FUNC(fdc37c93x_device::dtr_serial1_w));
 	pc_serial1_comdev->out_rts_callback().set(FUNC(fdc37c93x_device::rts_serial1_w));
 
-	NS16450(config, pc_serial2_comdev, XTAL(1'843'200));
+	NS16550(config, pc_serial2_comdev, XTAL(1'843'200));
 	pc_serial2_comdev->out_int_callback().set(FUNC(fdc37c93x_device::irq_serial2_w));
 	pc_serial2_comdev->out_tx_callback().set(FUNC(fdc37c93x_device::txd_serial2_w));
 	pc_serial2_comdev->out_dtr_callback().set(FUNC(fdc37c93x_device::dtr_serial2_w));
@@ -274,160 +284,173 @@ void fdc37c93x_device::device_add_mconfig(machine_config &config)
 	// keyboard
 	KBDC8042(config, m_kbdc);
 	m_kbdc->set_keyboard_type(kbdc8042_device::KBDC8042_PS2);
+	m_kbdc->set_interrupt_type(kbdc8042_device::KBDC8042_DOUBLE);
 	m_kbdc->input_buffer_full_callback().set(FUNC(fdc37c93x_device::irq_keyboard_w));
+	m_kbdc->input_buffer_full_mouse_callback().set(FUNC(fdc37c93x_device::irq_mouse_w));
 	m_kbdc->system_reset_callback().set(FUNC(fdc37c93x_device::kbdp20_gp20_reset_w));
 	m_kbdc->gate_a20_callback().set(FUNC(fdc37c93x_device::kbdp21_gp25_gatea20_w));
+	m_kbdc->set_keyboard_tag("at_keyboard");
+
+	at_keyboard_device &at_keyb(AT_KEYB(config, "at_keyboard", pc_keyboard_device::KEYBOARD_TYPE::AT, 1));
+	at_keyb.keypress().set(m_kbdc, FUNC(kbdc8042_device::keyboard_w));
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::irq_floppy_w)
+void fdc37c93x_device::irq_floppy_w(int state)
 {
 	if (enabled_logical[LogicalDevice::FDC] == false)
 		return;
 	request_irq(configuration_registers[LogicalDevice::FDC][0x70], state ? ASSERT_LINE : CLEAR_LINE);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::drq_floppy_w)
+void fdc37c93x_device::drq_floppy_w(int state)
 {
 	if (enabled_logical[LogicalDevice::FDC] == false)
 		return;
 	request_dma(configuration_registers[LogicalDevice::FDC][0x74], state ? ASSERT_LINE : CLEAR_LINE);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::irq_parallel_w)
+void fdc37c93x_device::irq_parallel_w(int state)
 {
 	if (enabled_logical[LogicalDevice::Parallel] == false)
 		return;
 	request_irq(configuration_registers[LogicalDevice::Parallel][0x70], state ? ASSERT_LINE : CLEAR_LINE);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::irq_serial1_w)
+void fdc37c93x_device::irq_serial1_w(int state)
 {
 	if (enabled_logical[LogicalDevice::Serial1] == false)
 		return;
 	request_irq(configuration_registers[LogicalDevice::Serial1][0x70], state ? ASSERT_LINE : CLEAR_LINE);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::txd_serial1_w)
+void fdc37c93x_device::txd_serial1_w(int state)
 {
 	if (enabled_logical[LogicalDevice::Serial1] == false)
 		return;
 	m_txd1_callback(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::dtr_serial1_w)
+void fdc37c93x_device::dtr_serial1_w(int state)
 {
 	if (enabled_logical[LogicalDevice::Serial1] == false)
 		return;
 	m_ndtr1_callback(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::rts_serial1_w)
+void fdc37c93x_device::rts_serial1_w(int state)
 {
 	if (enabled_logical[LogicalDevice::Serial1] == false)
 		return;
 	m_nrts1_callback(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::irq_serial2_w)
+void fdc37c93x_device::irq_serial2_w(int state)
 {
 	if (enabled_logical[LogicalDevice::Serial2] == false)
 		return;
 	request_irq(configuration_registers[LogicalDevice::Serial2][0x70], state ? ASSERT_LINE : CLEAR_LINE);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::txd_serial2_w)
+void fdc37c93x_device::txd_serial2_w(int state)
 {
 	if (enabled_logical[LogicalDevice::Serial2] == false)
 		return;
 	m_txd2_callback(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::dtr_serial2_w)
+void fdc37c93x_device::dtr_serial2_w(int state)
 {
 	if (enabled_logical[LogicalDevice::Serial2] == false)
 		return;
 	m_ndtr2_callback(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::rts_serial2_w)
+void fdc37c93x_device::rts_serial2_w(int state)
 {
 	if (enabled_logical[LogicalDevice::Serial2] == false)
 		return;
 	m_nrts2_callback(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::rxd1_w)
+void fdc37c93x_device::rxd1_w(int state)
 {
 	pc_serial1_comdev->rx_w(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::ndcd1_w)
+void fdc37c93x_device::ndcd1_w(int state)
 {
 	pc_serial1_comdev->dcd_w(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::ndsr1_w)
+void fdc37c93x_device::ndsr1_w(int state)
 {
 	pc_serial1_comdev->dsr_w(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::nri1_w)
+void fdc37c93x_device::nri1_w(int state)
 {
 	pc_serial1_comdev->ri_w(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::ncts1_w)
+void fdc37c93x_device::ncts1_w(int state)
 {
 	pc_serial1_comdev->cts_w(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::rxd2_w)
+void fdc37c93x_device::rxd2_w(int state)
 {
 	pc_serial2_comdev->rx_w(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::ndcd2_w)
+void fdc37c93x_device::ndcd2_w(int state)
 {
 	pc_serial2_comdev->dcd_w(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::ndsr2_w)
+void fdc37c93x_device::ndsr2_w(int state)
 {
 	pc_serial2_comdev->dsr_w(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::nri2_w)
+void fdc37c93x_device::nri2_w(int state)
 {
 	pc_serial2_comdev->ri_w(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::ncts2_w)
+void fdc37c93x_device::ncts2_w(int state)
 {
 	pc_serial2_comdev->cts_w(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::irq_rtc_w)
+void fdc37c93x_device::irq_rtc_w(int state)
 {
 	if (enabled_logical[LogicalDevice::RTC] == false)
 		return;
 	request_irq(configuration_registers[LogicalDevice::RTC][0x70], state ? ASSERT_LINE : CLEAR_LINE);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::irq_keyboard_w)
+void fdc37c93x_device::irq_keyboard_w(int state)
 {
 	if (enabled_logical[LogicalDevice::Keyboard] == false)
 		return;
 	request_irq(configuration_registers[LogicalDevice::Keyboard][0x70], state ? ASSERT_LINE : CLEAR_LINE);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::kbdp21_gp25_gatea20_w)
+void fdc37c93x_device::irq_mouse_w(int state)
+{
+	if (enabled_logical[LogicalDevice::Keyboard] == false)
+		return;
+	request_irq(configuration_registers[LogicalDevice::Keyboard][0x72], state ? ASSERT_LINE : CLEAR_LINE);
+}
+
+void fdc37c93x_device::kbdp21_gp25_gatea20_w(int state)
 {
 	if (enabled_logical[LogicalDevice::Keyboard] == false)
 		return;
 	m_gp25_gatea20_callback(state);
 }
 
-WRITE_LINE_MEMBER(fdc37c93x_device::kbdp20_gp20_reset_w)
+void fdc37c93x_device::kbdp20_gp20_reset_w(int state)
 {
 	if (enabled_logical[LogicalDevice::Keyboard] == false)
 		return;
@@ -491,7 +514,7 @@ void fdc37c93x_device::write(offs_t offset, uint8_t data)
 		if (config_index < 0x30)
 			write_global_configuration_register(config_index, byt);
 		else
-			write_logical_configuration_register(config_index, byt);;
+			write_logical_configuration_register(config_index, byt);
 	}
 	else
 		return;
@@ -499,7 +522,6 @@ void fdc37c93x_device::write(offs_t offset, uint8_t data)
 
 /* Map/unmap internal devices */
 
-#if 1
 uint8_t fdc37c93x_device::disabled_read()
 {
 	return 0xff;
@@ -511,26 +533,14 @@ void fdc37c93x_device::disabled_write(uint8_t data)
 
 void fdc37c93x_device::unmap_fdc(address_map &map)
 {
-	map(0x0, 0x0).rw(FUNC(fdc37c93x_device::disabled_read), FUNC(fdc37c93x_device::disabled_write));
-	map(0x1, 0x1).rw(FUNC(fdc37c93x_device::disabled_read), FUNC(fdc37c93x_device::disabled_write));
+	//map(0x0, 0x0).rw(FUNC(fdc37c93x_device::disabled_read), FUNC(fdc37c93x_device::disabled_write));
+	//map(0x1, 0x1).rw(FUNC(fdc37c93x_device::disabled_read), FUNC(fdc37c93x_device::disabled_write));
 	map(0x2, 0x2).rw(FUNC(fdc37c93x_device::disabled_read), FUNC(fdc37c93x_device::disabled_write));
 	map(0x3, 0x3).rw(FUNC(fdc37c93x_device::disabled_read), FUNC(fdc37c93x_device::disabled_write));
 	map(0x4, 0x4).rw(FUNC(fdc37c93x_device::disabled_read), FUNC(fdc37c93x_device::disabled_write));
 	map(0x5, 0x5).rw(FUNC(fdc37c93x_device::disabled_read), FUNC(fdc37c93x_device::disabled_write));
 	map(0x7, 0x7).rw(FUNC(fdc37c93x_device::disabled_read), FUNC(fdc37c93x_device::disabled_write));
 }
-#else
-void fdc37c93x_device::unmap_fdc(address_map &map)
-{
-	map(0x0, 0x0).noprw();
-	map(0x1, 0x1).noprw();
-	map(0x2, 0x2).noprw();
-	map(0x3, 0x3).noprw();
-	map(0x4, 0x4).noprw();
-	map(0x5, 0x5).noprw();
-	map(0x7, 0x7).noprw();
-}
-#endif
 
 void fdc37c93x_device::map_fdc_addresses()
 {
@@ -605,7 +615,8 @@ void fdc37c93x_device::unmap_serial2_addresses()
 
 void fdc37c93x_device::map_rtc(address_map &map)
 {
-	map(0x0, 0xf).rw(ds12885_rtcdev, FUNC(ds12885_device::read), FUNC(ds12885_device::write));
+	map(0x0, 0xf).lr8(NAME([this]() { return ds12885_rtcdev->get_address(); })).w(ds12885_rtcdev, FUNC(ds12885_device::address_w)).umask32(0x00ff00ff); // datasheet implies address might be a R/W register
+	map(0x0, 0xf).rw(ds12885_rtcdev, FUNC(ds12885_device::data_r), FUNC(ds12885_device::data_w)).umask32(0xff00ff00);
 }
 
 void fdc37c93x_device::map_rtc_addresses()
@@ -772,6 +783,8 @@ void fdc37c93x_device::write_fdd_configuration_register(int index, int data)
 	}
 	if (index == 0x74)
 		update_dreq_mapping(configuration_registers[LogicalDevice::FDC][0x74], LogicalDevice::FDC);
+	if (index == 0xF0)
+		logerror("FDD Mode Register changed: Floppy Mode %d FDC DMA Mode %d Interface Mode %d Swap Drives %d\n", (data >> 0) & 1, (data >> 1) & 1, (data >> 2) & 3, (data >> 4) & 1);
 }
 
 void fdc37c93x_device::write_parallel_configuration_register(int index, int data)
@@ -882,12 +895,12 @@ void fdc37c93x_device::write_auxio_configuration_register(int index, int data)
 	if (index == 0xe8)
 	{
 		if (data & 16)
-			logerror("GP20 used as 8042 P20 keyboard reset line\n");;
+			logerror("GP20 used as 8042 P20 keyboard reset line\n");
 	}
 	if (index == 0xed)
 	{
 		if (data & 8)
-			logerror("GP25 used as GATEA20 line\n");;
+			logerror("GP25 used as GATEA20 line\n");
 	}
 }
 
@@ -902,10 +915,10 @@ uint16_t fdc37c93x_device::read_global_configuration_register(int index)
 		ret = logical_device;
 		break;
 	case 0x20:
-		ret = 2;
+		ret = m_device_id;
 		break;
 	case 0x21:
-		ret = 1;
+		ret = m_device_rev;
 		break;
 	}
 	logerror("Read global configuration register %02X = %02X\n", index, ret);
@@ -975,19 +988,19 @@ void fdc37c93x_device::device_start()
 	m_isa->set_dma_channel(2, this, true);
 	m_isa->set_dma_channel(3, this, true);
 	remap(AS_IO, 0, 0x400);
-	m_gp20_reset_callback.resolve_safe();
-	m_gp25_gatea20_callback.resolve_safe();
-	m_irq1_callback.resolve_safe();
-	m_irq8_callback.resolve_safe();
-	m_irq9_callback.resolve_safe();
-	m_txd1_callback.resolve_safe();
-	m_ndtr1_callback.resolve_safe();
-	m_nrts1_callback.resolve_safe();
-	m_txd2_callback.resolve_safe();
-	m_ndtr2_callback.resolve_safe();
-	m_nrts2_callback.resolve_safe();
 }
 
 void fdc37c93x_device::device_reset()
 {
+}
+
+// 'M707 is mostly same except no IDE ports and extra power management regs
+DEFINE_DEVICE_TYPE(FDC37M707, fdc37m707_device, "fdc37m707", "SMSC FDC37M707 Super I/O")
+
+
+fdc37m707_device::fdc37m707_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: fdc37c93x_device(mconfig, FDC37M707, tag, owner, clock)
+{
+	m_device_id = 0x42;
+	m_device_rev = 0x01;
 }

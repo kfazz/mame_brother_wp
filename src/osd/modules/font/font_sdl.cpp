@@ -6,14 +6,14 @@
  */
 
 #include "font_module.h"
-#include "modules/osdmodule.h"
 
 #if defined(SDLMAME_UNIX) && !defined(SDLMAME_MACOSX) && !defined(SDLMAME_HAIKU) && !defined(SDLMAME_ANDROID)
 
 #include "corestr.h"
-#include "corealloc.h"
+#include "emucore.h"
 #include "fileio.h"
 #include "unicode.h"
+#include "osdcore.h"
 
 #ifdef SDLMAME_EMSCRIPTEN
 #include <SDL_ttf.h>
@@ -90,8 +90,8 @@ bool osd_font_sdl::open(std::string const &font_path, std::string const &_name, 
 	{
 		osd_printf_verbose("Searching font %s in -%s path/s\n", family, font_path);
 		//emu_file file(options().font_path(), OPEN_FLAG_READ);
-		emu_file file(font_path.c_str(), OPEN_FLAG_READ);
-		if (file.open(family.c_str()) == osd_file::error::NONE)
+		emu_file file(font_path, OPEN_FLAG_READ);
+		if (!file.open(family))
 		{
 			std::string full_name = file.fullpath();
 			font = TTF_OpenFont_Magic(full_name, POINT_SIZE, 0);
@@ -162,7 +162,7 @@ bool osd_font_sdl::get_bitmap(char32_t chnum, bitmap_argb32 &bitmap, std::int32_
 {
 	SDL_Color const fcol = { 0xff, 0xff, 0xff };
 	char ustr[16];
-	ustr[utf8_from_uchar(ustr, ARRAY_LENGTH(ustr), chnum)] = '\0';
+	ustr[utf8_from_uchar(ustr, std::size(ustr), chnum)] = '\0';
 	std::unique_ptr<SDL_Surface, void (*)(SDL_Surface *)> const drawsurf(TTF_RenderUTF8_Solid(m_font.get(), ustr, fcol), &SDL_FreeSurface);
 
 	// was nothing returned?
@@ -174,7 +174,7 @@ bool osd_font_sdl::get_bitmap(char32_t chnum, bitmap_argb32 &bitmap, std::int32_
 		// copy the rendered character image into it
 		for (int y = 0; y < bitmap.height(); y++)
 		{
-			std::uint32_t *const dstrow = &bitmap.pix32(y);
+			std::uint32_t *const dstrow = &bitmap.pix(y);
 			std::uint8_t const *const srcrow = reinterpret_cast<std::uint8_t const *>(drawsurf->pixels) + (y * drawsurf->pitch);
 
 			for (int x = 0; x < drawsurf->w; x++)
@@ -194,14 +194,13 @@ bool osd_font_sdl::get_bitmap(char32_t chnum, bitmap_argb32 &bitmap, std::int32_
 osd_font_sdl::TTF_Font_ptr osd_font_sdl::TTF_OpenFont_Magic(std::string const &name, int fsize, long index)
 {
 	emu_file file(OPEN_FLAG_READ);
-	if (file.open(name.c_str()) == osd_file::error::NONE)
+	if (!file.open(name))
 	{
 		unsigned char const ttf_magic[] = { 0x00, 0x01, 0x00, 0x00, 0x00 };
 		unsigned char const ttc1_magic[] = { 0x74, 0x74, 0x63, 0x66, 0x00, 0x01, 0x00, 0x00 };
 		unsigned char const ttc2_magic[] = { 0x74, 0x74, 0x63, 0x66, 0x00, 0x02, 0x00, 0x00 };
-		auto buffer_size = std::max({ sizeof(ttf_magic), sizeof(ttc1_magic), sizeof(ttc2_magic) });
-		unsigned char buffer[buffer_size];
-		auto const bytes_read = file.read(buffer, buffer_size);
+		unsigned char buffer[std::max({ sizeof(ttf_magic), sizeof(ttc1_magic), sizeof(ttc2_magic) })];
+		auto const bytes_read = file.read(buffer, std::size(buffer));
 		file.close();
 
 		if (((bytes_read >= sizeof(ttf_magic)) && !std::memcmp(buffer, ttf_magic, sizeof(ttf_magic))) ||
@@ -215,7 +214,7 @@ osd_font_sdl::TTF_Font_ptr osd_font_sdl::TTF_OpenFont_Magic(std::string const &n
 bool osd_font_sdl::BDF_Check_Magic(std::string const &name)
 {
 	emu_file file(OPEN_FLAG_READ);
-	if (file.open(name.c_str()) == osd_file::error::NONE)
+	if (!file.open(name))
 	{
 		unsigned char const magic[] = { 'S', 'T', 'A', 'R', 'T', 'F', 'O', 'N', 'T' };
 		unsigned char buffer[sizeof(magic)];
@@ -304,7 +303,7 @@ public:
 		return std::make_unique<osd_font_sdl>();
 	}
 
-	virtual int init(const osd_options &options) override
+	virtual int init(osd_interface &osd, const osd_options &options) override
 	{
 		if (TTF_Init() == -1)
 		{
@@ -350,10 +349,10 @@ bool font_sdl::get_font_families(std::string const &font_path, std::vector<std::
 		{
 			auto const compare_fonts = [](std::pair<std::string, std::string> const &a, std::pair<std::string, std::string> const &b) -> bool
 			{
-				int const second = core_stricmp(a.second.c_str(), b.second.c_str());
+				int const second = core_stricmp(a.second, b.second);
 				if (second < 0) return true;
 				else if (second > 0) return false;
-				else return core_stricmp(b.first.c_str(), b.first.c_str()) < 0;
+				else return core_stricmp(b.first, b.first) < 0;
 			};
 			std::string config((const char *)val.u.s);
 			std::string display(config);

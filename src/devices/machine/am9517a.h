@@ -61,18 +61,22 @@ public:
 	template <unsigned C> auto out_iow_callback() { return m_out_iow_cb[C].bind(); }
 	template <unsigned C> auto out_dack_callback() { return m_out_dack_cb[C].bind(); }
 
+	// define initial (inactive) state of DREQ inputs
+	void dreq_active_low() { assert(!configured()); m_status = 0xf0; }
+	void dreq_active_high() { assert(!configured()); m_status = 0; }
+
 	virtual uint8_t read(offs_t offset);
 	virtual void write(offs_t offset, uint8_t data);
 
-	DECLARE_WRITE_LINE_MEMBER( hack_w );
-	DECLARE_WRITE_LINE_MEMBER( ready_w );
-	DECLARE_WRITE_LINE_MEMBER( eop_w );
+	void hack_w(int state);
+	void ready_w(int state);
+	void eop_w(int state);
 
-	template <unsigned C> DECLARE_WRITE_LINE_MEMBER( dreq_w ) { dma_request(C, state); }
-	DECLARE_WRITE_LINE_MEMBER( dreq0_w );
-	DECLARE_WRITE_LINE_MEMBER( dreq1_w );
-	DECLARE_WRITE_LINE_MEMBER( dreq2_w );
-	DECLARE_WRITE_LINE_MEMBER( dreq3_w );
+	template <unsigned C> void dreq_w(int state) { dma_request(C, state); }
+	void dreq0_w(int state);
+	void dreq1_w(int state);
+	void dreq2_w(int state);
+	void dreq3_w(int state);
 
 protected:
 	am9517a_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
@@ -116,7 +120,9 @@ protected:
 	uint8_t m_request;
 
 private:
-	void dma_request(int channel, int state);
+	void dma_request(int channel, bool state);
+	void mask_channel(int channel, bool state);
+	void set_mask_register(uint8_t mask);
 	inline bool is_request_active(int channel);
 	inline bool is_software_request_active(int channel);
 	inline void set_hreq(int state);

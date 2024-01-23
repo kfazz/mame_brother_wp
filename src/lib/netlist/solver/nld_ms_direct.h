@@ -1,4 +1,4 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
 
 #ifndef NLD_MS_DIRECT_H_
@@ -13,24 +13,23 @@
 #include "plib/parray.h"
 #include "plib/vector_ops.h"
 
+#include "nld_matrix_solver_ext.h"
+
 #include <algorithm>
 
-namespace netlist
-{
-namespace solver
+namespace netlist::solver
 {
 
 	template <typename FT, int SIZE>
 	class matrix_solver_direct_t: public matrix_solver_ext_t<FT, SIZE>
 	{
-		friend class matrix_solver_t;
 	public:
 
 		using float_type = FT;
 
-		matrix_solver_direct_t(netlist_state_t &anetlist, const pstring &name,
-			const analog_net_t::list_t &nets,
-			const solver_parameters_t *params, std::size_t size);
+		matrix_solver_direct_t(devices::nld_solver &main_solver, const pstring &name,
+			const matrix_solver_t::net_list_t &nets,
+			const solver::solver_parameters_t *params, std::size_t size);
 
 		void reset() override { matrix_solver_t::reset(); }
 
@@ -42,7 +41,7 @@ namespace solver
 		static constexpr const std::size_t SIZEABS = plib::parray<FT, SIZE>::SIZEABS();
 		static constexpr const std::size_t m_pitch_ABS = (((SIZEABS + 0) + 7) / 8) * 8;
 
-		void vsolve_non_dynamic() override;
+		void upstream_solve_non_dynamic() override;
 		void solve_non_dynamic();
 
 		void LE_solve();
@@ -50,7 +49,7 @@ namespace solver
 		template <typename T>
 		void LE_back_subst(T & x);
 
-		PALIGNAS_VECTOROPT()
+		// PALIGNAS_VECTOROPT() `parray` defines alignment already
 		plib::parray2D<FT, SIZE, m_pitch_ABS> m_A;
 	};
 
@@ -87,25 +86,25 @@ namespace solver
 			for (std::size_t i = 0; i < kN; i++)
 			{
 				// Find the row with the largest first value
-				std::size_t maxrow = i;
+				std::size_t max_row = i;
 				for (std::size_t j = i + 1; j < kN; j++)
 				{
-					if (plib::abs(m_A[j][i]) > plib::abs(m_A[maxrow][i]))
-					//if (m_A[j][i] * m_A[j][i] > m_A[maxrow][i] * m_A[maxrow][i])
-						maxrow = j;
+					if (plib::abs(m_A[j][i]) > plib::abs(m_A[max_row][i]))
+					//#if (m_A[j][i] * m_A[j][i] > m_A[max_row][i] * m_A[max_row][i])
+						max_row = j;
 				}
 
-				if (maxrow != i)
+				if (max_row != i)
 				{
 #if 0
-					// Swap the maxrow and ith row
+					// Swap the max_row and ith row
 					for (std::size_t k = 0; k < kN; k++) {
-						std::swap(m_A[i][k], m_A[maxrow][k]);
+						std::swap(m_A[i][k], m_A[max_row][k]);
 					}
 #else
-						std::swap(m_A[i], m_A[maxrow]);
+						std::swap(m_A[i], m_A[max_row]);
 #endif
-					std::swap(this->m_RHS[i], this->m_RHS[maxrow]);
+					std::swap(this->m_RHS[i], this->m_RHS[max_row]);
 				}
 				// FIXME: Singular matrix?
 				const auto &Ai = m_A[i];
@@ -177,7 +176,7 @@ namespace solver
 	}
 
 	template <typename FT, int SIZE>
-	void matrix_solver_direct_t<FT, SIZE>::vsolve_non_dynamic()
+	void matrix_solver_direct_t<FT, SIZE>::upstream_solve_non_dynamic()
 	{
 		// populate matrix
 		this->clear_square_mat(m_A);
@@ -187,18 +186,17 @@ namespace solver
 	}
 
 	template <typename FT, int SIZE>
-	matrix_solver_direct_t<FT, SIZE>::matrix_solver_direct_t(netlist_state_t &anetlist, const pstring &name,
-		const analog_net_t::list_t &nets,
-		const solver_parameters_t *params,
+	matrix_solver_direct_t<FT, SIZE>::matrix_solver_direct_t(devices::nld_solver &main_solver, const pstring &name,
+		const matrix_solver_t::net_list_t &nets,
+		const solver::solver_parameters_t *params,
 		std::size_t size)
-	: matrix_solver_ext_t<FT, SIZE>(anetlist, name, nets, params, size)
+	: matrix_solver_ext_t<FT, SIZE>(main_solver, name, nets, params, size)
 	, m_pitch(m_pitch_ABS ? m_pitch_ABS : (((size + 0) + 7) / 8) * 8)
 	, m_A(size, m_pitch)
 	{
 		this->build_mat_ptr(m_A);
 	}
 
-} // namespace solver
-} // namespace netlist
+} // namespace netlist::solver
 
 #endif // NLD_MS_DIRECT_H_

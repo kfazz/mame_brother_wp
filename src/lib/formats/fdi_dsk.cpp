@@ -16,9 +16,10 @@
 
 */
 
-#include <cassert>
 #include "imageutl.h"
-#include "flopimg.h"
+#include "flopimg_legacy.h"
+
+#include "multibyte.h"
 
 /***************************************************************************
     PARAMETERS
@@ -238,7 +239,7 @@ FLOPPY_CONSTRUCT( fdi_dsk_construct )
 	floppy_image_read(floppy, &header, 0, sizeof(header));
 
 	tag->version = header.version[0];
-	tag->tracks = pick_integer_be(header.ltrack, 0, 2) + 1;
+	tag->tracks = get_u16be(header.ltrack) + 1;
 	tag->heads = header.lhead + 1;
 
 	if (LOG)

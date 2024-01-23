@@ -134,11 +134,11 @@ vec2 GetDistortedCoords(vec2 centerCoord, float amount, float amountCube)
 	float r2 = centerCoord.x * centerCoord.x + centerCoord.y * centerCoord.y;
 	float f = kcube == 0.0 ? 1.0 + r2 * k : 1.0 + r2 * (k + kcube * sqrt(r2));
 
-   	// fit screen bounds
+	// fit screen bounds
 	f /= 1.0 + amount * 0.25 + amountCube * 0.125;
 
 	// apply cubic distortion factor
-   	centerCoord *= f;
+	centerCoord *= f;
 
 	return centerCoord;
 }
@@ -183,7 +183,7 @@ void main()
 	// corner distortion at least by the amount of the image distorition
 	float distortCornerAmount = max(u_distort_corner.x, u_distortion.x + u_cubic_distortion.x);
 
-	float roundCornerAmount = u_round_corner.x * 0.5; 
+	float roundCornerAmount = u_round_corner.x * 0.5;
 	float smoothBorderAmount = u_smooth_border.x * 0.5;
 
 	vec2 TexelDims = vec2(1.0 / u_target_dims.x, 1.0 / u_target_dims.y);

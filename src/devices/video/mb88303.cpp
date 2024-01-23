@@ -122,11 +122,6 @@ mb88303_device::mb88303_device(const machine_config &mconfig, const char *tag, d
 
 void mb88303_device::device_start()
 {
-	// resolve callbacks
-	m_write_vow.resolve_safe();
-	m_write_vobn.resolve_safe();
-	m_write_do.resolve_safe();
-
 	// register for state saving
 	save_item(NAME(m_display_mem));
 	save_item(NAME(m_horiz_display_pos));
@@ -339,7 +334,7 @@ void mb88303_device::update_bitmap(bitmap_rgb32 &bitmap, const rectangle &clipre
 					const uint32_t color = BIT(gfx[row], bit) ? 0xffffffff : 0;
 					if (!show_background() && !color)
 						continue;
-					bitmap.pix32(bitmap_y + row + m_vert_display_pos, bitmap_x + (6 - bit) + m_horiz_display_pos) = color;
+					bitmap.pix(bitmap_y + row + m_vert_display_pos, bitmap_x + (6 - bit) + m_horiz_display_pos) = color;
 				}
 			}
 		}

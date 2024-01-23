@@ -261,15 +261,15 @@ inline uint8_t mos7360_device::read_rom(offs_t offset)
 //  mos7360_device - constructor
 //-------------------------------------------------
 
-mos7360_device::mos7360_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, MOS7360, tag, owner, clock),
-		device_memory_interface(mconfig, *this),
-		device_sound_interface(mconfig, *this),
-		device_video_interface(mconfig, *this),
-		m_videoram_space_config("videoram", ENDIANNESS_LITTLE, 8, 16, 0, address_map_constructor(FUNC(mos7360_device::mos7360_videoram_map), this)),
-		m_write_irq(*this),
-		m_read_k(*this),
-		m_stream(nullptr)
+mos7360_device::mos7360_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	device_t(mconfig, MOS7360, tag, owner, clock),
+	device_memory_interface(mconfig, *this),
+	device_sound_interface(mconfig, *this),
+	device_video_interface(mconfig, *this),
+	m_videoram_space_config("videoram", ENDIANNESS_LITTLE, 8, 16, 0, address_map_constructor(FUNC(mos7360_device::mos7360_videoram_map), this)),
+	m_write_irq(*this),
+	m_read_k(*this, 0xff),
+	m_stream(nullptr)
 {
 }
 
@@ -280,24 +280,20 @@ mos7360_device::mos7360_device(const machine_config &mconfig, const char *tag, d
 
 void mos7360_device::device_start()
 {
-	// resolve callbacks
-	m_write_irq.resolve_safe();
-	m_read_k.resolve_safe(0xff);
-
 	// allocate timers
-	m_timer1 = timer_alloc(TIMER_ID_1);
-	m_timer2 = timer_alloc(TIMER_ID_2);
-	m_timer3 = timer_alloc(TIMER_ID_3);
-	m_line_timer = timer_alloc(TIMER_LINE);
+	m_timer[TIMER_ID_1] = timer_alloc(FUNC(mos7360_device::timer_expired), this);
+	m_timer[TIMER_ID_2] = timer_alloc(FUNC(mos7360_device::timer_expired), this);
+	m_timer[TIMER_ID_3] = timer_alloc(FUNC(mos7360_device::timer_expired), this);
+	m_line_timer = timer_alloc(FUNC(mos7360_device::raster_interrupt_gen), this);
 	m_line_timer->adjust(screen().scan_period(), 0, screen().scan_period());
-	m_frame_timer = timer_alloc(TIMER_FRAME);
+	m_frame_timer = timer_alloc(FUNC(mos7360_device::frame_interrupt_gen), this);
 	m_frame_timer->adjust(screen().frame_period(), 0, screen().frame_period());
 
 	// allocate screen bitmap
 	screen().register_screen_bitmap(m_bitmap);
 
 	// create sound stream
-	m_stream = machine().sound().stream_alloc(*this, 0, 1, machine().sample_rate());
+	m_stream = stream_alloc(0, 1, machine().sample_rate());
 
 	// buffer for fastest played sample for 5 second so we have enough data for min 5 second
 	m_noisesize = NOISE_FREQUENCY_MAX * NOISE_BUFFER_SIZE_SEC;
@@ -340,9 +336,7 @@ void mos7360_device::device_start()
 	save_item(NAME(m_rom));
 	save_item(NAME(m_frame_count));
 	save_item(NAME(m_lines));
-	save_item(NAME(m_timer1_active));
-	save_item(NAME(m_timer2_active));
-	save_item(NAME(m_timer3_active));
+	save_item(NAME(m_timer_active));
 	save_item(NAME(m_cursor1));
 	save_item(NAME(m_chargenaddr));
 	save_item(NAME(m_bitmapaddr));
@@ -382,8 +376,10 @@ void mos7360_device::device_reset()
 	m_rom = 1;  // FIXME: at start should be RAM or ROM? old c16 code set it to ROM at init: is it correct?
 
 	m_lines = TED7360_LINES;
-	m_chargenaddr = m_bitmapaddr = m_videoaddr = 0;
-	m_timer1_active = m_timer2_active = m_timer3_active = 0;
+	m_chargenaddr = 0;
+	m_bitmapaddr = 0;
+	m_videoaddr = 0;
+	std::fill(std::begin(m_timer_active), std::end(m_timer_active), false);
 	m_cursor1 = 0;
 
 	m_rasterline = 0;
@@ -416,40 +412,25 @@ void mos7360_device::device_reset()
 
 
 //-------------------------------------------------
-//  device_timer - handler timer events
+//  timer_expired -
 //-------------------------------------------------
 
-void mos7360_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(mos7360_device::timer_expired)
 {
-	switch (id)
+	static const uint8_t s_irq_values[3] = { 0x08, 0x10, 0x40 };
+
+	if (param == TIMER_ID_1)
 	{
-	case TIMER_ID_1:
-		// proved by digisound of several intros like eoroidpro
-		m_timer1->adjust(clocks_to_attotime(TIMER1), 1);
-		m_timer1_active = 1;
-		set_interrupt(0x08);
-		break;
-
-	case TIMER_ID_2:
-		m_timer2->adjust(clocks_to_attotime(0x10000), 2);
-		m_timer2_active = 1;
-		set_interrupt(0x10);
-		break;
-
-	case TIMER_ID_3:
-		m_timer3->adjust(clocks_to_attotime(0x10000), 3);
-		m_timer3_active = 1;
-		set_interrupt(0x40);
-		break;
-
-	case TIMER_LINE:
-		raster_interrupt_gen();
-		break;
-
-	case TIMER_FRAME:
-		frame_interrupt_gen();
-		break;
+		// proven by digital sound of several intros like eoroidpro
+		m_timer[param]->adjust(clocks_to_attotime(TIMER1), param);
 	}
+	else
+	{
+		m_timer[param]->adjust(clocks_to_attotime(0x10000), param);
+	}
+
+	m_timer_active[param] = true;
+	set_interrupt(s_irq_values[param]);
 }
 
 
@@ -458,12 +439,12 @@ void mos7360_device::device_timer(emu_timer &timer, device_timer_id id, int para
 //  our sound stream
 //-------------------------------------------------
 
-void mos7360_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void mos7360_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
 	int i, v, a;
-	stream_sample_t *buffer = outputs[0];
+	auto &buffer = outputs[0];
 
-	for (i = 0; i < samples; i++)
+	for (i = 0; i < buffer.samples(); i++)
 	{
 		v = 0;
 
@@ -506,113 +487,100 @@ void mos7360_device::sound_stream_update(sound_stream &stream, stream_sample_t *
 
 		v = v * a;
 
-		buffer[i] = v;
+		buffer.put_int(i, v, 32768);
 	}
 }
 
 
 void mos7360_device::draw_character(int ybegin, int yend, int ch, int yoff, int xoff, uint16_t *color)
 {
-	int y, code;
-
-	for (y = ybegin; y <= yend; y++)
+	for (int y = ybegin; y <= yend; y++)
 	{
+		int code;
 		if (INROM)
 			code = read_rom(m_chargenaddr + ch * 8 + y);
 		else
 			code = read_ram(m_chargenaddr + ch * 8 + y);
 
-		m_bitmap.pix32(y + yoff, 0 + xoff) = PALETTE_MOS[color[code >> 7]];
-		m_bitmap.pix32(y + yoff, 1 + xoff) = PALETTE_MOS[color[(code >> 6) & 1]];
-		m_bitmap.pix32(y + yoff, 2 + xoff) = PALETTE_MOS[color[(code >> 5) & 1]];
-		m_bitmap.pix32(y + yoff, 3 + xoff) = PALETTE_MOS[color[(code >> 4) & 1]];
-		m_bitmap.pix32(y + yoff, 4 + xoff) = PALETTE_MOS[color[(code >> 3) & 1]];
-		m_bitmap.pix32(y + yoff, 5 + xoff) = PALETTE_MOS[color[(code >> 2) & 1]];
-		m_bitmap.pix32(y + yoff, 6 + xoff) = PALETTE_MOS[color[(code >> 1) & 1]];
-		m_bitmap.pix32(y + yoff, 7 + xoff) = PALETTE_MOS[color[code & 1]];
+		m_bitmap.pix(y + yoff, 0 + xoff) = PALETTE_MOS[color[BIT(code, 7)]];
+		m_bitmap.pix(y + yoff, 1 + xoff) = PALETTE_MOS[color[BIT(code, 6)]];
+		m_bitmap.pix(y + yoff, 2 + xoff) = PALETTE_MOS[color[BIT(code, 5)]];
+		m_bitmap.pix(y + yoff, 3 + xoff) = PALETTE_MOS[color[BIT(code, 4)]];
+		m_bitmap.pix(y + yoff, 4 + xoff) = PALETTE_MOS[color[BIT(code, 3)]];
+		m_bitmap.pix(y + yoff, 5 + xoff) = PALETTE_MOS[color[BIT(code, 2)]];
+		m_bitmap.pix(y + yoff, 6 + xoff) = PALETTE_MOS[color[BIT(code, 1)]];
+		m_bitmap.pix(y + yoff, 7 + xoff) = PALETTE_MOS[color[BIT(code, 0)]];
 	}
 }
 
 void mos7360_device::draw_character_multi(int ybegin, int yend, int ch, int yoff, int xoff)
 {
-	int y, code;
-
-	for (y = ybegin; y <= yend; y++)
+	for (int y = ybegin; y <= yend; y++)
 	{
+		int code;
 		if (INROM)
 			code = read_rom(m_chargenaddr + ch * 8 + y);
 		else
 			code = read_ram(m_chargenaddr + ch * 8 + y);
 
-		m_bitmap.pix32(y + yoff, 0 + xoff) =
-			m_bitmap.pix32(y + yoff, 1 + xoff) = PALETTE_MOS[m_multi[code >> 6]];
-		m_bitmap.pix32(y + yoff, 2 + xoff) =
-			m_bitmap.pix32(y + yoff, 3 + xoff) = PALETTE_MOS[m_multi[(code >> 4) & 3]];
-		m_bitmap.pix32(y + yoff, 4 + xoff) =
-			m_bitmap.pix32(y + yoff, 5 + xoff) = PALETTE_MOS[m_multi[(code >> 2) & 3]];
-		m_bitmap.pix32(y + yoff, 6 + xoff) =
-			m_bitmap.pix32(y + yoff, 7 + xoff) = PALETTE_MOS[m_multi[code & 3]];
+		m_bitmap.pix(y + yoff, 0 + xoff) = m_bitmap.pix(y + yoff, 1 + xoff) =
+				PALETTE_MOS[m_multi[code >> 6]];
+		m_bitmap.pix(y + yoff, 2 + xoff) = m_bitmap.pix(y + yoff, 3 + xoff) =
+				PALETTE_MOS[m_multi[(code >> 4) & 3]];
+		m_bitmap.pix(y + yoff, 4 + xoff) = m_bitmap.pix(y + yoff, 5 + xoff) =
+				PALETTE_MOS[m_multi[(code >> 2) & 3]];
+		m_bitmap.pix(y + yoff, 6 + xoff) = m_bitmap.pix(y + yoff, 7 + xoff) =
+				PALETTE_MOS[m_multi[code & 3]];
 	}
 }
 
 void mos7360_device::draw_bitmap(int ybegin, int yend, int ch, int yoff, int xoff)
 {
-	int y, code;
-
-	for (y = ybegin; y <= yend; y++)
+	for (int y = ybegin; y <= yend; y++)
 	{
-		code = read_ram(m_bitmapaddr + ch * 8 + y);
+		int code = read_ram(m_bitmapaddr + ch * 8 + y);
 
-		m_bitmap.pix32(y + yoff, 0 + xoff) = PALETTE_MOS[m_c16_bitmap[code >> 7]];
-		m_bitmap.pix32(y + yoff, 1 + xoff) = PALETTE_MOS[m_c16_bitmap[(code >> 6) & 1]];
-		m_bitmap.pix32(y + yoff, 2 + xoff) = PALETTE_MOS[m_c16_bitmap[(code >> 5) & 1]];
-		m_bitmap.pix32(y + yoff, 3 + xoff) = PALETTE_MOS[m_c16_bitmap[(code >> 4) & 1]];
-		m_bitmap.pix32(y + yoff, 4 + xoff) = PALETTE_MOS[m_c16_bitmap[(code >> 3) & 1]];
-		m_bitmap.pix32(y + yoff, 5 + xoff) = PALETTE_MOS[m_c16_bitmap[(code >> 2) & 1]];
-		m_bitmap.pix32(y + yoff, 6 + xoff) = PALETTE_MOS[m_c16_bitmap[(code >> 1) & 1]];
-		m_bitmap.pix32(y + yoff, 7 + xoff) = PALETTE_MOS[m_c16_bitmap[code & 1]];
+		m_bitmap.pix(y + yoff, 0 + xoff) = PALETTE_MOS[m_c16_bitmap[BIT(code, 7)]];
+		m_bitmap.pix(y + yoff, 1 + xoff) = PALETTE_MOS[m_c16_bitmap[BIT(code, 6)]];
+		m_bitmap.pix(y + yoff, 2 + xoff) = PALETTE_MOS[m_c16_bitmap[BIT(code, 5)]];
+		m_bitmap.pix(y + yoff, 3 + xoff) = PALETTE_MOS[m_c16_bitmap[BIT(code, 4)]];
+		m_bitmap.pix(y + yoff, 4 + xoff) = PALETTE_MOS[m_c16_bitmap[BIT(code, 3)]];
+		m_bitmap.pix(y + yoff, 5 + xoff) = PALETTE_MOS[m_c16_bitmap[BIT(code, 2)]];
+		m_bitmap.pix(y + yoff, 6 + xoff) = PALETTE_MOS[m_c16_bitmap[BIT(code, 1)]];
+		m_bitmap.pix(y + yoff, 7 + xoff) = PALETTE_MOS[m_c16_bitmap[BIT(code, 0)]];
 	}
 }
 
 void mos7360_device::draw_bitmap_multi(int ybegin, int yend, int ch, int yoff, int xoff)
 {
-	int y, code;
-
-	for (y = ybegin; y <= yend; y++)
+	for (int y = ybegin; y <= yend; y++)
 	{
-		code = read_ram(m_bitmapaddr + ch * 8 + y);
+		int code = read_ram(m_bitmapaddr + ch * 8 + y);
 
-		m_bitmap.pix32(y + yoff, 0 + xoff) =
-			m_bitmap.pix32(y + yoff, 1 + xoff) = PALETTE_MOS[m_bitmapmulti[code >> 6]];
-		m_bitmap.pix32(y + yoff, 2 + xoff) =
-			m_bitmap.pix32(y + yoff, 3 + xoff) = PALETTE_MOS[m_bitmapmulti[(code >> 4) & 3]];
-		m_bitmap.pix32(y + yoff, 4 + xoff) =
-			m_bitmap.pix32(y + yoff, 5 + xoff) = PALETTE_MOS[m_bitmapmulti[(code >> 2) & 3]];
-		m_bitmap.pix32(y + yoff, 6 + xoff) =
-			m_bitmap.pix32(y + yoff, 7 + xoff) = PALETTE_MOS[m_bitmapmulti[code & 3]];
+		m_bitmap.pix(y + yoff, 0 + xoff) = m_bitmap.pix(y + yoff, 1 + xoff) =
+				PALETTE_MOS[m_bitmapmulti[code >> 6]];
+		m_bitmap.pix(y + yoff, 2 + xoff) = m_bitmap.pix(y + yoff, 3 + xoff) =
+				PALETTE_MOS[m_bitmapmulti[(code >> 4) & 3]];
+		m_bitmap.pix(y + yoff, 4 + xoff) = m_bitmap.pix(y + yoff, 5 + xoff) =
+				PALETTE_MOS[m_bitmapmulti[(code >> 2) & 3]];
+		m_bitmap.pix(y + yoff, 6 + xoff) = m_bitmap.pix(y + yoff, 7 + xoff) =
+				PALETTE_MOS[m_bitmapmulti[code & 3]];
 	}
 }
 
 void mos7360_device::draw_cursor(int ybegin, int yend, int yoff, int xoff, int color)
 {
-	int y;
-
-	for (y = ybegin; y <= yend; y++)
+	for (int y = ybegin; y <= yend; y++)
 	{
 		for (int x = 0; x < 8; x++)
 		{
-			m_bitmap.pix32(y + yoff, x + xoff) = PALETTE_MOS[color];
+			m_bitmap.pix(y + yoff, x + xoff) = PALETTE_MOS[color];
 		}
 	}
 }
 
 void mos7360_device::drawlines(int first, int last)
 {
-	int line, vline, end;
-	int attr, ch, c1, c2, ecm;
-	int offs, yoff, xoff, ybegin, yend, xbegin, xend;
-	int i;
-
 	m_lastline = last;
 
 	/* top part of display not rastered */
@@ -625,34 +593,44 @@ void mos7360_device::drawlines(int first, int last)
 
 	if (!SCREENON)
 	{
-		for (line = first; (line < last) && (line < m_bitmap.height()); line++)
+		for (int line = first; (line < last) && (line < m_bitmap.height()); line++)
 		{
 			for (int x = 0; x < m_bitmap.width(); x++)
 			{
-				m_bitmap.pix32(line, x) = PALETTE_MOS[FRAMECOLOR];
+				m_bitmap.pix(line, x) = PALETTE_MOS[FRAMECOLOR];
 			}
 		}
 		return;
 	}
 
+	int xbegin, xend;
 	if (COLUMNS40)
-		xbegin = XPOS, xend = xbegin + 320;
+	{
+		xbegin = XPOS;
+		xend = xbegin + 320;
+	}
 	else
-		xbegin = XPOS + 7, xend = xbegin + 304;
+	{
+		xbegin = XPOS + 7;
+		xend = xbegin + 304;
+	}
 
+	int end;
 	if (last < m_y_begin)
 		end = last;
 	else
 		end = m_y_begin + YPOS;
+
+	int line;
+	for (line = first; line < end; line++)
 	{
-		for (line = first; line < end; line++)
+		for (int x = 0; x < m_bitmap.width(); x++)
 		{
-			for (int x = 0; x < m_bitmap.width(); x++)
-			{
-				m_bitmap.pix32(line, x) = PALETTE_MOS[FRAMECOLOR];
-			}
+			m_bitmap.pix(line, x) = PALETTE_MOS[FRAMECOLOR];
 		}
 	}
+
+	int vline;
 	if (LINES25)
 		vline = line - m_y_begin - YPOS;
 	else
@@ -663,23 +641,23 @@ void mos7360_device::drawlines(int first, int last)
 	else
 		end = m_y_end + YPOS;
 
-	for (; line < end; vline = (vline + 8) & ~7, line = line + 1 + yend - ybegin)
+	for (int ybegin, yend; line < end; vline = (vline + 8) & ~7, line = line + 1 + yend - ybegin)
 	{
-		offs = (vline >> 3) * 40;
+		int offs = (vline >> 3) * 40;
 		ybegin = vline & 7;
-		yoff = line - ybegin;
+		int yoff = line - ybegin;
 		yend = (yoff + 7 < end) ? 7 : (end - yoff - 1);
 		/* rendering 39 characters */
 		/* left and right borders are overwritten later */
 
-		for (xoff = m_x_begin + XPOS; xoff < m_x_end + XPOS; xoff += 8, offs++)
+		for (int xoff = m_x_begin + XPOS; xoff < m_x_end + XPOS; xoff += 8, offs++)
 		{
 			if (HIRESON)
 			{
-				ch = read_ram((m_videoaddr | 0x400) + offs);
-				attr = read_ram(m_videoaddr + offs);
-				c1 = ((ch >> 4) & 0xf) | (attr << 4);
-				c2 = (ch & 0xf) | (attr & 0x70);
+				int ch = read_ram((m_videoaddr | 0x400) + offs);
+				int attr = read_ram(m_videoaddr + offs);
+				int c1 = ((ch >> 4) & 0xf) | (attr << 4);
+				int c2 = (ch & 0xf) | (attr & 0x70);
 				m_bitmapmulti[1] = m_c16_bitmap[1] = c1 & 0x7f;
 				m_bitmapmulti[2] = m_c16_bitmap[0] = c2 & 0x7f;
 				if (MULTICOLORON)
@@ -693,13 +671,13 @@ void mos7360_device::drawlines(int first, int last)
 			}
 			else
 			{
-				ch = read_ram((m_videoaddr | 0x400) + offs);
-				attr = read_ram(m_videoaddr + offs);
+				int ch = read_ram((m_videoaddr | 0x400) + offs);
+				int attr = read_ram(m_videoaddr + offs);
 				// levente harsfalvi's docu says cursor off in ecm and multicolor
 				if (ECMON)
 				{
 					// hardware reverse off
-					ecm = ch >> 6;
+					int ecm = ch >> 6;
 					m_ecmcolor[0] = m_colors[ecm];
 					m_ecmcolor[1] = attr & 0x7f;
 					draw_character(ybegin, yend, ch & ~0xc0, yoff, xoff, m_ecmcolor);
@@ -741,16 +719,16 @@ void mos7360_device::drawlines(int first, int last)
 			}
 		}
 
-		for (i = ybegin; i <= yend; i++)
+		for (int i = ybegin; i <= yend; i++)
 		{
 			for (int x = 0; x < xbegin; x++)
 			{
-				m_bitmap.pix32(yoff + i, x) = PALETTE_MOS[FRAMECOLOR];
+				m_bitmap.pix(yoff + i, x) = PALETTE_MOS[FRAMECOLOR];
 			}
 
 			for (int x = xend; x < m_bitmap.width(); x++)
 			{
-				m_bitmap.pix32(yoff + i, x) = PALETTE_MOS[FRAMECOLOR];
+				m_bitmap.pix(yoff + i, x) = PALETTE_MOS[FRAMECOLOR];
 			}
 		}
 	}
@@ -764,7 +742,7 @@ void mos7360_device::drawlines(int first, int last)
 	{
 		for (int x = 0; x < m_bitmap.width(); x++)
 		{
-			m_bitmap.pix32(line, x) = PALETTE_MOS[FRAMECOLOR];
+			m_bitmap.pix(line, x) = PALETTE_MOS[FRAMECOLOR];
 		}
 	}
 }
@@ -818,7 +796,7 @@ void mos7360_device::soundport_w(int offset, int data)
 //  read - register read
 //-------------------------------------------------
 
-uint8_t mos7360_device::read(address_space &space, offs_t offset, int &cs0, int &cs1)
+uint8_t mos7360_device::read(offs_t offset, int &cs0, int &cs1)
 {
 	uint8_t val = m_last_data;
 
@@ -828,22 +806,22 @@ uint8_t mos7360_device::read(address_space &space, offs_t offset, int &cs0, int 
 	switch (offset)
 	{
 	case 0xff00:
-		val = attotime_to_clocks(m_timer1->remaining()) & 0xff;
+		val = attotime_to_clocks(m_timer[0]->remaining()) & 0xff;
 		break;
 	case 0xff01:
-		val = attotime_to_clocks(m_timer1->remaining()) >> 8;
+		val = attotime_to_clocks(m_timer[0]->remaining()) >> 8;
 		break;
 	case 0xff02:
-		val = attotime_to_clocks(m_timer2->remaining()) & 0xff;
+		val = attotime_to_clocks(m_timer[1]->remaining()) & 0xff;
 		break;
 	case 0xff03:
-		val = attotime_to_clocks(m_timer2->remaining()) >> 8;
+		val = attotime_to_clocks(m_timer[1]->remaining()) >> 8;
 		break;
 	case 0xff04:
-		val = attotime_to_clocks(m_timer3->remaining()) & 0xff;
+		val = attotime_to_clocks(m_timer[2]->remaining()) & 0xff;
 		break;
 	case 0xff05:
-		val = attotime_to_clocks(m_timer3->remaining()) >> 8;
+		val = attotime_to_clocks(m_timer[2]->remaining()) >> 8;
 		break;
 	case 0xff07:
 		val = (m_reg[offset & 0x1f] & ~0x40);
@@ -902,7 +880,7 @@ uint8_t mos7360_device::read(address_space &space, offs_t offset, int &cs0, int 
 //  write - register write
 //-------------------------------------------------
 
-void mos7360_device::write(address_space &space, offs_t offset, uint8_t data, int &cs0, int &cs1)
+void mos7360_device::write(offs_t offset, uint8_t data, int &cs0, int &cs1)
 {
 	int old;
 
@@ -925,45 +903,45 @@ void mos7360_device::write(address_space &space, offs_t offset, uint8_t data, in
 	case 0xff00:                        /* stop timer 1 */
 		m_reg[offset & 0x1f] = data;
 
-		if (m_timer1_active)
+		if (m_timer_active[0])
 		{
-			m_reg[1] = attotime_to_clocks(m_timer1->remaining()) >> 8;
-			m_timer1->reset();
-			m_timer1_active = 0;
+			m_reg[1] = attotime_to_clocks(m_timer[0]->remaining()) >> 8;
+			m_timer[0]->reset();
+			m_timer_active[0] = false;
 		}
 		break;
 	case 0xff01:                        /* start timer 1 */
 		m_reg[offset & 0x1f] = data;
-		m_timer1->adjust(clocks_to_attotime(TIMER1), 1);
-		m_timer1_active = 1;
+		m_timer[0]->adjust(clocks_to_attotime(TIMER1), TIMER_ID_1);
+		m_timer_active[0] = true;
 		break;
 	case 0xff02:                        /* stop timer 2 */
 		m_reg[offset & 0x1f] = data;
-		if (m_timer2_active)
+		if (m_timer_active[1])
 		{
-			m_reg[3] = attotime_to_clocks(m_timer2->remaining()) >> 8;
-			m_timer2->reset();
-			m_timer2_active = 0;
+			m_reg[3] = attotime_to_clocks(m_timer[1]->remaining()) >> 8;
+			m_timer[1]->reset();
+			m_timer_active[1] = false;
 		}
 		break;
 	case 0xff03:                        /* start timer 2 */
 		m_reg[offset & 0x1f] = data;
-		m_timer2->adjust(clocks_to_attotime(TIMER2), 2);
-		m_timer2_active = 1;
+		m_timer[1]->adjust(clocks_to_attotime(TIMER2), TIMER_ID_2);
+		m_timer_active[1] = true;
 		break;
 	case 0xff04:                        /* stop timer 3 */
 		m_reg[offset & 0x1f] = data;
-		if (m_timer3_active)
+		if (m_timer_active[2])
 		{
-			m_reg[5] = attotime_to_clocks(m_timer3->remaining()) >> 8;
-			m_timer3->reset();
-			m_timer3_active = 0;
+			m_reg[5] = attotime_to_clocks(m_timer[2]->remaining()) >> 8;
+			m_timer[2]->reset();
+			m_timer_active[2] = false;
 		}
 		break;
 	case 0xff05:                        /* start timer 3 */
 		m_reg[offset & 0x1f] = data;
-		m_timer3->adjust(clocks_to_attotime(TIMER3), 3);
-		m_timer3_active = 1;
+		m_timer[2]->adjust(clocks_to_attotime(TIMER3), TIMER_ID_2);
+		m_timer_active[2] = true;
 		break;
 	case 0xff06:
 		if (m_reg[offset & 0x1f] != data)
@@ -1148,7 +1126,7 @@ uint32_t mos7360_device::screen_update(screen_device &screen, bitmap_rgb32 &bitm
 	return 0;
 }
 
-void mos7360_device::frame_interrupt_gen()
+TIMER_CALLBACK_MEMBER(mos7360_device::frame_interrupt_gen)
 {
 	if ((m_reg[0x1f] & 0xf) >= 0x0f)
 	{
@@ -1161,7 +1139,7 @@ void mos7360_device::frame_interrupt_gen()
 		m_reg[0x1f]++;
 }
 
-void mos7360_device::raster_interrupt_gen()
+TIMER_CALLBACK_MEMBER(mos7360_device::raster_interrupt_gen)
 {
 	m_rasterline++;
 	m_rastertime = machine().time().as_double();

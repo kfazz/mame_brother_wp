@@ -5,7 +5,7 @@ $input v_color0, v_texcoord0, v_texcoord1
 
 /*
    Hyllian's Deposterize Shader - Pass1
-   
+
    Copyright (C) 2011/2016 Hyllian/Jararaca - sergiogdb@gmail.com
 
 */
@@ -20,7 +20,7 @@ uniform vec4 DIFF_THRESH2;
 
 vec3 df3(vec3 c1, vec3 c2)
 {
-      return abs(c1 - c2);
+	return abs(c1 - c2);
 }
 
 bvec3 le3(vec3 A, vec3 B, vec3 param)

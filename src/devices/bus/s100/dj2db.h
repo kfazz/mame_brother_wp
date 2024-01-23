@@ -50,8 +50,8 @@ protected:
 	virtual void s100_phantom_w(int state) override;
 
 private:
-	DECLARE_WRITE_LINE_MEMBER( fdc_intrq_w );
-	DECLARE_WRITE_LINE_MEMBER( fdc_drq_w );
+	void fdc_intrq_w(int state);
+	void fdc_drq_w(int state);
 
 	// internal state
 	required_device<mb8866_device> m_fdc;
@@ -63,7 +63,7 @@ private:
 	required_device<floppy_connector> m_floppy3;
 	floppy_image_device *m_floppy;
 	required_memory_region m_rom;
-	optional_shared_ptr<uint8_t> m_ram;
+	memory_share_creator<uint8_t> m_ram;
 	required_ioport m_j1a;
 	required_ioport m_j3a;
 	required_ioport m_j4;

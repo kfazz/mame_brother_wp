@@ -76,10 +76,10 @@ public:
 	device_serial_interface(const machine_config &mconfig, device_t &device);
 	virtual ~device_serial_interface();
 
-	DECLARE_WRITE_LINE_MEMBER(rx_w);
-	DECLARE_WRITE_LINE_MEMBER(tx_clock_w);
-	DECLARE_WRITE_LINE_MEMBER(rx_clock_w);
-	DECLARE_WRITE_LINE_MEMBER(clock_w);
+	void rx_w(int state);
+	void tx_clock_w(int state);
+	void rx_clock_w(int state);
+	void clock_w(int state);
 
 protected:
 	void set_data_frame(int start_bit_count, int data_bit_count, parity_t parity, stop_bits_t stop_bits);
@@ -201,8 +201,8 @@ protected:
 	virtual void tra_complete() override
 	{
 		assert(!m_empty || (m_head == m_tail));
-		assert(m_head < ARRAY_LENGTH(m_fifo));
-		assert(m_tail < ARRAY_LENGTH(m_fifo));
+		assert(m_head < std::size(m_fifo));
+		assert(m_tail < std::size(m_fifo));
 
 		if (!m_empty)
 		{
@@ -227,8 +227,8 @@ protected:
 	void transmit_byte(u8 byte)
 	{
 		assert(!m_empty || (m_head == m_tail));
-		assert(m_head < ARRAY_LENGTH(m_fifo));
-		assert(m_tail < ARRAY_LENGTH(m_fifo));
+		assert(m_head < std::size(m_fifo));
+		assert(m_tail < std::size(m_fifo));
 
 		if (m_empty && is_transmit_register_empty())
 		{

@@ -208,7 +208,7 @@ void tanbus_tug8082_device::write(offs_t offset, uint8_t data, int inhrom, int i
 //  IMPLEMENTATION
 //**************************************************************************
 
-WRITE_LINE_MEMBER(tanbus_tug8082_device::bus_irq_w)
+void tanbus_tug8082_device::bus_irq_w(int state)
 {
 	/* Manual says these DIPs are not used but schematic suggests they are */
 	//switch (m_dips[0]->read() >> 2)
@@ -222,7 +222,7 @@ WRITE_LINE_MEMBER(tanbus_tug8082_device::bus_irq_w)
 	//}
 }
 
-WRITE_LINE_MEMBER(tanbus_tug8082_device::vdu_irq_w)
+void tanbus_tug8082_device::vdu_irq_w(int state)
 {
 	switch (m_dips[0]->read() & 0x03)
 	{
@@ -241,18 +241,14 @@ WRITE_LINE_MEMBER(tanbus_tug8082_device::vdu_irq_w)
 
 uint32_t tanbus_tug8082_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
 {
-	uint32_t *scanline;
-	int x, y;
-	uint8_t pixels;
+	pen_t const *const pen = m_palette->pens();
 
-	const pen_t *pen = m_palette->pens();
-
-	for (y = 0; y < 256; y++)
+	for (int y = 0; y < 256; y++)
 	{
-		scanline = &bitmap.pix32(y);
-		for (x = 0; x < 64; x++)
+		uint32_t *scanline = &bitmap.pix(y);
+		for (int x = 0; x < 64; x++)
 		{
-			pixels = m_videoram[(y * 64) + x];
+			uint8_t const pixels = m_videoram[(y * 64) + x];
 
 			for (int i = 0; i < 8; ++i)
 				*scanline++ = pen[BIT(pixels, 7 - i)];

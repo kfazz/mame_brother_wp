@@ -37,14 +37,10 @@ DEFINE_DEVICE_TYPE(PLUS4_EXPANSION_SLOT, plus4_expansion_slot_device, "plus4_exp
 
 device_plus4_expansion_card_interface::device_plus4_expansion_card_interface(const machine_config &mconfig, device_t &device) :
 	device_interface(device, "plus4exp"),
-	m_c1l(*this, "c1l"),
-	m_c1h(*this, "c1h"),
-	m_c2l(*this, "c2l"),
-	m_c2h(*this, "c2h"),
-	m_c1l_mask(0),
-	m_c1h_mask(0),
-	m_c2l_mask(0),
-	m_c2h_mask(0)
+	m_c1l_size(0),
+	m_c1h_size(0),
+	m_c2l_size(0),
+	m_c2h_size(0)
 {
 	m_slot = dynamic_cast<plus4_expansion_slot_device *>(device.owner());
 }
@@ -71,9 +67,9 @@ device_plus4_expansion_card_interface::~device_plus4_expansion_card_interface()
 plus4_expansion_slot_device::plus4_expansion_slot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, PLUS4_EXPANSION_SLOT, tag, owner, clock),
 	device_single_card_slot_interface<device_plus4_expansion_card_interface>(mconfig, *this),
-	device_image_interface(mconfig, *this),
+	device_cartrom_image_interface(mconfig, *this),
 	m_write_irq(*this),
-	m_read_dma_cd(*this),
+	m_read_dma_cd(*this, 0xff),
 	m_write_dma_cd(*this),
 	m_write_aec(*this),
 	m_card(nullptr)
@@ -88,21 +84,6 @@ plus4_expansion_slot_device::plus4_expansion_slot_device(const machine_config &m
 void plus4_expansion_slot_device::device_start()
 {
 	m_card = get_card_device();
-
-	// resolve callbacks
-	m_write_irq.resolve_safe();
-	m_read_dma_cd.resolve_safe(0xff);
-	m_write_dma_cd.resolve_safe();
-	m_write_aec.resolve_safe();
-
-	// inherit bus clock
-	// FIXME: this should be unnecessary as slots pass DERIVED_CLOCK(1, 1) through by default
-	if (clock() == 0)
-	{
-		plus4_expansion_slot_device *root = machine().device<plus4_expansion_slot_device>(PLUS4_EXPANSION_SLOT_TAG);
-		assert(root);
-		set_unscaled_clock(root->clock());
-	}
 }
 
 
@@ -110,13 +91,14 @@ void plus4_expansion_slot_device::device_start()
 //  call_load -
 //-------------------------------------------------
 
-image_init_result plus4_expansion_slot_device::call_load()
+std::pair<std::error_condition, std::string> plus4_expansion_slot_device::call_load()
 {
 	if (m_card)
 	{
 		if (!loaded_through_softlist())
 		{
 			// TODO
+			return std::make_pair(image_error::UNSUPPORTED, "Plus/4 Expansion software must be loaded from the software list");
 		}
 		else
 		{
@@ -124,10 +106,17 @@ image_init_result plus4_expansion_slot_device::call_load()
 			load_software_region("c1h", m_card->m_c1h);
 			load_software_region("c2l", m_card->m_c2l);
 			load_software_region("c2h", m_card->m_c2h);
+			m_card->m_c1l_size = get_software_region_length("c1l");
+			m_card->m_c1h_size = get_software_region_length("c1h");
+			m_card->m_c2l_size = get_software_region_length("c2l");
+			m_card->m_c2h_size = get_software_region_length("c2h");
+
+			if ((m_card->m_c1l_size & (m_card->m_c1l_size - 1)) || (m_card->m_c1h_size & (m_card->m_c1h_size - 1)) || (m_card->m_c2l_size & (m_card->m_c2l_size - 1)) || (m_card->m_c2h_size & (m_card->m_c2h_size - 1)))
+				return std::make_pair(image_error::INVALIDLENGTH, "All ROM sizes must be powers of 2");
 		}
 	}
 
-	return image_init_result::PASS;
+	return std::make_pair(std::error_condition(), std::string());
 }
 
 

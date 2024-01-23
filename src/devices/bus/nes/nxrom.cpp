@@ -30,15 +30,12 @@
 #include "emu.h"
 #include "nxrom.h"
 
-#include "sound/samples.h"
-
 #ifdef NES_PCB_DEBUG
-#define VERBOSE 1
+#define VERBOSE (LOG_GENERAL)
 #else
-#define VERBOSE 0
+#define VERBOSE (0)
 #endif
-
-#define LOG_MMC(x) do { if (VERBOSE) logerror x; } while (0)
+#include "logmacro.h"
 
 
 //-------------------------------------------------
@@ -149,35 +146,16 @@ void nes_nrom_device::common_start()
 
 void nes_nrom_device::pcb_reset()
 {
-	m_chr_source = m_vrom_chunks ? CHRROM : CHRRAM;
 	prg32(0);
 	chr8(0, m_chr_source);
-}
-
-void nes_axrom_device::device_start()
-{
-	common_start();
 }
 
 void nes_axrom_device::pcb_reset()
 {
-	m_chr_source = m_vrom_chunks ? CHRROM : CHRRAM;
 	prg32(0);
 	chr8(0, m_chr_source);
 
 	set_nt_mirroring(PPU_MIRROR_LOW);
-}
-
-void nes_bxrom_device::device_start()
-{
-	common_start();
-}
-
-void nes_bxrom_device::pcb_reset()
-{
-	m_chr_source = m_vrom_chunks ? CHRROM : CHRRAM;
-	prg32(0);
-	chr8(0, m_chr_source);
 }
 
 void nes_cnrom_device::device_start()
@@ -188,74 +166,44 @@ void nes_cnrom_device::device_start()
 
 void nes_cnrom_device::pcb_reset()
 {
-	m_chr_source = m_vrom_chunks ? CHRROM : CHRRAM;
 	prg32(0);
 	chr8(0, m_chr_source);
 
 	m_chr_open_bus = 0;
 }
 
-void nes_cprom_device::device_start()
-{
-	common_start();
-}
-
 void nes_cprom_device::pcb_reset()
 {
-	m_chr_source = CHRRAM;
 	prg32(0);
 	chr4_0(0, m_chr_source);
 	chr4_4(0, m_chr_source);
 }
 
-void nes_gxrom_device::device_start()
-{
-	common_start();
-}
-
-void nes_gxrom_device::pcb_reset()
-{
-	m_chr_source = m_vrom_chunks ? CHRROM : CHRRAM;
-	prg32(0);
-	chr8(0, m_chr_source);
-}
-
-void nes_uxrom_device::device_start()
-{
-	common_start();
-}
-
 void nes_uxrom_device::pcb_reset()
 {
-	m_chr_source = m_vrom_chunks ? CHRROM : CHRRAM;
 	prg16_89ab(0);
 	prg16_cdef(m_prg_chunks - 1);
 	chr8(0, m_chr_source);
-}
-
-void nes_uxrom_cc_device::device_start()
-{
-	common_start();
-}
-
-void nes_uxrom_cc_device::pcb_reset()
-{
-	m_chr_source = m_vrom_chunks ? CHRROM : CHRRAM;
-	prg32(0);
-	chr8(0, m_chr_source);
-}
-
-void nes_un1rom_device::device_start()
-{
-	common_start();
 }
 
 void nes_un1rom_device::pcb_reset()
 {
-	m_chr_source = m_vrom_chunks ? CHRROM : CHRRAM;
 	prg16_89ab(0);
 	prg16_cdef(m_prg_chunks - 1);
 	chr8(0, m_chr_source);
+}
+
+void nes_nochr_device::pcb_reset()
+{
+	prg32(0);
+
+	switch (m_mirroring)
+	{
+		case PPU_MIRROR_VERT: m_ciram_a10 = 10; break;
+		case PPU_MIRROR_HORZ: m_ciram_a10 = 11; break;
+		case PPU_MIRROR_LOW:  m_ciram_a10 = 12; break;
+		case PPU_MIRROR_HIGH: m_ciram_a10 = 13; break;
+	}
 }
 
 
@@ -272,7 +220,7 @@ void nes_un1rom_device::pcb_reset()
 
  iNES: mapper 0
 
- In MESS: Supported, no need of specific handlers or IRQ
+ In MAME: Supported, no need of specific handlers or IRQ
 
  -------------------------------------------------*/
 
@@ -284,13 +232,13 @@ void nes_un1rom_device::pcb_reset()
  This is an homebrew extension to map linearly 46KB
  or PRG in boards with no PRG bankswitch logic
 
- In MESS: Supported
+ In MAME: Supported
 
  -------------------------------------------------*/
 
 uint8_t nes_nrom368_device::read_l(offs_t offset)
 {
-	LOG_MMC(("nrom368 read_l, offset: %04x\n", offset));
+	LOG("nrom368 read_l, offset: %04x\n", offset);
 	offset += 0x100;
 	if (offset >= 0x800)
 		return m_prg[offset - 0x800];
@@ -300,13 +248,13 @@ uint8_t nes_nrom368_device::read_l(offs_t offset)
 
 uint8_t nes_nrom368_device::read_m(offs_t offset)
 {
-	LOG_MMC(("nrom368 read_m, offset: %04x\n", offset));
+	LOG("nrom368 read_m, offset: %04x\n", offset);
 	return m_prg[0x1800 + (offset & 0x1fff)];
 }
 
 uint8_t nes_nrom368_device::read_h(offs_t offset)
 {
-	LOG_MMC(("nrom368 read_h, offset: %04x\n", offset));
+	LOG("nrom368 read_h, offset: %04x\n", offset);
 	return m_prg[0x3800 + (offset & 0x7fff)];
 }
 
@@ -327,13 +275,13 @@ uint8_t nes_nrom368_device::read_h(offs_t offset)
 
  iNES: mapper 7
 
- In MESS: Supported
+ In MAME: Supported
 
  -------------------------------------------------*/
 
 void nes_axrom_device::write_h(offs_t offset, uint8_t data)
 {
-	LOG_MMC(("axrom write_h, offset: %04x, data: %02x\n", offset, data));
+	LOG("axrom write_h, offset: %04x, data: %02x\n", offset, data);
 
 	// this pcb is subject to bus conflict
 	data = account_bus_conflict(offset, data);
@@ -356,7 +304,7 @@ void nes_bxrom_device::write_h(offs_t offset, uint8_t data)
 {
 	/* This portion of the mapper is nearly identical to Mapper 7, except no one-screen mirroring */
 	/* Deadly Towers is really a BxROM game - the demo screens look wrong using mapper 7. */
-	LOG_MMC(("bxrom write_h, offset: %04x, data: %02x\n", offset, data));
+	LOG("bxrom write_h, offset: %04x, data: %02x\n", offset, data);
 
 	// this pcb is subject to bus conflict, but the same is not true for some pirate variants
 	data = account_bus_conflict(offset, data);
@@ -382,15 +330,15 @@ void nes_bxrom_device::write_h(offs_t offset, uint8_t data)
 
  Notice that BANDAI_PT554 board (Aerobics Studio) uses very
  similar hardware but with an additional sound chip which
- gets writes to 0x6000 (currently unemulated in MESS)
+ gets writes to 0x6000 (currently unemulated in MAME)
 
- In MESS: Supported
+ In MAME: Supported
 
  -------------------------------------------------*/
 
 void nes_cnrom_device::write_h(offs_t offset, uint8_t data)
 {
-	LOG_MMC(("cxrom write_h, offset: %04x, data: %02x\n", offset, data));
+	LOG("cxrom write_h, offset: %04x, data: %02x\n", offset, data);
 
 	// this pcb is subject to bus conflict, but the same is not true for some pirate variants
 	data = account_bus_conflict(offset, data);
@@ -411,8 +359,6 @@ void nes_cnrom_device::write_h(offs_t offset, uint8_t data)
 
 uint8_t nes_cnrom_device::chr_r(offs_t offset)
 {
-	int bank = offset >> 10;
-
 	// a few CNROM boards contained copy protection schemes through
 	// suitably configured diodes, so that subsequent CHR reads can
 	// give actual VROM content or open bus values.
@@ -420,7 +366,7 @@ uint8_t nes_cnrom_device::chr_r(offs_t offset)
 	if (m_chr_open_bus)
 		return get_open_bus();
 
-	return m_chr_access[bank][offset & 0x3ff];
+	return device_nes_cart_interface::chr_r(offset);
 }
 
 
@@ -434,13 +380,13 @@ uint8_t nes_cnrom_device::chr_r(offs_t offset)
 
  iNES: mapper 13
 
- In MESS: Supported
+ In MAME: Supported
 
  -------------------------------------------------*/
 
 void nes_cprom_device::write_h(offs_t offset, uint8_t data)
 {
-	LOG_MMC(("cprom write_h, offset: %04x, data: %02x\n", offset, data));
+	LOG("cprom write_h, offset: %04x, data: %02x\n", offset, data);
 
 	// this pcb is subject to bus conflict
 	data = account_bus_conflict(offset, data);
@@ -461,12 +407,12 @@ void nes_cprom_device::write_h(offs_t offset, uint8_t data)
 
 void nes_gxrom_device::write_h(offs_t offset, uint8_t data)
 {
-	LOG_MMC(("gxrom write_h, offset %04x, data: %02x\n", offset, data));
+	LOG("gxrom write_h, offset %04x, data: %02x\n", offset, data);
 
 	// this pcb is subject to bus conflict
 	data = account_bus_conflict(offset, data);
 
-	prg32((data & 0xf0) >> 4);
+	prg32(data >> 4);
 	chr8(data & 0x0f, CHRROM);
 }
 
@@ -481,13 +427,13 @@ void nes_gxrom_device::write_h(offs_t offset, uint8_t data)
 
  iNES: mapper 2
 
- In MESS: Supported.
+ In MAME: Supported.
 
  -------------------------------------------------*/
 
 void nes_uxrom_device::write_h(offs_t offset, uint8_t data)
 {
-	LOG_MMC(("uxrom write_h, offset: %04x, data: %02x\n", offset, data));
+	LOG("uxrom write_h, offset: %04x, data: %02x\n", offset, data);
 
 	// this pcb is subject to bus conflict
 	data = account_bus_conflict(offset, data);
@@ -507,13 +453,13 @@ void nes_uxrom_device::write_h(offs_t offset, uint8_t data)
 
  iNES: mapper 180
 
- In MESS: Supported.
+ In MAME: Supported.
 
  -------------------------------------------------*/
 
 void nes_uxrom_cc_device::write_h(offs_t offset, uint8_t data)
 {
-	LOG_MMC(("uxrom_cc write_h, offset: %04x, data: %02x\n", offset, data));
+	LOG("uxrom_cc write_h, offset: %04x, data: %02x\n", offset, data);
 
 	prg16_cdef(data);
 }
@@ -528,13 +474,13 @@ void nes_uxrom_cc_device::write_h(offs_t offset, uint8_t data)
 
  iNES: mapper 94
 
- In MESS: Supported.
+ In MAME: Supported.
 
  -------------------------------------------------*/
 
 void nes_un1rom_device::write_h(offs_t offset, uint8_t data)
 {
-	LOG_MMC(("un1rom write_h, offset: %04x, data: %02x\n", offset, data));
+	LOG("un1rom write_h, offset: %04x, data: %02x\n", offset, data);
 
 	// this pcb is subject to bus conflict
 	data = account_bus_conflict(offset, data);
@@ -546,33 +492,39 @@ void nes_un1rom_device::write_h(offs_t offset, uint8_t data)
 
  NoCash NOCHR board emulation
 
- This is an homebrew PCB design on a single chip
- (+possibly CIC) which uses the NTRAM as CHRRAM!
+ This is a homebrew PCB design on a single chip
+ (+optional CIC) which uses the NTRAM as CHRRAM!
+ One of PPU A10-A13 is tied directly to CIRAM A10,
+ meaning the 16K PPU address space (save for the
+ palette RAM at 0x3f00-0x3fff) appears as the first
+ 1K page of CIRAM 1, 2, 4, or 8 times followed by
+ the second 1K page of CIRAM 1, 2, 4, or 8 times,
+ and then mirrored as many times as necessary.
 
  iNES: mapper 218
 
- In MESS: Supported.
+ In MAME: Supported.
 
  -------------------------------------------------*/
 
-void nes_nochr_device::chr_w(offs_t offset, uint8_t data)
+void nes_nochr_device::chr_w(offs_t offset, u8 data)
 {
-	int mirr = get_mirroring();
-	if (mirr == PPU_MIRROR_HIGH)
-		m_ciram[(offset & 0x3ff) + 0x000] = data;
-	else if (mirr == PPU_MIRROR_LOW)
-		m_ciram[(offset & 0x3ff) + 0x400] = data;
-	else
-		m_ciram[offset & 0x7ff] = data; // not sure here, since there is no software to test...
+	offset = (offset & 0x3ff) | BIT(offset, m_ciram_a10) << 10;
+	m_ciram[offset] = data;
 }
 
-uint8_t nes_nochr_device::chr_r(offs_t offset)
+u8 nes_nochr_device::chr_r(offs_t offset)
 {
-	int mirr = get_mirroring();
-	if (mirr == PPU_MIRROR_HIGH)
-		return m_ciram[(offset & 0x3ff) + 0x000];
-	else if (mirr == PPU_MIRROR_LOW)
-		return m_ciram[(offset & 0x3ff) + 0x400];
-	else
-		return m_ciram[offset & 0x7ff]; // not sure here, since there is no software to test...
+	offset = (offset & 0x3ff) | BIT(offset, m_ciram_a10) << 10;
+	return m_ciram[offset];
+}
+
+void nes_nochr_device::nt_w(offs_t offset, u8 data)
+{
+	chr_w(offset + 0x2000, data);
+}
+
+u8 nes_nochr_device::nt_r(offs_t offset)
+{
+	return chr_r(offset + 0x2000);
 }

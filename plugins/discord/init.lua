@@ -1,13 +1,15 @@
 -- license:BSD-3-Clause
 -- copyright-holders:Carl
-local exports = {}
-exports.name = "discord"
-exports.version = "0.0.1"
-exports.description = "Discord presence"
-exports.license = "The BSD 3-Clause License"
-exports.author = { name = "Carl" }
+local exports = {
+	name = "discord",
+	version = "0.0.1",
+	description = "Discord presence",
+	license = "BSD-3-Clause",
+	author = { name = "Carl" } }
 
 local discord = exports
+
+local reset_subscription, pause_subscription, resume_subscription
 
 function discord.startplugin()
 	local pipe = emu.file("rw")
@@ -49,11 +51,11 @@ function discord.startplugin()
 		if not pipe then return end
 		local running = emu.romname() ~= "___empty"
 		local state = not running and "In menu" or status
-		local details = running and manager:machine():system().description or nil
+		local details = running and manager.machine.system.description or nil
 		if emu.softname() ~= "" then
-			for name, dev in pairs(manager:machine().images) do
-				if dev:longname() then
-					details = details .. " (" .. dev:longname() .. ")"
+			for name, dev in pairs(manager.machine.images) do
+				if dev.software_longname then
+					details = details .. " (" .. dev.software_longname .. ")"
 					break
 				end
 			end
@@ -83,7 +85,7 @@ function discord.startplugin()
 			data = data .. res
 		until #res == 0 and #data > 0 or time + 1 < os.time()
 		if #data == 0 then
-			emu.print_verbose("discord: timed out waiting for response, closing connection\n");
+			emu.print_verbose("discord: timed out waiting for response, closing connection");
 			pipe = nil
 		end
 		--print(data)
@@ -98,16 +100,16 @@ function discord.startplugin()
 		end
 	end
 
-	emu.register_start(function()
+	reset_subscription = emu.add_machine_reset_notifier(function ()
 		starttime = os.time()
 		update("Playing")
 	end)
 
-	emu.register_pause(function()
+	pause_subscription = emu.add_machine_pause_notifier(function ()
 		update("Paused")
 	end)
 
-	emu.register_resume(function()
+	resume_subscription = emu.add_machine_resume_notifier(function ()
 		update("Playing")
 	end)
 end

@@ -30,12 +30,12 @@ public:
 	void ins8250_w(offs_t offset, u8 data);
 	u8 ins8250_r(offs_t offset);
 
-	DECLARE_WRITE_LINE_MEMBER(dcd_w);
-	DECLARE_WRITE_LINE_MEMBER(dsr_w);
-	DECLARE_WRITE_LINE_MEMBER(ri_w);
-	DECLARE_WRITE_LINE_MEMBER(cts_w);
-	DECLARE_WRITE_LINE_MEMBER(rx_w);
-	DECLARE_READ_LINE_MEMBER(intrpt_r);
+	void dcd_w(int state);
+	void dsr_w(int state);
+	void ri_w(int state);
+	void cts_w(int state);
+	void rx_w(int state);
+	int intrpt_r();
 
 protected:
 	enum class dev_type {
@@ -117,12 +117,14 @@ public:
 protected:
 	virtual void device_start() override;
 	virtual void device_reset() override;
+
 	virtual void rcv_complete() override;
 	virtual void tra_complete() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 	virtual void set_fcr(u8 data) override;
 	virtual void push_tx(u8 data) override;
 	virtual u8 pop_rx() override;
+
+	TIMER_CALLBACK_MEMBER(timeout_expired);
 private:
 	void set_timer() { m_timeout->adjust(attotime::from_hz((clock()*4*8)/(m_regs.dl*16))); }
 	int m_rintlvl;

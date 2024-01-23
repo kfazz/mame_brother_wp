@@ -11,7 +11,6 @@
 
  ***********************************************************************************************************/
 
-
 #include "emu.h"
 #include "pce_slot.h"
 
@@ -49,11 +48,11 @@ device_pce_cart_interface::~device_pce_cart_interface()
 //  rom_alloc - alloc the space for the cart
 //-------------------------------------------------
 
-void device_pce_cart_interface::rom_alloc(uint32_t size, const char *tag)
+void device_pce_cart_interface::rom_alloc(uint32_t size)
 {
 	if (m_rom == nullptr)
 	{
-		m_rom = device().machine().memory().region_alloc(std::string(tag).append(PCESLOT_ROM_REGION_TAG).c_str(), size, 1, ENDIANNESS_LITTLE)->base();
+		m_rom = device().machine().memory().region_alloc(device().subtag("^cart:rom"), size, 1, ENDIANNESS_LITTLE)->base();
 		m_rom_size = size;
 	}
 }
@@ -137,7 +136,7 @@ void device_pce_cart_interface::rom_map_setup(uint32_t size)
 //-------------------------------------------------
 pce_cart_slot_device::pce_cart_slot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, PCE_CART_SLOT, tag, owner, clock),
-	device_image_interface(mconfig, *this),
+	device_cartrom_image_interface(mconfig, *this),
 	device_single_card_slot_interface<device_pce_cart_interface>(mconfig, *this),
 	m_interface("pce_cart"),
 	m_type(PCE_STD), m_cart(nullptr)
@@ -188,7 +187,7 @@ static int pce_get_pcb_id(const char *slot)
 {
 	for (auto & elem : slot_list)
 	{
-		if (!core_stricmp(elem.slot_option, slot))
+		if (!strcmp(elem.slot_option, slot))
 			return elem.pcb_id;
 	}
 
@@ -211,43 +210,40 @@ static const char *pce_get_slot(int type)
  call load
  -------------------------------------------------*/
 
-image_init_result pce_cart_slot_device::call_load()
+std::pair<std::error_condition, std::string> pce_cart_slot_device::call_load()
 {
 	if (m_cart)
 	{
-		uint32_t offset;
 		uint32_t len = !loaded_through_softlist() ? length() : get_software_region_length("rom");
-		uint8_t *ROM;
 
 		// From fullpath, check for presence of a header and skip it
 		if (!loaded_through_softlist() && (len % 0x4000) == 512)
 		{
-			logerror("Rom-header found, skipping\n");
-			offset = 512;
+			logerror("ROM header found, skipping\n");
+			uint32_t const offset = 512;
 			len -= offset;
 			fseek(offset, SEEK_SET);
 		}
 
-		m_cart->rom_alloc(len, tag());
-		ROM = m_cart->get_rom_base();
+		m_cart->rom_alloc(len);
+		uint8_t *const ROM = m_cart->get_rom_base();
 
 		if (!loaded_through_softlist())
 			fread(ROM, len);
 		else
 			memcpy(ROM, get_software_region("rom"), len);
 
-		// check for encryption (US carts)
+		// check for bit-reversal (US carts)
 		if (ROM[0x1fff] < 0xe0)
 		{
-			uint8_t decrypted[256];
-
-			/* Initialize decryption table */
+			// Initialize unscrambling table
+			uint8_t unscrambled[256];
 			for (int i = 0; i < 256; i++)
-				decrypted[i] = ((i & 0x01) << 7) | ((i & 0x02) << 5) | ((i & 0x04) << 3) | ((i & 0x08) << 1) | ((i & 0x10) >> 1) | ((i & 0x20 ) >> 3) | ((i & 0x40) >> 5) | ((i & 0x80) >> 7);
+				unscrambled[i] = bitswap<8>(i, 0, 1, 2, 3, 4, 5, 6, 7);
 
-			/* Decrypt ROM image */
+			// Unscramble ROM image
 			for (int i = 0; i < len; i++)
-				ROM[i] = decrypted[ROM[i]];
+				ROM[i] = unscrambled[ROM[i]];
 		}
 
 		m_cart->rom_map_setup(len);
@@ -266,11 +262,9 @@ image_init_result pce_cart_slot_device::call_load()
 			m_cart->ram_alloc(0x8000);
 		if (m_type == PCE_CDSYS3J || m_type == PCE_CDSYS3U)
 			m_cart->ram_alloc(0x30000);
-
-		return image_init_result::PASS;
 	}
 
-	return image_init_result::PASS;
+	return std::make_pair(std::error_condition(), std::string());
 }
 
 
@@ -322,15 +316,15 @@ std::string pce_cart_slot_device::get_default_card_software(get_default_card_sof
 {
 	if (hook.image_file())
 	{
-		const char *slot_string;
-		uint32_t len = hook.image_file()->size();
+		uint64_t len;
+		hook.image_file()->length(len); // FIXME: check error return, guard against excessively large files
 		std::vector<uint8_t> rom(len);
-		int type;
 
-		hook.image_file()->read(&rom[0], len);
+		size_t actual;
+		hook.image_file()->read(&rom[0], len, actual); // FIXME: check error return or read returning short
 
-		type = get_cart_type(&rom[0], len);
-		slot_string = pce_get_slot(type);
+		int const type = get_cart_type(&rom[0], len);
+		char const *const slot_string = pce_get_slot(type);
 
 		//printf("type: %s\n", slot_string);
 
@@ -344,10 +338,10 @@ std::string pce_cart_slot_device::get_default_card_software(get_default_card_sof
  read
  -------------------------------------------------*/
 
-READ8_MEMBER(pce_cart_slot_device::read_cart)
+uint8_t pce_cart_slot_device::read_cart(offs_t offset)
 {
 	if (m_cart)
-		return m_cart->read_cart(space, offset);
+		return m_cart->read_cart(offset);
 	else
 		return 0xff;
 }
@@ -356,8 +350,8 @@ READ8_MEMBER(pce_cart_slot_device::read_cart)
  write
  -------------------------------------------------*/
 
-WRITE8_MEMBER(pce_cart_slot_device::write_cart)
+void pce_cart_slot_device::write_cart(offs_t offset, uint8_t data)
 {
 	if (m_cart)
-		m_cart->write_cart(space, offset, data);
+		m_cart->write_cart(offset, data);
 }

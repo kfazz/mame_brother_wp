@@ -11,9 +11,7 @@
 
 #pragma once
 
-#include "debugger.h"
-
-enum { TMS7000_PC=1, TMS7000_SP, TMS7000_ST };
+enum { TMS7000_PC=1, TMS7000_SP, TMS7000_ST, TMS7000_A, TMS7000_B };
 
 enum
 {
@@ -49,8 +47,8 @@ public:
 	void set_divide_by_2() { m_divider = 2; }
 	void set_divide_by_4() { m_divider = 4; }
 
-	uint8_t tms7000_unmapped_rf_r(offs_t offset) { if (!machine().side_effects_disabled()) logerror("'%s' (%04X): unmapped_rf_r @ $%04x\n", tag(), m_pc, offset + 0x80); return 0; };
-	void tms7000_unmapped_rf_w(offs_t offset, uint8_t data) { logerror("'%s' (%04X): unmapped_rf_w @ $%04x = $%02x\n", tag(), m_pc, offset + 0x80, data); };
+	uint8_t tms7000_unmapped_rf_r(offs_t offset) { if (!machine().side_effects_disabled()) logerror("'%s' (%04X): unmapped_rf_r @ $%04x\n", tag(), m_pc, offset + 0x80); return 0; }
+	void tms7000_unmapped_rf_w(offs_t offset, uint8_t data) { logerror("'%s' (%04X): unmapped_rf_w @ $%04x = $%02x\n", tag(), m_pc, offset + 0x80, data); }
 
 	uint8_t tms7000_pf_r(offs_t offset);
 	void tms7000_pf_w(offs_t offset, uint8_t data);
@@ -84,7 +82,7 @@ protected:
 	virtual void device_reset() override;
 
 	// device_execute_interface overrides
-	virtual uint64_t execute_clocks_to_cycles(uint64_t clocks) const noexcept override { return (clocks + m_divider - 1) / 2; }
+	virtual uint64_t execute_clocks_to_cycles(uint64_t clocks) const noexcept override { return (clocks + m_divider - 1) / m_divider; }
 	virtual uint64_t execute_cycles_to_clocks(uint64_t cycles) const noexcept override { return (cycles * m_divider); }
 	virtual uint32_t execute_min_cycles() const noexcept override { return 5; }
 	virtual uint32_t execute_max_cycles() const noexcept override { return 49; }
@@ -113,8 +111,8 @@ protected:
 	const uint32_t m_info_flags;
 	unsigned m_divider;
 
-	address_space *m_program;
-	memory_access_cache<0, 0, ENDIANNESS_BIG> *m_cache;
+	memory_access<16, 0, 0, ENDIANNESS_BIG>::cache m_cache;
+	memory_access<16, 0, 0, ENDIANNESS_BIG>::specific m_program;
 	int m_icount;
 
 	bool m_irq_state[2];
@@ -148,26 +146,26 @@ protected:
 	void timer_tick_low(int tmr);
 
 	// internal read/write
-	inline uint8_t read_r8(uint8_t address) { return m_program->read_byte(address); }
-	inline void write_r8(uint8_t address, uint8_t data) { m_program->write_byte(address, data); }
-	inline uint16_t read_r16(uint8_t address) { return m_program->read_byte((address - 1) & 0xff) << 8 | m_program->read_byte(address); }
-	inline void write_r16(uint8_t address, uint16_t data) { m_program->write_byte((address - 1) & 0xff, data >> 8 & 0xff); m_program->write_byte(address, data & 0xff); }
+	inline uint8_t read_r8(uint8_t address) { return m_program.read_byte(address); }
+	inline void write_r8(uint8_t address, uint8_t data) { m_program.write_byte(address, data); }
+	inline uint16_t read_r16(uint8_t address) { return m_program.read_byte((address - 1) & 0xff) << 8 | m_program.read_byte(address); }
+	inline void write_r16(uint8_t address, uint16_t data) { m_program.write_byte((address - 1) & 0xff, data >> 8 & 0xff); m_program.write_byte(address, data & 0xff); }
 
-	inline uint8_t read_p(uint8_t address) { return m_program->read_byte(0x100 + address); }
-	inline void write_p(uint8_t address, uint8_t data) { m_program->write_byte(0x100 + address, data); }
+	inline uint8_t read_p(uint8_t address) { return m_program.read_byte(0x100 + address); }
+	inline void write_p(uint8_t address, uint8_t data) { m_program.write_byte(0x100 + address, data); }
 
-	inline uint8_t read_mem8(uint16_t address) { return m_program->read_byte(address); }
-	inline void write_mem8(uint16_t address, uint8_t data) { m_program->write_byte(address, data); }
-	inline uint16_t read_mem16(uint16_t address) { return m_program->read_byte(address) << 8 | m_program->read_byte((address + 1) & 0xffff); }
-	inline void write_mem16(uint16_t address, uint16_t data) { m_program->write_byte(address, data >> 8 & 0xff); m_program->write_byte((address + 1) & 0xffff, data & 0xff); }
+	inline uint8_t read_mem8(uint16_t address) { return m_program.read_byte(address); }
+	inline void write_mem8(uint16_t address, uint8_t data) { m_program.write_byte(address, data); }
+	inline uint16_t read_mem16(uint16_t address) { return m_program.read_byte(address) << 8 | m_program.read_byte((address + 1) & 0xffff); }
+	inline void write_mem16(uint16_t address, uint16_t data) { m_program.write_byte(address, data >> 8 & 0xff); m_program.write_byte((address + 1) & 0xffff, data & 0xff); }
 
-	inline uint8_t imm8() { return m_cache->read_byte(m_pc++); }
-	inline uint16_t imm16() { uint16_t ret = m_cache->read_byte(m_pc++) << 8; return ret | m_cache->read_byte(m_pc++); }
+	inline uint8_t imm8() { return m_cache.read_byte(m_pc++); }
+	inline uint16_t imm16() { uint16_t ret = m_cache.read_byte(m_pc++) << 8; return ret | m_cache.read_byte(m_pc++); }
 
-	inline uint8_t pull8() { return m_program->read_byte(m_sp--); }
-	inline void push8(uint8_t data) { m_program->write_byte(++m_sp, data); }
-	inline uint16_t pull16() { uint16_t ret = m_program->read_byte(m_sp--); return ret | m_program->read_byte(m_sp--) << 8; }
-	inline void push16(uint16_t data) { m_program->write_byte(++m_sp, data >> 8 & 0xff); m_program->write_byte(++m_sp, data & 0xff); }
+	inline uint8_t pull8() { return m_program.read_byte(m_sp--); }
+	inline void push8(uint8_t data) { m_program.write_byte(++m_sp, data); }
+	inline uint16_t pull16() { uint16_t ret = m_program.read_byte(m_sp--); return ret | m_program.read_byte(m_sp--) << 8; }
+	inline void push16(uint16_t data) { m_program.write_byte(++m_sp, data >> 8 & 0xff); m_program.write_byte(++m_sp, data & 0xff); }
 
 	// statusreg flags
 	enum

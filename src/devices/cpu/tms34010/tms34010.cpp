@@ -16,10 +16,8 @@
 #include "tms34010.h"
 #include "34010dsm.h"
 
-#include "debugger.h"
 #include "screen.h"
 
-#define LOG_GENERAL      (1U << 0)
 #define LOG_CONTROL_REGS (1U << 1)
 #define LOG_GRAPHICS_OPS (1U << 2)
 
@@ -59,10 +57,10 @@ DEFINE_DEVICE_TYPE(TMS34020, tms34020_device, "tms34020", "Texas Instruments TMS
     GLOBAL VARIABLES
 ***************************************************************************/
 
-tms340x0_device::tms340x0_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, address_map_constructor internal_regs_map)
+tms340x0_device::tms340x0_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, address_map_constructor internal_regs_map, bool is_34020)
 	: cpu_device(mconfig, type, tag, owner, clock)
 	, device_video_interface(mconfig, *this)
-	, m_program_config("program", ENDIANNESS_LITTLE, 16, 32, 3, internal_regs_map)
+	, m_program_config("program", ENDIANNESS_LITTLE, is_34020 ? 32 : 16, 32, 3, internal_regs_map)
 	, m_pc(0)
 	, m_ppc(0)
 	, m_st(0)
@@ -76,14 +74,12 @@ tms340x0_device::tms340x0_device(const machine_config &mconfig, device_type type
 	, m_convmp(0)
 	, m_gfxcycles(0)
 	, m_pixelshift(0)
-	, m_is_34020(0)
+	, m_is_34020(is_34020)
 	, m_reset_deferred(false)
 	, m_halt_on_reset(false)
 	, m_hblank_stable(0)
 	, m_external_host_access(0)
 	, m_executing(0)
-	, m_program(nullptr)
-	, m_cache(nullptr)
 	, m_pixclock(0)
 	, m_pixperclock(0)
 	, m_scantimer(nullptr)
@@ -99,16 +95,14 @@ tms340x0_device::tms340x0_device(const machine_config &mconfig, device_type type
 
 
 tms34010_device::tms34010_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: tms340x0_device(mconfig, TMS34010, tag, owner, clock, address_map_constructor(FUNC(tms34010_device::internal_regs_map), this))
+	: tms340x0_device(mconfig, TMS34010, tag, owner, clock, address_map_constructor(FUNC(tms34010_device::internal_regs_map), this), false)
 {
-	m_is_34020 = 0;
 }
 
 
 tms34020_device::tms34020_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: tms340x0_device(mconfig, TMS34020, tag, owner, clock, address_map_constructor(FUNC(tms34020_device::internal_regs_map), this))
+	: tms340x0_device(mconfig, TMS34020, tag, owner, clock, address_map_constructor(FUNC(tms34020_device::internal_regs_map), this), true)
 {
-	m_is_34020 = 1;
 }
 
 device_memory_interface::space_config_vector tms340x0_device::memory_space_config() const
@@ -232,37 +226,120 @@ inline void tms340x0_device::RESET_ST()
 }
 
 /* shortcuts for reading opcodes */
-inline uint32_t tms340x0_device::ROPCODE()
+uint16_t tms34010_device::ROPCODE()
 {
 	uint32_t pc = m_pc;
 	m_pc += 2 << 3;
-	return m_cache->read_word(pc);
+	return m_cache.read_word(pc);
 }
 
-inline int16_t tms340x0_device::PARAM_WORD()
+uint16_t tms34020_device::ROPCODE()
 {
 	uint32_t pc = m_pc;
 	m_pc += 2 << 3;
-	return m_cache->read_word(pc);
+	return m_cache.read_word(pc);
 }
 
-inline int32_t tms340x0_device::PARAM_LONG()
+int16_t tms34010_device::PARAM_WORD()
+{
+	uint32_t pc = m_pc;
+	m_pc += 2 << 3;
+	return m_cache.read_word(pc);
+}
+
+int16_t tms34020_device::PARAM_WORD()
+{
+	uint32_t pc = m_pc;
+	m_pc += 2 << 3;
+	return m_cache.read_word(pc);
+}
+
+int32_t tms34010_device::PARAM_LONG()
 {
 	uint32_t pc = m_pc;
 	m_pc += 4 << 3;
-	return (uint16_t)m_cache->read_word(pc) | (m_cache->read_word(pc + 16) << 16);
+	return (uint16_t)m_cache.read_word(pc) | (m_cache.read_word(pc + 16) << 16);
 }
 
-inline int16_t tms340x0_device::PARAM_WORD_NO_INC()
-{
-	return m_cache->read_word(m_pc);
-}
-
-inline int32_t tms340x0_device::PARAM_LONG_NO_INC()
+int32_t tms34020_device::PARAM_LONG()
 {
 	uint32_t pc = m_pc;
-	return (uint16_t)m_cache->read_word(pc) | (m_cache->read_word(pc + 16) << 16);
+	m_pc += 4 << 3;
+	return m_cache.read_dword_unaligned(pc);
 }
+
+int16_t tms34010_device::PARAM_WORD_NO_INC()
+{
+	return m_cache.read_word(m_pc);
+}
+
+int16_t tms34020_device::PARAM_WORD_NO_INC()
+{
+	return m_cache.read_word(m_pc);
+}
+
+int32_t tms34010_device::PARAM_LONG_NO_INC()
+{
+	uint32_t pc = m_pc;
+	return (uint16_t)m_cache.read_word(pc) | (m_cache.read_word(pc + 16) << 16);
+}
+
+int32_t tms34020_device::PARAM_LONG_NO_INC()
+{
+	return m_cache.read_dword_unaligned(m_pc);
+}
+
+uint32_t tms34010_device::TMS34010_RDMEM_WORD(offs_t A)
+{
+	return m_program.read_word(A);
+}
+
+uint32_t tms34020_device::TMS34010_RDMEM_WORD(offs_t A)
+{
+	return m_program.read_word(A);
+}
+
+uint32_t tms34010_device::TMS34010_RDMEM_DWORD(offs_t A)
+{
+	uint32_t result = m_program.read_word(A);
+	return result | (m_program.read_word(A+16)<<16);
+}
+
+uint32_t tms34020_device::TMS34010_RDMEM_DWORD(offs_t A)
+{
+	return m_program.read_dword_unaligned(A);
+}
+
+void tms34010_device::TMS34010_WRMEM_WORD(offs_t A, uint32_t V)
+{
+	m_program.write_word(A,V);
+}
+
+void tms34020_device::TMS34010_WRMEM_WORD(offs_t A, uint32_t V)
+{
+	if (BIT(A, 4))
+		m_program.write_dword(A-16,(V<<16)|(V>>16),0xffff0000);
+	else
+		m_program.write_dword(A,V,0x0000ffff);
+}
+
+void tms34010_device::TMS34010_WRMEM_DWORD(offs_t A, uint32_t V)
+{
+	m_program.write_word(A,V);
+	m_program.write_word(A+16,V>>16);
+}
+
+void tms34020_device::TMS34010_WRMEM_DWORD(offs_t A, uint32_t V)
+{
+	if (BIT(A, 4))
+	{
+		m_program.write_dword(A-16,(V<<16)|(V>>16),0xffff0000);
+		m_program.write_dword(A+16,(V<<16)|(V>>16),0x0000ffff);
+	}
+	else
+		m_program.write_dword(A,V);
+}
+
 
 /* read memory byte */
 inline uint32_t tms340x0_device::RBYTE(offs_t offset)
@@ -333,7 +410,7 @@ uint32_t tms340x0_device::read_pixel_32(offs_t offset)
 uint32_t tms340x0_device::read_pixel_shiftreg(offs_t offset)
 {
 	if (!m_to_shiftreg_cb.isnull())
-		m_to_shiftreg_cb(*m_program, offset, &m_shiftreg[0]);
+		m_to_shiftreg_cb(offset, &m_shiftreg[0]);
 	else
 		fatalerror("To ShiftReg function not set. PC = %08X\n", m_pc);
 	return m_shiftreg[0];
@@ -475,7 +552,7 @@ void tms340x0_device::write_pixel_r_t_32(offs_t offset, uint32_t data)
 void tms340x0_device::write_pixel_shiftreg(offs_t offset, uint32_t data)
 {
 	if (!m_from_shiftreg_cb.isnull())
-		m_from_shiftreg_cb(*m_program, offset, &m_shiftreg[0]);
+		m_from_shiftreg_cb(offset, &m_shiftreg[0]);
 	else
 		fatalerror("From ShiftReg function not set. PC = %08X\n", m_pc);
 }
@@ -613,15 +690,15 @@ void tms340x0_device::check_interrupt()
 	/* if we took something, generate it */
 	if (vector)
 	{
+		/* call the callback for externals */
+		if (irqline >= 0)
+			standard_irq_callback(irqline, m_pc);
+
 		PUSH(m_pc);
 		PUSH(m_st);
 		RESET_ST();
 		m_pc = RLONG(vector);
 		COUNT_CYCLES(16);
-
-		/* call the callback for externals */
-		if (irqline >= 0)
-			standard_irq_callback(irqline);
 	}
 }
 
@@ -635,15 +712,10 @@ void tms340x0_device::device_start()
 {
 	m_scanline_ind16_cb.resolve();
 	m_scanline_rgb32_cb.resolve();
-	m_output_int_cb.resolve();
-	m_ioreg_pre_write_cb.resolve();
 	m_to_shiftreg_cb.resolve();
 	m_from_shiftreg_cb.resolve();
 
 	m_external_host_access = false;
-
-	m_program = &space(AS_PROGRAM);
-	m_cache = m_program->cache<1, 3, ENDIANNESS_LITTLE>();
 
 	/* set up the state table */
 	{
@@ -651,7 +723,6 @@ void tms340x0_device::device_start()
 		state_add(STATE_GENPC,     "GENPC",     m_pc).noshow();
 		state_add(STATE_GENPCBASE, "CURPC",     m_ppc).noshow();
 		state_add(TMS34010_SP,     "SP",        m_regs[15].reg);
-		state_add(STATE_GENSP,     "GENSP",     m_regs[15].reg).noshow();
 		state_add(TMS34010_ST,     "ST",        m_st);
 		state_add(STATE_GENFLAGS,  "GENFLAGS",  m_st).noshow().formatstr("%18s");
 
@@ -666,7 +737,7 @@ void tms340x0_device::device_start()
 	}
 
 	/* allocate a scanline timer and set it to go off at the start */
-	m_scantimer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(tms340x0_device::scanline_callback), this));
+	m_scantimer = timer_alloc(FUNC(tms340x0_device::scanline_callback), this);
 	m_scantimer->adjust(attotime::zero);
 
 	save_item(NAME(m_pc));
@@ -679,9 +750,25 @@ void tms340x0_device::device_start()
 	save_item(NAME(m_convmp));
 	save_item(NAME(m_pixelshift));
 	save_item(NAME(m_gfxcycles));
-	save_pointer(NAME(&m_regs[0].reg), ARRAY_LENGTH(m_regs));
+	save_pointer(NAME(&m_regs[0].reg), std::size(m_regs));
 
 	set_icountptr(m_icount);
+}
+
+void tms34010_device::device_start()
+{
+	tms340x0_device::device_start();
+
+	space(AS_PROGRAM).cache(m_cache);
+	space(AS_PROGRAM).specific(m_program);
+}
+
+void tms34020_device::device_start()
+{
+	tms340x0_device::device_start();
+
+	space(AS_PROGRAM).cache(m_cache);
+	space(AS_PROGRAM).specific(m_program);
 }
 
 void tms340x0_device::device_reset()
@@ -796,7 +883,7 @@ void tms340x0_device::execute_run()
 			uint16_t op;
 			m_ppc = m_pc;
 			op = ROPCODE();
-			(this->*s_opcode_table[op >> 4])(op);
+			execute_op(op);
 		} while (m_icount > 0);
 	}
 	else
@@ -807,10 +894,20 @@ void tms340x0_device::execute_run()
 			m_ppc = m_pc;
 			debugger_instruction_hook(m_pc);
 			op = ROPCODE();
-			(this->*s_opcode_table[op >> 4])(op);
+			execute_op(op);
 		} while (m_icount > 0);
 	}
 	m_executing = false;
+}
+
+void tms34010_device::execute_op(uint16_t op)
+{
+	(this->*s_opcode_table[op >> 4])(op);
+}
+
+void tms34020_device::execute_op(uint16_t op)
+{
+	(this->*s_opcode_table[op >> 4])(op);
 }
 
 
@@ -873,14 +970,14 @@ void tms340x0_device::set_pixel_function()
 
 const tms340x0_device::raster_op_func tms340x0_device::s_raster_ops[32] =
 {
-				nullptr, &tms340x0_device::raster_op_1 , &tms340x0_device::raster_op_2 , &tms340x0_device::raster_op_3,
-	&tms340x0_device::raster_op_4 , &tms340x0_device::raster_op_5 , &tms340x0_device::raster_op_6 , &tms340x0_device::raster_op_7,
-	&tms340x0_device::raster_op_8 , &tms340x0_device::raster_op_9 , &tms340x0_device::raster_op_10, &tms340x0_device::raster_op_11,
+	nullptr,                        &tms340x0_device::raster_op_1,  &tms340x0_device::raster_op_2,  &tms340x0_device::raster_op_3,
+	&tms340x0_device::raster_op_4,  &tms340x0_device::raster_op_5,  &tms340x0_device::raster_op_6,  &tms340x0_device::raster_op_7,
+	&tms340x0_device::raster_op_8,  &tms340x0_device::raster_op_9,  &tms340x0_device::raster_op_10, &tms340x0_device::raster_op_11,
 	&tms340x0_device::raster_op_12, &tms340x0_device::raster_op_13, &tms340x0_device::raster_op_14, &tms340x0_device::raster_op_15,
 	&tms340x0_device::raster_op_16, &tms340x0_device::raster_op_17, &tms340x0_device::raster_op_18, &tms340x0_device::raster_op_19,
-	&tms340x0_device::raster_op_20, &tms340x0_device::raster_op_21,            nullptr,            nullptr,
-				nullptr,            nullptr,            nullptr,            nullptr,
-				nullptr,            nullptr,            nullptr,            nullptr,
+	&tms340x0_device::raster_op_20, &tms340x0_device::raster_op_21, nullptr,                        nullptr,
+	nullptr,                        nullptr,                        nullptr,                        nullptr,
+	nullptr,                        nullptr,                        nullptr,                        nullptr,
 };
 
 
@@ -922,7 +1019,7 @@ TIMER_CALLBACK_MEMBER( tms340x0_device::scanline_callback )
 	if (enabled && vcount == SMART_IOREG(DPYINT))
 	{
 		/* generate the display interrupt signal */
-		internal_interrupt_callback(nullptr, TMS34010_DI);
+		internal_interrupt_callback(TMS34010_DI);
 	}
 
 	/* at the start of VBLANK, load the starting display address */
@@ -1086,7 +1183,7 @@ uint32_t tms340x0_device::tms340x0_ind16(screen_device &screen, bitmap_ind16 &bi
 		params.heblnk = params.hsblnk = cliprect.max_x + 1;
 
 	/* blank out the blank regions */
-	uint16_t *dest = &bitmap.pix16(cliprect.min_y);
+	uint16_t *dest = &bitmap.pix(cliprect.min_y);
 	for (x = cliprect.min_x; x < params.heblnk; x++)
 		dest[x] = blackpen;
 	for (x = params.hsblnk; x <= cliprect.max_x; x++)
@@ -1117,7 +1214,7 @@ uint32_t tms340x0_device::tms340x0_rgb32(screen_device &screen, bitmap_rgb32 &bi
 		params.heblnk = params.hsblnk = cliprect.max_x + 1;
 
 	/* blank out the blank regions */
-	uint32_t *dest = &bitmap.pix32(cliprect.min_y);
+	uint32_t *dest = &bitmap.pix(cliprect.min_y);
 	for (x = cliprect.min_x; x < params.heblnk; x++)
 		dest[x] = blackpen;
 	for (x = params.hsblnk; x <= cliprect.max_x; x++)
@@ -1145,7 +1242,7 @@ static const char *const ioreg_name[] =
 
 void tms34010_device::io_register_w(offs_t offset, u16 data, u16 mem_mask)
 {
-	if (!m_ioreg_pre_write_cb.isnull())
+	if (!m_ioreg_pre_write_cb.isunset())
 		m_ioreg_pre_write_cb(offset, data, mem_mask);
 
 	int oldreg, newreg;
@@ -1220,15 +1317,9 @@ void tms34010_device::io_register_w(offs_t offset, u16 data, u16 mem_mask)
 
 				/* the TMS34010 can set output interrupt? */
 				if (!(oldreg & 0x0080) && (newreg & 0x0080))
-				{
-					if (!m_output_int_cb.isnull())
-						m_output_int_cb(1);
-				}
+					m_output_int_cb(1);
 				else if ((oldreg & 0x0080) && !(newreg & 0x0080))
-				{
-					if (!m_output_int_cb.isnull())
-						m_output_int_cb(0);
-				}
+					m_output_int_cb(0);
 
 				/* input interrupt? (should really be state-based, but the functions don't exist!) */
 				if (!(oldreg & 0x0008) && (newreg & 0x0008))
@@ -1296,7 +1387,7 @@ static const char *const ioreg020_name[] =
 
 void tms34020_device::io_register_w(offs_t offset, u16 data, u16 mem_mask)
 {
-	if (!m_ioreg_pre_write_cb.isnull())
+	if (!m_ioreg_pre_write_cb.isunset())
 		m_ioreg_pre_write_cb(offset, data, mem_mask);
 
 	int oldreg, newreg;
@@ -1372,15 +1463,9 @@ void tms34020_device::io_register_w(offs_t offset, u16 data, u16 mem_mask)
 
 			/* the TMS34010 can set output interrupt? */
 			if (!(oldreg & 0x0080) && (newreg & 0x0080))
-			{
-				if (!m_output_int_cb.isnull())
-					m_output_int_cb(1);
-			}
+				m_output_int_cb(1);
 			else if ((oldreg & 0x0080) && !(newreg & 0x0080))
-			{
-				if (!m_output_int_cb.isnull())
-					m_output_int_cb(0);
-			}
+				m_output_int_cb(0);
 
 			/* input interrupt? (should really be state-based, but the functions don't exist!) */
 			if (!(oldreg & 0x0008) && (newreg & 0x0008))

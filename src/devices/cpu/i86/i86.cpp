@@ -13,7 +13,6 @@
 
 #include "emu.h"
 #include "i86.h"
-#include "debugger.h"
 #include "i86inline.h"
 #include "cpu/i386/i386dasm.h"
 
@@ -346,9 +345,6 @@ void i8086_cpu_device::execute_run()
 void i8086_cpu_device::device_start()
 {
 	i8086_common_cpu_device::device_start();
-	m_out_if_func.resolve_safe();
-	m_esc_opcode_handler.resolve_safe();
-	m_esc_data_handler.resolve_safe();
 	m_stack = has_space(AS_STACK) ? &space(AS_STACK) : m_program;
 	m_code = has_space(AS_CODE) ? &space(AS_CODE) : m_program;
 	m_extra = has_space(AS_EXTRA) ? &space(AS_EXTRA) : m_program;
@@ -359,7 +355,7 @@ void i8086_cpu_device::device_start()
 	state_add( I8086_VECTOR, "V", m_int_vector).formatstr("%02X");
 
 	state_add( I8086_PC, "PC", m_pc ).callimport().formatstr("%05X");
-	state_add( STATE_GENPCBASE, "CURPC", m_pc ).callimport().formatstr("%05X").noshow();
+	state_add<uint32_t>( STATE_GENPCBASE, "CURPC", [this] { return (m_sregs[CS] << 4) + m_prev_ip; }).mask(0xfffff).noshow();
 	state_add( I8086_HALT, "HALT", m_halt ).mask(1);
 }
 
@@ -421,10 +417,10 @@ void i8086_common_cpu_device::state_import(const device_state_entry &entry)
 		break;
 
 	case STATE_GENPC:
-	case STATE_GENPCBASE:
 		if (m_pc - (m_sregs[CS] << 4) > 0xffff)
 			m_sregs[CS] = m_pc >> 4;
 		m_ip = m_pc - (m_sregs[CS] << 4);
+		m_prev_ip = m_ip;
 		break;
 	}
 }
@@ -470,11 +466,11 @@ void i8086_common_cpu_device::device_start()
 	m_opcodes = has_space(AS_OPCODES) ? &space(AS_OPCODES) : m_program;
 
 	if(m_opcodes->data_width() == 8) {
-		auto cache = m_opcodes->cache<0, 0, ENDIANNESS_LITTLE>();
-		m_or8 = [cache](offs_t address) -> u8 { return cache->read_byte(address); };
+		m_opcodes->cache(m_cache8);
+		m_or8 = [this](offs_t address) -> u8 { return m_cache8.read_byte(address); };
 	} else {
-		auto cache = m_opcodes->cache<1, 0, ENDIANNESS_LITTLE>();
-		m_or8 = [cache](offs_t address) -> u8 { return cache->read_byte(address); };
+		m_opcodes->cache(m_cache16);
+		m_or8 = [this](offs_t address) -> u8 { return m_cache16.read_byte(address); };
 	}
 	m_io = &space(AS_IO);
 
@@ -506,7 +502,7 @@ void i8086_common_cpu_device::device_start()
 	// Register state for debugger
 	state_add( I8086_IP, "IP", m_ip         ).callimport().formatstr("%04X");
 	state_add( I8086_AX, "AX", m_regs.w[AX] ).formatstr("%04X");
-	state_add( I8086_CX, "CX", m_regs.w[CS] ).formatstr("%04X");
+	state_add( I8086_CX, "CX", m_regs.w[CX] ).formatstr("%04X");
 	state_add( I8086_DX, "DX", m_regs.w[DX] ).formatstr("%04X");
 	state_add( I8086_BX, "BX", m_regs.w[BX] ).formatstr("%04X");
 	state_add( I8086_SP, "SP", m_regs.w[SP] ).formatstr("%04X");
@@ -514,11 +510,18 @@ void i8086_common_cpu_device::device_start()
 	state_add( I8086_SI, "SI", m_regs.w[SI] ).formatstr("%04X");
 	state_add( I8086_DI, "DI", m_regs.w[DI] ).formatstr("%04X");
 
+	state_add( I8086_AL, "AL", m_regs.b[AL] ).noshow();
+	state_add( I8086_AH, "AH", m_regs.b[AH] ).noshow();
+	state_add( I8086_CL, "CL", m_regs.b[CL] ).noshow();
+	state_add( I8086_CH, "CH", m_regs.b[CH] ).noshow();
+	state_add( I8086_DL, "DL", m_regs.b[DL] ).noshow();
+	state_add( I8086_DH, "DH", m_regs.b[DH] ).noshow();
+	state_add( I8086_BL, "BL", m_regs.b[BL] ).noshow();
+	state_add( I8086_BH, "BH", m_regs.b[BH] ).noshow();
+
 	state_add(STATE_GENFLAGS, "GENFLAGS", m_TF).formatstr("%16s").noshow();
 
 	set_icountptr(m_icount);
-
-	m_lock_handler.resolve_safe();
 }
 
 
@@ -577,12 +580,8 @@ void i8086_common_cpu_device::interrupt(int int_num, int trap)
 	m_TF = m_IF = 0;
 
 	if (int_num == -1)
-	{
-		int_num = standard_irq_callback(0);
-
-		m_irq_state = CLEAR_LINE;
-		m_pending_irq &= ~INT_IRQ;
-	}
+		int_num = standard_irq_callback(0, (m_sregs[CS] << 4) + m_ip);
+	debugger_exception_hook(int_num);
 
 	m_easeg = CS;
 	uint16_t dest_off = read_word(int_num * 4 + 0);
@@ -590,7 +589,7 @@ void i8086_common_cpu_device::interrupt(int int_num, int trap)
 
 	PUSH(m_sregs[CS]);
 	PUSH(m_ip);
-	m_ip = dest_off;
+	m_prev_ip = m_ip = dest_off;
 	m_sregs[CS] = dest_seg;
 }
 
@@ -2261,10 +2260,10 @@ bool i8086_common_cpu_device::common_op(uint8_t op)
 					CLKM(NEGNOT_R8,NEGNOT_M8);
 					break;
 				case 0x18:  /* NEG */
-					m_CarryVal = (tmp!=0) ? 1 : 0;
-					tmp = (~tmp)+1;
-					set_SZPF_Byte(tmp);
-					PutbackRMByte(tmp&0xff);
+					m_dst = 0;
+					m_src = tmp;
+					set_CFB(SUBB());
+					PutbackRMByte(m_dst);
 					CLKM(NEGNOT_R8,NEGNOT_M8);
 					break;
 				case 0x20:  /* MUL */
@@ -2351,10 +2350,10 @@ bool i8086_common_cpu_device::common_op(uint8_t op)
 					CLKM(NEGNOT_R16,NEGNOT_M16);
 					break;
 				case 0x18:  /* NEG */
-					m_CarryVal = (tmp!=0) ? 1 : 0;
-					tmp = (~tmp) + 1;
-					set_SZPF_Word(tmp);
-					PutbackRMWord(tmp);
+					m_dst = 0;
+					m_src = tmp;
+					set_CFW(SUBX());
+					PutbackRMWord(m_dst);
 					CLKM(NEGNOT_R16,NEGNOT_M16);
 					break;
 				case 0x20:  /* MUL */

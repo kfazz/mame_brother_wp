@@ -74,7 +74,8 @@
 #include "emu.h"
 #include "pci.h"
 
-#define LOG_PCI 0
+#define VERBOSE (0)
+#include "logmacro.h"
 
 //**************************************************************************
 //  GLOBAL VARIABLES
@@ -104,7 +105,7 @@ pci_bus_device::pci_bus_device(const machine_config &mconfig, const char *tag, d
     INLINE FUNCTIONS
 ***************************************************************************/
 
-READ32_MEMBER( pci_bus_device::read )
+uint32_t pci_bus_device::read(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t result = 0xffffffff;
 	int function, reg;
@@ -130,8 +131,7 @@ READ32_MEMBER( pci_bus_device::read )
 			break;
 	}
 
-	if (LOG_PCI)
-		logerror("read('%s'): offset=%d result=0x%08X\n", tag(), offset, result);
+	LOG("read('%s'): offset=%d result=0x%08X\n", tag(), offset, result);
 
 	return result;
 }
@@ -158,12 +158,11 @@ pci_bus_device *pci_bus_device::pci_search_bustree(int busnum, int devicenum, pc
 
 
 
-WRITE32_MEMBER( pci_bus_device::write )
+void pci_bus_device::write(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	offset %= 2;
 
-	if (LOG_PCI)
-		logerror("write('%s'): offset=%d data=0x%08X\n", tag(), offset, data);
+	LOG("write('%s'): offset=%d data=0x%08X\n", tag(), offset, data);
 
 	switch (offset)
 	{
@@ -183,8 +182,7 @@ WRITE32_MEMBER( pci_bus_device::write )
 				}
 				else
 					m_devicenum = -1;
-				if (LOG_PCI)
-					logerror("  bus:%d device:%d\n", busnum, devicenum);
+				LOG("  bus:%d device:%d\n", busnum, devicenum);
 			}
 			break;
 
@@ -197,8 +195,7 @@ WRITE32_MEMBER( pci_bus_device::write )
 					int reg = (m_address >> 0) & 0xfc;
 					m_busnumaddr->m_device[m_devicenum]->pci_write(m_busnumaddr, function, reg, data, mem_mask);
 				}
-				if (LOG_PCI)
-					logerror("  function:%d register:%d\n", (m_address >> 8) & 0x07, (m_address >> 0) & 0xfc);
+				LOG("  function:%d register:%d\n", (m_address >> 8) & 0x07, (m_address >> 0) & 0xfc);
 			}
 			break;
 	}
@@ -206,25 +203,25 @@ WRITE32_MEMBER( pci_bus_device::write )
 
 
 
-READ64_MEMBER(pci_bus_device::read_64be)
+uint64_t pci_bus_device::read_64be(offs_t offset, uint64_t mem_mask)
 {
 	uint64_t result = 0;
 	mem_mask = swapendian_int64(mem_mask);
 	if (ACCESSING_BITS_0_31)
-		result |= (uint64_t)read(space, offset * 2 + 0, mem_mask >> 0) << 0;
+		result |= (uint64_t)read(offset * 2 + 0, mem_mask >> 0) << 0;
 	if (ACCESSING_BITS_32_63)
-		result |= (uint64_t)read(space, offset * 2 + 1, mem_mask >> 32) << 32;
+		result |= (uint64_t)read(offset * 2 + 1, mem_mask >> 32) << 32;
 	return swapendian_int64(result);
 }
 
-WRITE64_MEMBER(pci_bus_device::write_64be)
+void pci_bus_device::write_64be(offs_t offset, uint64_t data, uint64_t mem_mask)
 {
 	data = swapendian_int64(data);
 	mem_mask = swapendian_int64(mem_mask);
 	if (ACCESSING_BITS_0_31)
-		write(space, offset * 2 + 0, data >> 0, mem_mask >> 0);
+		write(offset * 2 + 0, data >> 0, mem_mask >> 0);
 	if (ACCESSING_BITS_32_63)
-		write(space, offset * 2 + 1, data >> 32, mem_mask >> 32);
+		write(offset * 2 + 1, data >> 32, mem_mask >> 32);
 }
 
 
@@ -237,7 +234,7 @@ void pci_bus_device::add_sibling(pci_bus_device *sibling, int busnum)
 
 void pci_bus_device::remap(int space_id, offs_t start, offs_t end)
 {
-	for (int i = 0; i < ARRAY_LENGTH(m_devtag); i++)
+	for (int i = 0; i < std::size(m_devtag); i++)
 	{
 		if (m_device[i] != nullptr)
 			m_device[i]->remap(space_id, start, end);
@@ -272,7 +269,7 @@ void pci_bus_device::device_start()
 
 	char id[3];
 	/* find all our devices */
-	for (int i = 0; i < ARRAY_LENGTH(m_devtag); i++)
+	for (int i = 0; i < std::size(m_devtag); i++)
 	{
 		sprintf(id, "%d", i);
 		pci_connector_device *conn = downcast<pci_connector_device *>(subdevice(id));

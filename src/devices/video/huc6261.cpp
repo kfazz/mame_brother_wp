@@ -94,26 +94,24 @@ void huc6261_device::apply_pal_offs(uint16_t *pix_data)
 	*pix_data &= 0x1ff;
 }
 
-void huc6261_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(huc6261_device::update_events)
 {
 	int vpos = screen().vpos();
 	int hpos = screen().hpos();
 	int h = m_last_h;
 	int v = m_last_v;
-	uint32_t *bitmap_line = &m_bmp->pix32(v);
+	uint32_t *bitmap_line = &m_bmp->pix(v);
 
 	while ( h != hpos || v != vpos )
 	{
 		if ( m_pixel_clock == 0 )
 		{
-			g_profiler.start( PROFILER_VIDEO );
+			auto profile = g_profiler.start( PROFILER_VIDEO );
 			/* Get next pixel information */
 			m_pixel_data_a = m_huc6270_a->next_pixel();
 			m_pixel_data_b = m_huc6270_b->next_pixel();
 			apply_pal_offs(&m_pixel_data_a);
 			apply_pal_offs(&m_pixel_data_b);
-
-			g_profiler.stop();
 		}
 
 		bitmap_line[ h ] = yuv2rgb( m_palette[ m_pixel_data_a ] );
@@ -153,7 +151,7 @@ void huc6261_device::device_timer(emu_timer &timer, device_timer_id id, int para
 			m_huc6270_b->hsync_changed( 1 );
 			m_pixel_clock = 0;
 			v = ( v + 1 ) % m_height;
-			bitmap_line = &m_bmp->pix32(v);
+			bitmap_line = &m_bmp->pix(v);
 			break;
 
 		case HUC6261_HSYNC_START + 30:      /* End/Start of VSync */
@@ -230,7 +228,7 @@ void huc6261_device::video_update( bitmap_rgb32 &bitmap, const rectangle &clipre
 }
 
 
-READ16_MEMBER( huc6261_device::read )
+uint16_t huc6261_device::read(offs_t offset)
 {
 	uint16_t data = 0xFFFF;
 
@@ -275,7 +273,7 @@ READ16_MEMBER( huc6261_device::read )
 					break;
 
 				case 0x09:
-					data = m_priority[0] | ( m_priority[1] << 4 ) | ( m_priority[2] << 8 ) | ( m_priority[3] << 12 );;
+					data = m_priority[0] | ( m_priority[1] << 4 ) | ( m_priority[2] << 8 ) | ( m_priority[3] << 12 );
 					break;
 			}
 			break;
@@ -285,7 +283,7 @@ READ16_MEMBER( huc6261_device::read )
 }
 
 
-WRITE16_MEMBER( huc6261_device::write )
+void huc6261_device::write(offs_t offset, uint16_t data)
 {
 	switch ( offset & 1 )
 	{
@@ -295,14 +293,14 @@ WRITE16_MEMBER( huc6261_device::write )
 			break;
 
 		case 0x01:
-			logerror("huc6261: writing 0x%04x to register 0x%02x\n", data, m_register );
+			//logerror("huc6261: writing 0x%04x to register 0x%02x\n", data, m_register );
 			switch( m_register )
 			{
 				/* Control register */
 				// -x-- ---- ---- ---- Enable HuC6271: 0 - disabled, 1 - enabled
 				// --x- ---- ---- ---- Enable HuC6272 BG3: 0 - disabled, 1 - enabled
 				// ---x ---- ---- ---- Enable HuC6272 BG2: 0 - disabled, 1 - enabled
-				// ---- x--- ---- ---- Enable Huc6272 BG1: 0 - disabled, 1 - enabled
+				// ---- x--- ---- ---- Enable HuC6272 BG1: 0 - disabled, 1 - enabled
 				// ---- -x-- ---- ---- Enable HuC6272 BG0: 0 - disabled, 1 - enabled
 				// ---- --x- ---- ---- Enable HuC6270 SPR: 0 - disabled, 1 - enabled
 				// ---- ---x ---- ---- Enable HuC6270 BG: 0 - disabled, 1 - enabled
@@ -414,7 +412,7 @@ WRITE16_MEMBER( huc6261_device::write )
 
 void huc6261_device::device_start()
 {
-	m_timer = timer_alloc();
+	m_timer = timer_alloc(FUNC(huc6261_device::update_events), this);
 
 	m_bmp = std::make_unique<bitmap_rgb32>(WPF, LPF);
 

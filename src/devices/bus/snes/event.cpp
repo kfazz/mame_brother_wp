@@ -4,7 +4,7 @@
 
  Super NES/Famicom Event cartridges emulation (for SNES/SFC)
 
- TODO: figure out how the Test Mode switch works...
+ TODO: Figure out how the Test Mode switch works
 
  ***********************************************************************************************************/
 
@@ -38,7 +38,7 @@ void sns_pfest94_device::device_start()
 {
 	m_dsp_prg.resize(0x2000/sizeof(uint32_t));
 	m_dsp_data.resize(0x800/sizeof(uint16_t));
-	pfest94_timer = timer_alloc(TIMER_EVENT);
+	pfest94_timer = timer_alloc(FUNC(sns_pfest94_device::event_tick), this);
 	pfest94_timer->reset();
 
 	save_item(NAME(m_base_bank));
@@ -102,7 +102,7 @@ uint8_t sns_pfest94_device::read_h(offs_t offset)
 }
 
 
-// these are used for two diff effects: both to select game from menu and to access the DSP when running SMK!
+// these are used both to select game from the menu and to access the DSP when running Super Mario Kart.
 uint8_t sns_pfest94_device::chip_read(offs_t offset)
 {
 	if (offset & 0x8000)
@@ -166,6 +166,7 @@ inline uint32_t get_prg(uint8_t *CPU, uint32_t addr)
 {
 	return ((CPU[addr * 4] << 24) | (CPU[addr * 4 + 1] << 16) | (CPU[addr * 4 + 2] << 8) | 0x00);
 }
+
 inline uint16_t get_data(uint8_t *CPU, uint32_t addr)
 {
 	return ((CPU[addr * 2] << 8) | CPU[addr * 2 + 1]);
@@ -173,10 +174,8 @@ inline uint16_t get_data(uint8_t *CPU, uint32_t addr)
 
 void sns_pfest94_device::speedup_addon_bios_access()
 {
-	m_upd7725->space(AS_PROGRAM).install_read_bank(0x0000, 0x07ff, "dsp_prg");
-	m_upd7725->space(AS_DATA).install_read_bank(0x0000, 0x03ff, "dsp_data");
-	membank("dsp_prg")->set_base(&m_dsp_prg[0]);
-	membank("dsp_data")->set_base(&m_dsp_data[0]);
+	m_upd7725->space(AS_PROGRAM).install_rom(0x0000, 0x07ff, &m_dsp_prg[0]);
+	m_upd7725->space(AS_DATA).install_rom(0x0000, 0x03ff, &m_dsp_data[0]);
 	// copy data in the correct format
 	for (int x = 0; x < 0x800; x++)
 		m_dsp_prg[x] = (m_bios[x * 4] << 24) | (m_bios[x * 4 + 1] << 16) | (m_bios[x * 4 + 2] << 8) | 0x00;
@@ -185,7 +184,7 @@ void sns_pfest94_device::speedup_addon_bios_access()
 }
 
 
-// DSP dump contains prg at offset 0 and data at offset 0x2000
+// DSP dump contains program code at offset 0 and data at offset 0x2000
 uint32_t sns_pfest94_device::necdsp_prg_r(offs_t offset)
 {
 	return get_prg(&m_bios[0], offset);
@@ -264,20 +263,12 @@ ioport_constructor sns_pfest94_device::device_input_ports() const
 	return INPUT_PORTS_NAME( pfest94_dsw );
 }
 
-
-//-------------------------------------------------
-//  device_timer - handler timer events
-//-------------------------------------------------
-
-void sns_pfest94_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(sns_pfest94_device::event_tick)
 {
-	if (id == TIMER_EVENT)
+	if (!m_count)
 	{
-		if (!m_count)
-		{
-			m_status |= 2;
-			pfest94_timer->reset();
-		}
-		m_count--;
+		m_status |= 2;
+		pfest94_timer->reset();
 	}
+	m_count--;
 }

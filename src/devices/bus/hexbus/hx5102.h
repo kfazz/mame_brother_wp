@@ -22,12 +22,13 @@
 #include "machine/upd765.h"
 #include "machine/7474.h"
 #include "machine/74123.h"
+#include "machine/74259.h"
 #include "machine/rescap.h"
 #include "machine/ram.h"
 #include "imagedev/floppy.h"
 #include "tp0370.h"
 
-namespace bus { namespace hexbus {
+namespace bus::hexbus {
 
 class hx5102_device : public hexbus_chained_device
 {
@@ -41,11 +42,11 @@ protected:
 
 	void crumap(address_map &map);
 	void memmap(address_map &map);
-	DECLARE_WRITE8_MEMBER(external_operation);
-	DECLARE_WRITE_LINE_MEMBER( clock_out );
-	DECLARE_WRITE_LINE_MEMBER( board_ready );
-	DECLARE_WRITE_LINE_MEMBER( board_reset );
-	DECLARE_FLOPPY_FORMATS( floppy_formats );
+	void external_operation(offs_t offset, uint8_t data);
+	void clock_out(int state);
+	void board_ready(int state);
+	void board_reset(int state);
+	static void floppy_formats(format_registration &fr);
 
 	void device_start() override;
 	void device_reset() override;
@@ -55,23 +56,33 @@ private:
 	required_device<tms9995_device> m_flopcpu;
 	line_state m_ready_old;
 
-	DECLARE_READ8_MEMBER(read);
-	DECLARE_WRITE8_MEMBER(write);
+	uint8_t read(offs_t offset);
+	void write(offs_t offset, uint8_t data);
 
-	DECLARE_WRITE_LINE_MEMBER(fdc_irq_w);
-	DECLARE_WRITE_LINE_MEMBER(fdc_drq_w);
-	DECLARE_WRITE_LINE_MEMBER(motor_w);
-	DECLARE_WRITE_LINE_MEMBER(mspeed_w);
+	void fdc_irq_w(int state);
+	void fdc_drq_w(int state);
+	void motor_w(int state);
+	void mspeed_w(int state);
 
-	DECLARE_READ8_MEMBER(fdc_read);
-	DECLARE_WRITE8_MEMBER(fdc_write);
-	DECLARE_READ8_MEMBER(ibc_read);
-	DECLARE_WRITE8_MEMBER(ibc_write);
-	DECLARE_WRITE8_MEMBER(hexbus_out);
-	DECLARE_WRITE_LINE_MEMBER(hsklatch_out);
+	uint8_t fdc_read(offs_t offset);
+	void fdc_write(offs_t offset, uint8_t data);
+	uint8_t ibc_read(offs_t offset);
+	void ibc_write(offs_t offset, uint8_t data);
+	void hexbus_out(uint8_t data);
+	void hsklatch_out(int state);
 
-	DECLARE_READ8_MEMBER(cruread);
-	DECLARE_WRITE8_MEMBER(cruwrite);
+	uint8_t cruread(offs_t offset);
+	void nocomp_w(int state);
+	void diren_w(int state);
+	void dacken_w(int state);
+	void stepen_w(int state);
+	void ds1_w(int state);
+	void ds2_w(int state);
+	void ds3_w(int state);
+	void ds4_w(int state);
+	void aux_motor_w(int state);
+	void wait_w(int state);
+	void update_drive_select();
 
 	// Operate the floppy motors
 	bool m_motor_on;
@@ -96,6 +107,7 @@ private:
 
 	required_device<ibc_device> m_hexbus_ctrl;
 	required_device<i8272a_device> m_floppy_ctrl;
+	required_device_array<ls259_device, 2> m_crulatch;
 	required_device<ttl74123_device> m_motormf;
 	required_device<ttl74123_device> m_speedmf;
 	required_device<ttl7474_device> m_readyff;
@@ -109,7 +121,7 @@ private:
 	uint8_t* m_rom2;
 };
 
-}   } // end namespace bus::hexbus
+} // end namespace bus::hexbus
 
 DECLARE_DEVICE_TYPE_NS(HX5102, bus::hexbus, hx5102_device)
 

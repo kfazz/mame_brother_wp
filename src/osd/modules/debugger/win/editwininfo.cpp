@@ -2,7 +2,7 @@
 // copyright-holders:Aaron Giles, Vas Crabb
 //============================================================
 //
-//  editwininfo.c - Win32 debug window handling
+//  editwininfo.cpp - Win32 debug window handling
 //
 //============================================================
 
@@ -12,10 +12,14 @@
 #include "debugviewinfo.h"
 #include "uimetrics.h"
 
+#include "xmlfile.h"
+
 #include "strconv.h"
 
 #include "winutil.h"
 
+
+namespace osd::debugger::win {
 
 namespace {
 
@@ -23,7 +27,7 @@ constexpr DWORD EDIT_BOX_STYLE      = WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL;
 constexpr DWORD EDIT_BOX_STYLE_EX   = 0;
 
 constexpr int   MAX_EDIT_STRING     = 256;
-constexpr int   HISTORY_LENGTH      = 20;
+constexpr int   HISTORY_LENGTH      = 100;
 
 } // anonymous namespace
 
@@ -34,7 +38,7 @@ editwin_info::editwin_info(debugger_windows_interface &debugger, bool is_main_co
 	m_edit_defstr(),
 	m_original_editproc(nullptr),
 	m_history(),
-	m_last_history(0)
+	m_last_history(-1)
 {
 	if (window() == nullptr)
 		return;
@@ -105,6 +109,43 @@ void editwin_info::draw_contents(HDC dc)
 }
 
 
+void editwin_info::restore_configuration_from_node(util::xml::data_node const &node)
+{
+	m_history.clear();
+	util::xml::data_node const *const hist = node.get_child(NODE_WINDOW_HISTORY);
+	if (hist)
+	{
+		util::xml::data_node const *item = hist->get_child(NODE_HISTORY_ITEM);
+		while (item)
+		{
+			if (item->get_value() && *item->get_value())
+			{
+				while (m_history.size() >= HISTORY_LENGTH)
+					m_history.pop_back();
+				m_history.emplace_front(osd::text::to_tstring(item->get_value()));
+			}
+			item = item->get_next_sibling(NODE_HISTORY_ITEM);
+		}
+	}
+	m_last_history = -1;
+
+	debugwin_info::restore_configuration_from_node(node);
+}
+
+
+void editwin_info::save_configuration_to_node(util::xml::data_node &node)
+{
+	debugwin_info::save_configuration_to_node(node);
+
+	util::xml::data_node *const hist = node.add_child(NODE_WINDOW_HISTORY, nullptr);
+	if (hist)
+	{
+		for (auto it = m_history.crbegin(); m_history.crend() != it; ++it)
+			hist->add_child(NODE_HISTORY_ITEM, osd::text::from_tstring(*it).c_str());
+	}
+}
+
+
 LRESULT editwin_info::edit_proc(UINT message, WPARAM wparam, LPARAM lparam)
 {
 	// handle a few messages
@@ -114,7 +155,7 @@ LRESULT editwin_info::edit_proc(UINT message, WPARAM wparam, LPARAM lparam)
 	case WM_SYSKEYDOWN:
 		if (wparam != VK_F10)
 			return CallWindowProc(m_original_editproc, m_editwnd, message, wparam, lparam);
-		// (fall through)
+		[[fallthrough]];
 	case WM_KEYDOWN:
 		switch (wparam)
 		{
@@ -185,7 +226,7 @@ LRESULT editwin_info::edit_proc(UINT message, WPARAM wparam, LPARAM lparam)
 				case 13: // carriage return
 					{
 						// fetch the text
-						SendMessage(m_editwnd, WM_GETTEXT, WPARAM(ARRAY_LENGTH(buffer)), LPARAM(buffer));
+						SendMessage(m_editwnd, WM_GETTEXT, WPARAM(std::size(buffer)), LPARAM(buffer));
 
 						// add to the history if it's not a repeat of the last one
 						if (buffer[0] && (m_history.empty() || _tcscmp(buffer, m_history[0].c_str())))
@@ -194,7 +235,7 @@ LRESULT editwin_info::edit_proc(UINT message, WPARAM wparam, LPARAM lparam)
 								m_history.pop_back();
 							m_history.emplace_front(buffer);
 						}
-						m_last_history = m_history.size() - 1;
+						m_last_history = -1;
 
 						// process
 						{
@@ -241,3 +282,5 @@ LRESULT CALLBACK editwin_info::static_edit_proc(HWND wnd, UINT message, WPARAM w
 	assert(info->m_editwnd == wnd);
 	return info->edit_proc(message, wparam, lparam);
 }
+
+} // namespace osd::debugger::win

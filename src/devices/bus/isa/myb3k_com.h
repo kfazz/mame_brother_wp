@@ -39,16 +39,16 @@ public:
 	// construction/destruction
 	isa8_myb3k_com_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_WRITE_LINE_MEMBER(pit_txc);
-	DECLARE_WRITE_LINE_MEMBER(pit_rxc);
-	DECLARE_WRITE_LINE_MEMBER(rem_txc);
-	DECLARE_WRITE_LINE_MEMBER(rem_rxc);
-	DECLARE_WRITE_LINE_MEMBER(com_int_rx);
-	DECLARE_WRITE_LINE_MEMBER(com_int_tx);
-	DECLARE_WRITE_LINE_MEMBER(dcd_w);
-	DECLARE_WRITE_LINE_MEMBER(ri_w);
-	DECLARE_WRITE8_MEMBER(dce_control);
-	DECLARE_READ8_MEMBER(dce_status);
+	void pit_txc(int state);
+	void pit_rxc(int state);
+	void rem_txc(int state);
+	void rem_rxc(int state);
+	void com_int_rx(int state);
+	void com_int_tx(int state);
+	void dcd_w(int state);
+	void ri_w(int state);
+	void dce_control(uint8_t data);
+	uint8_t dce_status();
 
 protected:
 	isa8_myb3k_com_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);

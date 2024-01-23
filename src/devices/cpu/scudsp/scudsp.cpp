@@ -94,8 +94,6 @@
 #include "scudsp.h"
 #include "scudspdasm.h"
 
-#include "debugger.h"
-
 
 DEFINE_DEVICE_TYPE(SCUDSP, scudsp_cpu_device, "scudsp", "Sega SCUDSP")
 
@@ -129,6 +127,8 @@ DEFINE_DEVICE_TYPE(SCUDSP, scudsp_cpu_device, "scudsp", "Sega SCUDSP")
 #define scudsp_writeop(A, B) m_program->write_dword(A, B)
 #define scudsp_readmem(A,MD) m_data->read_dword(A | (MD << 6))
 #define scudsp_writemem(A,MD,B) m_data->write_dword(A | (MD << 6), B)
+
+constexpr uint64_t concat_64(uint32_t hi, uint32_t lo) { return (uint64_t(hi) << 32) | lo; }
 
 uint32_t scudsp_cpu_device::scudsp_get_source_mem_reg_value( uint32_t mode )
 {
@@ -340,12 +340,12 @@ uint32_t scudsp_cpu_device::scudsp_get_mem_source_dma( uint32_t memcode, uint32_
 }
 
 
-READ32_MEMBER( scudsp_cpu_device::program_control_r )
+uint32_t scudsp_cpu_device::program_control_r()
 {
 	return (m_pc & 0xff) | (m_flags & FLAGS_MASK);
 }
 
-WRITE32_MEMBER( scudsp_cpu_device::program_control_w )
+void scudsp_cpu_device::program_control_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t oldval, newval;
 
@@ -362,13 +362,13 @@ WRITE32_MEMBER( scudsp_cpu_device::program_control_w )
 	set_input_line(INPUT_LINE_RESET, (EXF) ? CLEAR_LINE : ASSERT_LINE);
 }
 
-WRITE32_MEMBER( scudsp_cpu_device::program_w )
+void scudsp_cpu_device::program_w(uint32_t data)
 {
 	//printf("%02x %08x PRG\n",m_pc,data);
 	scudsp_writeop(m_pc++, data);
 }
 
-WRITE32_MEMBER( scudsp_cpu_device::ram_address_control_w )
+void scudsp_cpu_device::ram_address_control_w(uint32_t data)
 {
 	//printf("%02x %08x PRG\n",m_pc,data);
 	m_ra = data & 0xff;
@@ -382,7 +382,7 @@ WRITE32_MEMBER( scudsp_cpu_device::ram_address_control_w )
 	}
 }
 
-READ32_MEMBER( scudsp_cpu_device::ram_address_r )
+uint32_t scudsp_cpu_device::ram_address_r()
 {
 	uint32_t data;
 
@@ -391,7 +391,7 @@ READ32_MEMBER( scudsp_cpu_device::ram_address_r )
 	return data;
 }
 
-WRITE32_MEMBER( scudsp_cpu_device::ram_address_w )
+void scudsp_cpu_device::ram_address_w(uint32_t data)
 {
 	scudsp_set_dest_mem_reg( (m_ra & 0xc0) >> 6, data );
 }
@@ -498,7 +498,7 @@ void scudsp_cpu_device::scudsp_operation(uint32_t opcode)
 			/* Unrecognized opcode */
 			break;
 		case 0xF:   /* RL8 */
-			i3 = ((m_acl.si << 8) & 0xffffff00) | ((m_acl.si >> 24) & 0xff);
+			i3 = rotl_32(m_acl.si, 8);
 			m_alu = i3;
 			SET_Z( i3 == 0 );
 			SET_S( i3 < 0 );
@@ -611,15 +611,13 @@ void scudsp_cpu_device::scudsp_move_immediate( uint32_t opcode )
 	{
 		if ( scudsp_compute_condition( (opcode & 0x3F80000 ) >> 19 ) )
 		{
-			value = opcode & 0x7ffff;
-			if ( value & 0x40000 ) value |= 0xfff80000;
+			value = util::sext( opcode, 19 );
 			scudsp_set_dest_mem_reg_2( (opcode & 0x3C000000) >> 26, value );
 		}
 	}
 	else
 	{
-		value = opcode & 0x1ffffff;
-		if ( value & 0x1000000 ) value |= 0xfe000000;
+		value = util::sext( opcode, 25 );
 		scudsp_set_dest_mem_reg_2( (opcode & 0x3C000000) >> 26, value );
 	}
 	m_icount -= 1;
@@ -989,10 +987,6 @@ void scudsp_cpu_device::device_start()
 	state_add( STATE_GENPCBASE, "CURPC", m_pc ).noshow();
 	state_add( STATE_GENFLAGS, "GENFLAGS", m_flags ).formatstr("%17s").noshow();
 
-	m_out_irq_cb.resolve_safe();
-	m_in_dma_cb.resolve_safe(0);
-	m_out_dma_cb.resolve_safe();
-
 	set_icountptr(m_icount);
 }
 
@@ -1023,7 +1017,7 @@ void scudsp_cpu_device::data_map(address_map &map)
 scudsp_cpu_device::scudsp_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: cpu_device(mconfig, SCUDSP, tag, owner, clock)
 	, m_out_irq_cb(*this)
-	, m_in_dma_cb(*this)
+	, m_in_dma_cb(*this, 0)
 	, m_out_dma_cb(*this)
 	, m_program_config("program", ENDIANNESS_BIG, 32, 8, -2, address_map_constructor(FUNC(scudsp_cpu_device::program_map), this))
 	, m_data_config("data", ENDIANNESS_BIG, 32, 8, -2, address_map_constructor(FUNC(scudsp_cpu_device::data_map), this))

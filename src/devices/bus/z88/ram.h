@@ -14,6 +14,7 @@
 // ======================> z88_32k_ram_device
 
 class z88_32k_ram_device : public device_t,
+							public device_nvram_interface,
 							public device_z88cart_interface
 {
 public:
@@ -26,9 +27,14 @@ protected:
 	// device-level overrides
 	virtual void device_start() override;
 
+	// device_nvram_interface overrides
+	virtual void nvram_default() override                       { }
+	virtual bool nvram_read(util::read_stream &file) override   { size_t actual; return !file.read (get_cart_base(), get_cart_size(), actual) && actual == get_cart_size(); }
+	virtual bool nvram_write(util::write_stream &file) override { size_t actual; return !file.write(get_cart_base(), get_cart_size(), actual) && actual == get_cart_size(); }
+
 	// z88cart_interface overrides
-	virtual DECLARE_READ8_MEMBER(read) override;
-	virtual DECLARE_WRITE8_MEMBER(write) override;
+	virtual uint8_t read(offs_t offset) override;
+	virtual void write(offs_t offset, uint8_t data) override;
 	virtual uint8_t* get_cart_base() override;
 	virtual uint32_t get_cart_size() override { return 0x8000; }
 

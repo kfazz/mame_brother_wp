@@ -153,6 +153,8 @@ enum
 	ADSP2100_FL0,
 	ADSP2100_FL1,
 	ADSP2100_FL2,
+	ADSP2100_PMOVLAY,
+	ADSP2100_DMOVLAY,
 	ADSP2100_AX0_SEC,
 	ADSP2100_AX1_SEC,
 	ADSP2100_AY0_SEC,
@@ -194,7 +196,7 @@ public:
 	// public interfaces
 	void load_boot_data(uint8_t *srcdata, uint32_t *dstdata);
 	// Returns base address for circular dag
-	uint32_t get_ibase(int index) { return m_base[index]; };
+	uint32_t get_ibase(int index) { return m_base[index]; }
 
 protected:
 	enum
@@ -213,6 +215,7 @@ protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
+	virtual void device_post_load() override;
 
 	// device_execute_interface overrides
 	virtual uint32_t execute_min_cycles() const noexcept override;
@@ -253,17 +256,17 @@ protected:
 	inline uint32_t data_read_dag2(uint32_t op);
 	inline void pgm_write_dag2(uint32_t op, int32_t val);
 	inline uint32_t pgm_read_dag2(uint32_t op);
-	void alu_op_ar(int op);
-	void alu_op_ar_const(int op);
-	void alu_op_af(int op);
-	void alu_op_af_const(int op);
-	void alu_op_none(int op);
-	void mac_op_mr(int op);
-	void mac_op_mr_xop(int op);
-	void mac_op_mf(int op);
-	void mac_op_mf_xop(int op);
-	void shift_op(int op);
-	void shift_op_imm(int op);
+	void alu_op_ar(uint32_t op);
+	void alu_op_ar_const(uint32_t op);
+	void alu_op_af(uint32_t op);
+	void alu_op_af_const(uint32_t op);
+	void alu_op_none(uint32_t op);
+	void mac_op_mr(uint32_t op);
+	void mac_op_mr_xop(uint32_t op);
+	void mac_op_mf(uint32_t op);
+	void mac_op_mf_xop(uint32_t op);
+	void shift_op(uint32_t op);
+	void shift_op_imm(uint32_t op);
 
 	// memory access
 	inline uint16_t data_read(uint32_t addr);
@@ -277,6 +280,7 @@ protected:
 	// register read/write
 	inline void update_i(int which);
 	inline void update_l(int which);
+	inline void update_dmovlay();
 	inline void write_reg0(int regnum, int32_t val);
 	inline void write_reg1(int regnum, int32_t val);
 	inline void write_reg2(int regnum, int32_t val);
@@ -382,6 +386,8 @@ protected:
 	uint32_t              m_lmask[8];
 	uint32_t              m_base[8];
 	uint8_t               m_px;
+	uint32_t              m_pmovlay; // External Program Space overlay
+	uint32_t              m_dmovlay; // External Data Space overlay
 
 	// stacks
 	uint32_t              m_loop_stack[LOOP_STACK_DEPTH];
@@ -429,10 +435,10 @@ protected:
 	adsp_core           m_alt;
 
 	// address spaces
-	address_space *     m_program;
-	address_space *     m_data;
-	address_space *     m_io;
-	memory_access_cache<2, -2, ENDIANNESS_LITTLE> *m_cache;
+	memory_access<14, 2, -2, ENDIANNESS_LITTLE>::cache m_cache;
+	memory_access<14, 2, -2, ENDIANNESS_LITTLE>::specific m_program;
+	memory_access<14, 1, -1, ENDIANNESS_LITTLE>::specific m_data;
+	memory_access<11, 1, -1, ENDIANNESS_LITTLE>::specific m_io;
 
 	// tables
 	uint8_t               m_condition_table[0x1000];
@@ -441,8 +447,8 @@ protected:
 
 	devcb_read32            m_sport_rx_cb;    // callback for serial receive
 	devcb_write32           m_sport_tx_cb;    // callback for serial transmit
-	devcb_write_line        m_timer_fired_cb;          // callback for timer fired
-	devcb_write_line        m_dmovlay_cb;          // callback for DMOVLAY instruction
+	devcb_write_line        m_timer_fired_cb; // callback for timer fired
+	devcb_write32           m_dmovlay_cb;     // callback for DMOVLAY instruction
 
 	// debugging
 #if ADSP_TRACK_HOTSPOTS

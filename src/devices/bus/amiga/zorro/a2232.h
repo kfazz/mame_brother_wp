@@ -24,7 +24,7 @@
 #include "bus/rs232/rs232.h"
 
 
-namespace bus { namespace amiga { namespace zorro {
+namespace bus::amiga::zorro {
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -39,16 +39,16 @@ public:
 	a2232_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
 	// zorro slot
-	DECLARE_READ16_MEMBER( shared_ram_r );
-	DECLARE_WRITE16_MEMBER( shared_ram_w );
-	DECLARE_READ16_MEMBER( irq_ack_r );
-	DECLARE_WRITE16_MEMBER( irq_ack_w );
-	DECLARE_READ16_MEMBER( reset_low_r );
-	DECLARE_WRITE16_MEMBER( reset_low_w );
-	DECLARE_READ16_MEMBER( irq_r );
-	DECLARE_WRITE16_MEMBER( irq_w );
-	DECLARE_READ16_MEMBER( reset_high_r );
-	DECLARE_WRITE16_MEMBER( reset_high_w );
+	uint16_t shared_ram_r(offs_t offset, uint16_t mem_mask = ~0);
+	void shared_ram_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
+	uint16_t irq_ack_r();
+	void irq_ack_w(uint16_t data);
+	uint16_t reset_low_r();
+	void reset_low_w(uint16_t data);
+	uint16_t irq_r();
+	void irq_w(uint16_t data);
+	uint16_t reset_high_r(offs_t offset, uint16_t mem_mask = ~0);
+	void reset_high_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
 
 	void iocpu_map(address_map &map);
 
@@ -58,43 +58,43 @@ protected:
 	virtual void device_reset_after_children() override;
 
 	// device_zorro2_card_interface overrides
-	virtual DECLARE_WRITE_LINE_MEMBER( cfgin_w ) override;
+	virtual void cfgin_w(int state) override;
 
 	// amiga_autoconfig overrides
 	virtual void autoconfig_base_address(offs_t address) override;
 
 private:
 	// cpu
-	WRITE8_MEMBER( int2_w );
-	WRITE8_MEMBER( irq_ack8_w );
+	void int2_w(uint8_t data);
+	void irq_ack8_w(uint8_t data);
 
 	// acia
-	template<int N> DECLARE_READ8_MEMBER( acia_r );
-	template<int N> DECLARE_WRITE8_MEMBER( acia_w );
+	template<int N> uint8_t acia_r(offs_t offset);
+	template<int N> void acia_w(offs_t offset, uint8_t data);
 
 	// cia
-	DECLARE_READ8_MEMBER( cia_port_a_r );
-	DECLARE_READ8_MEMBER( cia_port_b_r );
-	DECLARE_WRITE8_MEMBER( cia_port_b_w );
-	DECLARE_READ8_MEMBER( cia_r );
-	DECLARE_WRITE8_MEMBER( cia_w );
+	uint8_t cia_port_a_r();
+	uint8_t cia_port_b_r();
+	void cia_port_b_w(uint8_t data);
+	uint8_t cia_r(offs_t offset);
+	void cia_w(offs_t offset, uint8_t data);
 
 	// rs232
-	DECLARE_WRITE_LINE_MEMBER( rs232_1_rxd_w );
-	DECLARE_WRITE_LINE_MEMBER( rs232_1_dcd_w );
-	DECLARE_WRITE_LINE_MEMBER( rs232_1_cts_w );
-	DECLARE_WRITE_LINE_MEMBER( rs232_2_dcd_w );
-	DECLARE_WRITE_LINE_MEMBER( rs232_2_cts_w );
-	DECLARE_WRITE_LINE_MEMBER( rs232_3_dcd_w );
-	DECLARE_WRITE_LINE_MEMBER( rs232_3_cts_w );
-	DECLARE_WRITE_LINE_MEMBER( rs232_4_dcd_w );
-	DECLARE_WRITE_LINE_MEMBER( rs232_4_cts_w );
-	DECLARE_WRITE_LINE_MEMBER( rs232_5_dcd_w );
-	DECLARE_WRITE_LINE_MEMBER( rs232_5_cts_w );
-	DECLARE_WRITE_LINE_MEMBER( rs232_6_dcd_w );
-	DECLARE_WRITE_LINE_MEMBER( rs232_6_cts_w );
-	DECLARE_WRITE_LINE_MEMBER( rs232_7_dcd_w );
-	DECLARE_WRITE_LINE_MEMBER( rs232_7_cts_w );
+	void rs232_1_rxd_w(int state);
+	void rs232_1_dcd_w(int state);
+	void rs232_1_cts_w(int state);
+	void rs232_2_dcd_w(int state);
+	void rs232_2_cts_w(int state);
+	void rs232_3_dcd_w(int state);
+	void rs232_3_cts_w(int state);
+	void rs232_4_dcd_w(int state);
+	void rs232_4_cts_w(int state);
+	void rs232_5_dcd_w(int state);
+	void rs232_5_cts_w(int state);
+	void rs232_6_dcd_w(int state);
+	void rs232_6_cts_w(int state);
+	void rs232_7_dcd_w(int state);
+	void rs232_7_cts_w(int state);
 
 	required_device<m65ce02_device> m_iocpu;
 	required_device<input_merger_device> m_ioirq;
@@ -106,7 +106,7 @@ private:
 	uint8_t m_cia_port_b;
 };
 
-} } } // namespace bus::amiga::zorro
+} // namespace bus::amiga::zorro
 
 // device type definition
 DECLARE_DEVICE_TYPE_NS(ZORRO_A2232, bus::amiga::zorro, a2232_device)

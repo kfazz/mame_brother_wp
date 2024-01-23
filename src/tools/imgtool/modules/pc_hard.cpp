@@ -50,8 +50,10 @@
 
 ****************************************************************************/
 #include "imgtool.h"
-#include "formats/imageutl.h"
 #include "imghd.h"
+
+#include "multibyte.h"
+#include "opresolv.h"
 
 #define FAT_SECLEN  512
 
@@ -103,15 +105,12 @@ static pc_chd_image_info *pc_chd_get_image_info(imgtool::image &image)
 
 static void pc_chd_locate_block(imgtool::image &image, uint64_t block, uint32_t *cylinder, uint32_t *head, uint32_t *sector)
 {
-	pc_chd_image_info *info;
-	const hard_disk_info *hd_info;
+	pc_chd_image_info *info = pc_chd_get_image_info(image);
+	const auto &hd_info = imghd_get_header(&info->hard_disk);
 
-	info = pc_chd_get_image_info(image);
-	hd_info = imghd_get_header(&info->hard_disk);
-
-	*sector = block % hd_info->sectors;
-	*head = (block / hd_info->sectors) % hd_info->heads;
-	*cylinder = block / hd_info->sectors / hd_info->heads;
+	*sector = block % hd_info.sectors;
+	*head = (block / hd_info.sectors) % hd_info.heads;
+	*cylinder = block / hd_info.sectors / hd_info.heads;
 }
 
 
@@ -168,16 +167,16 @@ static imgtoolerr_t pc_chd_partition_create(imgtool::image &image, int partition
 
 	/* fill out the partition entry */
 	partition_entry = &header_block[446 + (partition_index * 16)];
-	place_integer_le(partition_entry,  0, 1, 0x80);
-	place_integer_le(partition_entry,  1, 1, first_head);
-	place_integer_le(partition_entry,  2, 1, ((first_sector & 0x3F) | (first_cylinder >> 8 << 2)));
-	place_integer_le(partition_entry,  3, 1, first_cylinder);
-	place_integer_le(partition_entry,  4, 1, partition_type);
-	place_integer_le(partition_entry,  5, 1, last_head);
-	place_integer_le(partition_entry,  6, 1, ((last_sector & 0x3F) | (last_cylinder >> 8 << 2)));
-	place_integer_le(partition_entry,  7, 1, last_cylinder);
-	place_integer_le(partition_entry,  8, 4, first_block);
-	place_integer_le(partition_entry, 12, 4, block_count);
+	partition_entry[0] = 0x80;
+	partition_entry[1] = first_head;
+	partition_entry[2] = ((first_sector & 0x3F) | (first_cylinder >> 8 << 2));
+	partition_entry[3] = first_cylinder;
+	partition_entry[4] = partition_type;
+	partition_entry[5] = last_head;
+	partition_entry[6] = ((last_sector & 0x3F) | (last_cylinder >> 8 << 2));
+	partition_entry[7] = last_cylinder;
+	put_u32le(&partition_entry[ 8], first_block);
+	put_u32le(&partition_entry[12], block_count);
 
 	/* write the partition header */
 	err = image.write_block(0, header_block);
@@ -193,7 +192,6 @@ done:
 static imgtoolerr_t pc_chd_read_partition_header(imgtool::image &image)
 {
 	imgtoolerr_t err;
-	int i;
 	const uint8_t *partition_info;
 	pc_chd_image_info *info;
 	uint8_t buffer[FAT_SECLEN];
@@ -209,7 +207,7 @@ static imgtoolerr_t pc_chd_read_partition_header(imgtool::image &image)
 	if ((buffer[510] != 0x55) || (buffer[511] != 0xAA))
 		return IMGTOOLERR_CORRUPTIMAGE;
 
-	for (i = 0; i < ARRAY_LENGTH(info->partitions); i++)
+	for (int i = 0; i < std::size(info->partitions); i++)
 	{
 		partition_info = &buffer[446 + i * 16];
 
@@ -221,8 +219,8 @@ static imgtoolerr_t pc_chd_read_partition_header(imgtool::image &image)
 		info->partitions[i].ending_track    = ((partition_info[6] << 2) & 0xFF00) | partition_info[7];
 		info->partitions[i].ending_sector   = partition_info[6] & 0x3F;
 
-		info->partitions[i].sector_index    = pick_integer_le(partition_info,  8, 4);
-		info->partitions[i].total_sectors   = pick_integer_le(partition_info, 12, 4);
+		info->partitions[i].sector_index    = get_u32le(&partition_info[ 8]);
+		info->partitions[i].total_sectors   = get_u32le(&partition_info[12]);
 
 		if (info->partitions[i].starting_track > info->partitions[i].ending_track)
 			return IMGTOOLERR_CORRUPTIMAGE;
@@ -310,15 +308,12 @@ static void pc_chd_image_close(imgtool::image &image)
 
 static imgtoolerr_t pc_chd_image_get_geometry(imgtool::image &image, uint32_t *tracks, uint32_t *heads, uint32_t *sectors)
 {
-	pc_chd_image_info *info;
-	const hard_disk_info *hd_info;
+	pc_chd_image_info *info = pc_chd_get_image_info(image);
+	const auto &hd_info = imghd_get_header(&info->hard_disk);
 
-	info = pc_chd_get_image_info(image);
-	hd_info = imghd_get_header(&info->hard_disk);
-
-	*tracks = hd_info->cylinders;
-	*heads = hd_info->heads;
-	*sectors = hd_info->sectors;
+	*tracks = hd_info.cylinders;
+	*heads = hd_info.heads;
+	*sectors = hd_info.sectors;
 	return IMGTOOLERR_SUCCESS;
 }
 
@@ -327,13 +322,11 @@ static imgtoolerr_t pc_chd_image_get_geometry(imgtool::image &image, uint32_t *t
 static uint32_t pc_chd_calc_lbasector(pc_chd_image_info &info, uint32_t track, uint32_t head, uint32_t sector)
 {
 	uint32_t lbasector;
-	const hard_disk_info *hd_info;
-
-	hd_info = imghd_get_header(&info.hard_disk);
+	const auto &hd_info = imghd_get_header(&info.hard_disk);
 	lbasector = track;
-	lbasector *= hd_info->heads;
+	lbasector *= hd_info.heads;
 	lbasector += head;
-	lbasector *= hd_info->sectors;
+	lbasector *= hd_info.sectors;
 	lbasector += sector;
 	return lbasector;
 }
@@ -345,7 +338,7 @@ static imgtoolerr_t pc_chd_image_readsector(imgtool::image &image, uint32_t trac
 	pc_chd_image_info *info = pc_chd_get_image_info(image);
 
 	// get the sector size and resize the buffer
-	uint32_t sector_size = imghd_get_header(&info->hard_disk)->sectorbytes;
+	uint32_t sector_size = imghd_get_header(&info->hard_disk).sectorbytes;
 	try { buffer.resize(sector_size); }
 	catch (std::bad_alloc const &) { return IMGTOOLERR_OUTOFMEMORY; }
 

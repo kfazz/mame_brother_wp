@@ -1,4 +1,4 @@
-// license:GPL-2.0+
+// license:CC0-1.0
 // copyright-holders:Couriersud
 /*
  * cmos_inverter_clk
@@ -7,21 +7,21 @@
 
 
 #include "netlist/devices/net_lib.h"
-#include "netlist/analog/nld_twoterm.h"
 
 #define USE_CLOCK (1)
 
 NETLIST_START(cmos_inverter_clk)
+{
 	/* Standard stuff */
 
 	//SOLVER(Solver, 480000)
 	SOLVER(Solver, 1e5)
 	//SOLVER(Solver, 100000000000)
 	PARAM(Solver.ACCURACY, 1e-6 )
-	PARAM(Solver.NR_LOOPS, 500000)
+	PARAM(Solver.NR_LOOPS, 50)
 	PARAM(Solver.DYNAMIC_TS, 1)
 	PARAM(Solver.DYNAMIC_LTE, 1e-5)
-	PARAM(Solver.DYNAMIC_MIN_TIMESTEP, 2e-9)
+	PARAM(Solver.DYNAMIC_MIN_TIMESTEP, 2e-6)
 	ANALOG_INPUT(V5, 5)
 
 //  CLOCK(clk, 0.5e6)
@@ -61,4 +61,4 @@ NETLIST_START(cmos_inverter_clk)
 	LOG(log_D, M.D)
 	LOGD(log_X, RG.1, RG.2)
 #endif
-NETLIST_END()
+}

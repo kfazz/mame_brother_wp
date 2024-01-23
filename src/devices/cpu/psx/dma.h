@@ -29,8 +29,8 @@ public:
 	void install_read_handler( int n_channel, read_delegate p_fn_dma_read );
 	void install_write_handler( int n_channel, write_delegate p_fn_dma_write );
 
-	DECLARE_WRITE32_MEMBER( write );
-	DECLARE_READ32_MEMBER( read );
+	void write(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
+	uint32_t read(offs_t offset, uint32_t mem_mask = ~0);
 
 	uint32_t *m_ram;
 	size_t m_ramsize;
@@ -39,7 +39,6 @@ protected:
 	virtual void device_start() override;
 	virtual void device_reset() override;
 	virtual void device_post_load() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 private:
 	struct psx_dma_channel
@@ -58,7 +57,7 @@ private:
 	void dma_stop_timer( int n_channel );
 	void dma_timer_adjust( int n_channel );
 	void dma_interrupt_update();
-	void dma_finished( int n_channel );
+	TIMER_CALLBACK_MEMBER( dma_finished );
 
 	psx_dma_channel m_channel[7];
 	uint32_t m_dpcp;

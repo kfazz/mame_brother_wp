@@ -30,14 +30,14 @@ spg2xx_device::spg2xx_device(const machine_config &mconfig, device_type type, co
 	m_porta_out(*this),
 	m_portb_out(*this),
 	m_portc_out(*this),
-	m_porta_in(*this),
-	m_portb_in(*this),
-	m_portc_in(*this),
-	m_adc_in(*this),
-	m_guny_in(*this),
-	m_gunx_in(*this),
+	m_porta_in(*this, 0),
+	m_portb_in(*this, 0),
+	m_portc_in(*this, 0),
+	m_adc_in(*this, 0x0fff),
+	m_guny_in(*this, 0),
+	m_gunx_in(*this, 0),
 	m_i2c_w(*this),
-	m_i2c_r(*this),
+	m_i2c_r(*this, 0),
 	m_uart_tx(*this),
 	m_spi_tx(*this),
 	m_chip_sel(*this),
@@ -70,7 +70,8 @@ void spg2xx_device::internal_map(address_map &map)
 {
 	map(0x000000, 0x0027ff).ram();
 	map(0x002800, 0x0028ff).rw(m_spg_video, FUNC(spg2xx_video_device::video_r), FUNC(spg2xx_video_device::video_w));
-	map(0x002900, 0x002aff).ram().share("spgvideo:scrollram");
+	map(0x002900, 0x0029ff).ram().share("spgvideo:scrollram");
+	map(0x002a00, 0x002aff).ram().share("spgvideo:hcompram"); // not all models?
 	map(0x002b00, 0x002bff).ram().share("spgvideo:paletteram");
 	map(0x002c00, 0x002fff).ram().share("spgvideo:spriteram");
 	map(0x003000, 0x0031ff).rw(m_spg_audio, FUNC(spg2xx_audio_device::audio_r), FUNC(spg2xx_audio_device::audio_w));
@@ -85,21 +86,6 @@ void spg2xx_device::device_start()
 {
 	unsp_device::device_start();
 
-	m_porta_out.resolve_safe();
-	m_portb_out.resolve_safe();
-	m_portc_out.resolve_safe();
-	m_porta_in.resolve_safe(0);
-	m_portb_in.resolve_safe(0);
-	m_portc_in.resolve_safe(0);
-	m_adc_in.resolve_all_safe(0x0fff);
-	m_guny_in.resolve_safe(0);
-	m_gunx_in.resolve_safe(0);
-	m_i2c_w.resolve_safe();
-	m_i2c_r.resolve_safe(0);
-	m_uart_tx.resolve_safe();
-	m_spi_tx.resolve_safe();
-	m_chip_sel.resolve_safe();
-
 	save_item(NAME(m_sprite_limit));
 	save_item(NAME(m_pal_flag));
 	save_item(NAME(m_fiq_vector));
@@ -111,12 +97,12 @@ void spg2xx_device::device_reset()
 	m_fiq_vector = 0xff;
 }
 
-WRITE8_MEMBER(spg2xx_device::fiq_vector_w)
+void spg2xx_device::fiq_vector_w(uint8_t data)
 {
 	m_fiq_vector = data;
 }
 
-WRITE_LINE_MEMBER(spg2xx_device::videoirq_w)
+void spg2xx_device::videoirq_w(int state)
 {
 	if (m_fiq_vector == 0)
 	{
@@ -128,44 +114,44 @@ WRITE_LINE_MEMBER(spg2xx_device::videoirq_w)
 	}
 }
 
-WRITE_LINE_MEMBER(spg2xx_device::timerirq_w)
+void spg2xx_device::timerirq_w(int state)
 {
 	set_state_unsynced(UNSP_IRQ2_LINE, state);
 }
 
-WRITE_LINE_MEMBER(spg2xx_device::uartirq_w)
+void spg2xx_device::uartirq_w(int state)
 {
 	set_state_unsynced(UNSP_IRQ3_LINE, state);
 }
 
-WRITE_LINE_MEMBER(spg2xx_device::audioirq_w)
+void spg2xx_device::audioirq_w(int state)
 {
 	set_state_unsynced(UNSP_IRQ4_LINE, state);
 }
 
-WRITE_LINE_MEMBER(spg2xx_device::audiochirq_w)
+void spg2xx_device::audiochirq_w(int state)
 {
 	set_state_unsynced(UNSP_FIQ_LINE, state);
 }
 
-WRITE_LINE_MEMBER(spg2xx_device::extirq_w)
+void spg2xx_device::extirq_w(int state)
 {
 	set_state_unsynced(UNSP_IRQ5_LINE, state);
 }
 
-WRITE_LINE_MEMBER(spg2xx_device::ffreq1_w)
+void spg2xx_device::ffreq1_w(int state)
 {
 	set_state_unsynced(UNSP_IRQ6_LINE, state);
 }
 
-WRITE_LINE_MEMBER(spg2xx_device::ffreq2_w)
+void spg2xx_device::ffreq2_w(int state)
 {
 	set_state_unsynced(UNSP_IRQ7_LINE, state);
 }
 
 
 
-READ16_MEMBER(spg2xx_device::space_r)
+uint16_t spg2xx_device::space_r(offs_t offset)
 {
 	address_space &cpuspace = this->space(AS_PROGRAM);
 	return cpuspace.read_word(offset);
@@ -181,6 +167,8 @@ void spg2xx_device::configure_spg_io(spg2xx_io_device* io)
 	io->portc_out().set(FUNC(spg2xx_device::portc_w));
 	io->adc_in<0>().set(FUNC(spg2xx_device::adc_r<0>));
 	io->adc_in<1>().set(FUNC(spg2xx_device::adc_r<1>));
+	io->adc_in<2>().set(FUNC(spg2xx_device::adc_r<2>));
+	io->adc_in<3>().set(FUNC(spg2xx_device::adc_r<3>));
 	io->i2c_w().set(FUNC(spg2xx_device::eepromx_w));
 	io->i2c_r().set(FUNC(spg2xx_device::eepromx_r));
 	io->uart_tx().set(FUNC(spg2xx_device::uart_tx_w));

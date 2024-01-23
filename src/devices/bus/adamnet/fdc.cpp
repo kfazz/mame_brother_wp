@@ -19,6 +19,8 @@
 #include "emu.h"
 #include "fdc.h"
 
+#include "formats/adam_dsk.h"
+
 
 
 //**************************************************************************
@@ -79,8 +81,6 @@ const tiny_rom_entry *adam_fdc_device::device_rom_region() const
 
 void adam_fdc_device::adam_fdc_mem(address_map &map)
 {
-	map(0x0000, 0x001f).m(M6801_TAG, FUNC(m6801_cpu_device::m6801_io));
-	map(0x0080, 0x00ff).ram();
 	map(0x0400, 0x07ff).ram().writeonly().share("ram");
 	map(0x0800, 0x0800).mirror(0x3ff).r(WD2793_TAG, FUNC(wd2793_device::status_r));
 	map(0x1400, 0x17ff).ram().readonly().share("ram");
@@ -97,12 +97,14 @@ void adam_fdc_device::adam_fdc_mem(address_map &map)
 
 
 //-------------------------------------------------
-//  floppy_format_type floppy_formats
+//  floppy_formats
 //-------------------------------------------------
 
-FLOPPY_FORMATS_MEMBER( adam_fdc_device::floppy_formats )
-	FLOPPY_ADAM_FORMAT
-FLOPPY_FORMATS_END
+void adam_fdc_device::floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_ADAM_FORMAT);
+}
 
 static void adam_fdc_floppies(device_slot_interface &device)
 {
@@ -116,7 +118,7 @@ static void adam_fdc_floppies(device_slot_interface &device)
 
 void adam_fdc_device::device_add_mconfig(machine_config &config)
 {
-	M6801(config, m_maincpu, 4_MHz_XTAL),
+	M6803(config, m_maincpu, 4_MHz_XTAL),
 	m_maincpu->set_addrmap(AS_PROGRAM, &adam_fdc_device::adam_fdc_mem);
 	m_maincpu->in_p1_cb().set(FUNC(adam_fdc_device::p1_r));
 	m_maincpu->out_p1_cb().set(FUNC(adam_fdc_device::p1_w));
@@ -199,7 +201,7 @@ void adam_fdc_device::adamnet_reset_w(int state)
 //  data_r -
 //-------------------------------------------------
 
-READ8_MEMBER( adam_fdc_device::data_r )
+uint8_t adam_fdc_device::data_r(offs_t offset)
 {
 	uint8_t data = m_fdc->data_r();
 
@@ -213,7 +215,7 @@ READ8_MEMBER( adam_fdc_device::data_r )
 //  p1_r -
 //-------------------------------------------------
 
-READ8_MEMBER( adam_fdc_device::p1_r )
+uint8_t adam_fdc_device::p1_r()
 {
 	/*
 
@@ -250,7 +252,7 @@ READ8_MEMBER( adam_fdc_device::p1_r )
 //  p1_w -
 //-------------------------------------------------
 
-WRITE8_MEMBER( adam_fdc_device::p1_w )
+void adam_fdc_device::p1_w(uint8_t data)
 {
 	/*
 
@@ -292,7 +294,7 @@ WRITE8_MEMBER( adam_fdc_device::p1_w )
 //  p2_r -
 //-------------------------------------------------
 
-READ8_MEMBER( adam_fdc_device::p2_r )
+uint8_t adam_fdc_device::p2_r()
 {
 	/*
 
@@ -319,7 +321,7 @@ READ8_MEMBER( adam_fdc_device::p2_r )
 //  p2_w -
 //-------------------------------------------------
 
-WRITE8_MEMBER( adam_fdc_device::p2_w )
+void adam_fdc_device::p2_w(uint8_t data)
 {
 	/*
 

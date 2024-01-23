@@ -24,12 +24,11 @@
 #include "video/ppu2c0x.h"      // this has to be included so that IRQ functions can access ppu2c0x_device::BOTTOM_VISIBLE_SCANLINE
 
 #ifdef NES_PCB_DEBUG
-#define VERBOSE 1
+#define VERBOSE (LOG_GENERAL)
 #else
-#define VERBOSE 0
+#define VERBOSE (0)
 #endif
-
-#define LOG_MMC(x) do { if (VERBOSE) logerror x; } while (0)
+#include "logmacro.h"
 
 
 //-------------------------------------------------
@@ -73,7 +72,7 @@ nes_jy_typec_device::nes_jy_typec_device(const machine_config &mconfig, const ch
 void nes_jy_typea_device::device_start()
 {
 	common_start();
-	irq_timer = timer_alloc(TIMER_IRQ);
+	irq_timer = timer_alloc(FUNC(nes_jy_typea_device::irq_timer_tick), this);
 	irq_timer->reset();
 	timer_freq = clocks_to_attotime(1);
 
@@ -98,7 +97,6 @@ void nes_jy_typea_device::device_start()
 
 void nes_jy_typea_device::pcb_reset()
 {
-	m_chr_source = m_vrom_chunks ? CHRROM : CHRRAM;
 	prg32(0);
 	chr8(0, m_chr_source);
 
@@ -147,18 +145,18 @@ void nes_jy_typea_device::pcb_reset()
 uint8_t nes_jy_typea_device::nt_r(offs_t offset)
 {
 	int page = ((offset & 0xc00) >> 10);
-	irq_clock(0, 2);
+	irq_clock(false, 2);
 	return m_nt_access[page][offset & 0x3ff];
 }
 
 uint8_t nes_jy_typea_device::chr_r(offs_t offset)
 {
 	int bank = offset >> 10;
-	irq_clock(0, 2);
+	irq_clock(false, 2);
 	return m_chr_access[bank][offset & 0x3ff];
 }
 
-void nes_jy_typea_device::irq_clock(int mode, int blanked)
+void nes_jy_typea_device::irq_clock(bool blanked, int mode)
 {
 	bool clock = false, fire = false;
 
@@ -225,15 +223,12 @@ void nes_jy_typea_device::irq_clock(int mode, int blanked)
 	}
 }
 
-void nes_jy_typea_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(nes_jy_typea_device::irq_timer_tick)
 {
-	if (id == TIMER_IRQ)
-	{
-		irq_clock(0, 0);
-	}
+	irq_clock(false, 0);
 }
 
-void nes_jy_typea_device::scanline_irq(int scanline, int vblank, int blanked)
+void nes_jy_typea_device::scanline_irq(int scanline, bool vblank, bool blanked)
 {
 	if (scanline < ppu2c0x_device::BOTTOM_VISIBLE_SCANLINE)
 		irq_clock(blanked, 1);
@@ -243,7 +238,7 @@ void nes_jy_typea_device::scanline_irq(int scanline, int vblank, int blanked)
 // 0x5000-0x5fff : sort of protection?
 uint8_t nes_jy_typea_device::read_l(offs_t offset)
 {
-	LOG_MMC(("JY Company write_m, offset: %04x\n", offset));
+	LOG("JY Company write_m, offset: %04x\n", offset);
 	offset += 0x100;
 
 	if (offset >= 0x1000 && offset < 0x1800)
@@ -262,12 +257,12 @@ uint8_t nes_jy_typea_device::read_l(offs_t offset)
 			return m_latch;
 	}
 
-	return get_open_bus();   // open bus
+	return get_open_bus();
 }
 
 void nes_jy_typea_device::write_l(offs_t offset, uint8_t data)
 {
-	LOG_MMC(("JY Company write_m, offset: %04x, data: %02x\n", offset, data));
+	LOG("JY Company write_m, offset: %04x, data: %02x\n", offset, data);
 	offset += 0x100;
 
 	if (offset >= 0x1800)
@@ -284,12 +279,12 @@ void nes_jy_typea_device::write_l(offs_t offset, uint8_t data)
 // 0x6000-0x7fff : WRAM or open bus
 uint8_t nes_jy_typea_device::read_m(offs_t offset)
 {
-	LOG_MMC(("JY Company write_m, offset: %04x\n", offset));
+	LOG("JY Company write_m, offset: %04x\n", offset);
 
 	if (m_reg[0] & 0x80)
 		return m_prg[(m_bank_6000 & m_prg_mask) * 0x2000 + (offset & 0x1fff)];
 
-	return get_open_bus();   // open bus
+	return get_open_bus();
 }
 
 
@@ -427,7 +422,7 @@ void nes_jy_typea_device::update_banks(int reg)
 
 void nes_jy_typea_device::write_h(offs_t offset, uint8_t data)
 {
-	LOG_MMC(("JY Company write_m, offset: %04x, data: %02x\n", offset, data));
+	LOG("JY Company write_m, offset: %04x, data: %02x\n", offset, data);
 
 	switch (offset & 0x7000)
 	{
@@ -573,7 +568,7 @@ uint8_t nes_jy_typec_device::chr_r(offs_t offset)
 {
 	int bank = offset >> 10;
 
-	irq_clock(0, 2);
+	irq_clock(false, 2);
 	switch (offset & 0xff0)
 	{
 		case 0xfd0:

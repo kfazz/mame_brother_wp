@@ -64,28 +64,29 @@ protected:
 	// construction/destruction
 	dp8344_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock);
 
-	// device-specific overrides
-	virtual void device_resolve_objects() override;
+	// device_t implementation
 	virtual void device_start() override;
 	virtual void device_reset() override;
 
-	// device_execute_interface overrides
+	// device_execute_interface implementation
 	virtual u32 execute_min_cycles() const noexcept override { return 2; }
 	virtual u32 execute_max_cycles() const noexcept override { return 4; }
 	virtual u32 execute_input_lines() const noexcept override { return 3; }
 	virtual void execute_run() override;
 	virtual void execute_set_input(int irqline, int state) override;
 
-	// device_disasm_interface overrides
+	// device_disasm_interface implementation
 	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
 
-	// device_memory_interface overrides
+	// device_memory_interface implementation
 	virtual space_config_vector memory_space_config() const override;
 
-	// device_state_interface overrides
+	// device_state_interface implementation
 	virtual void state_string_export(const device_state_entry &entry, std::string &str) const override;
 
 private:
+	static const char *const s_protocol_names[8];
+
 	enum inst_state : u8 {
 		T1_DECODE, T1_START, T1_SKIP, T1_LJMP, T1_LCALL,
 		TX_READ, TX_WRITE,
@@ -123,7 +124,7 @@ private:
 	u16 transmit_fifo_pop();
 	void transmitter_idle();
 	void receiver_active();
-	void receive_fifo_push(u8 data);
+	void receive_fifo_push(u16 data);
 	u8 receive_fifo_pop(bool test);
 	void set_receiver_error(u8 code);
 	u8 get_error_code(bool test);
@@ -144,9 +145,9 @@ private:
 	// address spaces
 	const address_space_config m_inst_config;
 	const address_space_config m_data_config;
-	address_space *m_inst_space;
-	address_space *m_data_space;
-	memory_access_cache<1, -1, ENDIANNESS_LITTLE> *m_inst_cache;
+	memory_access<16, 1, -1, ENDIANNESS_LITTLE>::cache m_inst_cache;
+	memory_access<16, 1, -1, ENDIANNESS_LITTLE>::specific m_inst_space;
+	memory_access<16, 0,  0, ENDIANNESS_LITTLE>::specific m_data_space;
 
 	// output callbacks
 	devcb_write_line m_birq_out_cb;
@@ -214,6 +215,9 @@ private:
 	u16 m_tfifo[3];
 	u8 m_rfifo_head;
 	u8 m_tfifo_head;
+
+	// misc. state
+	bool m_receiver_interrupt;
 };
 
 // ======================> dp8344a_device

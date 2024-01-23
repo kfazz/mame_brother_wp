@@ -14,8 +14,15 @@
 #define LEAVE_HALT() {                                          \
 	if( m_HALT )                                                  \
 	{                                                           \
+		if( m_HALT == 2 )                                        \
+		{                                                       \
+			_PC += 2;                                           \
+		}                                                       \
+		else                                                    \
+		{                                                       \
+			_PC++;                                              \
+		}                                                       \
 		m_HALT = 0;                                               \
-		_PC++;                                                  \
 	}                                                           \
 }
 
@@ -27,7 +34,7 @@ inline u8 z180_device::IN(u16 port)
 	if (is_internal_io_address(port))
 		return z180_readcontrol(port);
 	m_extra_cycles += io_wait_states();
-	return m_iospace->read_byte(port);
+	return m_io.read_byte(port);
 }
 
 /***************************************************************
@@ -40,7 +47,7 @@ inline void z180_device::OUT(u16 port, u8 value)
 	else
 	{
 		m_extra_cycles += io_wait_states();
-		m_iospace->write_byte(port, value);
+		m_io.write_byte(port, value);
 	}
 }
 
@@ -117,7 +124,7 @@ uint8_t z180_device::ROP()
 	offs_t addr = _PCD;
 	_PC++;
 	m_extra_cycles += memory_wait_states();
-	return m_ocache->read_byte(MMU_REMAP_ADDR(addr));
+	return m_copcodes.read_byte(MMU_REMAP_ADDR(addr));
 }
 
 /****************************************************************
@@ -131,7 +138,7 @@ uint8_t z180_device::ARG()
 	offs_t addr = _PCD;
 	_PC++;
 	m_extra_cycles += memory_wait_states();
-	return m_cache->read_byte(MMU_REMAP_ADDR(addr));
+	return m_cprogram.read_byte(MMU_REMAP_ADDR(addr));
 }
 
 uint32_t z180_device::ARG16()
@@ -139,7 +146,7 @@ uint32_t z180_device::ARG16()
 	offs_t addr = _PCD;
 	_PC += 2;
 	m_extra_cycles += memory_wait_states() * 2;
-	return m_cache->read_byte(MMU_REMAP_ADDR(addr)) | (m_cache->read_byte(MMU_REMAP_ADDR(addr+1)) << 8);
+	return m_cprogram.read_byte(MMU_REMAP_ADDR(addr)) | (m_cprogram.read_byte(MMU_REMAP_ADDR(addr+1)) << 8);
 }
 
 /***************************************************************
@@ -177,7 +184,8 @@ uint32_t z180_device::ARG16()
 	}                                                           \
 	else                                                        \
 	{                                                           \
-		_PC += 2;                                             \
+		(void)ARG();                                            \
+		_PC++;                                                \
 	}
 
 /***************************************************************
@@ -193,13 +201,14 @@ uint32_t z180_device::ARG16()
  * JR_COND
  ***************************************************************/
 #define JR_COND(cond,opcode)                                    \
+{                                                               \
+	int8_t arg = (int8_t)ARG(); /* ARG() also increments _PC */   \
 	if( cond )                                                  \
 	{                                                           \
-		int8_t arg = (int8_t)ARG(); /* ARG() also increments _PC */ \
 		_PC += arg;           /* so don't do _PC += ARG() */  \
 		CC(ex,opcode);                                          \
 	}                                                           \
-	else _PC++;
+}
 /***************************************************************
  * CALL
  ***************************************************************/
@@ -221,7 +230,8 @@ uint32_t z180_device::ARG16()
 	}                                                           \
 	else                                                        \
 	{                                                           \
-		_PC+=2;                                               \
+		(void)ARG();                                            \
+		_PC++;                                                \
 	}
 
 /***************************************************************
@@ -952,6 +962,7 @@ uint8_t z180_device::SET(uint8_t bit, uint8_t value)
  * OTDMR
  ***************************************************************/
 #define SLP {                                                   \
+	_PC -= 2;                                                      \
 	m_icount = 0;                                           \
 	m_HALT = 2;                                                 \
 }

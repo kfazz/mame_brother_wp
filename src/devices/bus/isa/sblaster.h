@@ -8,9 +8,9 @@
 #include "isa.h"
 #include "bus/midi/midi.h"
 #include "bus/pc_joy/pc_joy.h"
-#include "sound/3812intf.h"
 #include "sound/dac.h"
 #include "sound/saa1099.h"
+#include "sound/ymopl.h"
 #include "diserial.h"
 
 //**************************************************************************
@@ -28,16 +28,16 @@ public:
 	void queue_r(uint8_t data);
 	uint8_t dequeue_r();
 
-	DECLARE_READ8_MEMBER(dsp_reset_r);
-	DECLARE_WRITE8_MEMBER(dsp_reset_w);
-	DECLARE_READ8_MEMBER(dsp_data_r);
-	DECLARE_WRITE8_MEMBER(dsp_data_w);
-	DECLARE_READ8_MEMBER(dsp_rbuf_status_r);
-	DECLARE_READ8_MEMBER(dsp_wbuf_status_r);
-	DECLARE_WRITE8_MEMBER(dsp_rbuf_status_w);
-	DECLARE_WRITE8_MEMBER(dsp_cmd_w);
+	uint8_t dsp_reset_r(offs_t offset);
+	void dsp_reset_w(offs_t offset, uint8_t data);
+	uint8_t dsp_data_r(offs_t offset);
+	void dsp_data_w(offs_t offset, uint8_t data);
+	uint8_t dsp_rbuf_status_r(offs_t offset);
+	uint8_t dsp_wbuf_status_r(offs_t offset);
+	void dsp_rbuf_status_w(offs_t offset, uint8_t data);
+	void dsp_cmd_w(offs_t offset, uint8_t data);
 
-	DECLARE_WRITE_LINE_MEMBER( midi_rx_w ) { device_serial_interface::rx_w((uint8_t)state); }
+	void midi_rx_w(int state) { device_serial_interface::rx_w((uint8_t)state); }
 
 protected:
 	void common(machine_config &config);
@@ -110,13 +110,13 @@ protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
+
 	uint8_t dack_r(int line);
 	void dack_w(int line, uint8_t data);
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 	virtual void drq16_w(int state) { }
 	virtual void drq_w(int state) { }
 	virtual void irq_w(int state, int source) { }
-	virtual void mixer_reset() {}
+	virtual void mixer_reset() { }
 	void adpcm_decode(uint8_t sample, int size);
 
 	// serial overrides
@@ -125,6 +125,8 @@ protected:
 	virtual void tra_callback() override;    // Tx send bit
 
 	static constexpr unsigned MIDI_RING_SIZE = 2048;
+
+	TIMER_CALLBACK_MEMBER(timer_tick);
 
 	required_device<dac_16bit_r2r_device> m_ldac;
 	required_device<dac_16bit_r2r_device> m_rdac;
@@ -150,8 +152,8 @@ class sb8_device : public sb_device,
 					public device_isa8_card_interface
 {
 public:
-	DECLARE_READ8_MEMBER(ym3812_16_r);
-	DECLARE_WRITE8_MEMBER(ym3812_16_w);
+	uint8_t ym3812_16_r(offs_t offset);
+	void ym3812_16_w(offs_t offset, uint8_t data);
 	virtual ioport_constructor device_input_ports() const override;
 protected:
 	// construction/destruction
@@ -172,9 +174,9 @@ public:
 	// construction/destruction
 	isa8_sblaster1_0_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(saa1099_16_r);
-	DECLARE_WRITE8_MEMBER(saa1099_1_16_w);
-	DECLARE_WRITE8_MEMBER(saa1099_2_16_w);
+	uint8_t saa1099_16_r(offs_t offset);
+	void saa1099_1_16_w(offs_t offset, uint8_t data);
+	void saa1099_2_16_w(offs_t offset, uint8_t data);
 
 protected:
 	// device-level overrides
@@ -207,10 +209,10 @@ class sb16_device : public sb_device,
 					public device_isa16_card_interface
 {
 public:
-	DECLARE_READ8_MEMBER(mpu401_r);
-	DECLARE_WRITE8_MEMBER(mpu401_w);
-	DECLARE_READ8_MEMBER(mixer_r);
-	DECLARE_WRITE8_MEMBER(mixer_w);
+	uint8_t mpu401_r(offs_t offset);
+	void mpu401_w(offs_t offset, uint8_t data);
+	uint8_t mixer_r(offs_t offset);
+	void mixer_w(offs_t offset, uint8_t data);
 	virtual ioport_constructor device_input_ports() const override;
 protected:
 	// construction/destruction

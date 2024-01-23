@@ -28,7 +28,6 @@ protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	void device_timer(emu_timer &timer, device_timer_id tid, int param, void *ptr) override;
 
 	// optional information overrides
 	virtual void device_add_mconfig(machine_config &config) override;
@@ -38,20 +37,22 @@ protected:
 	virtual void io_write(int ifsel, offs_t offset, uint8_t data) override;
 
 private:
-	DECLARE_READ8_MEMBER(porta_r);
-	DECLARE_READ8_MEMBER(portb_r);
-	DECLARE_READ8_MEMBER(portc_r);
-	DECLARE_WRITE8_MEMBER(porta_w);
-	DECLARE_WRITE8_MEMBER(portb_w);
-	DECLARE_WRITE8_MEMBER(portc_w);
+	uint8_t porta_r();
+	uint8_t portb_r();
+	uint8_t portc_r();
+	void porta_w(uint8_t data);
+	void portb_w(uint8_t data);
+	void portc_w(uint8_t data);
 
-	DECLARE_WRITE_LINE_MEMBER(cent_ack_w);
-	DECLARE_WRITE_LINE_MEMBER(cent_busy_w);
-	DECLARE_WRITE_LINE_MEMBER(cent_slct_w);
-	DECLARE_WRITE_LINE_MEMBER(cent_pe_w);
-	DECLARE_WRITE_LINE_MEMBER(cent_fault_w);
-	DECLARE_WRITE_LINE_MEMBER(cent_autofd_w);
-	DECLARE_WRITE_LINE_MEMBER(cent_init_w);
+	void cent_ack_w(int state);
+	void cent_busy_w(int state);
+	void cent_slct_w(int state);
+	void cent_pe_w(int state);
+	void cent_fault_w(int state);
+	void cent_autofd_w(int state);
+	void cent_init_w(int state);
+
+	TIMER_CALLBACK_MEMBER(strobe_tick);
 
 	required_device<i8255_device> m_ppi;
 	required_device<centronics_device> m_centronics;

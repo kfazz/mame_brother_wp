@@ -64,7 +64,7 @@ ROM_END
 bsmt2000_device::bsmt2000_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: device_t(mconfig, BSMT2000, tag, owner, clock)
 	, device_sound_interface(mconfig, *this)
-	, device_rom_interface(mconfig, *this, 32)
+	, device_rom_interface(mconfig, *this)
 	, m_ready_callback(*this)
 	, m_stream(nullptr)
 	, m_cpu(*this, "bsmt2000")
@@ -110,7 +110,7 @@ void bsmt2000_device::device_add_mconfig(machine_config &config)
 
 void bsmt2000_device::device_start()
 {
-	m_ready_callback.resolve();
+	m_ready_callback.resolve_safe();
 
 	// create the stream; BSMT typically runs at 24MHz and writes to a DAC, so
 	// in theory we should generate a 24MHz stream, but that's certainly overkill
@@ -126,6 +126,11 @@ void bsmt2000_device::device_start()
 	save_item(NAME(m_left_data));
 	save_item(NAME(m_right_data));
 	save_item(NAME(m_write_pending));
+
+	// allocate timers
+	m_deferred_reset = timer_alloc(FUNC(bsmt2000_device::deferred_reset), this);
+	m_deferred_reg_write = timer_alloc(FUNC(bsmt2000_device::deferred_reg_write), this);
+	m_deferred_data_write = timer_alloc(FUNC(bsmt2000_device::deferred_data_write), this);
 }
 
 
@@ -135,39 +140,45 @@ void bsmt2000_device::device_start()
 
 void bsmt2000_device::device_reset()
 {
-	synchronize(TIMER_ID_RESET);
+	m_deferred_reset->adjust(attotime::zero);
 }
 
 
 
 //-------------------------------------------------
-//  device_timer - handle deferred writes and
-//  resets as a timer callback
+//  deferred_reset -
 //-------------------------------------------------
 
-void bsmt2000_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(bsmt2000_device::deferred_reset)
 {
-	switch (id)
-	{
-		// deferred reset
-		case TIMER_ID_RESET:
-			m_stream->update();
-			m_cpu->reset();
-			break;
-
-		// deferred register write
-		case TIMER_ID_REG_WRITE:
-			m_register_select = param & 0xffff;
-			break;
-
-		// deferred data write
-		case TIMER_ID_DATA_WRITE:
-			m_write_data = param & 0xffff;
-			if (m_write_pending) logerror("BSMT2000: Missed data\n");
-			m_write_pending = true;
-			break;
-	}
+	m_stream->update();
+	m_cpu->reset();
 }
+
+
+
+//-------------------------------------------------
+//  deferred_reg_write -
+//-------------------------------------------------
+
+TIMER_CALLBACK_MEMBER(bsmt2000_device::deferred_reg_write)
+{
+	m_register_select = param & 0xffff;
+}
+
+
+
+//-------------------------------------------------
+//  deferred_data_write -
+//-------------------------------------------------
+
+TIMER_CALLBACK_MEMBER(bsmt2000_device::deferred_data_write)
+{
+	m_write_data = param & 0xffff;
+	if (m_write_pending) logerror("BSMT2000: Missed data\n");
+	m_write_pending = true;
+}
+
 
 
 //-------------------------------------------------
@@ -175,22 +186,21 @@ void bsmt2000_device::device_timer(emu_timer &timer, device_timer_id id, int par
 //  for our sound stream
 //-------------------------------------------------
 
-void bsmt2000_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void bsmt2000_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
 	// just fill with current left/right values
-	for (int samp = 0; samp < samples; samp++)
-	{
-		outputs[0][samp] = m_left_data;
-		outputs[1][samp] = m_right_data;
-	}
+	constexpr stream_buffer::sample_t sample_scale = 1.0 / 32768.0;
+	outputs[0].fill(stream_buffer::sample_t(m_left_data) * sample_scale);
+	outputs[1].fill(stream_buffer::sample_t(m_right_data) * sample_scale);
 }
 
 
 //-------------------------------------------------
-//  rom_bank_updated - the rom bank has changed
+//  rom_bank_pre_change - refresh the stream if the
+//  ROM banking changes
 //-------------------------------------------------
 
-void bsmt2000_device::rom_bank_updated()
+void bsmt2000_device::rom_bank_pre_change()
 {
 	m_stream->update();
 }
@@ -213,7 +223,7 @@ uint16_t bsmt2000_device::read_status()
 
 void bsmt2000_device::write_reg(uint16_t data)
 {
-	synchronize(TIMER_ID_REG_WRITE, data);
+	m_deferred_reg_write->adjust(attotime::zero, data);
 }
 
 
@@ -224,10 +234,10 @@ void bsmt2000_device::write_reg(uint16_t data)
 
 void bsmt2000_device::write_data(uint16_t data)
 {
-	synchronize(TIMER_ID_DATA_WRITE, data);
+	m_deferred_data_write->adjust(attotime::zero, data);
 
 	// boost the interleave on a write so that the caller detects the status more accurately
-	machine().scheduler().boost_interleave(attotime::from_usec(1), attotime::from_usec(10));
+	machine().scheduler().add_quantum(attotime::from_usec(1), attotime::from_usec(10));
 }
 
 
@@ -236,7 +246,7 @@ void bsmt2000_device::write_data(uint16_t data)
 //  the register select port
 //-------------------------------------------------
 
-READ16_MEMBER( bsmt2000_device::tms_register_r )
+uint16_t bsmt2000_device::tms_register_r()
 {
 	return m_register_select;
 }
@@ -247,12 +257,11 @@ READ16_MEMBER( bsmt2000_device::tms_register_r )
 //  data port
 //-------------------------------------------------
 
-READ16_MEMBER( bsmt2000_device::tms_data_r )
+uint16_t bsmt2000_device::tms_data_r()
 {
 	// also implicitly clear the write pending flag
 	m_write_pending = false;
-	if (!m_ready_callback.isnull())
-		m_ready_callback();
+	m_ready_callback();
 	return m_write_data;
 }
 
@@ -262,7 +271,7 @@ READ16_MEMBER( bsmt2000_device::tms_data_r )
 //  selected ROM bank and address
 //-------------------------------------------------
 
-READ16_MEMBER( bsmt2000_device::tms_rom_r )
+uint16_t bsmt2000_device::tms_rom_r()
 {
 	// DSP code expects a 16-bit value with the data in the high byte
 	return (int16_t)(read_byte((m_rom_bank << 16) + m_rom_address) << 8);
@@ -274,7 +283,7 @@ READ16_MEMBER( bsmt2000_device::tms_rom_r )
 //  current ROM bank to access
 //-------------------------------------------------
 
-WRITE16_MEMBER( bsmt2000_device::tms_rom_addr_w )
+void bsmt2000_device::tms_rom_addr_w(uint16_t data)
 {
 	m_rom_address = data;
 }
@@ -285,7 +294,7 @@ WRITE16_MEMBER( bsmt2000_device::tms_rom_addr_w )
 //  access
 //-------------------------------------------------
 
-WRITE16_MEMBER( bsmt2000_device::tms_rom_bank_w )
+void bsmt2000_device::tms_rom_bank_w(uint16_t data)
 {
 	m_rom_bank = data;
 }
@@ -296,7 +305,7 @@ WRITE16_MEMBER( bsmt2000_device::tms_rom_bank_w )
 //  DAC
 //-------------------------------------------------
 
-WRITE16_MEMBER( bsmt2000_device::tms_left_w )
+void bsmt2000_device::tms_left_w(uint16_t data)
 {
 	m_stream->update();
 	m_left_data = data;
@@ -308,7 +317,7 @@ WRITE16_MEMBER( bsmt2000_device::tms_left_w )
 //  channel DAC
 //-------------------------------------------------
 
-WRITE16_MEMBER( bsmt2000_device::tms_right_w )
+void bsmt2000_device::tms_right_w(uint16_t data)
 {
 	m_stream->update();
 	m_right_data = data;
@@ -321,7 +330,7 @@ WRITE16_MEMBER( bsmt2000_device::tms_right_w )
 //  on the TMS32015
 //-------------------------------------------------
 
-READ_LINE_MEMBER( bsmt2000_device::tms_write_pending_r )
+int bsmt2000_device::tms_write_pending_r()
 {
 	return m_write_pending ? 1 : 0;
 }

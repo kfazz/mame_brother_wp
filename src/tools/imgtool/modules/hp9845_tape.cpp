@@ -108,11 +108,19 @@
     these special characters.
 
 *********************************************************************/
-#include <bitset>
-
 #include "imgtool.h"
-#include "formats/imageutl.h"
+#include "filter.h"
+
 #include "formats/hti_tape.h"
+
+#include "corefile.h"
+#include "ioprocs.h"
+#include "multibyte.h"
+#include "opresolv.h"
+
+#include <bitset>
+#include <cstdio>
+
 
 // Constants
 #define SECTOR_LEN          256 // Bytes in a sector
@@ -291,49 +299,16 @@ void tape_image_t::format_img(void)
 	dirty = true;
 }
 
-static int my_seekproc(void *file, int64_t offset, int whence)
-{
-	reinterpret_cast<imgtool::stream *>(file)->seek(offset, whence);
-	return 0;
-}
-
-static size_t my_readproc(void *file, void *buffer, size_t length)
-{
-	return reinterpret_cast<imgtool::stream *>(file)->read(buffer, length);
-}
-
-static size_t my_writeproc(void *file, const void *buffer, size_t length)
-{
-	reinterpret_cast<imgtool::stream *>(file)->write(buffer, length);
-	return length;
-}
-
-static uint64_t my_filesizeproc(void *file)
-{
-	return reinterpret_cast<imgtool::stream *>(file)->size();
-}
-
-static const struct io_procs my_stream_procs = {
-	nullptr,
-	my_seekproc,
-	my_readproc,
-	my_writeproc,
-	my_filesizeproc
-};
-
 imgtoolerr_t tape_image_t::load_from_file(imgtool::stream *stream)
 {
 	hti_format_t inp_image;
-	inp_image.set_bits_per_word(16);
+	inp_image.set_image_format(hti_format_t::HTI_DELTA_MOD_16_BITS);
 
-	io_generic io;
-	io.file = (void *)stream;
-	io.procs = &my_stream_procs;
-	io.filler = 0;
-
-	if (!inp_image.load_tape(&io)) {
+	auto io = imgtool::stream_read(*stream, 0);
+	if (!io || !inp_image.load_tape(*io)) {
 		return IMGTOOLERR_READERROR;
 	}
+	io.reset();
 
 	unsigned exp_sector = 0;
 	unsigned last_sector_on_track = SECTORS_PER_TRACK;
@@ -523,12 +498,7 @@ imgtoolerr_t tape_image_t::save_to_file(imgtool::stream *stream)
 		}
 	}
 
-	io_generic io;
-	io.file = (void *)stream;
-	io.procs = &my_stream_procs;
-	io.filler = 0;
-
-	out_image.save_tape(&io);
+	out_image.save_tape(*imgtool::stream_read_write(*stream, 0));
 
 	return IMGTOOLERR_SUCCESS;
 }
@@ -985,7 +955,7 @@ static tape_state_t& get_tape_state(imgtool::image &img)
 static tape_image_t& get_tape_image(tape_state_t& ts)
 {
 	if (ts.img == nullptr) {
-		ts.img = global_alloc(tape_image_t);
+		ts.img = new tape_image_t;
 	}
 
 	return *(ts.img);
@@ -1034,7 +1004,7 @@ static void hp9845_tape_close(imgtool::image &image)
 	delete state.stream;
 
 	// Free tape_image
-	global_free(&tape_image);
+	delete &tape_image;
 }
 
 static imgtoolerr_t hp9845_tape_begin_enum (imgtool::directory &enumeration, const char *path)
@@ -1374,7 +1344,7 @@ static imgtoolerr_t hp9845data_read_file(imgtool::partition &partition, const ch
 		if (!get_record_part(*inp_data , tmp , 2)) {
 			return IMGTOOLERR_READERROR;
 		}
-		rec_type = (uint16_t)pick_integer_be(tmp , 0 , 2);
+		rec_type = get_u16be(&tmp[ 0 ]);
 		switch (rec_type) {
 		case REC_TYPE_EOR:
 			// End of record: just skip it
@@ -1397,7 +1367,7 @@ static imgtoolerr_t hp9845data_read_file(imgtool::partition &partition, const ch
 			if (!get_record_part(*inp_data , tmp , 2)) {
 				return IMGTOOLERR_READERROR;
 			}
-			tmp_len = (unsigned)pick_integer_be(tmp , 0 , 2);
+			tmp_len = get_u16be(&tmp [ 0 ]);
 
 			if (rec_type == REC_TYPE_FULLSTR || rec_type == REC_TYPE_1STSTR) {
 				accum_len = tmp_len;
@@ -1445,7 +1415,7 @@ static bool split_string_n_dump(const char *s , imgtool::stream &dest)
 		unsigned free_len = len_to_eor(dest);
 		if (free_len <= 4) {
 			// Not enough free space at end of current record: fill with EORs
-			place_integer_be(tmp , 0 , 2 , REC_TYPE_EOR);
+			put_u16be(&tmp[ 0 ] , REC_TYPE_EOR);
 			while (free_len) {
 				if (dest.write(tmp , 2) != 2) {
 					return false;
@@ -1458,8 +1428,8 @@ static bool split_string_n_dump(const char *s , imgtool::stream &dest)
 				// Free space to EOR enough for what's left of string
 				break;
 			}
-			place_integer_be(tmp , 0 , 2 , rec_type);
-			place_integer_be(tmp , 2 , 2 , s_len);
+			put_u16be(&tmp[ 0 ] , rec_type);
+			put_u16be(&tmp[ 2 ] , s_len);
 			if (dest.write(tmp , 4) != 4 ||
 				dest.write(s, s_part_len) != s_part_len) {
 				return false;
@@ -1471,8 +1441,8 @@ static bool split_string_n_dump(const char *s , imgtool::stream &dest)
 		}
 	}
 
-	place_integer_be(tmp , 0 , 2 , at_least_one ? REC_TYPE_ENDSTR : REC_TYPE_FULLSTR);
-	place_integer_be(tmp , 2 , 2 , s_len);
+	put_u16be(&tmp[ 0 ] , at_least_one ? REC_TYPE_ENDSTR : REC_TYPE_FULLSTR);
+	put_u16be(&tmp[ 2 ] , s_len);
 	if (dest.write(tmp , 4) != 4 ||
 		dest.write(s , s_len) != s_len) {
 		return false;
@@ -1528,7 +1498,7 @@ static imgtoolerr_t hp9845data_write_file(imgtool::partition &partition, const c
 	// Fill free space of last record with EOFs
 	unsigned free_len = len_to_eor(*out_data);
 	uint8_t tmp[ 2 ];
-	place_integer_be(tmp , 0 , 2 , REC_TYPE_EOF);
+	put_u16be(&tmp[ 0 ] , REC_TYPE_EOF);
 
 	while (free_len) {
 		if (out_data->write(tmp , 2 ) != 2) {

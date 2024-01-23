@@ -12,7 +12,6 @@
 ****************************************************************************/
 
 #include "emu.h"
-#include "debugger.h"
 #include "upd7725.h"
 #include "dasm7725.h"
 
@@ -25,26 +24,23 @@
 DEFINE_DEVICE_TYPE(UPD7725,  upd7725_device,  "upd7725",  "NEC uPD7725")
 DEFINE_DEVICE_TYPE(UPD96050, upd96050_device, "upd96050", "NEC uPD96050")
 
-necdsp_device::necdsp_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, uint32_t abits, uint32_t dbits)
-	: cpu_device(mconfig, type, tag, owner, clock),
-		m_program_config("program", ENDIANNESS_BIG, 32, abits, -2), // data bus width, address bus width, -2 means DWORD-addressable
-		m_data_config("data", ENDIANNESS_BIG, 16, dbits, -1), m_icount(0),   // -1 for WORD-addressable
-		m_irq(0),
-		m_irq_firing(0),
-		m_program(nullptr),
-		m_data(nullptr),
-		m_cache(nullptr),
-		m_in_int_cb(*this),
-		//m_in_si_cb(*this),
-		//m_in_sck_cb(*this),
-		//m_in_sien_cb(*this),
-		//m_in_soen_cb(*this),
-		//m_in_dack_cb(*this),
-		m_out_p0_cb(*this),
-		m_out_p1_cb(*this)
-		//m_out_so_cb(*this),
-		//m_out_sorq_cb(*this),
-		//m_out_drq_cb(*this)
+necdsp_device::necdsp_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, uint32_t abits, uint32_t dbits) :
+	cpu_device(mconfig, type, tag, owner, clock),
+	m_program_config("program", ENDIANNESS_BIG, 32, abits, -2), // data bus width, address bus width, -2 means DWORD-addressable
+	m_data_config("data", ENDIANNESS_BIG, 16, dbits, -1), m_icount(0),   // -1 for WORD-addressable
+	m_irq(0),
+	m_irq_firing(0),
+	m_in_int_cb(*this, 0),
+	//m_in_si_cb(*this, 0),
+	//m_in_sck_cb(*this, 0),
+	//m_in_sien_cb(*this, 0),
+	//m_in_soen_cb(*this, 0),
+	//m_in_dack_cb(*this, 0),
+	m_out_p0_cb(*this),
+	m_out_p1_cb(*this)
+	//m_out_so_cb(*this),
+	//m_out_sorq_cb(*this),
+	//m_out_drq_cb(*this)
 {
 }
 
@@ -66,9 +62,9 @@ upd96050_device::upd96050_device(const machine_config &mconfig, const char *tag,
 void necdsp_device::device_start()
 {
 	// get our address spaces
-	m_program = &space(AS_PROGRAM);
-	m_data = &space(AS_DATA);
-	m_cache = m_program->cache<2, -2, ENDIANNESS_BIG>();
+	space(AS_PROGRAM).specific(m_program);
+	space(AS_PROGRAM).cache(m_cache);
+	space(AS_DATA).specific(m_data);
 
 	// register our state for the debugger
 	state_add(STATE_GENPC, "GENPC", regs.pc).noshow();
@@ -89,19 +85,6 @@ void necdsp_device::device_start()
 	state_add(UPD7725_SI, "SI", regs.si);
 	state_add(UPD7725_SO, "SO", regs.so);
 	state_add(UPD7725_IDB, "IDB", regs.idb);
-
-	// resolve callbacks
-	m_in_int_cb.resolve_safe(0);
-	//m_in_si_cb.resolve_safe(0);
-	//m_in_sck_cb.resolve_safe(0);
-	//m_in_sien_cb.resolve_safe(0);
-	//m_in_soen_cb.resolve_safe(0);
-	//m_in_dack_cb.resolve_safe(0);
-	m_out_p0_cb.resolve_safe();
-	m_out_p1_cb.resolve_safe();
-	//m_out_so_cb.resolve_safe();
-	//m_out_sorq_cb.resolve_safe();
-	//m_out_drq_cb.resolve_safe();
 
 	// save state registrations
 	save_item(NAME(regs.pc));
@@ -340,7 +323,7 @@ void necdsp_device::execute_run()
 
 		if (m_irq_firing == 0) // normal opcode
 		{
-			opcode = m_cache->read_dword(regs.pc) >> 8;
+			opcode = m_cache.read_dword(regs.pc) >> 8;
 			regs.pc++;
 		}
 		else if (m_irq_firing == 1) // if we're in an interrupt cycle, execute a op 'nop' first...
@@ -392,7 +375,7 @@ void necdsp_device::exec_op(uint32_t opcode) {
 	case  3: regs.idb = regs.tr; break;
 	case  4: regs.idb = regs.dp; break;
 	case  5: regs.idb = regs.rp; break;
-	case  6: regs.idb = m_data->read_word(regs.rp); break;
+	case  6: regs.idb = m_data.read_word(regs.rp); break;
 	case  7: regs.idb = 0x8000 - regs.flaga.s1; break;  //SGN
 	case  8: regs.idb = regs.dr; regs.sr.rqm = 1; break;
 	case  9: regs.idb = regs.dr; break;
@@ -441,7 +424,7 @@ void necdsp_device::exec_op(uint32_t opcode) {
 		case 12: r = (q << 1) | (c ? 1 : 0); break;   //SHL1 (ROL)
 		case 13: r = (q << 2) | 3; break;             //SHL2
 		case 14: r = (q << 4) | 15; break;            //SHL4
-		case 15: r = (q << 8) | (q >> 8); break;      //XCHG
+		case 15: r = swapendian_int16(q); break;      //XCHG
 	}
 
 	flag.s0 = (r & 0x8000);
@@ -589,7 +572,7 @@ void necdsp_device::exec_ld(uint32_t opcode) {
 	case  8: regs.so = bitswap<16>(id, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15); break;  //LSB first output, output tapped at bit 15 shifting left
 	case  9: regs.so = id; break;  //MSB first output, output tapped at bit 15 shifting left
 	case 10: regs.k = id; break;
-	case 11: regs.k = id; regs.l = m_data->read_word(regs.rp); break;
+	case 11: regs.k = id; regs.l = m_data.read_word(regs.rp); break;
 	case 12: regs.l = id; regs.k = dataRAM[regs.dp | 0x40]; break;
 	case 13: regs.l = id; break;
 	case 14: regs.trb = id; break;

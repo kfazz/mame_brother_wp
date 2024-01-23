@@ -21,10 +21,10 @@ DEFINE_DEVICE_TYPE(CDP1879, cdp1879_device, "cdp1879", "RCA CDP1879 RTC")
 //  cdp1879_device - constructor
 //-------------------------------------------------
 
-cdp1879_device::cdp1879_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, CDP1879, tag, owner, clock),
-		device_rtc_interface(mconfig, *this),
-		m_irq_w(*this)
+cdp1879_device::cdp1879_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	device_t(mconfig, CDP1879, tag, owner, clock),
+	device_rtc_interface(mconfig, *this),
+	m_irq_w(*this)
 {
 }
 
@@ -36,10 +36,8 @@ cdp1879_device::cdp1879_device(const machine_config &mconfig, const char *tag, d
 void cdp1879_device::device_start()
 {
 	// allocate timers
-	m_clock_timer = timer_alloc();
+	m_clock_timer = timer_alloc(FUNC(cdp1879_device::clock_tick), this);
 	m_clock_timer->adjust(attotime::from_seconds(1), 0, attotime::from_seconds(1));
-
-	m_irq_w.resolve_safe();
 
 	// state saving
 	save_item(NAME(m_regs));
@@ -61,10 +59,10 @@ void cdp1879_device::device_reset()
 
 
 //-------------------------------------------------
-//  device_timer - handler timer events
+//  clock_tick - advance the clock
 //-------------------------------------------------
 
-void cdp1879_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(cdp1879_device::clock_tick)
 {
 	advance_seconds();
 
@@ -140,6 +138,7 @@ void cdp1879_device::write(offs_t offset, uint8_t data)
 				m_regs[offset + 6] = data;
 				break;
 			}
+			[[fallthrough]];
 		case R_CNT_DAYOFMONTH:
 		case R_CNT_MONTH:
 			m_regs[offset] = data;

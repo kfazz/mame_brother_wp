@@ -133,14 +133,7 @@ void S3C24_CLASS_NAME::s3c24xx_reset()
 
 int S3C24_CLASS_NAME::iface_core_pin_r(int pin)
 {
-	if (!m_pin_r_cb.isnull())
-	{
-		return (m_pin_r_cb)(pin);
-	}
-	else
-	{
-		return 0;
-	}
+	return m_pin_r_cb(pin);
 }
 
 /* LCD Controller */
@@ -292,8 +285,8 @@ uint32_t S3C24_CLASS_NAME::s3c24xx_lcd_dma_read()
 	uint8_t data[4];
 	for (int i = 0; i < 2; i++)
 	{
-		data[i*2+0] = m_cache->read_byte(m_lcd.vramaddr_cur + 0);
-		data[i*2+1] = m_cache->read_byte(m_lcd.vramaddr_cur + 1);
+		data[i*2+0] = m_cache.read_byte(m_lcd.vramaddr_cur + 0);
+		data[i*2+1] = m_cache.read_byte(m_lcd.vramaddr_cur + 1);
 		m_lcd.vramaddr_cur += 2;
 		m_lcd.pagewidth_cur++;
 		if (m_lcd.pagewidth_cur >= m_lcd.pagewidth_max)
@@ -338,39 +331,39 @@ uint32_t S3C24_CLASS_NAME::s3c24xx_lcd_dma_read()
 			{
 				if ((m_lcd.vramaddr_cur & 2) == 0)
 				{
-					data[i*2+0] = m_cache->read_byte(m_lcd.vramaddr_cur + 3);
-					data[i*2+1] = m_cache->read_byte(m_lcd.vramaddr_cur + 2);
+					data[i*2+0] = m_cache.read_byte(m_lcd.vramaddr_cur + 3);
+					data[i*2+1] = m_cache.read_byte(m_lcd.vramaddr_cur + 2);
 				}
 				else
 				{
-					data[i*2+0] = m_cache->read_byte(m_lcd.vramaddr_cur - 1);
-					data[i*2+1] = m_cache->read_byte(m_lcd.vramaddr_cur - 2);
+					data[i*2+0] = m_cache.read_byte(m_lcd.vramaddr_cur - 1);
+					data[i*2+1] = m_cache.read_byte(m_lcd.vramaddr_cur - 2);
 				}
 			}
 			else
 			{
-				data[i*2+0] = m_cache->read_byte(m_lcd.vramaddr_cur + 0);
-				data[i*2+1] = m_cache->read_byte(m_lcd.vramaddr_cur + 1);
+				data[i*2+0] = m_cache.read_byte(m_lcd.vramaddr_cur + 0);
+				data[i*2+1] = m_cache.read_byte(m_lcd.vramaddr_cur + 1);
 			}
 		}
 		else
 		{
 			if (m_lcd.bswp == 0)
 			{
-				data[i*2+0] = m_cache->read_byte(m_lcd.vramaddr_cur + 1);
-				data[i*2+1] = m_cache->read_byte(m_lcd.vramaddr_cur + 0);
+				data[i*2+0] = m_cache.read_byte(m_lcd.vramaddr_cur + 1);
+				data[i*2+1] = m_cache.read_byte(m_lcd.vramaddr_cur + 0);
 			}
 			else
 			{
 				if ((m_lcd.vramaddr_cur & 2) == 0)
 				{
-					data[i*2+0] = m_cache->read_byte(m_lcd.vramaddr_cur + 2);
-					data[i*2+1] = m_cache->read_byte(m_lcd.vramaddr_cur + 3);
+					data[i*2+0] = m_cache.read_byte(m_lcd.vramaddr_cur + 2);
+					data[i*2+1] = m_cache.read_byte(m_lcd.vramaddr_cur + 3);
 				}
 				else
 				{
-					data[i*2+0] = m_cache->read_byte(m_lcd.vramaddr_cur - 2);
-					data[i*2+1] = m_cache->read_byte(m_lcd.vramaddr_cur - 1);
+					data[i*2+0] = m_cache.read_byte(m_lcd.vramaddr_cur - 2);
+					data[i*2+1] = m_cache.read_byte(m_lcd.vramaddr_cur - 1);
 				}
 			}
 		}
@@ -434,7 +427,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_tpal()
 	uint32_t color = s3c24xx_get_color_tpal();
 	for (int y = m_lcd.vpos_min; y <= m_lcd.vpos_max; y++)
 	{
-		uint32_t *scanline = &bitmap.pix32(y, m_lcd.hpos_min);
+		uint32_t *scanline = &bitmap.pix(y, m_lcd.hpos_min);
 		for (int x = m_lcd.hpos_min; x <= m_lcd.hpos_max; x++)
 		{
 			*scanline++ = color;
@@ -445,7 +438,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_tpal()
 void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_01()
 {
 	bitmap_rgb32 &bitmap = *m_lcd.bitmap[0];
-	uint32_t *scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+	uint32_t *scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 	for (int i = 0; i < 4; i++)
 	{
 		uint32_t data = s3c24xx_lcd_dma_read();
@@ -467,7 +460,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_01()
 				m_lcd.vpos++;
 				if (m_lcd.vpos > m_lcd.vpos_max) m_lcd.vpos = m_lcd.vpos_min;
 				m_lcd.hpos = m_lcd.hpos_min;
-				scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+				scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 			}
 		}
 	}
@@ -476,7 +469,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_01()
 void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_02()
 {
 	bitmap_rgb32 &bitmap = *m_lcd.bitmap[0];
-	uint32_t *scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+	uint32_t *scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 	for (int i = 0; i < 4; i++)
 	{
 		uint32_t data = s3c24xx_lcd_dma_read();
@@ -490,7 +483,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_02()
 				m_lcd.vpos++;
 				if (m_lcd.vpos > m_lcd.vpos_max) m_lcd.vpos = m_lcd.vpos_min;
 				m_lcd.hpos = m_lcd.hpos_min;
-				scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+				scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 			}
 		}
 	}
@@ -499,7 +492,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_02()
 void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_04()
 {
 	bitmap_rgb32 &bitmap = *m_lcd.bitmap[0];
-	uint32_t *scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+	uint32_t *scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 	for (int i = 0; i < 4; i++)
 	{
 		uint32_t data = s3c24xx_lcd_dma_read();
@@ -513,7 +506,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_04()
 				m_lcd.vpos++;
 				if (m_lcd.vpos > m_lcd.vpos_max) m_lcd.vpos = m_lcd.vpos_min;
 				m_lcd.hpos = m_lcd.hpos_min;
-				scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+				scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 			}
 		}
 	}
@@ -522,7 +515,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_04()
 void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_08()
 {
 	bitmap_rgb32 &bitmap = *m_lcd.bitmap[0];
-	uint32_t *scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+	uint32_t *scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 	for (int i = 0; i < 4; i++)
 	{
 		uint32_t data = s3c24xx_lcd_dma_read();
@@ -536,7 +529,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_08()
 				m_lcd.vpos++;
 				if (m_lcd.vpos > m_lcd.vpos_max) m_lcd.vpos = m_lcd.vpos_min;
 				m_lcd.hpos = m_lcd.hpos_min;
-				scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+				scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 			}
 		}
 	}
@@ -545,7 +538,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_08()
 void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_12_p()
 {
 	bitmap_rgb32 &bitmap = *m_lcd.bitmap[0];
-	uint32_t *scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+	uint32_t *scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 	for (int i = 0; i < 16; i++)
 	{
 		*scanline++ = s3c24xx_get_color_stn_12(s3c24xx_lcd_dma_read_bits(12));
@@ -555,7 +548,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_12_p()
 			m_lcd.vpos++;
 			if (m_lcd.vpos > m_lcd.vpos_max) m_lcd.vpos = m_lcd.vpos_min;
 			m_lcd.hpos = m_lcd.hpos_min;
-			scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+			scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 		}
 	}
 }
@@ -563,7 +556,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_12_p()
 void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_12_u() // not tested
 {
 	bitmap_rgb32 &bitmap = *m_lcd.bitmap[0];
-	uint32_t *scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+	uint32_t *scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 	for (int i = 0; i < 4; i++)
 	{
 		uint32_t data = s3c24xx_lcd_dma_read();
@@ -577,7 +570,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_12_u() // not tested
 				m_lcd.vpos++;
 				if (m_lcd.vpos > m_lcd.vpos_max) m_lcd.vpos = m_lcd.vpos_min;
 				m_lcd.hpos = m_lcd.hpos_min;
-				scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+				scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 			}
 		}
 	}
@@ -586,7 +579,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_stn_12_u() // not tested
 void S3C24_CLASS_NAME::s3c24xx_lcd_render_tft_01()
 {
 	bitmap_rgb32 &bitmap = *m_lcd.bitmap[0];
-	uint32_t *scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+	uint32_t *scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 	for (int i = 0; i < 4; i++)
 	{
 		uint32_t data = s3c24xx_lcd_dma_read();
@@ -600,7 +593,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_tft_01()
 				m_lcd.vpos++;
 				if (m_lcd.vpos > m_lcd.vpos_max) m_lcd.vpos = m_lcd.vpos_min;
 				m_lcd.hpos = m_lcd.hpos_min;
-				scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+				scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 			}
 		}
 	}
@@ -609,7 +602,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_tft_01()
 void S3C24_CLASS_NAME::s3c24xx_lcd_render_tft_02()
 {
 	bitmap_rgb32 &bitmap = *m_lcd.bitmap[0];
-	uint32_t *scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+	uint32_t *scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 	for (int i = 0; i < 4; i++)
 	{
 		uint32_t data = s3c24xx_lcd_dma_read();
@@ -623,7 +616,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_tft_02()
 				m_lcd.vpos++;
 				if (m_lcd.vpos > m_lcd.vpos_max) m_lcd.vpos = m_lcd.vpos_min;
 				m_lcd.hpos = m_lcd.hpos_min;
-				scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+				scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 			}
 		}
 	}
@@ -632,7 +625,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_tft_02()
 void S3C24_CLASS_NAME::s3c24xx_lcd_render_tft_04()
 {
 	bitmap_rgb32 &bitmap = *m_lcd.bitmap[0];
-	uint32_t *scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+	uint32_t *scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 	for (int i = 0; i < 4; i++)
 	{
 		uint32_t data = s3c24xx_lcd_dma_read();
@@ -646,7 +639,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_tft_04()
 				m_lcd.vpos++;
 				if (m_lcd.vpos > m_lcd.vpos_max) m_lcd.vpos = m_lcd.vpos_min;
 				m_lcd.hpos = m_lcd.hpos_min;
-				scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+				scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 			}
 		}
 	}
@@ -655,7 +648,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_tft_04()
 void S3C24_CLASS_NAME::s3c24xx_lcd_render_tft_08()
 {
 	bitmap_rgb32 &bitmap = *m_lcd.bitmap[0];
-	uint32_t *scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+	uint32_t *scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 	for (int i = 0; i < 4; i++)
 	{
 		uint32_t data = s3c24xx_lcd_dma_read();
@@ -669,7 +662,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_tft_08()
 				m_lcd.vpos++;
 				if (m_lcd.vpos > m_lcd.vpos_max) m_lcd.vpos = m_lcd.vpos_min;
 				m_lcd.hpos = m_lcd.hpos_min;
-				scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+				scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 			}
 		}
 	}
@@ -678,7 +671,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_tft_08()
 void S3C24_CLASS_NAME::s3c24xx_lcd_render_tft_16()
 {
 	bitmap_rgb32 &bitmap = *m_lcd.bitmap[0];
-	uint32_t *scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+	uint32_t *scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 	for (int i = 0; i < 4; i++)
 	{
 		uint32_t data = s3c24xx_lcd_dma_read();
@@ -692,7 +685,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_render_tft_16()
 				m_lcd.vpos++;
 				if (m_lcd.vpos > m_lcd.vpos_max) m_lcd.vpos = m_lcd.vpos_min;
 				m_lcd.hpos = m_lcd.hpos_min;
-				scanline = &bitmap.pix32(m_lcd.vpos, m_lcd.hpos);
+				scanline = &bitmap.pix(m_lcd.vpos, m_lcd.hpos);
 			}
 		}
 	}
@@ -744,16 +737,16 @@ void S3C24_CLASS_NAME::s3c24xx_video_start()
 	m_lcd.bitmap[0] = std::make_unique<bitmap_rgb32>(m_screen->width(), m_screen->height());
 	m_lcd.bitmap[1] = std::make_unique<bitmap_rgb32>(m_screen->width(), m_screen->height());
 
-	m_cache = m_cpu->space(AS_PROGRAM).cache<2, 0, ENDIANNESS_LITTLE>();
+	m_cpu->space(AS_PROGRAM).cache(m_cache);
 }
 
 void S3C24_CLASS_NAME::bitmap_blend( bitmap_rgb32 &bitmap_dst, bitmap_rgb32 &bitmap_src_1, bitmap_rgb32 &bitmap_src_2)
 {
 	for (int y = 0; y < bitmap_dst.height(); y++)
 	{
-		uint32_t *line0 = &bitmap_src_1.pix32(y);
-		uint32_t *line1 = &bitmap_src_2.pix32(y);
-		uint32_t *line2 = &bitmap_dst.pix32(y);
+		uint32_t const *const line0 = &bitmap_src_1.pix(y);
+		uint32_t const *const line1 = &bitmap_src_2.pix(y);
+		uint32_t *const line2 = &bitmap_dst.pix(y);
 		for (int x = 0; x < bitmap_dst.width(); x++)
 		{
 			uint32_t color0 = line0[x];
@@ -764,9 +757,9 @@ void S3C24_CLASS_NAME::bitmap_blend( bitmap_rgb32 &bitmap_dst, bitmap_rgb32 &bit
 			uint16_t r1 = (color1 >> 16) & 0x000000ff;
 			uint16_t g1 = (color1 >>  8) & 0x000000ff;
 			uint16_t b1 = (color1 >>  0) & 0x000000ff;
-			uint8_t r = (uint8_t)((r0 + r1) >> 1);
-			uint8_t g = (uint8_t)((g0 + g1) >> 1);
-			uint8_t b = (uint8_t)((b0 + b1) >> 1);
+			uint8_t r = uint8_t((r0 + r1) >> 1);
+			uint8_t g = uint8_t((g0 + g1) >> 1);
+			uint8_t b = uint8_t((b0 + b1) >> 1);
 			line2[x] = (r << 16) | (g << 8) | b;
 		}
 	}
@@ -791,7 +784,7 @@ uint32_t S3C24_CLASS_NAME::s3c24xx_video_update(screen_device &screen, bitmap_rg
 }
 
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_lcd_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_lcd_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_lcd.regs)[offset];
 	switch (offset)
@@ -953,7 +946,7 @@ void S3C24_CLASS_NAME::s3c24xx_lcd_recalc()
 	}
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_lcd_w )
+void S3C24_CLASS_NAME::s3c24xx_lcd_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_lcd.regs)[offset];
 	LOGMASKED(LOG_LCD_REGS, "%s: lcd write: %08X = %08X & %08x\n", machine().describe_context(), S3C24XX_BASE_LCD + (offset << 2), data, mem_mask);
@@ -973,14 +966,14 @@ WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_lcd_w )
 
 /* LCD Palette */
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_lcd_palette_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_lcd_palette_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = m_lcdpal.regs.data[offset];
 	LOGMASKED(LOG_LCD_REGS, "%s: lcd palette read: %08X = %08X & %08x\n", machine().describe_context(), S3C24XX_BASE_LCDPAL + (offset << 2), data, mem_mask);
 	return data;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_lcd_palette_w )
+void S3C24_CLASS_NAME::s3c24xx_lcd_palette_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	LOGMASKED(LOG_LCD_REGS, "%s: lcd palette write: %08X = %08X & %08x\n", machine().describe_context(), S3C24XX_BASE_LCDPAL + (offset << 2), data, mem_mask);
 	COMBINE_DATA(&m_lcdpal.regs.data[offset]);
@@ -1063,14 +1056,14 @@ uint32_t S3C24_CLASS_NAME::s3c24xx_get_pclk()
 	return s3c24xx_get_hclk() / (1 << BIT(m_clkpow.regs.clkdivn, 0));
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_clkpow_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_clkpow_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_clkpow.regs)[offset];
 	LOGMASKED(LOG_CLKPOW, "%s: clock/power read: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_CLKPOW + (offset << 2), data, mem_mask);
 	return data;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_clkpow_w )
+void S3C24_CLASS_NAME::s3c24xx_clkpow_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	const uint32_t old = ((uint32_t*)&m_clkpow.regs)[offset];
 	COMBINE_DATA(&((uint32_t*)&m_clkpow.regs)[offset]);
@@ -1155,12 +1148,6 @@ void S3C24_CLASS_NAME::s3c24xx_check_pending_irq()
 	temp = (m_irq.regs.srcpnd & ~m_irq.regs.intmsk) & m_irq.regs.intmod;
 	if (temp != 0)
 	{
-		uint32_t int_type = 0;
-		while ((temp & 1) == 0)
-		{
-			int_type++;
-			temp = temp >> 1;
-		}
 		if (m_irq.line_fiq != ASSERT_LINE)
 		{
 			LOGMASKED(LOG_IRQS, "asserting FIQ line\n");
@@ -1204,7 +1191,7 @@ void S3C24_CLASS_NAME::s3c24xx_check_pending_subirq()
 	}
 }
 
-ATTR_UNUSED void S3C24_CLASS_NAME::s3c24xx_request_subirq( uint32_t int_type)
+[[maybe_unused]] void S3C24_CLASS_NAME::s3c24xx_request_subirq( uint32_t int_type)
 {
 	LOGMASKED(LOG_IRQS, "request subirq %d\n", int_type);
 	m_irq.regs.subsrcpnd |= (1 << int_type);
@@ -1233,7 +1220,7 @@ void S3C24_CLASS_NAME::s3c24xx_check_pending_eint()
 	}
 }
 
-ATTR_UNUSED void S3C24_CLASS_NAME::s3c24xx_request_eint(uint32_t number)
+[[maybe_unused]] void S3C24_CLASS_NAME::s3c24xx_request_eint(uint32_t number)
 {
 	LOGMASKED(LOG_IRQS, "request external interrupt %d\n", number);
 	if (number < 4)
@@ -1249,7 +1236,7 @@ ATTR_UNUSED void S3C24_CLASS_NAME::s3c24xx_request_eint(uint32_t number)
 
 #endif
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_irq_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_irq_r(offs_t offset, uint32_t mem_mask)
 {
 	const uint32_t data = ((uint32_t*)&m_irq.regs)[offset];
 	switch (offset)
@@ -1287,7 +1274,7 @@ READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_irq_r )
 	return data;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_irq_w )
+void S3C24_CLASS_NAME::s3c24xx_irq_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_irq.regs)[offset];
 	COMBINE_DATA(&((uint32_t*)&m_irq.regs)[offset]);
@@ -1328,7 +1315,7 @@ WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_irq_w )
 
 /* PWM Timer */
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_pwm_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_pwm_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_pwm.regs)[offset];
 	switch (offset)
@@ -1452,7 +1439,7 @@ void S3C24_CLASS_NAME::s3c24xx_pwm_recalc(int timer)
 	}
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_pwm_w )
+void S3C24_CLASS_NAME::s3c24xx_pwm_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t const old_value = ((uint32_t*)&m_pwm.regs)[offset];
 	COMBINE_DATA(&((uint32_t*)&m_pwm.regs)[offset]);
@@ -1683,42 +1670,42 @@ void S3C24_CLASS_NAME::s3c24xx_dma_w(uint32_t ch, uint32_t offset, uint32_t data
 	}
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_dma_0_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_dma_0_r(offs_t offset, uint32_t mem_mask)
 {
 	return s3c24xx_dma_r(0, offset);
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_dma_1_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_dma_1_r(offs_t offset, uint32_t mem_mask)
 {
 	return s3c24xx_dma_r(1, offset);
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_dma_2_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_dma_2_r(offs_t offset, uint32_t mem_mask)
 {
 	return s3c24xx_dma_r(2, offset);
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_dma_3_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_dma_3_r(offs_t offset, uint32_t mem_mask)
 {
 	return s3c24xx_dma_r(3, offset);
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_dma_0_w )
+void S3C24_CLASS_NAME::s3c24xx_dma_0_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	s3c24xx_dma_w(0, offset, data, mem_mask);
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_dma_1_w )
+void S3C24_CLASS_NAME::s3c24xx_dma_1_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	s3c24xx_dma_w(1, offset, data, mem_mask);
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_dma_2_w )
+void S3C24_CLASS_NAME::s3c24xx_dma_2_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	s3c24xx_dma_w(2, offset, data, mem_mask);
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_dma_3_w )
+void S3C24_CLASS_NAME::s3c24xx_dma_3_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	s3c24xx_dma_w(3, offset, data, mem_mask);
 }
@@ -1760,25 +1747,15 @@ void S3C24_CLASS_NAME::s3c24xx_gpio_reset()
 
 uint32_t S3C24_CLASS_NAME::iface_gpio_port_r(int port, uint32_t mask)
 {
-	if (!m_port_r_cb.isnull())
-	{
-		// TO CHECK : masking is not done in any of handlers
-		// devcb do it automatically so guess is masks are not proper right now
-		// without masking works fine
-		return (m_port_r_cb)( port ); //, mask);
-	}
-	else
-	{
-		return 0;
-	}
+	// TO CHECK : masking is not done in any of handlers
+	// devcb do it automatically so guess is masks are not proper right now
+	// without masking works fine
+	return m_port_r_cb( port ); //, mask);
 }
 
 void S3C24_CLASS_NAME::iface_gpio_port_w(int port, uint32_t mask, uint32_t data)
 {
-	if (!m_port_w_cb.isnull())
-	{
-		(m_port_w_cb)( port, data, mask );
-	}
+	m_port_w_cb( port, data, mask );
 }
 
 uint16_t S3C24_CLASS_NAME::s3c24xx_gpio_get_mask( uint32_t con, int val)
@@ -1792,7 +1769,7 @@ uint16_t S3C24_CLASS_NAME::s3c24xx_gpio_get_mask( uint32_t con, int val)
 	return mask;
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_gpio_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_gpio_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_gpio.regs)[offset];
 	switch (offset)
@@ -1844,7 +1821,7 @@ READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_gpio_r )
 	return data;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_gpio_w )
+void S3C24_CLASS_NAME::s3c24xx_gpio_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 #if defined(DEVICE_S3C2410) || defined(DEVICE_S3C2440)
 	uint32_t old_value = ((uint32_t*)&m_gpio.regs)[offset];
@@ -1917,15 +1894,15 @@ WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_gpio_w )
 
 /* Memory Controller */
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_memcon_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_memcon_r(offs_t offset, uint32_t mem_mask)
 {
-	assert(offset < ARRAY_LENGTH(m_memcon.regs.data));
+	assert(offset < std::size(m_memcon.regs.data));
 	uint32_t data = m_memcon.regs.data[offset];
 	LOGMASKED(LOG_MEMCON, "%s: memcon read: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_MEMCON + (offset << 2), data, mem_mask);
 	return data;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_memcon_w )
+void S3C24_CLASS_NAME::s3c24xx_memcon_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	LOGMASKED(LOG_MEMCON, "%s: memcon write: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_MEMCON + (offset << 2), data, mem_mask);
 	COMBINE_DATA(&m_memcon.regs.data[offset]);
@@ -1933,7 +1910,7 @@ WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_memcon_w )
 
 /* USB Host Controller */
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_usb_host_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_usb_host_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = m_usbhost.regs.data[offset];
 	switch (offset)
@@ -1968,7 +1945,7 @@ READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_usb_host_r )
 	return data;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_usb_host_w )
+void S3C24_CLASS_NAME::s3c24xx_usb_host_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	LOGMASKED(LOG_USBHOST, "%s: USB host write: %08x = %08x & %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
 	COMBINE_DATA(&m_usbhost.regs.data[offset]);
@@ -2023,38 +2000,38 @@ void S3C24_CLASS_NAME::s3c24xx_uart_w(uint32_t ch, uint32_t offset, uint32_t dat
 	}
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_uart_0_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_uart_0_r(offs_t offset, uint32_t mem_mask)
 {
 	return s3c24xx_uart_r(0, offset);
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_uart_1_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_uart_1_r(offs_t offset, uint32_t mem_mask)
 {
 	return s3c24xx_uart_r(1, offset);
 }
 
 #if defined(DEVICE_S3C2410) || defined(DEVICE_S3C2440)
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_uart_2_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_uart_2_r(offs_t offset, uint32_t mem_mask)
 {
 	return s3c24xx_uart_r(2, offset);
 }
 
 #endif
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_uart_0_w )
+void S3C24_CLASS_NAME::s3c24xx_uart_0_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	s3c24xx_uart_w(0, offset, data, mem_mask);
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_uart_1_w )
+void S3C24_CLASS_NAME::s3c24xx_uart_1_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	s3c24xx_uart_w(1, offset, data, mem_mask);
 }
 
 #if defined(DEVICE_S3C2410) || defined(DEVICE_S3C2440)
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_uart_2_w )
+void S3C24_CLASS_NAME::s3c24xx_uart_2_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	s3c24xx_uart_w(2, offset, data, mem_mask);
 }
@@ -2110,14 +2087,14 @@ void S3C24_CLASS_NAME::s3c24xx_usb_device_reset()
 #endif
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_usb_device_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_usb_device_r(offs_t offset, uint32_t mem_mask)
 {
 	const uint32_t data = m_usbdev.regs.data[offset];
 	LOGMASKED(LOG_USB, "%s: USB read: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_USBDEV + (offset << 2), data, mem_mask);
 	return data;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_usb_device_w )
+void S3C24_CLASS_NAME::s3c24xx_usb_device_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	LOGMASKED(LOG_USB, "%s: USB read: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_USBDEV + (offset << 2), data, mem_mask);
 	COMBINE_DATA(&m_usbdev.regs.data[offset]);
@@ -2125,7 +2102,7 @@ WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_usb_device_w )
 
 /* Watchdog Timer */
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_wdt_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_wdt_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_wdt.regs)[offset];
 	switch (offset)
@@ -2186,7 +2163,7 @@ void S3C24_CLASS_NAME::s3c24xx_wdt_recalc()
 		s3c24xx_wdt_stop();
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_wdt_w )
+void S3C24_CLASS_NAME::s3c24xx_wdt_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_wdt.regs)[offset];
 	COMBINE_DATA(&((uint32_t*)&m_wdt.regs)[offset]);
@@ -2234,22 +2211,17 @@ void S3C24_CLASS_NAME::s3c24xx_iic_reset()
 
 void S3C24_CLASS_NAME::iface_i2c_scl_w( int state)
 {
-	if (!m_scl_w_cb.isnull())
-		m_scl_w_cb(state);
+	m_scl_w_cb(state);
 }
 
 void S3C24_CLASS_NAME::iface_i2c_sda_w(int state)
 {
-	if (!m_sda_w_cb.isnull())
-		m_sda_w_cb(state);
+	m_sda_w_cb(state);
 }
 
 int S3C24_CLASS_NAME::iface_i2c_sda_r()
 {
-	if (!m_sda_r_cb.isnull())
-		return m_sda_r_cb();
-	else
-		return 1;
+	return m_sda_r_cb();
 }
 
 void S3C24_CLASS_NAME::i2c_send_start()
@@ -2343,7 +2315,7 @@ void S3C24_CLASS_NAME::iic_resume()
 	m_iic.timer->adjust(attotime::from_usec(1));
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_iic_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_iic_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_iic.regs)[offset];
 	switch (offset)
@@ -2359,7 +2331,7 @@ READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_iic_r )
 	return data;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_iic_w )
+void S3C24_CLASS_NAME::s3c24xx_iic_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_iic.regs)[offset];
 	COMBINE_DATA(&((uint32_t*)&m_iic.regs)[offset]);
@@ -2453,8 +2425,7 @@ TIMER_CALLBACK_MEMBER( S3C24_CLASS_NAME::s3c24xx_iic_timer_exp )
 
 void S3C24_CLASS_NAME::iface_i2s_data_w(int ch, uint16_t data)
 {
-	if (!m_data_w_cb.isnull())
-		(m_data_w_cb)(ch, data, 0);
+	m_data_w_cb(ch, data, 0);
 }
 
 void S3C24_CLASS_NAME::s3c24xx_iis_start()
@@ -2485,7 +2456,7 @@ void S3C24_CLASS_NAME::s3c24xx_iis_recalc()
 		s3c24xx_iis_stop();
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_iis_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_iis_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_iis.regs)[offset];
 #if 0
@@ -2501,7 +2472,7 @@ READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_iis_r )
 	return data;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_iis_w )
+void S3C24_CLASS_NAME::s3c24xx_iis_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_iis.regs)[offset];
 	COMBINE_DATA(&((uint32_t*)&m_iis.regs)[offset]);
@@ -2543,14 +2514,14 @@ TIMER_CALLBACK_MEMBER( S3C24_CLASS_NAME::s3c24xx_iis_timer_exp )
 
 /* RTC */
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_rtc_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_rtc_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_rtc.regs)[offset];
 	LOGMASKED(LOG_RTC, "%s: rtc read: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_RTC + (offset << 2), data, mem_mask);
 	return data;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_rtc_w )
+void S3C24_CLASS_NAME::s3c24xx_rtc_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	COMBINE_DATA(&((uint32_t*)&m_rtc.regs)[offset]);
 	switch (offset)
@@ -2604,24 +2575,17 @@ void S3C24_CLASS_NAME::s3c24xx_adc_reset()
 
 uint32_t S3C24_CLASS_NAME::iface_adc_data_r(int ch)
 {
-	if (!m_data_r_cb.isnull())
-	{
-		int offs = ch;
+	int offs = ch;
 #if defined(DEVICE_S3C2410) || defined(DEVICE_S3C2440)
-		if (BIT(m_adc.regs.adctsc, 2) != 0)
-		{
-			offs += 2;
-		}
-#endif
-		return m_data_r_cb(offs, 0);
-	}
-	else
+	if (BIT(m_adc.regs.adctsc, 2) != 0)
 	{
-		return 0;
+		offs += 2;
 	}
+#endif
+	return m_data_r_cb(offs, 0);
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_adc_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_adc_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_adc.regs)[offset];
 	switch (offset)
@@ -2658,7 +2622,7 @@ void S3C24_CLASS_NAME::s3c24xx_adc_start()
 #endif
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_adc_w )
+void S3C24_CLASS_NAME::s3c24xx_adc_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_adc.regs)[offset];
 	COMBINE_DATA(&((uint32_t*)&m_adc.regs)[offset]);
@@ -2719,7 +2683,7 @@ void S3C24_CLASS_NAME::s3c24xx_spi_w(uint32_t ch, uint32_t offset, uint32_t data
 	COMBINE_DATA(&((uint32_t*)&m_spi[ch].regs)[offset]);
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_spi_0_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_spi_0_r(offs_t offset, uint32_t mem_mask)
 {
 	const uint32_t data = s3c24xx_spi_r(0, offset);
 	LOGMASKED(LOG_SPI, "%s: SPI 0 read: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_SPI_0 + (offset << 2), data, mem_mask);
@@ -2728,7 +2692,7 @@ READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_spi_0_r )
 
 #if defined(DEVICE_S3C2410) || defined(DEVICE_S3C2440)
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_spi_1_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_spi_1_r(offs_t offset, uint32_t mem_mask)
 {
 	const uint32_t data = s3c24xx_spi_r(1, offset);
 	LOGMASKED(LOG_SPI, "%s: SPI 0 read: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_SPI_0 + (offset << 2), data, mem_mask);
@@ -2737,7 +2701,7 @@ READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_spi_1_r )
 
 #endif
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_spi_0_w )
+void S3C24_CLASS_NAME::s3c24xx_spi_0_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	LOGMASKED(LOG_SPI, "%s: SPI 0 write: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_SPI_0 + (offset << 2), data, mem_mask);
 	s3c24xx_spi_w( 0, offset, data, mem_mask);
@@ -2745,7 +2709,7 @@ WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_spi_0_w )
 
 #if defined(DEVICE_S3C2410) || defined(DEVICE_S3C2440)
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_spi_1_w )
+void S3C24_CLASS_NAME::s3c24xx_spi_1_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	LOGMASKED(LOG_SPI, "%s: SPI 1 write: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_SPI_0 + (offset << 2), data, mem_mask);
 	s3c24xx_spi_w( 1, offset, data, mem_mask);
@@ -2757,14 +2721,14 @@ WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_spi_1_w )
 
 #if defined(DEVICE_S3C2400)
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_mmc_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_mmc_r(offs_t offset, uint32_t mem_mask)
 {
 	const uint32_t data = m_mmc.regs.data[offset];
 	LOGMASKED(LOG_MMC, "%s: MMC read: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_MMC + (offset << 2), data, mem_mask);
 	return data;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_mmc_w )
+void S3C24_CLASS_NAME::s3c24xx_mmc_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	LOGMASKED(LOG_MMC, "%s: MMC write: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_MMC + (offset << 2), data, mem_mask);
 	COMBINE_DATA(&m_mmc.regs.data[offset]);
@@ -2787,14 +2751,14 @@ void S3C24_CLASS_NAME::s3c24xx_sdi_reset()
 #endif
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_sdi_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_sdi_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = m_sdi.regs.data[offset];
 	LOGMASKED(LOG_SDI, "%s: SDI read: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_SDI + (offset << 2), data, mem_mask);
 	return data;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_sdi_w )
+void S3C24_CLASS_NAME::s3c24xx_sdi_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	LOGMASKED(LOG_SDI, "%s: SDI write: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_SDI + (offset << 2), data, mem_mask);
 	COMBINE_DATA(&m_sdi.regs.data[offset]);
@@ -2817,32 +2781,22 @@ void S3C24_CLASS_NAME::s3c24xx_nand_reset()
 
 void S3C24_CLASS_NAME::iface_nand_command_w(uint8_t data)
 {
-	if (!m_command_w_cb.isnull())
-	{
-		m_command_w_cb(0, data, 0xff);
-	}
+	m_command_w_cb(0, data, 0xff);
 }
 
 void S3C24_CLASS_NAME::iface_nand_address_w(uint8_t data)
 {
-	if (!m_address_w_cb.isnull())
-	{
-		m_address_w_cb(0, data, 0xff);
-	}
+	m_address_w_cb(0, data, 0xff);
 }
 
 uint8_t S3C24_CLASS_NAME::iface_nand_data_r()
 {
-	if (!m_nand_data_r_cb.isnull())
-		return m_nand_data_r_cb(0, 0xff);
-	else
-		return 0;
+	return m_nand_data_r_cb(0, 0xff);
 }
 
 void S3C24_CLASS_NAME::iface_nand_data_w(uint8_t data)
 {
-	if (!m_nand_data_w_cb.isnull())
-		m_nand_data_w_cb(0, data, 0xff);
+	m_nand_data_w_cb(0, data, 0xff);
 }
 
 void S3C24_CLASS_NAME::nand_update_mecc(uint8_t *ecc, int pos, uint8_t data)
@@ -2973,7 +2927,7 @@ void S3C24_CLASS_NAME::s3c24xx_nand_data_w(uint8_t data)
 	s3c24xx_nand_update_ecc(data);
 }
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_nand_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_nand_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_nand.regs)[offset];
 	switch (offset)
@@ -3034,7 +2988,7 @@ void S3C24_CLASS_NAME::s3c24xx_nand_init_ecc()
 	m_nand.ecc_pos = 0;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_nand_w )
+void S3C24_CLASS_NAME::s3c24xx_nand_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_nand.regs)[offset];
 	COMBINE_DATA(&((uint32_t*)&m_nand.regs)[offset]);
@@ -3086,7 +3040,7 @@ WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_nand_w )
 	}
 }
 
-ATTR_UNUSED WRITE_LINE_MEMBER( S3C24_CLASS_NAME::s3c24xx_pin_frnb_w )
+[[maybe_unused]] void S3C24_CLASS_NAME::s3c24xx_pin_frnb_w(int state)
 {
 	LOGMASKED(LOG_FLASH, "s3c24xx_pin_frnb_w (%d)\n", state);
 #if defined(DEVICE_S3C2440)
@@ -3109,14 +3063,14 @@ ATTR_UNUSED WRITE_LINE_MEMBER( S3C24_CLASS_NAME::s3c24xx_pin_frnb_w )
 
 #if defined(DEVICE_S3C2440)
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_cam_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_cam_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = m_cam.regs.data[offset];
 	LOGMASKED(LOG_CAM, "%s: camera read: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_CAM + (offset << 2), data, mem_mask);
 	return data;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_cam_w )
+void S3C24_CLASS_NAME::s3c24xx_cam_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	LOGMASKED(LOG_CAM, "%s: camera write: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_CAM + (offset << 2), data, mem_mask);
 	COMBINE_DATA(&m_cam.regs.data[offset]);
@@ -3128,14 +3082,14 @@ WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_cam_w )
 
 #if defined(DEVICE_S3C2440)
 
-READ32_MEMBER( S3C24_CLASS_NAME::s3c24xx_ac97_r )
+uint32_t S3C24_CLASS_NAME::s3c24xx_ac97_r(offs_t offset, uint32_t mem_mask)
 {
 	const uint32_t data = m_ac97.regs.data[offset];
 	LOGMASKED(LOG_AC97, "%s: audio codec read: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_AC97 + (offset << 2), data, mem_mask);
 	return data;
 }
 
-WRITE32_MEMBER( S3C24_CLASS_NAME::s3c24xx_ac97_w )
+void S3C24_CLASS_NAME::s3c24xx_ac97_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	LOGMASKED(LOG_AC97, "%s: audio codec write: %08x = %08x & %08x\n", machine().describe_context(), S3C24XX_BASE_AC97 + (offset << 2), data, mem_mask);
 	COMBINE_DATA(&m_ac97.regs.data[offset]);
@@ -3256,31 +3210,16 @@ void S3C24_CLASS_NAME::s3c24xx_device_reset()
 void S3C24_CLASS_NAME::s3c24xx_device_start()
 {
 	LOGMASKED(LOG_RESET, "s3c24xx device start\n");
-	m_pin_r_cb.resolve();
-	m_pin_w_cb.resolve_safe();
-	m_port_r_cb.resolve();
-	m_port_w_cb.resolve();
-	m_scl_w_cb.resolve();
-	m_sda_r_cb.resolve();
-	m_sda_w_cb.resolve();
-	m_data_r_cb.resolve();
-	m_data_w_cb.resolve();
-#if !defined(DEVICE_S3C2400)
-	m_command_w_cb.resolve();
-	m_address_w_cb.resolve();
-	m_nand_data_r_cb.resolve();
-	m_nand_data_w_cb.resolve();
-#endif
 	for (int i = 0; i < 5; i++)
-		m_pwm.timer[i] = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(S3C24_CLASS_NAME::s3c24xx_pwm_timer_exp), this));
+		m_pwm.timer[i] = timer_alloc(FUNC(S3C24_CLASS_NAME::s3c24xx_pwm_timer_exp), this);
 	for (auto & elem : m_dma)
-		elem.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(S3C24_CLASS_NAME::s3c24xx_dma_timer_exp), this));
-	m_iic.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(S3C24_CLASS_NAME::s3c24xx_iic_timer_exp), this));
-	m_iis.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(S3C24_CLASS_NAME::s3c24xx_iis_timer_exp), this));
-	m_lcd.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(S3C24_CLASS_NAME::s3c24xx_lcd_timer_exp), this));
-	m_rtc.timer_tick_count = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(S3C24_CLASS_NAME::s3c24xx_rtc_timer_tick_count_exp), this));
-	m_rtc.timer_update = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(S3C24_CLASS_NAME::s3c24xx_rtc_timer_update_exp), this));
-	m_wdt.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(S3C24_CLASS_NAME::s3c24xx_wdt_timer_exp), this));
+		elem.timer = timer_alloc(FUNC(S3C24_CLASS_NAME::s3c24xx_dma_timer_exp), this);
+	m_iic.timer = timer_alloc(FUNC(S3C24_CLASS_NAME::s3c24xx_iic_timer_exp), this);
+	m_iis.timer = timer_alloc(FUNC(S3C24_CLASS_NAME::s3c24xx_iis_timer_exp), this);
+	m_lcd.timer = timer_alloc(FUNC(S3C24_CLASS_NAME::s3c24xx_lcd_timer_exp), this);
+	m_rtc.timer_tick_count = timer_alloc(FUNC(S3C24_CLASS_NAME::s3c24xx_rtc_timer_tick_count_exp), this);
+	m_rtc.timer_update = timer_alloc(FUNC(S3C24_CLASS_NAME::s3c24xx_rtc_timer_update_exp), this);
+	m_wdt.timer = timer_alloc(FUNC(S3C24_CLASS_NAME::s3c24xx_wdt_timer_exp), this);
 
 #if defined(DEVICE_S3C2410) || defined(DEVICE_S3C2440)
 	int om0 = iface_core_pin_r(S3C24XX_CORE_PIN_OM0);

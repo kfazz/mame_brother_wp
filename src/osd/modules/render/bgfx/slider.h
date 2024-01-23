@@ -6,21 +6,24 @@
 //
 //============================================================
 
-#pragma once
+#ifndef MAME_RENDER_BGFX_SLIDER_H
+#define MAME_RENDER_BGFX_SLIDER_H
 
-#ifndef __DRAWBGFX_SLIDER__
-#define __DRAWBGFX_SLIDER__
+#pragma once
 
 #include <bgfx/bgfx.h>
 
+#include <cmath>
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
-#include "../frontend/mame/ui/sliderchangednotifier.h"
-
 struct slider_state;
 
-class bgfx_slider : public slider_changed_notifier
+class running_machine;
+
+class bgfx_slider
 {
 public:
 	enum slider_type
@@ -44,16 +47,19 @@ public:
 		SLIDER_SCREEN_TYPE_ANY = SLIDER_SCREEN_TYPE_RASTER | SLIDER_SCREEN_TYPE_VECTOR | SLIDER_SCREEN_TYPE_LCD
 	};
 
-	bgfx_slider(running_machine& machine, std::string name, float min, float def, float max, float step, slider_type type, screen_type screen, std::string format, std::string description, std::vector<std::string>& strings);
+	bgfx_slider(running_machine& machine, std::string &&name, float min, float def, float max, float step, slider_type type, screen_type screen, std::string format, std::string description, std::vector<std::string>& strings);
 	virtual ~bgfx_slider();
 
 	int32_t update(std::string *str, int32_t newval);
 
 	// Getters
-	std::string name() const { return m_name; }
+	const std::string &name() const { return m_name; }
 	slider_type type() const { return m_type; }
 	float value() const { return m_value; }
 	float uniform_value() const { return float(m_value); }
+	float min_value() const { return m_min; }
+	float default_value() const { return m_default; }
+	float max_value() const { return m_max; }
 	slider_state *core_slider() const { return m_slider_state.get(); }
 	size_t size() const { return get_size_for_type(m_type); }
 	static size_t get_size_for_type(slider_type type);
@@ -62,7 +68,6 @@ public:
 	void import(float val);
 
 protected:
-	virtual int32_t slider_changed(running_machine &machine, void *arg, int /*id*/, std::string *str, int32_t newval) override;
 	std::unique_ptr<slider_state> create_core_slider();
 	int32_t as_int() const { return int32_t(floor(m_value / m_step + 0.5f)); }
 
@@ -81,4 +86,4 @@ protected:
 	running_machine&m_machine;
 };
 
-#endif // __DRAWBGFX_SLIDER__
+#endif // MAME_RENDER_BGFX_SLIDER_H

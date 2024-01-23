@@ -20,7 +20,7 @@
 class dsp16_device_base : public cpu_device, protected dsp16_disassembler::cpu
 {
 public:
-	DECLARE_WRITE_LINE_MEMBER(exm_w);
+	void exm_w(int state);
 
 	// interrupt output callbacks
 	auto iack_cb() { return m_iack_cb.bind(); }
@@ -44,24 +44,24 @@ public:
 	auto pods_cb() { return m_pods_cb.bind(); }
 
 	// interrupt outputs
-	DECLARE_READ_LINE_MEMBER(iack_r) { return m_iack_out; }
+	int iack_r() { return m_iack_out; }
 
 	// serial outputs
-	DECLARE_READ_LINE_MEMBER(ick_r) { return sio_ick_active() ? m_sio_clk : 1; }
-	DECLARE_READ_LINE_MEMBER(ild_r) { return sio_ild_active() ? m_sio_ld : 1; }
-	DECLARE_READ_LINE_MEMBER(do_r) { return m_do_out; }
-	DECLARE_READ_LINE_MEMBER(ock_r) { return sio_ock_active() ? m_sio_clk : 1; }
-	DECLARE_READ_LINE_MEMBER(old_r) { return sio_old_active() ? m_sio_ld : 1; }
-	DECLARE_READ_LINE_MEMBER(ose_r) { return m_ose_out; }
+	int ick_r() { return sio_ick_active() ? m_sio_clk : 1; }
+	int ild_r() { return sio_ild_active() ? m_sio_ld : 1; }
+	int do_r() { return m_do_out; }
+	int ock_r() { return sio_ock_active() ? m_sio_clk : 1; }
+	int old_r() { return sio_old_active() ? m_sio_ld : 1; }
+	int ose_r() { return m_ose_out; }
 
 	// high-level passive parallel I/O handlers
-	DECLARE_READ16_MEMBER(pio_r);
-	DECLARE_WRITE16_MEMBER(pio_w);
+	u16 pio_r();
+	void pio_w(u16 data);
 
 	// parallel I/O outputs
-	DECLARE_READ_LINE_MEMBER(psel_r) { return m_psel_out; }
-	DECLARE_READ_LINE_MEMBER(pids_r) { return m_pids_out; }
-	DECLARE_READ_LINE_MEMBER(pods_r) { return m_pods_out; }
+	int psel_r() { return m_psel_out; }
+	int pids_r() { return m_pids_out; }
+	int pods_r() { return m_pods_out; }
 
 protected:
 	// construction/destruction
@@ -75,7 +75,6 @@ protected:
 			address_map_constructor &&data_map);
 
 	// device_t implementation
-	virtual void device_resolve_objects() override;
 	virtual void device_start() override;
 	virtual void device_stop() override;
 	virtual void device_reset() override;
@@ -105,7 +104,7 @@ protected:
 	// for specialisations to override
 	virtual void external_memory_enable(address_space &space, bool enable) = 0;
 
-	template <offs_t Base> DECLARE_READ16_MEMBER(external_memory_r);
+	template <offs_t Base> u16 external_memory_r(offs_t offset, u16 mem_mask = ~0);
 
 private:
 	// state registration indices
@@ -275,7 +274,7 @@ private:
 	// memory system access
 	required_shared_ptr<u16>    m_workram;
 	address_space               *m_spaces[3];
-	memory_access_cache<1, -1, ENDIANNESS_BIG> *m_pcache;
+	memory_access<16, 1, -1, ENDIANNESS_BIG>::cache m_pcache;
 	u16                         m_workram_mask;
 
 	// recompiler stuff

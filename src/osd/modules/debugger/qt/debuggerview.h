@@ -1,50 +1,63 @@
 // license:BSD-3-Clause
 // copyright-holders:Andrew Gardner
-#ifndef __DEBUG_QT_DEBUGGER_VIEW_H__
-#define __DEBUG_QT_DEBUGGER_VIEW_H__
+#ifndef MAME_DEBUGGER_QT_DEBUGGERVIEW_H
+#define MAME_DEBUGGER_QT_DEBUGGERVIEW_H
 
-#include <QtWidgets/QAbstractScrollArea>
+#pragma once
 
 #include "debug/debugvw.h"
 
+#include <QtWidgets/QAbstractScrollArea>
+#include <QtWidgets/QMenu>
+
+
+namespace osd::debugger::qt {
 
 class DebuggerView : public QAbstractScrollArea
 {
 	Q_OBJECT
 
 public:
-	DebuggerView(const debug_view_type& type,
-					running_machine* machine,
-					QWidget* parent=nullptr);
+	DebuggerView(debug_view_type type, running_machine &machine, QWidget *parent = nullptr);
 	virtual ~DebuggerView();
 
-	void paintEvent(QPaintEvent* event);
+	virtual void paintEvent(QPaintEvent *event) override;
 
 	// Setters and accessors
 	void setPreferBottom(bool pb) { m_preferBottom = pb; }
-	debug_view* view() { return m_view; }
+	debug_view *view() { return m_view; }
+	template <typename T> T *view() { return downcast<T *>(m_view); }
+	int sourceIndex() const;
+
+	virtual void restoreConfigurationFromNode(util::xml::data_node const &node);
+	virtual void saveConfigurationToNode(util::xml::data_node &node);
 
 signals:
 	void updated();
 
 protected:
-	void keyPressEvent(QKeyEvent* event);
-	void mousePressEvent(QMouseEvent* event);
+	virtual void keyPressEvent(QKeyEvent *event) override;
+	virtual void mousePressEvent(QMouseEvent *event) override;
+	virtual void contextMenuEvent(QContextMenuEvent *event) override;
+
+	virtual void addItemsToContextMenu(QMenu *menu);
 
 private slots:
 	void verticalScrollSlot(int value);
 	void horizontalScrollSlot(int value);
-
+	void copyVisibleSlot();
+	void pasteSlot();
 
 private:
 	// Callback to allow MAME to refresh the view
-	static void debuggerViewUpdate(debug_view& debugView, void* osdPrivate);
+	static void debuggerViewUpdate(debug_view &debugView, void *osdPrivate);
+
+	running_machine &m_machine;
+	debug_view *m_view;
 
 	bool m_preferBottom;
-
-	debug_view* m_view;
-	running_machine* m_machine;
 };
 
+} // namespace osd::debugger::qt
 
-#endif
+#endif // MAME_DEBUGGER_QT_DEBUGGERVIEW_H

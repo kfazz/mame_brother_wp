@@ -46,7 +46,7 @@ dmv_k210_device::dmv_k210_device(const machine_config &mconfig, const char *tag,
 
 void dmv_k210_device::device_start()
 {
-	m_clk1_timer = timer_alloc(0, nullptr);
+	m_clk1_timer = timer_alloc(FUNC(dmv_k210_device::strobe_tick), this);
 
 	// register for state saving
 	save_item(NAME(m_portb));
@@ -65,10 +65,10 @@ void dmv_k210_device::device_reset()
 }
 
 //-------------------------------------------------
-//  device_timer - handler timer events
+//  strobe_tick -
 //-------------------------------------------------
 
-void dmv_k210_device::device_timer(emu_timer &timer, device_timer_id tid, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(dmv_k210_device::strobe_tick)
 {
 	m_centronics->write_strobe(CLEAR_LINE);
 }
@@ -115,27 +115,27 @@ void dmv_k210_device::io_write(int ifsel, offs_t offset, uint8_t data)
 		m_ppi->write(offset & 0x03, data);
 }
 
-READ8_MEMBER( dmv_k210_device::porta_r )
+uint8_t dmv_k210_device::porta_r()
 {
 	return m_cent_data_in->read();
 }
 
-READ8_MEMBER( dmv_k210_device::portb_r )
+uint8_t dmv_k210_device::portb_r()
 {
 	return m_portb;
 }
 
-READ8_MEMBER( dmv_k210_device::portc_r )
+uint8_t dmv_k210_device::portc_r()
 {
 	return m_portc;
 }
 
-WRITE8_MEMBER( dmv_k210_device::porta_w )
+void dmv_k210_device::porta_w(uint8_t data)
 {
 	m_cent_data_out->write(data);
 }
 
-WRITE8_MEMBER( dmv_k210_device::portb_w )
+void dmv_k210_device::portb_w(uint8_t data)
 {
 	m_centronics->write_ack(BIT(data, 2));
 	m_centronics->write_select(BIT(data, 4));
@@ -144,7 +144,7 @@ WRITE8_MEMBER( dmv_k210_device::portb_w )
 	m_centronics->write_fault(BIT(data, 7));
 }
 
-WRITE8_MEMBER( dmv_k210_device::portc_w )
+void dmv_k210_device::portc_w(uint8_t data)
 {
 	if (!(data & 0x80))
 	{
@@ -158,11 +158,11 @@ WRITE8_MEMBER( dmv_k210_device::portc_w )
 	out_irq(BIT(data, 3));
 }
 
-WRITE_LINE_MEMBER( dmv_k210_device::cent_ack_w )     { if (state) m_portb |= 0x04; else m_portb &= ~0x04; m_ppi->pc6_w(state); }
-WRITE_LINE_MEMBER( dmv_k210_device::cent_slct_w )    { if (state) m_portb |= 0x10; else m_portb &= ~0x10; }
-WRITE_LINE_MEMBER( dmv_k210_device::cent_busy_w )    { if (state) m_portb |= 0x20; else m_portb &= ~0x20; }
-WRITE_LINE_MEMBER( dmv_k210_device::cent_pe_w )      { if (state) m_portb |= 0x40; else m_portb &= ~0x40; }
-WRITE_LINE_MEMBER( dmv_k210_device::cent_fault_w )   { if (state) m_portb |= 0x80; else m_portb &= ~0x80; }
+void dmv_k210_device::cent_ack_w(int state)     { if (state) m_portb |= 0x04; else m_portb &= ~0x04; m_ppi->pc6_w(state); }
+void dmv_k210_device::cent_slct_w(int state)    { if (state) m_portb |= 0x10; else m_portb &= ~0x10; }
+void dmv_k210_device::cent_busy_w(int state)    { if (state) m_portb |= 0x20; else m_portb &= ~0x20; }
+void dmv_k210_device::cent_pe_w(int state)      { if (state) m_portb |= 0x40; else m_portb &= ~0x40; }
+void dmv_k210_device::cent_fault_w(int state)   { if (state) m_portb |= 0x80; else m_portb &= ~0x80; }
 
-WRITE_LINE_MEMBER( dmv_k210_device::cent_autofd_w )  { if (state) m_portc |= 0x02; else m_portc &= ~0x02; }
-WRITE_LINE_MEMBER( dmv_k210_device::cent_init_w )    { if (state) m_portc |= 0x04; else m_portc &= ~0x04; }
+void dmv_k210_device::cent_autofd_w(int state)  { if (state) m_portc |= 0x02; else m_portc &= ~0x02; }
+void dmv_k210_device::cent_init_w(int state)    { if (state) m_portc |= 0x04; else m_portc &= ~0x04; }

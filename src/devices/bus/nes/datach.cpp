@@ -18,16 +18,14 @@
 #include "datach.h"
 
 #ifdef NES_PCB_DEBUG
-#define VERBOSE 1
+#define VERBOSE (LOG_GENERAL)
 #else
-#define VERBOSE 0
+#define VERBOSE (0)
 #endif
-
-#define LOG_MMC(x) do { if (VERBOSE) logerror x; } while (0)
+#include "logmacro.h"
 
 #define EEPROM_INTERNAL 0
 #define EEPROM_EXTERNAL 1
-
 
 #define TEST_EEPROM 0
 
@@ -68,7 +66,7 @@ DEFINE_DEVICE_TYPE(NES_DATACH_SLOT, nes_datach_slot_device, "nes_datach_slot", "
 
 nes_datach_slot_device::nes_datach_slot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: device_t(mconfig, NES_DATACH_SLOT, tag, owner, clock)
-	, device_image_interface(mconfig, *this)
+	, device_cartrom_image_interface(mconfig, *this)
 	, device_single_card_slot_interface<datach_cart_interface>(mconfig, *this)
 	, m_cart(nullptr)
 {
@@ -92,20 +90,19 @@ uint8_t nes_datach_slot_device::read(offs_t offset)
 		return 0xff;
 }
 
-image_init_result nes_datach_slot_device::call_load()
+std::pair<std::error_condition, std::string> nes_datach_slot_device::call_load()
 {
 	if (m_cart)
 	{
-		uint8_t *ROM = m_cart->get_cart_base();
-
+		uint8_t *const ROM = m_cart->get_cart_base();
 		if (!ROM)
-			return image_init_result::FAIL;
+			return std::make_pair(image_error::INTERNAL, std::string());
 
 		// Existing Datach carts are all 256K, so we only load files of this size
 		if (!loaded_through_softlist())
 		{
 			if (length() != 0x40000 && length() != 0x40010)
-				return image_init_result::FAIL;
+				return std::make_pair(image_error::INVALIDLENGTH, std::string());
 
 			int shift = length() - 0x40000;
 			uint8_t temp[0x40010];
@@ -120,20 +117,22 @@ image_init_result nes_datach_slot_device::call_load()
 				mapper |= temp[7] & 0xf0;
 				if (mapper != 157 && mapper != 16)
 				{
-					return image_init_result::FAIL;
+					return std::make_pair(
+							image_error::INVALIDIMAGE,
+							util::string_format("Unsupported iNES mapper %u (must be 16 or 157)", mapper));
 				}
 			}
 		}
 		else
 		{
 			if (get_software_region_length("rom") != 0x40000)
-				return image_init_result::FAIL;
+				return std::make_pair(image_error::INVALIDLENGTH, "Unsupported cartridge size (must be 256K)");
 
 			memcpy(ROM, get_software_region("rom"), 0x40000);
 		}
 	}
 
-	return image_init_result::PASS;
+	return std::make_pair(std::error_condition(), std::string());
 }
 
 
@@ -231,8 +230,8 @@ nes_datach_device::nes_datach_device(const machine_config &mconfig, const char *
 void nes_datach_device::device_start()
 {
 	common_start();
-	irq_timer = timer_alloc(TIMER_IRQ);
-	serial_timer = timer_alloc(TIMER_SERIAL);
+	irq_timer = timer_alloc(FUNC(nes_datach_device::irq_timer_tick), this);
+	serial_timer = timer_alloc(FUNC(nes_datach_device::serial_tick), this);
 	irq_timer->adjust(attotime::zero, 0, clocks_to_attotime(1));
 	serial_timer->adjust(attotime::zero, 0, clocks_to_attotime(1000));
 
@@ -243,7 +242,6 @@ void nes_datach_device::device_start()
 
 void nes_datach_device::pcb_reset()
 {
-	m_chr_source = m_vrom_chunks ? CHRROM : CHRRAM;
 	prg16_89ab(0);
 	prg16_cdef(m_prg_chunks - 1);
 	chr8(0, m_chr_source);
@@ -267,7 +265,7 @@ void nes_datach_device::pcb_reset()
 
  iNES: mappers 157
 
- In MESS: Supported
+ In MAME: Supported
 
  TODO: Datach carts should actually be handled
  separately! Original carts were minicarts to be
@@ -286,7 +284,7 @@ void nes_datach_device::pcb_reset()
 
 uint8_t nes_datach_device::read_m(offs_t offset)
 {
-	LOG_MMC(("Datach read_m, offset: %04x\n", offset));
+	LOG("Datach read_m, offset: %04x\n", offset);
 	uint8_t i2c_val = 0;
 #if TEST_EEPROM
 	if (m_i2c_dir)
@@ -303,8 +301,8 @@ uint8_t nes_datach_device::read_m(offs_t offset)
 
 uint8_t nes_datach_device::read_h(offs_t offset)
 {
-	LOG_MMC(("Datach read_h, offset: %04x\n", offset));
-	// this shall be the proper code, but it's a bit slower, so we access directly the subcart below
+	LOG("Datach read_h, offset: %04x\n", offset);
+	// this should be the proper code, but it's a bit slower, so we access directly the subcart below
 	//return m_subslot->read(offset);
 
 	if (m_subslot->m_cart)
@@ -315,7 +313,7 @@ uint8_t nes_datach_device::read_h(offs_t offset)
 
 void nes_datach_device::write_h(offs_t offset, uint8_t data)
 {
-	LOG_MMC(("Datach write_h, offset: %04x, data: %02x\n", offset, data));
+	LOG("Datach write_h, offset: %04x, data: %02x\n", offset, data);
 
 	switch (offset & 0x0f)
 	{
@@ -378,32 +376,34 @@ void nes_datach_device::device_add_mconfig(machine_config &config)
 
 
 //-------------------------------------------------
-//  device_timer - handler timer events
+//  irq_timer_tick - handle IRQ timer
 //-------------------------------------------------
 
-void nes_datach_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(nes_datach_device::irq_timer_tick)
 {
-	if (id == TIMER_IRQ)
+	if (m_irq_enable)
 	{
-		if (m_irq_enable)
-		{
-			// 16bit counter, IRQ fired when the counter goes from 1 to 0
-			// after firing, the counter is *not* reloaded, but next clock
-			// counter wraps around from 0 to 0xffff
-			if (!m_irq_count)
-				m_irq_count = 0xffff;
-			else
-				m_irq_count--;
+		// 16bit counter, IRQ fired when the counter goes from 1 to 0
+		// after firing, the counter is *not* reloaded, but next clock
+		// counter wraps around from 0 to 0xffff
+		if (!m_irq_count)
+			m_irq_count = 0xffff;
+		else
+			m_irq_count--;
 
-			if (!m_irq_count)
-			{
-				set_irq_line(ASSERT_LINE);
-				m_irq_enable = 0;
-			}
+		if (!m_irq_count)
+		{
+			set_irq_line(ASSERT_LINE);
+			m_irq_enable = 0;
 		}
 	}
-	if (id == TIMER_SERIAL)
-	{
-		m_datach_latch = (m_reader->read_pixel() << 3);
-	}
+}
+
+//-------------------------------------------------
+//  serial_tick - tick in a serial bit
+//-------------------------------------------------
+
+TIMER_CALLBACK_MEMBER(nes_datach_device::serial_tick)
+{
+	m_datach_latch = (m_reader->read_pixel() << 3);
 }

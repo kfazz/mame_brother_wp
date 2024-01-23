@@ -1,8 +1,15 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
 
 #ifndef NLD_MS_W_H_
 #define NLD_MS_W_H_
+
+// Names
+// spell-checker: words Woodbury, Raphson,
+//
+// Specific technical terms
+// spell-checker: words Cgso, Cgdo, Cgbo, Cjsw, Mjsw, Ucrit, Uexp, Utra, Neff, Tnom, capval, Udsat, Utst
+
 
 ///
 /// \file nld_ms_direct.h
@@ -34,28 +41,23 @@
 /// for uk being unit vectors for full rank (max(k) == n) is identical to the
 /// inverse of A.
 ///
-/// The approach performs relatively well for matrices up to n ~ 40 (kidniki using frontiers).
-/// Kidniki without frontiers has n==88. Here, the average number of Newton-Raphson
+/// The approach performs relatively well for matrices up to n ~ 40 (`kidniki` using frontiers).
+/// `Kidniki` without frontiers has n==88. Here, the average number of Newton-Raphson
 /// loops increase to 20. It looks like that the approach for larger matrices
 /// introduces numerical instability.
 ///
 
-#include "nld_matrix_solver.h"
-#include "nld_solver.h"
+#include "nld_matrix_solver_ext.h"
 #include "plib/vector_ops.h"
 
 #include <algorithm>
 
-namespace netlist
-{
-namespace solver
+namespace netlist::solver
 {
 
 	template <typename FT, int SIZE>
 	class matrix_solver_w_t: public matrix_solver_ext_t<FT, SIZE>
 	{
-		friend class matrix_solver_t;
-
 	public:
 		using float_ext_type = FT;
 		using float_type = FT;
@@ -63,10 +65,10 @@ namespace solver
 		// FIXME: dirty hack to make this compile
 		static constexpr const std::size_t storage_N = 100;
 
-		matrix_solver_w_t(netlist_state_t &anetlist, const pstring &name,
-			const analog_net_t::list_t &nets,
+		matrix_solver_w_t(devices::nld_solver &main_solver, const pstring &name,
+			const matrix_solver_t::net_list_t &nets,
 			const solver_parameters_t *params, const std::size_t size)
-		: matrix_solver_ext_t<FT, SIZE>(anetlist, name, nets, params, size)
+		: matrix_solver_ext_t<FT, SIZE>(main_solver, name, nets, params, size)
 		, m_cnt(0)
 		{
 			this->build_mat_ptr(m_A);
@@ -75,20 +77,19 @@ namespace solver
 		void reset() override { matrix_solver_t::reset(); }
 
 	protected:
-		void vsolve_non_dynamic() override;
+		void upstream_solve_non_dynamic() override;
 
 		void LE_invert();
 
 		template <typename T>
 		void LE_compute_x(T & x);
 
-
 		template <typename T1, typename T2>
 		float_ext_type &A(const T1 &r, const T2 &c) { return m_A[r][c]; }
 		template <typename T1, typename T2>
 		float_ext_type &W(const T1 &r, const T2 &c) { return m_W[r][c]; }
 
-		// access to Ainv for fixed columns over row, there store transposed
+		// access to the inverted matrix for fixed columns over row, values stored transposed
 		template <typename T1, typename T2>
 		float_ext_type &Ainv(const T1 &r, const T2 &c) { return m_Ainv[c][r]; }
 		template <typename T1>
@@ -115,7 +116,7 @@ namespace solver
 		array2D<float_ext_type, storage_N, m_pitch> H;
 		std::array<unsigned, storage_N> rows;
 		array2D<unsigned, storage_N, m_pitch> cols;
-		std::array<unsigned, storage_N> colcount;
+		std::array<unsigned, storage_N> col_count;
 
 		unsigned m_cnt;
 	};
@@ -231,7 +232,7 @@ namespace solver
 
 			// determine changed rows
 
-			unsigned rowcount=0;
+			unsigned row_count=0;
 			#define VT(r,c) (A(r,c) - lA(r,c))
 
 			for (unsigned row = 0; row < iN; row ++)
@@ -241,20 +242,20 @@ namespace solver
 				for (auto & col : nz)
 				{
 					if (A(row,col) != lA(row,col))
-						cols[rowcount][cc++] = col;
+						cols[row_count][cc++] = col;
 				}
 				if (cc > 0)
 				{
-					colcount[rowcount] = cc;
-					rows[rowcount++] = row;
+					col_count[row_count] = cc;
+					rows[row_count++] = row;
 				}
 			}
-			if (rowcount > 0)
+			if (row_count > 0)
 			{
 				// construct w = transform(V) * y
-				// dim: rowcount x iN
+				// dim: row_count x iN
 				//
-				for (unsigned i = 0; i < rowcount; i++)
+				for (unsigned i = 0; i < row_count; i++)
 				{
 					const unsigned r = rows[i];
 					FT tmp = plib::constants<FT>::zero();
@@ -263,32 +264,32 @@ namespace solver
 					w[i] = tmp;
 				}
 
-				for (unsigned i = 0; i < rowcount; i++)
-					for (unsigned k=0; k< rowcount; k++)
+				for (unsigned i = 0; i < row_count; i++)
+					for (unsigned k=0; k< row_count; k++)
 						H[i][k] = plib::constants<FT>::zero();
 
-				for (unsigned i = 0; i < rowcount; i++)
+				for (unsigned i = 0; i < row_count; i++)
 					H[i][i] = plib::constants<FT>::one();
 				// Construct H = (I + VT*Z)
-				for (unsigned i = 0; i < rowcount; i++)
-					for (unsigned k=0; k< colcount[i]; k++)
+				for (unsigned i = 0; i < row_count; i++)
+					for (unsigned k=0; k< col_count[i]; k++)
 					{
 						const unsigned col = cols[i][k];
 						float_type f = VT(rows[i],col);
 						// FIXME: comparison to zero
 						if (f != plib::constants<float_type>::zero())
-							for (unsigned j= 0; j < rowcount; j++)
+							for (unsigned j= 0; j < row_count; j++)
 								H[i][j] += f * Ainv(col,rows[j]);
 					}
 
 				// Gaussian elimination of H
-				for (unsigned i = 0; i < rowcount; i++)
+				for (unsigned i = 0; i < row_count; i++)
 				{
 					// FIXME: comparison to zero
 					if (H[i][i] == plib::constants<float_type>::zero())
 						plib::perrlogger("{} H singular\n", this->name());
 					const float_type f = plib::reciprocal(H[i][i]);
-					for (unsigned j = i+1; j < rowcount; j++)
+					for (unsigned j = i+1; j < row_count; j++)
 					{
 						const float_type f1 = - f * H[j][i];
 
@@ -297,7 +298,7 @@ namespace solver
 						{
 							float_type *pj = &H[j][i+1];
 							const float_type *pi = &H[i][i+1];
-							for (unsigned k = 0; k < rowcount-i-1; k++)
+							for (unsigned k = 0; k < row_count-i-1; k++)
 								pj[k] += f1 * pi[k];
 								//H[j][k] += f1 * H[i][k];
 							w[j] += f1 * w[i];
@@ -306,12 +307,12 @@ namespace solver
 				}
 				// Back substitution
 				//inv(H) w = t     w = H t
-				for (unsigned j = rowcount; j-- > 0; )
+				for (unsigned j = row_count; j-- > 0; )
 				{
 					float_type tmp = 0;
 					const float_type *pj = &H[j][j+1];
 					const float_type *tj = &t[j+1];
-					for (unsigned k = 0; k < rowcount-j-1; k++)
+					for (unsigned k = 0; k < row_count-j-1; k++)
 						tmp += pj[k] * tj[k];
 						//tmp += H[j][k] * t[k];
 					t[j] = (w[j] - tmp) / H[j][j];
@@ -321,7 +322,7 @@ namespace solver
 				for (unsigned i=0; i<iN; i++)
 				{
 					float_type tmp = plib::constants<FT>::zero();
-					for (unsigned j=0; j<rowcount;j++)
+					for (unsigned j=0; j<row_count;j++)
 					{
 						const unsigned row = rows[j];
 						tmp += Ainv(i,row) * t[j];
@@ -332,7 +333,7 @@ namespace solver
 		}
 		m_cnt++;
 
-		if (false)
+		if (false) // NOLINT
 			for (unsigned i=0; i<iN; i++)
 			{
 				float_type tmp = plib::constants<FT>::zero();
@@ -346,7 +347,7 @@ namespace solver
 	}
 
 	template <typename FT, int SIZE>
-	void matrix_solver_w_t<FT, SIZE>::vsolve_non_dynamic()
+	void matrix_solver_w_t<FT, SIZE>::upstream_solve_non_dynamic()
 	{
 		this->clear_square_mat(this->m_A);
 		this->fill_matrix_and_rhs();
@@ -354,7 +355,6 @@ namespace solver
 		this->solve_non_dynamic();
 	}
 
-} // namespace solver
-} // namespace netlist
+} // namespace netlist::solver
 
 #endif // NLD_MS_DIRECT_H_

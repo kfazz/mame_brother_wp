@@ -39,11 +39,11 @@ protected:
 	virtual bool write(offs_t offset, uint8_t data) override;
 
 private:
-	DECLARE_WRITE8_MEMBER(porta_w);
-	DECLARE_WRITE8_MEMBER(portc_w);
-	DECLARE_WRITE_LINE_MEMBER(write_out0);
-	DECLARE_WRITE_LINE_MEMBER(write_out1);
-	DECLARE_WRITE_LINE_MEMBER(write_out2);
+	void porta_w(uint8_t data);
+	void portc_w(uint8_t data);
+	void write_out0(int state);
+	void write_out1(int state);
+	void write_out2(int state);
 
 	required_device<pit8253_device> m_pit;
 	required_device<i8255_device> m_ppi;

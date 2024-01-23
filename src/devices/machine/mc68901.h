@@ -71,27 +71,26 @@ public:
 
 	u8 get_vector();
 
-	DECLARE_WRITE_LINE_MEMBER( i0_w );
-	DECLARE_WRITE_LINE_MEMBER( i1_w );
-	DECLARE_WRITE_LINE_MEMBER( i2_w );
-	DECLARE_WRITE_LINE_MEMBER( i3_w );
-	DECLARE_WRITE_LINE_MEMBER( i4_w );
-	DECLARE_WRITE_LINE_MEMBER( i5_w );
-	DECLARE_WRITE_LINE_MEMBER( i6_w );
-	DECLARE_WRITE_LINE_MEMBER( i7_w );
+	void i0_w(int state);
+	void i1_w(int state);
+	void i2_w(int state);
+	void i3_w(int state);
+	void i4_w(int state);
+	void i5_w(int state);
+	void i6_w(int state);
+	void i7_w(int state);
 
-	DECLARE_WRITE_LINE_MEMBER( tai_w );
-	DECLARE_WRITE_LINE_MEMBER( tbi_w );
+	void tai_w(int state);
+	void tbi_w(int state);
 
-	DECLARE_WRITE_LINE_MEMBER( si_w );
-	DECLARE_WRITE_LINE_MEMBER( rc_w );
-	DECLARE_WRITE_LINE_MEMBER( tc_w );
+	void si_w(int state);
+	void rc_w(int state);
+	void tc_w(int state);
 
 protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	void check_interrupts();
 	void take_interrupt(u16 mask);
@@ -99,7 +98,7 @@ protected:
 	void tx_error();
 	void rx_buffer_full();
 	void rx_error();
-	void timer_count(int index);
+	TIMER_CALLBACK_MEMBER(timer_count);
 	void timer_input(int index, int value);
 	void gpio_input(int bit, int state);
 	void gpio_output();

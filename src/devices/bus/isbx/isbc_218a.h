@@ -12,7 +12,6 @@
 #pragma once
 
 #include "isbx.h"
-#include "formats/pc_dsk.h"
 #include "imagedev/floppy.h"
 #include "machine/upd765.h"
 
@@ -49,9 +48,9 @@ protected:
 	virtual void opt0_w(int state) override;
 
 private:
-	DECLARE_WRITE_LINE_MEMBER( fdc_irq );
-	DECLARE_WRITE_LINE_MEMBER( fdc_drq );
-	DECLARE_FLOPPY_FORMATS( floppy_formats );
+	void fdc_irq(int state);
+	void fdc_drq(int state);
+	static void floppy_formats(format_registration &fr);
 
 	required_device<i8272a_device> m_fdc;
 	required_device<floppy_connector> m_floppy0;

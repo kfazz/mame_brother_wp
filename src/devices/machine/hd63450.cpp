@@ -18,7 +18,7 @@ hd63450_device::hd63450_device(const machine_config &mconfig, const char *tag, d
 	: device_t(mconfig, HD63450, tag, owner, clock)
 	, m_irq_callback(*this)
 	, m_dma_end(*this)
-	, m_dma_read(*this)
+	, m_dma_read(*this, 0)
 	, m_dma_write(*this)
 	, m_cpu(*this, finder_base::DUMMY_TAG)
 {
@@ -42,15 +42,9 @@ hd63450_device::hd63450_device(const machine_config &mconfig, const char *tag, d
 
 void hd63450_device::device_start()
 {
-	// resolve callbacks
-	m_irq_callback.resolve_safe();
-	m_dma_end.resolve_safe();
-	m_dma_read.resolve_all();
-	m_dma_write.resolve_all();
-
 	// Initialise timers and registers
 	for (int x = 0; x < 4; x++)
-		m_timer[x] = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(hd63450_device::dma_transfer_timer), this));
+		m_timer[x] = timer_alloc(FUNC(hd63450_device::dma_transfer_timer), this);
 
 	save_item(STRUCT_MEMBER(m_reg, csr));
 	save_item(STRUCT_MEMBER(m_reg, cer));
@@ -62,6 +56,7 @@ void hd63450_device::device_start()
 	save_item(STRUCT_MEMBER(m_reg, mar));
 	save_item(STRUCT_MEMBER(m_reg, dar));
 	save_item(STRUCT_MEMBER(m_reg, btc));
+	save_item(STRUCT_MEMBER(m_reg, bar));
 	save_item(STRUCT_MEMBER(m_reg, niv));
 	save_item(STRUCT_MEMBER(m_reg, eiv));
 	save_item(STRUCT_MEMBER(m_reg, mfc));
@@ -101,7 +96,7 @@ void hd63450_device::device_reset()
 	m_irq_callback(CLEAR_LINE);
 }
 
-READ16_MEMBER(hd63450_device::read)
+uint16_t hd63450_device::read(offs_t offset)
 {
 	int channel,reg;
 
@@ -150,7 +145,7 @@ READ16_MEMBER(hd63450_device::read)
 	return 0xff;
 }
 
-WRITE16_MEMBER(hd63450_device::write)
+void hd63450_device::write(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	int channel,reg;
 
@@ -278,7 +273,7 @@ void hd63450_device::dma_transfer_start(int channel)
 	m_reg[channel].csr &= ~0xe0;
 	m_reg[channel].csr |= 0x08;  // Channel active
 	m_reg[channel].csr &= ~0x30;  // Reset Error and Normal termination bits
-	if ((m_reg[channel].ocr & 0x0c) != 0x00)  // Array chain or Link array chain
+	if ((m_reg[channel].ocr & 0x0c) == 0x08)  // Array chain
 	{
 		m_reg[channel].mar = space.read_word(m_reg[channel].bar) << 16;
 		m_reg[channel].mar |= space.read_word(m_reg[channel].bar+2);
@@ -286,11 +281,22 @@ void hd63450_device::dma_transfer_start(int channel)
 		if (m_reg[channel].btc > 0)
 			m_reg[channel].btc--;
 	}
+	else if ((m_reg[channel].ocr & 0x0c) == 0x0c) // Link array chain
+	{
+		u32 bar = m_reg[channel].bar;
+		m_reg[channel].mar = space.read_word(bar) << 16;
+		m_reg[channel].mar |= space.read_word(bar+2);
+		m_reg[channel].mtc = space.read_word(bar+4);
+		m_reg[channel].bar = space.read_word(bar+6) << 16;
+		m_reg[channel].bar |= space.read_word(bar+8);
+	}
 
 	// Burst transfers will halt the CPU until the transfer is complete
-	if ((m_reg[channel].dcr & 0xc0) == 0x00)  // Burst transfer
+	// max rate transfer hold the bus
+	if (((m_reg[channel].dcr & 0xc0) == 0x00))  // Burst transfer
 	{
-		m_cpu->set_input_line(INPUT_LINE_HALT, ASSERT_LINE);
+		if((m_reg[channel].ocr & 3) == 1) // TODO: proper cycle stealing
+			m_cpu->set_input_line(INPUT_LINE_HALT, ASSERT_LINE);
 		m_timer[channel]->adjust(attotime::zero, channel, m_burst_clock[channel]);
 	}
 	else if (!(m_reg[channel].ocr & 2))
@@ -353,9 +359,11 @@ void hd63450_device::single_transfer(int x)
 	if (!dma_in_progress(x))  // DMA in progress in channel x
 		return;
 
+	m_bec = 0;
+
 	if (m_reg[x].ocr & 0x80)  // direction: 1 = device -> memory
 	{
-		if (!m_dma_read[x].isnull())
+		if (!m_dma_read[x].isunset())
 		{
 			data = m_dma_read[x](m_reg[x].mar);
 			if (data == -1)
@@ -395,7 +403,7 @@ void hd63450_device::single_transfer(int x)
 	}
 	else  // memory -> device
 	{
-		if (!m_dma_write[x].isnull())
+		if (!m_dma_write[x].isunset())
 		{
 			data = space.read_byte(m_reg[x].mar);
 			m_dma_write[x]((offs_t)m_reg[x].mar,data);
@@ -432,6 +440,11 @@ void hd63450_device::single_transfer(int x)
 //              LOG("DMA#%i: byte transfer %08lx -> %08lx\n",x,m_reg[x].mar,m_reg[x].dar);
 	}
 
+	if (m_bec == ERR_BUS)
+	{
+		set_error(x, 9);  //assume error in mar, TODO: other errors
+		return;
+	}
 
 	// decrease memory transfer counter
 	if (m_reg[x].mtc > 0)
@@ -452,7 +465,7 @@ void hd63450_device::single_transfer(int x)
 	{
 		// End of transfer
 		LOG("DMA#%i: End of transfer\n",x);
-		if ((m_reg[x].ocr & 0x0c) != 0 && m_reg[x].btc > 0)
+		if ((m_reg[x].ocr & 0x0c) == 0x08 && m_reg[x].btc > 0)
 		{
 			m_reg[x].btc--;
 			m_reg[x].bar+=6;
@@ -461,13 +474,31 @@ void hd63450_device::single_transfer(int x)
 			m_reg[x].mtc = space.read_word(m_reg[x].bar+4);
 			return;
 		}
+		else if ((m_reg[x].ocr & 0x0c) == 0x0c && m_reg[x].bar)
+		{
+			u32 bar = m_reg[x].bar;
+			m_reg[x].mar = space.read_word(bar) << 16;
+			m_reg[x].mar |= space.read_word(bar+2);
+			m_reg[x].mtc = space.read_word(bar+4);
+			m_reg[x].bar = space.read_word(bar+6) << 16;
+			m_reg[x].bar |= space.read_word(bar+8);
+			return;
+		}
+		else if (m_reg[x].ccr & 0x40)
+		{
+			m_reg[x].mar = m_reg[x].bar;
+			m_reg[x].mtc = m_reg[x].btc;
+			m_reg[x].csr |= 0x40;
+			set_irq(x);
+			return;
+		}
 		m_timer[x]->adjust(attotime::never);
 		m_reg[x].csr |= 0xe0;  // channel operation complete, block transfer complete
 		m_reg[x].csr &= ~0x08;  // channel no longer active
 		m_reg[x].ccr &= ~0xc0;
 
-		// Burst transfer
-		if ((m_reg[x].dcr & 0xc0) == 0x00)
+		// Burst transfer or max rate transfer
+		if (((m_reg[x].dcr & 0xc0) == 0x00) || ((m_reg[x].ocr & 3) == 1))
 		{
 			m_cpu->set_input_line(INPUT_LINE_HALT, CLEAR_LINE);
 		}
@@ -484,10 +515,12 @@ void hd63450_device::set_error(int channel, uint8_t code)
 	m_reg[channel].cer = code;
 	m_reg[channel].ccr &= ~0xc0;
 
+	if (((m_reg[channel].dcr & 0xc0) == 0x00) || ((m_reg[channel].ocr & 3) == 1))
+		m_cpu->set_input_line(INPUT_LINE_HALT, CLEAR_LINE); // if the cpu is halted resume it
 	set_irq(channel);
 }
 
-WRITE_LINE_MEMBER(hd63450_device::drq0_w)
+void hd63450_device::drq0_w(int state)
 {
 	bool ostate = m_drq_state[0];
 	m_drq_state[0] = state;
@@ -502,7 +535,7 @@ WRITE_LINE_MEMBER(hd63450_device::drq0_w)
 		m_timer[0]->adjust(attotime::never);
 }
 
-WRITE_LINE_MEMBER(hd63450_device::drq1_w)
+void hd63450_device::drq1_w(int state)
 {
 	bool ostate = m_drq_state[1];
 	m_drq_state[1] = state;
@@ -516,7 +549,7 @@ WRITE_LINE_MEMBER(hd63450_device::drq1_w)
 		m_timer[1]->adjust(attotime::never);
 }
 
-WRITE_LINE_MEMBER(hd63450_device::drq2_w)
+void hd63450_device::drq2_w(int state)
 {
 	bool ostate = m_drq_state[2];
 	m_drq_state[2] = state;
@@ -530,7 +563,7 @@ WRITE_LINE_MEMBER(hd63450_device::drq2_w)
 		m_timer[2]->adjust(attotime::never);
 }
 
-WRITE_LINE_MEMBER(hd63450_device::drq3_w)
+void hd63450_device::drq3_w(int state)
 {
 	bool ostate = m_drq_state[3];
 	m_drq_state[3] = state;

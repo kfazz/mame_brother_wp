@@ -52,9 +52,11 @@ void kc_d004_gide_device::kc_d004_gide_io(address_map &map)
 	map(0x00fc, 0x00ff).mirror(0xff00).rw(Z80CTC_TAG, FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
 }
 
-FLOPPY_FORMATS_MEMBER( kc_d004_device::floppy_formats )
-	FLOPPY_KC85_FORMAT
-FLOPPY_FORMATS_END
+void kc_d004_device::floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_KC85_FORMAT);
+}
 
 static void kc_d004_floppies(device_slot_interface &device)
 {
@@ -129,7 +131,7 @@ void kc_d004_device::device_start()
 {
 	m_rom  = memregion(Z80_TAG)->base();
 
-	m_reset_timer = timer_alloc(TIMER_RESET);
+	m_reset_timer = timer_alloc(FUNC(kc_d004_device::reset_tick), this);
 }
 
 //-------------------------------------------------
@@ -183,17 +185,12 @@ const tiny_rom_entry *kc_d004_device::device_rom_region() const
 }
 
 //-------------------------------------------------
-//  device_timer - handler timer events
+//  reset_tick - reset the main CPU when needed
 //-------------------------------------------------
 
-void kc_d004_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(kc_d004_device::reset_tick)
 {
-	switch(id)
-	{
-		case TIMER_RESET:
-			m_cpu->set_input_line(INPUT_LINE_RESET, ASSERT_LINE);
-			break;
-	}
+	m_cpu->set_input_line(INPUT_LINE_RESET, ASSERT_LINE);
 }
 
 /*-------------------------------------------------
@@ -301,7 +298,7 @@ void kc_d004_device::io_write(offs_t offset, uint8_t data)
 //  FDC emulation
 //**************************************************************************
 
-READ8_MEMBER(kc_d004_device::hw_input_gate_r)
+uint8_t kc_d004_device::hw_input_gate_r()
 {
 	/*
 	    bit 7: DMA Request (DRQ from FDC)
@@ -327,7 +324,7 @@ READ8_MEMBER(kc_d004_device::hw_input_gate_r)
 	return hw_input_gate;
 }
 
-WRITE8_MEMBER(kc_d004_device::fdd_select_w)
+void kc_d004_device::fdd_select_w(uint8_t data)
 {
 	if (data & 0x01)
 		m_floppy = m_floppy0->get_device();
@@ -346,12 +343,12 @@ WRITE8_MEMBER(kc_d004_device::fdd_select_w)
 	m_fdc->set_floppy(m_floppy);
 }
 
-WRITE8_MEMBER(kc_d004_device::hw_terminal_count_w)
+void kc_d004_device::hw_terminal_count_w(uint8_t data)
 {
 	m_fdc->tc_w(true);
 }
 
-WRITE_LINE_MEMBER(kc_d004_device::fdc_irq)
+void kc_d004_device::fdc_irq(int state)
 {
 	if (state)
 		m_fdc->tc_w(false);
@@ -412,7 +409,7 @@ void kc_d004_gide_device::device_reset()
 //  GIDE read
 //-------------------------------------------------
 
-READ8_MEMBER(kc_d004_gide_device::gide_r)
+uint8_t kc_d004_gide_device::gide_r(offs_t offset)
 {
 	uint8_t data = 0xff;
 	uint8_t io_addr = offset & 0x0f;
@@ -440,11 +437,11 @@ READ8_MEMBER(kc_d004_gide_device::gide_r)
 			{
 				if (ide_cs == 0 )
 				{
-					m_ata_data = m_ata->read_cs0(io_addr & 0x07);
+					m_ata_data = m_ata->cs0_r(io_addr & 0x07);
 				}
 				else
 				{
-					m_ata_data = m_ata->read_cs1(io_addr & 0x07);
+					m_ata_data = m_ata->cs1_r(io_addr & 0x07);
 				}
 			}
 
@@ -461,7 +458,7 @@ READ8_MEMBER(kc_d004_gide_device::gide_r)
 //  GIDE write
 //-------------------------------------------------
 
-WRITE8_MEMBER(kc_d004_gide_device::gide_w)
+void kc_d004_gide_device::gide_w(offs_t offset, uint8_t data)
 {
 	uint8_t io_addr = offset & 0x0f;
 
@@ -489,11 +486,11 @@ WRITE8_MEMBER(kc_d004_gide_device::gide_w)
 			{
 				if (ide_cs == 0)
 				{
-					m_ata->write_cs0(io_addr & 0x07, m_ata_data);
+					m_ata->cs0_w(io_addr & 0x07, m_ata_data);
 				}
 				else
 				{
-					m_ata->write_cs1(io_addr & 0x07, m_ata_data);
+					m_ata->cs1_w(io_addr & 0x07, m_ata_data);
 				}
 			}
 		}

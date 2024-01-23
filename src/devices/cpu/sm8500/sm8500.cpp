@@ -22,7 +22,6 @@ they are internally.
 #include "emu.h"
 #include "sm8500.h"
 #include "sm8500d.h"
-#include "debugger.h"
 
 
 DEFINE_DEVICE_TYPE(SM8500, sm8500_cpu_device, "sm8500", "Sharp SM8500")
@@ -108,9 +107,6 @@ void sm8500_cpu_device::mem_writebyte( uint32_t offset, uint8_t data )
 void sm8500_cpu_device::device_start()
 {
 	m_program = &space(AS_PROGRAM);
-
-	m_dma_func.resolve_safe();
-	m_timer_func.resolve_safe();
 
 	save_item(NAME(m_PC));
 	save_item(NAME(m_IE0));

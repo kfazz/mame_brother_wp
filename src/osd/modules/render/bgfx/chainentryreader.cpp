@@ -6,15 +6,14 @@
 //
 //============================================================
 
-#include <string>
+#include "chainentryreader.h"
 
-#include "emu.h"
+#include "emucore.h"
+#include "fileio.h"
 #include "rendutil.h"
 #include <modules/render/copyutil.h>
 
 #include <modules/lib/osdobj_common.h>
-
-#include "chainentryreader.h"
 
 #include "texturemanager.h"
 #include "targetmanager.h"
@@ -30,15 +29,21 @@
 #include "clear.h"
 #include "clearreader.h"
 
-bgfx_chain_entry* chain_entry_reader::read_from_value(const Value& value, std::string prefix, chain_manager& chains, std::map<std::string, bgfx_slider*>& sliders, std::map<std::string, bgfx_parameter*>& params, uint32_t screen_index)
+bgfx_chain_entry* chain_entry_reader::read_from_value(
+		const Value &value,
+		const std::string &prefix,
+		chain_manager &chains,
+		std::map<std::string, bgfx_slider*> &sliders,
+		std::map<std::string, bgfx_parameter*> &params,
+		uint32_t screen_index)
 {
 	if (!validate_parameters(value, prefix))
 	{
-		printf("Failed validation\n");
+		osd_printf_error("Chain entry failed validation.\n");
 		return nullptr;
 	}
 
-	bgfx_effect* effect = chains.effects().effect(value["effect"].GetString());
+	bgfx_effect* effect = chains.effects().get_or_load_effect(chains.options(), value["effect"].GetString());
 	if (effect == nullptr)
 	{
 		return nullptr;
@@ -53,18 +58,18 @@ bgfx_chain_entry* chain_entry_reader::read_from_value(const Value& value, std::s
 		for (uint32_t i = 0; i < input_array.Size(); i++)
 		{
 			const Value& input = input_array[i];
-			if (!READER_CHECK(input.HasMember("sampler"), (prefix + "input[" + std::to_string(i) + ": Must have string value 'sampler' (what sampler are we binding to?)\n").c_str())) return nullptr;
-			if (!READER_CHECK(input["sampler"].IsString(), (prefix + "input[" + std::to_string(i) + ": Value 'sampler' must be a string\n").c_str())) return nullptr;
+			if (!READER_CHECK(input.HasMember("sampler"), "%sinput[%u]: Must have string value 'sampler' (what sampler are we binding to?)\n", prefix, i)) return nullptr;
+			if (!READER_CHECK(input["sampler"].IsString(), "%sinput[%u]: Value 'sampler' must be a string\n", prefix, i)) return nullptr;
 			bool has_texture = input.HasMember("texture");
 			bool has_target = input.HasMember("target");
 			bool has_option = input.HasMember("option");
-			if (!READER_CHECK(has_texture || has_target || has_option, (prefix + "input[" + std::to_string(i) + ": Must have string value 'target', 'texture' or 'option' (what source are we using?)\n").c_str())) return nullptr;
-			if (!READER_CHECK(!has_texture || input["texture"].IsString(), (prefix + "input[" + std::to_string(i) + ": Value 'texture' must be a string\n").c_str())) return nullptr;
-			if (!READER_CHECK(!has_target || input["target"].IsString(), (prefix + "input[" + std::to_string(i) + ": Value 'target' must be a string\n").c_str())) return nullptr;
-			if (!READER_CHECK(!has_option || input["option"].IsString(), (prefix + "input[" + std::to_string(i) + ": Value 'option' must be a string\n").c_str())) return nullptr;
-			if (!READER_CHECK(has_target || !input.HasMember("bilinear") || input["bilinear"].IsBool(), (prefix + "input[" + std::to_string(i) + ": Value 'bilinear' must be a boolean\n").c_str())) return nullptr;
-			if (!READER_CHECK(has_target || !input.HasMember("clamp") || input["clamp"].IsBool(), (prefix + "input[" + std::to_string(i) + ": Value 'clamp' must be a boolean\n").c_str())) return nullptr;
-			if (!READER_CHECK(has_texture || has_option || !input.HasMember("selection") || input["selection"].IsString(), (prefix + "input[" + std::to_string(i) + ": Value 'selection' must be a string\n").c_str())) return nullptr;
+			if (!READER_CHECK(has_texture || has_target || has_option, "%sinput[%u]: Must have string value 'target', 'texture' or 'option' (what source are we using?)\n", prefix, i)) return nullptr;
+			if (!READER_CHECK(!has_texture || input["texture"].IsString(), "%sinput[%u]: Value 'texture' must be a string\n", prefix, i)) return nullptr;
+			if (!READER_CHECK(!has_target || input["target"].IsString(), "%sinput[%u]: Value 'target' must be a string\n", prefix, i)) return nullptr;
+			if (!READER_CHECK(!has_option || input["option"].IsString(), "%sinput[%u]: Value 'option' must be a string\n", prefix, i)) return nullptr;
+			if (!READER_CHECK(has_target || !input.HasMember("bilinear") || input["bilinear"].IsBool(), "%sinput[%u]: Value 'bilinear' must be a boolean\n", prefix, i)) return nullptr;
+			if (!READER_CHECK(has_target || !input.HasMember("clamp") || input["clamp"].IsBool(), "%sinput[%u]: Value 'clamp' must be a boolean\n", prefix, i)) return nullptr;
+			if (!READER_CHECK(has_texture || has_option || !input.HasMember("selection") || input["selection"].IsString(), "%sinput[%u]: Value 'selection' must be a string\n", prefix, i)) return nullptr;
 			bool bilinear = get_bool(input, "bilinear", true);
 			bool clamp = get_bool(input, "clamp", false);
 			std::string selection = get_string(input, "selection", "");
@@ -109,59 +114,48 @@ bgfx_chain_entry* chain_entry_reader::read_from_value(const Value& value, std::s
 						}
 
 						// get directory of file
-						std::string directory_path = std::string(chains.options().art_path());
-						std::string file_directory = "";
 						const size_t last_slash = texture_name.rfind('/');
-						if (last_slash != std::string::npos)
+						const std::string file_directory = last_slash != std::string::npos ? texture_name.substr(0, last_slash) : std::string();
+						file_enumerator directory_path(chains.options().art_path());
+						while (const osd::directory::entry *entry = directory_path.next(file_directory.empty() ? nullptr : file_directory.c_str()))
 						{
-							file_directory = texture_name.substr(0, last_slash);
-
-							directory_path += "/" + file_directory;
-						}
-
-						osd::directory::ptr directory = osd::directory::open(directory_path);
-						if (directory)
-						{
-							for (const osd::directory::entry *entry = directory->read(); entry != nullptr; entry = directory->read())
+							if (entry->type == osd::directory::entry::entry_type::FILE)
 							{
-								if (entry->type == osd::directory::entry::entry_type::FILE)
+								std::string file(entry->name);
+								std::string extension(".png");
+
+								// split into file name and extension
+								std::string file_name;
+								std::string file_extension;
+								const size_t last_dot = file.rfind('.');
+								if (last_dot != std::string::npos)
 								{
-									std::string file(entry->name);
-									std::string extension(".png");
+									file_name = file.substr(0, last_dot);
+									file_extension = file.substr(last_dot, file.length() - last_dot);
+								}
 
-									// split into file name and extension
-									std::string file_name;
-									std::string file_extension;
-									const size_t last_dot = file.rfind('.');
-									if (last_dot != std::string::npos)
-									{
-										file_name = file.substr(0, last_dot);
-										file_extension = file.substr(last_dot, file.length() - last_dot);
-									}
+								std::string file_path;
+								if (file_directory == "")
+								{
+									file_path = file;
+								}
+								else
+								{
+									file_path = file_directory + PATH_SEPARATOR + file;
+								}
 
-									std::string file_path;
-									if (file_directory == "")
+								// check for .png extension
+								if (file_extension == extension && std::find(texture_names.begin(), texture_names.end(), file_path) == texture_names.end())
+								{
+									// create textures for all files containd in the path of the specified file name
+									uint32_t flags = bilinear ? 0u : (BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT);
+									flags |= clamp ? (BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_W_CLAMP) : 0u;
+									bgfx_texture* texture = chains.textures().create_png_texture(chains.options().art_path(), file_path, file_path, flags, screen_index);
+									if (texture == nullptr)
 									{
-										file_path = file;
+										return nullptr;
 									}
-									else
-									{
-										file_path = file_directory + "/" + file;
-									}
-
-									// check for .png extension
-									if (file_extension == extension)
-									{
-										// create textures for all files containd in the path of the specified file name
-										uint32_t flags = bilinear ? 0u : (BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT);
-										flags |= clamp ? (BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_W_CLAMP) : 0u;
-										bgfx_texture* texture = chains.textures().create_png_texture(chains.options().art_path(), file_path, file_path, flags, screen_index);
-										if (texture == nullptr)
-										{
-											return nullptr;
-										}
-										texture_names.push_back(file_path);
-									}
+									texture_names.push_back(file_path);
 								}
 							}
 						}
@@ -235,17 +229,17 @@ bgfx_chain_entry* chain_entry_reader::read_from_value(const Value& value, std::s
 	return new bgfx_chain_entry(name, effect, clear, suppressors, inputs, uniforms, chains.targets(), output, applytint);
 }
 
-bool chain_entry_reader::validate_parameters(const Value& value, std::string prefix)
+bool chain_entry_reader::validate_parameters(const Value& value, const std::string &prefix)
 {
-	if (!READER_CHECK(value.HasMember("effect"), (prefix + "Must have string value 'effect' (what effect does this entry use?)\n").c_str())) return false;
-	if (!READER_CHECK(value["effect"].IsString(), (prefix + "Value 'effect' must be a string\n").c_str())) return false;
-	if (!READER_CHECK(value.HasMember("name"), (prefix + "Must have string value 'effect' (what effect does this entry use?)\n").c_str())) return false;
-	if (!READER_CHECK(value["name"].IsString(), (prefix + "Value 'name' must be a string\n").c_str())) return false;
-	if (!READER_CHECK(value.HasMember("output"), (prefix + "Must have string value 'offset' (what target are we rendering to?)\n").c_str())) return false;
-	if (!READER_CHECK(value["output"].IsString(), (prefix + "Value 'output' must be a string\n").c_str())) return false;
-	if (!READER_CHECK(!value.HasMember("input") || value["input"].IsArray(), (prefix + "Value 'input' must be an array\n").c_str())) return false;
-	if (!READER_CHECK(!value.HasMember("uniforms") || value["uniforms"].IsArray(), (prefix + "Value 'uniforms' must be an array\n").c_str())) return false;
-	if (!READER_CHECK(!value.HasMember("disablewhen") || value["disablewhen"].IsArray(), (prefix + "Value 'disablewhen' must be an array\n").c_str())) return false;
-	if (!READER_CHECK(!value.HasMember("applytint") || value["applytint"].IsBool(), (prefix + "Value 'applytint' must be a bool\n").c_str())) return false;
+	if (!READER_CHECK(value.HasMember("effect"), "%sMust have string value 'effect' (what effect does this entry use?)\n", prefix)) return false;
+	if (!READER_CHECK(value["effect"].IsString(), "%sValue 'effect' must be a string\n", prefix)) return false;
+	if (!READER_CHECK(value.HasMember("name"), "%sMust have string value 'effect' (what effect does this entry use?)\n", prefix)) return false;
+	if (!READER_CHECK(value["name"].IsString(), "%sValue 'name' must be a string\n", prefix)) return false;
+	if (!READER_CHECK(value.HasMember("output"), "%sMust have string value 'offset' (what target are we rendering to?)\n", prefix)) return false;
+	if (!READER_CHECK(value["output"].IsString(), "%sValue 'output' must be a string\n", prefix)) return false;
+	if (!READER_CHECK(!value.HasMember("input") || value["input"].IsArray(), "%sValue 'input' must be an array\n", prefix)) return false;
+	if (!READER_CHECK(!value.HasMember("uniforms") || value["uniforms"].IsArray(), "%sValue 'uniforms' must be an array\n", prefix)) return false;
+	if (!READER_CHECK(!value.HasMember("disablewhen") || value["disablewhen"].IsArray(), "%sValue 'disablewhen' must be an array\n", prefix)) return false;
+	if (!READER_CHECK(!value.HasMember("applytint") || value["applytint"].IsBool(), "%sValue 'applytint' must be a bool\n", prefix)) return false;
 	return true;
 }

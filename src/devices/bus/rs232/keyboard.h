@@ -5,8 +5,6 @@
 
 #pragma once
 
-#pragma once
-
 #include "rs232.h"
 #include "machine/keyboard.h"
 
@@ -20,9 +18,9 @@ public:
 
 	virtual ioport_constructor device_input_ports() const override;
 
-	virtual DECLARE_WRITE_LINE_MEMBER( input_txd ) override;
+	virtual void input_txd(int state) override;
 
-	DECLARE_WRITE_LINE_MEMBER(update_serial);
+	void update_serial(int state);
 
 protected:
 	serial_keyboard_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
@@ -35,7 +33,6 @@ private:
 	virtual void received_byte(uint8_t byte) override;
 
 	required_ioport m_rs232_txbaud;
-	required_ioport m_rs232_startbits;
 	required_ioport m_rs232_databits;
 	required_ioport m_rs232_parity;
 	required_ioport m_rs232_stopbits;

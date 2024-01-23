@@ -80,6 +80,10 @@
 
 DEFINE_DEVICE_TYPE(A2BUS_SLOT, a2bus_slot_device, "a2bus_slot", "Apple II Slot")
 
+template class device_finder<device_a2bus_card_interface, false>;
+template class device_finder<device_a2bus_card_interface, true>;
+
+
 //**************************************************************************
 //  LIVE DEVICE
 //**************************************************************************
@@ -148,15 +152,6 @@ a2bus_device::a2bus_device(const machine_config &mconfig, device_type type, cons
 //  device_start - device-specific startup
 //-------------------------------------------------
 
-void a2bus_device::device_resolve_objects()
-{
-	// resolve callbacks
-	m_out_irq_cb.resolve_safe();
-	m_out_nmi_cb.resolve_safe();
-	m_out_inh_cb.resolve_safe();
-	m_out_dma_cb.resolve_safe();
-}
-
 void a2bus_device::device_start()
 {
 	// clear slots
@@ -193,6 +188,18 @@ void a2bus_device::add_a2bus_card(int slot, device_a2bus_card_interface *card)
 	m_device_list[slot] = card;
 }
 
+void a2bus_device::reset_bus()
+{
+	for (int slot = 0; slot <= 7; slot++)
+	{
+		auto card = get_a2bus_card(slot);
+		if (card != nullptr)
+		{
+			card->bus_reset();
+		}
+	}
+}
+
 uint8_t a2bus_device::get_a2bus_irq_mask()
 {
 	return m_slot_irq_mask;
@@ -205,8 +212,6 @@ uint8_t a2bus_device::get_a2bus_nmi_mask()
 
 void a2bus_device::set_irq_line(int state, int slot)
 {
-	m_out_irq_cb(state);
-
 	if (state == CLEAR_LINE)
 	{
 		m_slot_irq_mask &= ~(1<<slot);
@@ -215,6 +220,8 @@ void a2bus_device::set_irq_line(int state, int slot)
 	{
 		m_slot_irq_mask |= (1<<slot);
 	}
+
+	m_out_irq_cb(state);
 }
 
 void a2bus_device::set_nmi_line(int state, int slot)
@@ -253,8 +260,8 @@ void a2bus_device::recalc_inh(int slot)
 }
 
 // interrupt request from a2bus card
-WRITE_LINE_MEMBER( a2bus_device::irq_w ) { m_out_irq_cb(state); }
-WRITE_LINE_MEMBER( a2bus_device::nmi_w ) { m_out_nmi_cb(state); }
+void a2bus_device::irq_w(int state) { m_out_irq_cb(state); }
+void a2bus_device::nmi_w(int state) { m_out_nmi_cb(state); }
 
 //**************************************************************************
 //  DEVICE CONFIG A2BUS CARD INTERFACE

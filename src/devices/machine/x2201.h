@@ -41,9 +41,9 @@ public:
 	void write(offs_t offset, u8 data);
 
 	// control lines
-	DECLARE_WRITE_LINE_MEMBER(cs_w);
-	DECLARE_WRITE_LINE_MEMBER(array_recall_w);
-	DECLARE_WRITE_LINE_MEMBER(store_w);
+	void cs_w(int state);
+	void array_recall_w(int state);
+	void store_w(int state);
 
 protected:
 	// device-level overrides
@@ -51,8 +51,8 @@ protected:
 
 	// device_nvram_interface overrides
 	virtual void nvram_default() override;
-	virtual void nvram_read(emu_file &file) override;
-	virtual void nvram_write(emu_file &file) override;
+	virtual bool nvram_read(util::read_stream &file) override;
+	virtual bool nvram_write(util::write_stream &file) override;
 
 private:
 	// optional default data

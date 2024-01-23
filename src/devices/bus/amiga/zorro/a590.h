@@ -18,7 +18,7 @@
 #include "machine/wd33c9x.h"
 
 
-namespace bus { namespace amiga { namespace zorro {
+namespace bus::amiga::zorro {
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -58,12 +58,12 @@ protected:
 	std::vector<uint8_t> m_ram;
 
 private:
-	DECLARE_READ8_MEMBER( dmac_scsi_r );
-	DECLARE_WRITE8_MEMBER( dmac_scsi_w );
-	DECLARE_WRITE_LINE_MEMBER( dmac_int_w );
-	DECLARE_WRITE_LINE_MEMBER( dmac_cfgout_w ) { cfgout_w(state); }
-	DECLARE_WRITE_LINE_MEMBER( scsi_irq_w );
-	DECLARE_WRITE_LINE_MEMBER( scsi_drq_w );
+	uint8_t dmac_scsi_r(offs_t offset);
+	void dmac_scsi_w(offs_t offset, uint8_t data);
+	void dmac_int_w(int state);
+	void dmac_cfgout_w(int state) { cfgout_w(state); }
+	void scsi_irq_w(int state);
+	void scsi_drq_w(int state);
 
 	static void scsi_devices(device_slot_interface &device) ATTR_COLD;
 	void wd33c93(device_t *device);
@@ -91,7 +91,7 @@ protected:
 	virtual void int6_w(int state) override { m_slot->int6_w(state); }
 
 	// input from slot
-	virtual DECLARE_WRITE_LINE_MEMBER( cfgin_w ) override;
+	virtual void cfgin_w(int state) override;
 
 private:
 	required_ioport m_dips;
@@ -122,7 +122,7 @@ protected:
 	virtual void int6_w(int state) override { m_slot->int6_w(state); }
 
 	// input from slot
-	virtual DECLARE_WRITE_LINE_MEMBER( cfgin_w ) override;
+	virtual void cfgin_w(int state) override;
 
 private:
 	required_ioport m_jp1;
@@ -132,7 +132,7 @@ private:
 	required_ioport m_jp201;
 };
 
-} } } // namespace bus::amiga::zorro
+} // namespace bus::amiga::zorro
 
 // device type definition
 DECLARE_DEVICE_TYPE_NS(ZORRO_A590,  bus::amiga::zorro, a590_device)

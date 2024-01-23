@@ -50,33 +50,39 @@ protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 private:
 	inline uint32_t adjusted_count() const;
+	inline void adjust_timer(attotime target);
 	void decrease_counter_value(int64_t cycles);
 	void load_counter_value();
 	void set_output(int output);
 	void simulate(int64_t elapsed_cycles);
+	TIMER_CALLBACK_MEMBER(update_tick);
 	void update();
 	uint16_t masked_value() const;
 	uint8_t read();
 	void load_count(uint16_t newcount);
 	void readback(int command);
-	void control_w(uint8_t data);
-	void count_w(uint8_t data);
-	void gate_w(int state);
+	void control_w(uint8_t data) { machine().scheduler().synchronize(timer_expired_delegate(FUNC(pit_counter_device::control_w_deferred), this), data); }
+	TIMER_CALLBACK_MEMBER(control_w_deferred);
+	void count_w(uint8_t data) { machine().scheduler().synchronize(timer_expired_delegate(FUNC(pit_counter_device::count_w_deferred), this), data); }
+	TIMER_CALLBACK_MEMBER(count_w_deferred);
+	void gate_w(int state) { machine().scheduler().synchronize(timer_expired_delegate(FUNC(pit_counter_device::gate_w_deferred), this), state); }
+	TIMER_CALLBACK_MEMBER(gate_w_deferred);
 	void set_clock_signal(int state);
 	void set_clockin(double new_clockin);
 
 	// internal state
 	int m_index;                // index number of the timer
 	double m_clockin;           // input clock frequency in Hz
+	attotime m_clock_period;    // precomputed input clock period
 	int m_clock_signal;         // clock signal when clockin is 0
 
 	attotime m_last_updated;    // time when last updated
+	attotime m_next_update;     // time of next update
 
-	emu_timer *m_updatetimer;   // MAME timer to process updates
+	emu_timer *m_update_timer;  // MAME timer to process updates
 
 	uint16_t m_value;           // current counter value ("CE" in Intel docs)
 	uint16_t m_latch;           // latched counter value ("OL" in Intel docs)
@@ -113,9 +119,9 @@ public:
 	uint8_t read(offs_t offset);
 	void write(offs_t offset, uint8_t data);
 
-	WRITE_LINE_MEMBER(write_gate0) { m_counter[0]->gate_w(state); }
-	WRITE_LINE_MEMBER(write_gate1) { m_counter[1]->gate_w(state); }
-	WRITE_LINE_MEMBER(write_gate2) { m_counter[2]->gate_w(state); }
+	void write_gate0(int state) { m_counter[0]->gate_w(state); }
+	void write_gate1(int state) { m_counter[1]->gate_w(state); }
+	void write_gate2(int state) { m_counter[2]->gate_w(state); }
 
 	/* In the 8253/8254 the CLKx input lines can be attached to a regular clock
 	 signal. Another option is to use the output from one timer as the input
@@ -127,9 +133,9 @@ public:
 	 to 0 with pit8253_set_clockin and call pit8253_clkX_w to change
 	 the state of the input CLKx signal.
 	 */
-	WRITE_LINE_MEMBER(write_clk0) { m_counter[0]->set_clock_signal(state); }
-	WRITE_LINE_MEMBER(write_clk1) { m_counter[1]->set_clock_signal(state); }
-	WRITE_LINE_MEMBER(write_clk2) { m_counter[2]->set_clock_signal(state); }
+	void write_clk0(int state) { m_counter[0]->set_clock_signal(state); }
+	void write_clk1(int state) { m_counter[1]->set_clock_signal(state); }
+	void write_clk2(int state) { m_counter[2]->set_clock_signal(state); }
 
 	void set_clockin(int timer, double new_clockin) { m_counter[timer]->set_clockin(new_clockin); }
 

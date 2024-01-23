@@ -22,24 +22,24 @@
 #include "emu.h"
 #include "evpcconn.h"
 
-DEFINE_DEVICE_TYPE_NS(TI99_EVPCCONN, bus::ti99::internal, evpc_clock_connector, "ti99_evpc_clock", "EVPC clock connector")
+DEFINE_DEVICE_TYPE(TI99_EVPCCONN, bus::ti99::internal::evpc_clock_connector, "ti99_evpc_clock", "EVPC clock connector")
 
-namespace bus { namespace ti99 { namespace internal {
+namespace bus::ti99::internal {
 
-evpc_clock_connector::evpc_clock_connector(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, TI99_EVPCCONN, tag, owner, clock),
-		m_vdpint(*this)
+evpc_clock_connector::evpc_clock_connector(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	device_t(mconfig, TI99_EVPCCONN, tag, owner, clock),
+	m_vdpint(*this)
 {
 }
 
-WRITE_LINE_MEMBER( evpc_clock_connector::vclock_line )
+void evpc_clock_connector::vclock_line(int state)
 {
 	m_vdpint(state);
 }
 
 void evpc_clock_connector::device_start()
 {
-	m_vdpint.resolve();
 }
-} } } // end namespace bus::ti99::internal
+
+} // end namespace bus::ti99::internal
 

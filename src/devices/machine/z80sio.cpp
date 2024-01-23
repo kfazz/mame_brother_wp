@@ -72,19 +72,18 @@
 //  MACROS / CONSTANTS
 //**************************************************************************
 
-//#define LOG_GENERAL (1U <<  0)
-#define LOG_SETUP   (1U <<  1)
-#define LOG_READ    (1U <<  2)
-#define LOG_INT     (1U <<  3)
-#define LOG_CMD     (1U <<  4)
-#define LOG_TX      (1U <<  5)
-#define LOG_RCV     (1U <<  6)
-#define LOG_CTS     (1U <<  7)
-#define LOG_DCD     (1U <<  8)
-#define LOG_SYNC    (1U <<  9)
-#define LOG_BIT     (1U <<  10)
-#define LOG_RTS     (1U <<  11)
-#define LOG_BRG     (1U <<  12)
+#define LOG_SETUP   (1U << 1)
+#define LOG_READ    (1U << 2)
+#define LOG_INT     (1U << 3)
+#define LOG_CMD     (1U << 4)
+#define LOG_TX      (1U << 5)
+#define LOG_RCV     (1U << 6)
+#define LOG_CTS     (1U << 7)
+#define LOG_DCD     (1U << 8)
+#define LOG_SYNC    (1U << 9)
+#define LOG_BIT     (1U << 10)
+#define LOG_RTS     (1U << 11)
+#define LOG_BRG     (1U << 12)
 
 //#define VERBOSE  (LOG_CMD | LOG_SETUP | LOG_SYNC | LOG_BIT | LOG_TX )
 //#define LOG_OUTPUT_STREAM std::cout
@@ -456,24 +455,6 @@ void z80sio_device::device_validity_check(validity_checker &valid) const
 }
 
 //-------------------------------------------------
-//  device_resolve_objects - device-specific setup
-//-------------------------------------------------
-void z80sio_device::device_resolve_objects()
-{
-	LOG("%s\n", FUNCNAME);
-
-	// resolve callbacks
-	m_out_txd_cb.resolve_all_safe();
-	m_out_dtr_cb.resolve_all_safe();
-	m_out_rts_cb.resolve_all_safe();
-	m_out_wrdy_cb.resolve_all_safe();
-	m_out_sync_cb.resolve_all_safe();
-	m_out_int_cb.resolve_safe();
-	m_out_rxdrq_cb.resolve_all_safe();
-	m_out_txdrq_cb.resolve_all_safe();
-}
-
-//-------------------------------------------------
 //  device_start - device-specific startup
 //-------------------------------------------------
 void z80sio_device::device_start()
@@ -506,7 +487,7 @@ int z80sio_device::z80daisy_irq_state()
 
 	// loop over all interrupt sources
 	int state = 0;
-	for (int i = 0; ARRAY_LENGTH(m_int_state) > i; ++i)
+	for (int i = 0; std::size(m_int_state) > i; ++i)
 	{
 		// if we're servicing a request, don't indicate more interrupts
 		if (m_int_state[prio[i]] & Z80_DAISY_IEO)
@@ -531,7 +512,7 @@ int z80sio_device::z80daisy_irq_ack()
 
 	// loop over all interrupt sources
 	int const *const prio = interrupt_priorities();
-	for (int i = 0; ARRAY_LENGTH(m_int_state) > i; ++i)
+	for (int i = 0; std::size(m_int_state) > i; ++i)
 	{
 		// find the first channel with an interrupt requested
 		if (m_int_state[prio[i]] & Z80_DAISY_INT)
@@ -597,7 +578,7 @@ int i8274_device::z80daisy_irq_ack()
 	{
 		// loop over all interrupt sources
 		int const *const prio = interrupt_priorities();
-		for (int i = 0; ARRAY_LENGTH(m_int_state) > i; ++i)
+		for (int i = 0; std::size(m_int_state) > i; ++i)
 		{
 			// find the first channel with an interrupt requested
 			if (m_int_state[prio[i]] & Z80_DAISY_INT)
@@ -711,7 +692,7 @@ void z80sio_device::return_from_interrupt()
 {
 	// loop over all interrupt sources
 	int const *const prio = interrupt_priorities();
-	for (int i = 0; ARRAY_LENGTH(m_int_state) > i; ++i)
+	for (int i = 0; std::size(m_int_state) > i; ++i)
 	{
 		// find the first channel with an interrupt requested
 		if (m_int_state[prio[i]] & (Z80_DAISY_IEO))
@@ -741,7 +722,7 @@ uint8_t z80sio_device::read_vector()
 	// modify vector for highest-priority pending interrupt
 	int const *const prio = interrupt_priorities();
 	vec &= 0xf1U;
-	for (int i = 0; ARRAY_LENGTH(m_int_state) > i; ++i)
+	for (int i = 0; std::size(m_int_state) > i; ++i)
 	{
 		if (m_int_state[prio[i]] & Z80_DAISY_INT)
 		{
@@ -797,7 +778,7 @@ uint8_t i8274_device::read_vector()
 
 	// modify vector for highest-priority pending interrupt
 	int const *const prio = interrupt_priorities();
-	for (int i = 0; ARRAY_LENGTH(m_int_state) > i; ++i)
+	for (int i = 0; std::size(m_int_state) > i; ++i)
 	{
 		if (m_int_state[prio[i]] & Z80_DAISY_INT)
 		{
@@ -1087,7 +1068,7 @@ void mk68564_channel::device_start()
 {
 	z80sio_channel::device_start();
 
-	m_brg_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(mk68564_channel::brg_timeout), this));
+	m_brg_timer = timer_alloc(FUNC(mk68564_channel::brg_timeout), this);
 
 	save_item(NAME(m_tx_auto_enable));
 	save_item(NAME(m_brg_tc));
@@ -2307,7 +2288,7 @@ void z80sio_channel::queue_received(uint16_t data, uint32_t error)
 //-------------------------------------------------
 //  cts_w - clear to send handler
 //-------------------------------------------------
-WRITE_LINE_MEMBER( z80sio_channel::cts_w )
+void z80sio_channel::cts_w(int state)
 {
 	if (bool(m_cts) != bool(state))
 	{
@@ -2325,7 +2306,7 @@ WRITE_LINE_MEMBER( z80sio_channel::cts_w )
 //-------------------------------------------------
 //  dcd_w - data carrier detected handler
 //-------------------------------------------------
-WRITE_LINE_MEMBER( z80sio_channel::dcd_w )
+void z80sio_channel::dcd_w(int state)
 {
 	if (bool(m_dcd) != bool(state))
 	{
@@ -2345,7 +2326,7 @@ WRITE_LINE_MEMBER( z80sio_channel::dcd_w )
 //-------------------------------------------------
 //  sh_w - Sync Hunt handler
 //-------------------------------------------------
-WRITE_LINE_MEMBER( z80sio_channel::sync_w )
+void z80sio_channel::sync_w(int state)
 {
 	if (bool(m_sync) != bool(state))
 	{
@@ -2363,7 +2344,7 @@ WRITE_LINE_MEMBER( z80sio_channel::sync_w )
 //-------------------------------------------------
 //  rxc_w - receive clock
 //-------------------------------------------------
-WRITE_LINE_MEMBER( z80sio_channel::rxc_w )
+void z80sio_channel::rxc_w(int state)
 {
 	//LOG("Z80SIO \"%s\" Channel %c : Receiver Clock Pulse\n", owner()->tag(), m_index + 'A');
 	//if ((receive_allowed() || m_rx_bit != 0) && state && !m_rx_clock)
@@ -2488,7 +2469,7 @@ WRITE_LINE_MEMBER( z80sio_channel::rxc_w )
 //-------------------------------------------------
 //  txc_w - transmit clock
 //-------------------------------------------------
-WRITE_LINE_MEMBER( z80sio_channel::txc_w )
+void z80sio_channel::txc_w(int state)
 {
 	//LOG("Z80SIO \"%s\" Channel %c : Transmitter Clock Pulse\n", owner()->tag(), m_index + 'A');
 	if (!state && m_tx_clock)

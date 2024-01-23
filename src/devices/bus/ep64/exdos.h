@@ -12,7 +12,6 @@
 #pragma once
 
 #include "exp.h"
-#include "formats/ep64_dsk.h"
 #include "imagedev/floppy.h"
 #include "machine/wd_fdc.h"
 
@@ -31,8 +30,8 @@ public:
 	// construction/destruction
 	ep64_exdos_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER( read );
-	DECLARE_WRITE8_MEMBER( write );
+	uint8_t read();
+	void write(uint8_t data);
 
 protected:
 	// device-level overrides
@@ -44,14 +43,11 @@ protected:
 	virtual void device_add_mconfig(machine_config &config) override;
 
 private:
-	DECLARE_FLOPPY_FORMATS( floppy_formats );
+	static void floppy_formats(format_registration &fr);
 
 	required_device<wd1770_device> m_fdc;
-	required_device<floppy_connector> m_floppy0;
-	required_device<floppy_connector> m_floppy1;
-	required_device<floppy_connector> m_floppy2;
-	required_device<floppy_connector> m_floppy3;
-	floppy_image_device *m_floppy;
+	required_device_array<floppy_connector, 4> m_floppy;
+	floppy_image_device *m_selected_floppy;
 	required_memory_region m_rom;
 };
 

@@ -305,6 +305,9 @@ protected:
 	const address_space_config m_program_config;
 	const address_space_config m_io_config;
 	address_space *m_program;
+	memory_access<32, 1, 0, ENDIANNESS_BIG>::cache m_cache16;
+	memory_access<32, 2, 0, ENDIANNESS_BIG>::cache m_cache32;
+
 	std::function<u16 (offs_t)> m_pr16;
 	std::function<const void * (offs_t)> m_prptr;
 	address_space *m_io;
@@ -334,6 +337,10 @@ private:
 
 	uint32_t get_global_register(uint8_t code);
 
+	// words interpreted as pairs of signed half-words (HS)
+	static int get_lhs(uint32_t val) { return int16_t(val & 0xffff); }
+	static int get_rhs(uint32_t val) { return int16_t(val >> 16); }
+
 	uint32_t get_emu_code_addr(uint8_t num);
 	int32_t get_instruction_length(uint16_t op);
 
@@ -350,6 +357,9 @@ private:
 	void execute_int(uint32_t addr);
 	void execute_exception(uint32_t addr);
 	void execute_software();
+
+	template <reg_bank DST_GLOBAL> uint64_t get_double_word(uint8_t dst_code, uint8_t dstf_code) const;
+	template <reg_bank DST_GLOBAL> void set_double_word(uint8_t dst_code, uint8_t dstf_code, uint64_t val);
 
 	template <reg_bank DST_GLOBAL, reg_bank SRC_GLOBAL> void hyperstone_chk();
 	template <reg_bank DST_GLOBAL, reg_bank SRC_GLOBAL> void hyperstone_movd();

@@ -110,7 +110,7 @@ msm5832_device::msm5832_device(const machine_config &mconfig, const char *tag, d
 void msm5832_device::device_start()
 {
 	// allocate timers
-	m_clock_timer = timer_alloc(TIMER_CLOCK);
+	m_clock_timer = timer_alloc(FUNC(msm5832_device::clock_tick), this);
 	m_clock_timer->adjust(attotime::from_hz(clock() / 32768), 0, attotime::from_hz(clock() / 32768));
 
 	// state saving
@@ -125,19 +125,14 @@ void msm5832_device::device_start()
 
 
 //-------------------------------------------------
-//  device_timer - handler timer events
+//  clock_tick - advance the RTC if enabled
 //-------------------------------------------------
 
-void msm5832_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(msm5832_device::clock_tick)
 {
-	switch (id)
+	if (!m_hold)
 	{
-	case TIMER_CLOCK:
-		if (!m_hold)
-		{
-			advance_seconds();
-		}
-		break;
+		advance_seconds();
 	}
 }
 
@@ -217,7 +212,7 @@ void msm5832_device::address_w(uint8_t data)
 //  adj_w -
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( msm5832_device::adj_w )
+void msm5832_device::adj_w(int state)
 {
 	LOG("MSM5832 30 ADJ: %u\n", state);
 
@@ -232,7 +227,7 @@ WRITE_LINE_MEMBER( msm5832_device::adj_w )
 //  test_w -
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( msm5832_device::test_w )
+void msm5832_device::test_w(int state)
 {
 	LOG("MSM5832 TEST: %u\n", state);
 }
@@ -242,7 +237,7 @@ WRITE_LINE_MEMBER( msm5832_device::test_w )
 //  hold_w -
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( msm5832_device::hold_w )
+void msm5832_device::hold_w(int state)
 {
 	LOG("MSM5832 HOLD: %u\n", state);
 
@@ -254,7 +249,7 @@ WRITE_LINE_MEMBER( msm5832_device::hold_w )
 //  read_w -
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( msm5832_device::read_w )
+void msm5832_device::read_w(int state)
 {
 	LOG("MSM5832 READ: %u\n", state);
 
@@ -266,7 +261,7 @@ WRITE_LINE_MEMBER( msm5832_device::read_w )
 //  write_w -
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( msm5832_device::write_w )
+void msm5832_device::write_w(int state)
 {
 	if (m_write == state)
 		return;
@@ -296,7 +291,7 @@ WRITE_LINE_MEMBER( msm5832_device::write_w )
 //  cs_w -
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( msm5832_device::cs_w )
+void msm5832_device::cs_w(int state)
 {
 	LOG("MSM5832 CS: %u\n", state);
 

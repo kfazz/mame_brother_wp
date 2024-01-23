@@ -312,7 +312,7 @@ Exidy's 'Victory' and 'Victor Banana' (need verify for both)
     Pinball: Several (don't know names offhand, have not checked schematics; likely Zaccaria's 'Farfalla')
     Home computer: Street Electronics Corp.'s Apple II 'Echo 2' Speech
 synthesizer (later cards only); Texas Instruments' 'Speak and Learn'
-scanner wand unit.
+scanner wand unit; HP 27201A Speech Output Module (serial port connection).
 
 TMS5220C AKA TSP5220C: (on stuff made from 1984 to 1992 or so)
     Arcade: Atari's 'Indiana Jones and the Temple of Doom', '720',
@@ -368,37 +368,35 @@ emulating the tms5220 in MCU code). Look for a 16-pin chip at U6 labeled
 
 
 /* *****debugging defines***** */
-// general, somewhat obsolete, catch all for debugs which don't fit elsewhere
-#define LOG_GENERAL (1 << 0)
-/* 5220 only; above dumps the data written to the tms52xx to stdout, useful
+/* 5220 only; above dumps the data written to the tms52xx to the error log, useful
    for making logged data dumps for real hardware tests */
-#define LOG_DUMP_INPUT_DATA (1 << 1)
+#define LOG_DUMP_INPUT_DATA (1U << 1)
 // 5220 only; above debugs FIFO stuff: writes, reads and flag updates
-#define LOG_FIFO (1 << 2)
+#define LOG_FIFO (1U << 2)
 // dumps each speech frame as binary
-#define LOG_PARSE_FRAME_DUMP_BIN (1 << 3)
+#define LOG_PARSE_FRAME_DUMP_BIN (1U << 3)
 // dumps each speech frame as hex
-#define LOG_PARSE_FRAME_DUMP_HEX (1 << 4)
+#define LOG_PARSE_FRAME_DUMP_HEX (1U << 4)
 // dumps info if a frame ran out of data
-#define LOG_FRAME_ERRORS (1 << 6)
+#define LOG_FRAME_ERRORS (1U << 6)
 // dumps all non-speech-data command writes
-#define LOG_COMMAND_DUMP (1 << 7)
+#define LOG_COMMAND_DUMP (1U << 7)
 // dumps decoded info about command writes
-#define LOG_COMMAND_VERBOSE (1 << 8)
-// spams the errorlog with i/o ready messages whenever the ready or irq pin is read
-#define LOG_PIN_READS (1 << 9)
+#define LOG_COMMAND_VERBOSE (1U << 8)
+// spams the error log with i/o ready messages whenever the ready or irq pin is read
+#define LOG_PIN_READS (1U << 9)
 // dumps debug information related to the sample generation loop, i.e. whether interpolation is inhibited or not, and what the current and target values for each frame are.
-#define LOG_GENERATION (1 << 10)
+#define LOG_GENERATION (1U << 10)
 // dumps MUCH MORE debug information related to the sample generation loop, namely the excitation, energy, pitch, k*, and output values for EVERY SINGLE SAMPLE during a frame.
-#define LOG_GENERATION_VERBOSE (1 << 11)
+#define LOG_GENERATION_VERBOSE (1U << 11)
 // dumps the lattice filter state data each sample.
-#define LOG_LATTICE (1 << 12)
-// dumps info to stderr whenever the analog clip hardware is (or would be) clipping the signal.
-#define LOG_CLIP (1 << 13)
+#define LOG_LATTICE (1U << 12)
+// dumps info to the error log whenever the analog clip hardware is (or would be) clipping the signal.
+#define LOG_CLIP (1U << 13)
 // debugs the io ready callback timer
-#define LOG_IO_READY (1 << 14)
+#define LOG_IO_READY (1U << 14)
 // debugs the tms5220_data_r and data_w access methods which actually respect rs and ws
-#define LOG_RS_WS (1 << 15)
+#define LOG_RS_WS (1U << 15)
 
 //#define VERBOSE (LOG_GENERAL | LOG_DUMP_INPUT_DATA | LOG_FIFO | LOG_PARSE_FRAME_DUMP_HEX | LOG_FRAME_ERRORS | LOG_COMMAND_DUMP | LOG_COMMAND_VERBOSE | LOG_PIN_READS | LOG_GENERATION | LOG_GENERATION_VERBOSE | LOG_LATTICE | LOG_CLIP | LOG_IO_READY | LOG_RS_WS)
 #include "logmacro.h"
@@ -570,13 +568,10 @@ void tms5220_device::printbits(long data, int num)
 ***********************************************************************************************/
 void tms5220_device::new_int_write(uint8_t rc, uint8_t m0, uint8_t m1, uint8_t addr)
 {
-	if (!m_m0_cb.isnull())
-		m_m0_cb(m0);
-	if (!m_m1_cb.isnull())
-		m_m1_cb(m1);
-	if (!m_addr_cb.isnull())
-		m_addr_cb((offs_t)0, addr);
-	if (!m_romclk_cb.isnull())
+	m_m0_cb(m0);
+	m_m1_cb(m1);
+	m_addr_cb(offs_t(0), addr);
+	if (!m_romclk_cb.isunset())
 	{
 		//printf("rc %d\n", rc);
 		m_romclk_cb(rc);
@@ -607,9 +602,9 @@ uint8_t tms5220_device::new_int_read()
 	new_int_write(0, 1, 0, 0); // romclk 0, m0 1, m1 0, addr bus nybble = 0/open bus
 	new_int_write(1, 0, 0, 0); // romclk 1, m0 0, m1 0, addr bus nybble = 0/open bus
 	new_int_write(0, 0, 0, 0); // romclk 0, m0 0, m1 0, addr bus nybble = 0/open bus
-	if (!m_data_cb.isnull())
+	if (!m_data_cb.isunset())
 		return m_data_cb();
-	LOGMASKED(LOG_GENERAL, "WARNING: CALLBACK MISSING, RETURNING 0!\n");
+	LOG("WARNING: CALLBACK MISSING, RETURNING 0!\n");
 	return 0;
 }
 
@@ -741,7 +736,7 @@ void tms5220_device::update_fifo_status_and_ints()
 	// also, in this case, regardless if DDIS was set, unset it.
 	if (m_previous_talk_status && !talk_status())
 	{
-		LOGMASKED(LOG_GENERAL, "Talk status WAS 1, is now 0, unsetting DDIS and firing an interrupt!\n");
+		LOG("Talk status WAS 1, is now 0, unsetting DDIS and firing an interrupt!\n");
 		set_interrupt_state(1);
 		m_DDIS = false;
 	}
@@ -789,7 +784,7 @@ int tms5220_device::extract_bits(int count)
 		while (count--)
 		{
 			val = (val << 1) | new_int_read();
-			LOGMASKED(LOG_GENERAL, "bit read: %d\n", val&1);
+			LOG("bit read: %d\n", val&1);
 		}
 #endif
 	}
@@ -802,7 +797,7 @@ void tms5220_device::perform_dummy_read()
 	if (m_schedule_dummy_read)
 	{
 		int data = new_int_read();
-		LOGMASKED(LOG_GENERAL, "TMS5110 performing dummy read; value read = %1i\n", data & 1);
+		LOG("TMS5110 performing dummy read; value read = %1i\n", data & 1);
 		m_schedule_dummy_read = false;
 	}
 }
@@ -886,7 +881,7 @@ void tms5220_device::process(int16_t *buffer, unsigned int size)
 	int i, bitout;
 	int32_t this_sample;
 
-	LOGMASKED(LOG_GENERAL, "process called with size of %d; IP=%d, PC=%d, subcycle=%d, m_SPEN=%d, m_TALK=%d, m_TALKD=%d\n", size, m_IP, m_PC, m_subcycle, m_SPEN, m_TALK, m_TALKD);
+	LOG("process called with size of %d; IP=%d, PC=%d, subcycle=%d, m_SPEN=%d, m_TALK=%d, m_TALKD=%d\n", size, m_IP, m_PC, m_subcycle, m_SPEN, m_TALK, m_TALKD);
 
 	/* loop until the buffer is full or we've stopped speaking */
 	while (size > 0)
@@ -1219,8 +1214,8 @@ int32_t tms5220_device::matrix_multiply(int32_t a, int32_t b) const
 	while (b>16383) { b-=32768; }
 	while (b<-16384) { b+=32768; }
 	result = ((a*b)>>9); /** TODO: this isn't technically right to the chip, which truncates the lowest result bit, but it causes glitches otherwise. **/
-	if (result>16383) LOGMASKED(LOG_GENERAL, "matrix multiplier overflowed! a: %x, b: %x, result: %x", a, b, result);
-	if (result<-16384) LOGMASKED(LOG_GENERAL, "matrix multiplier underflowed! a: %x, b: %x, result: %x", a, b, result);
+	if (result>16383) LOG("matrix multiplier overflowed! a: %x, b: %x, result: %x", a, b, result);
+	if (result<-16384) LOG("matrix multiplier underflowed! a: %x, b: %x, result: %x", a, b, result);
 	return result;
 }
 
@@ -1542,9 +1537,9 @@ void tms5220_device::parse_frame()
 	LOGMASKED(LOG_PARSE_FRAME_DUMP_BIN | LOG_PARSE_FRAME_DUMP_HEX, "\n");
 
 	if (m_DDIS)
-		LOGMASKED(LOG_GENERAL, "Parsed a frame successfully in FIFO - %d bits remaining\n", (m_fifo_count*8)-(m_fifo_bits_taken));
+		LOG("Parsed a frame successfully in FIFO - %d bits remaining\n", (m_fifo_count*8)-(m_fifo_bits_taken));
 	else
-		LOGMASKED(LOG_GENERAL, "Parsed a frame successfully in ROM\n");
+		LOG("Parsed a frame successfully in ROM\n");
 	return;
 
 	ranout:
@@ -1564,9 +1559,11 @@ void tms5220_device::set_interrupt_state(int state)
 
 	LOGMASKED(LOG_PIN_READS, "irq pin set to state %d\n", state);
 
-	if (!m_irq_handler.isnull() && state != m_irq_pin)
+	if (state != m_irq_pin)
+	{
+		m_irq_pin = state;
 		m_irq_handler(!state);
-	m_irq_pin = state;
+	}
 }
 
 /**********************************************************************************************
@@ -1581,8 +1578,7 @@ void tms5220_device::update_ready_state()
 	if (m_ready_pin != state)
 	{
 		LOGMASKED(LOG_PIN_READS, "ready pin set to state %d\n", state);
-		if (!m_readyq_handler.isnull())
-			m_readyq_handler(!state);
+		m_readyq_handler(!state);
 		m_ready_pin = state;
 	}
 }
@@ -1639,19 +1635,10 @@ void tms5220_device::device_start()
 		fatalerror("Unknown variant in tms5220_set_variant\n");
 	}
 
-	/* resolve callbacks */
-	m_irq_handler.resolve();
-	m_readyq_handler.resolve();
-	m_m0_cb.resolve();
-	m_m1_cb.resolve();
-	m_romclk_cb.resolve();
-	m_addr_cb.resolve();
-	m_data_cb.resolve();
-
 	/* initialize a stream */
-	m_stream = machine().sound().stream_alloc(*this, 0, 1, clock() / 80);
+	m_stream = stream_alloc(0, 1, clock() / 80);
 
-	m_timer_io_ready = timer_alloc(0);
+	m_timer_io_ready = timer_alloc(FUNC(tms5220_device::set_io_ready), this);
 
 	/* not during reset which is called from within a write! */
 	m_io_ready = true;
@@ -1724,68 +1711,57 @@ void tms5220_device::device_reset()
 	m_next_is_address = false;
 	m_addr_bit = 0;
 	m_CTL_buffer = 0;
-
 }
 
-/**********************************************************************************************
-
-     True timing
-
-***********************************************************************************************/
-
-void tms5220_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(tms5220_device::set_io_ready)
 {
-	switch(id)
+	/* bring up to date first */
+	m_stream->update();
+	LOGMASKED(LOG_IO_READY, "m_timer_io_ready timer fired, param = %02x, m_rs_ws = %02x\n", param, m_rs_ws);
+	if (param) // low->high ready state
 	{
-	case 0: // m_timer_io_ready
-		/* bring up to date first */
-		m_stream->update();
-		LOGMASKED(LOG_IO_READY, "m_timer_io_ready timer fired, param = %02x, m_rs_ws = %02x\n", param, m_rs_ws);
-		if (param) // low->high ready state
+		switch (m_rs_ws)
 		{
-			switch (m_rs_ws)
+		case 0x02:
+			/* Write */
+			LOGMASKED(LOG_IO_READY, "m_timer_io_ready: Attempting to service write...\n");
+			if ((m_fifo_count >= FIFO_SIZE) && m_DDIS) // if FIFO is full and we're in speak external mode
 			{
-			case 0x02:
-				/* Write */
-				LOGMASKED(LOG_IO_READY, "m_timer_io_ready: Attempting to service write...\n");
-				if ((m_fifo_count >= FIFO_SIZE) && m_DDIS) // if FIFO is full and we're in speak external mode
-				{
-					LOGMASKED(LOG_IO_READY, "m_timer_io_ready: in SPKEXT and FIFO was full! cannot service write now, delaying 16 cycles...\n");
-					m_timer_io_ready->adjust(clocks_to_attotime(16), 1);
-					break;
-				}
-				else
-				{
-					LOGMASKED(LOG_IO_READY, "m_timer_io_ready: Serviced write: %02x\n", m_write_latch);
-					data_write(m_write_latch);
-					m_io_ready = param;
-					break;
-				}
-			case 0x01:
-				/* Read */
-				m_read_latch = status_read(true);
-				LOGMASKED(LOG_IO_READY, "m_timer_io_ready: Serviced read, returning %02x\n", m_read_latch);
-				m_io_ready = param;
+				LOGMASKED(LOG_IO_READY, "m_timer_io_ready: in SPKEXT and FIFO was full! cannot service write now, delaying 16 cycles...\n");
+				m_timer_io_ready->adjust(clocks_to_attotime(16), 1);
 				break;
-			case 0x03:
-				/* High Impedance */
-				m_io_ready = param;
-			case 0x00:
-				/* illegal */
+			}
+			else
+			{
+				LOGMASKED(LOG_IO_READY, "m_timer_io_ready: Serviced write: %02x\n", m_write_latch);
+				data_write(m_write_latch);
 				m_io_ready = param;
 				break;
 			}
+		case 0x01:
+			/* Read */
+			m_read_latch = status_read(true);
+			LOGMASKED(LOG_IO_READY, "m_timer_io_ready: Serviced read, returning %02x\n", m_read_latch);
+			m_io_ready = param;
+			break;
+		case 0x03:
+			/* High Impedance */
+			m_io_ready = param;
+			break;
+		case 0x00:
+			/* illegal */
+			m_io_ready = param;
+			break;
 		}
-
-		update_ready_state();
-		break;
 	}
+
+	update_ready_state();
 }
 
 /*
  * /RS line write handler
  */
-WRITE_LINE_MEMBER( tms5220_device::rsq_w )
+void tms5220_device::rsq_w(int state)
 {
 	m_true_timing = true;
 	state &= 0x01;
@@ -1832,7 +1808,7 @@ WRITE_LINE_MEMBER( tms5220_device::rsq_w )
 /*
  * /WS line write handler
  */
-WRITE_LINE_MEMBER( tms5220_device::wsq_w )
+void tms5220_device::wsq_w(int state)
 {
 	m_true_timing = true;
 	state &= 0x01;
@@ -1851,7 +1827,7 @@ WRITE_LINE_MEMBER( tms5220_device::wsq_w )
 				LOGMASKED(LOG_RS_WS, "tms5220_wsq_w: illegal\n");
 			return;
 		}
-		else if ( new_val == 3)
+		else if (new_val == 3)
 		{
 			/* high impedance */
 			m_read_latch = 0xff;
@@ -2019,7 +1995,7 @@ uint8_t tms5220_device::status_r()
 
 ***********************************************************************************************/
 
-READ_LINE_MEMBER( tms5220_device::readyq_r )
+int tms5220_device::readyq_r()
 {
 	// prevent debugger from changing the internal state
 	if (!machine().side_effects_disabled())
@@ -2035,7 +2011,7 @@ READ_LINE_MEMBER( tms5220_device::readyq_r )
 
 ***********************************************************************************************/
 
-READ_LINE_MEMBER( tms5220_device::intq_r )
+int tms5220_device::intq_r()
 {
 	// prevent debugger from changing the internal state
 	if (!machine().side_effects_disabled())
@@ -2055,24 +2031,20 @@ READ_LINE_MEMBER( tms5220_device::intq_r )
 //  sound_stream_update - handle a stream update
 //-------------------------------------------------
 
-void tms5220_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void tms5220_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
 	int16_t sample_data[MAX_SAMPLE_CHUNK];
-	stream_sample_t *buffer = outputs[0];
+	auto &output = outputs[0];
 
 	/* loop while we still have samples to generate */
-	while (samples)
+	for (int sampindex = 0; sampindex < output.samples(); )
 	{
-		int length = (samples > MAX_SAMPLE_CHUNK) ? MAX_SAMPLE_CHUNK : samples;
-		int index;
+		int length = (output.samples() > MAX_SAMPLE_CHUNK) ? MAX_SAMPLE_CHUNK : output.samples();
 
 		/* generate the samples and copy to the target buffer */
 		process(sample_data, length);
-		for (index = 0; index < length; index++)
-			*buffer++ = sample_data[index];
-
-		/* account for the samples */
-		samples -= length;
+		for (int index = 0; index < length; index++)
+			output.put_int(sampindex++, sample_data[index], 32768);
 	}
 }
 
@@ -2118,7 +2090,7 @@ tms5220_device::tms5220_device(const machine_config &mconfig, device_type type, 
 	, m_m0_cb(*this)
 	, m_m1_cb(*this)
 	, m_addr_cb(*this)
-	, m_data_cb(*this)
+	, m_data_cb(*this, 0)
 	, m_romclk_cb(*this)
 {
 }

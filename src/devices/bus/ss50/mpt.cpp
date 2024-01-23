@@ -35,12 +35,11 @@ protected:
 	virtual void register_write(offs_t offset, u8 data) override;
 
 private:
-	DECLARE_WRITE8_MEMBER(pia_b_w);
-	DECLARE_READ8_MEMBER(pia_cb1_r);
-	DECLARE_WRITE_LINE_MEMBER(pia_irq_b);
+	void pia_b_w(uint8_t data);
+	void pia_irq_b(int state);
 	TIMER_CALLBACK_MEMBER(mpt_timer_callback);
-	DECLARE_WRITE_LINE_MEMBER(pia_irqa_w);
-	DECLARE_WRITE_LINE_MEMBER(pia_irqb_w);
+	void pia_irqa_w(int state);
+	void pia_irqb_w(int state);
 
 	required_device<pia6821_device> m_pia;
 	required_ioport m_irqa_jumper;
@@ -81,16 +80,16 @@ ioport_constructor ss50_mpt_device::device_input_ports() const
 
 void ss50_mpt_device::device_add_mconfig(machine_config &config)
 {
-	PIA6821(config, m_pia, 0);
+	PIA6821(config, m_pia);
 	m_pia->writepb_handler().set(FUNC(ss50_mpt_device::pia_b_w));
-	m_pia->readcb1_handler().set(FUNC(ss50_mpt_device::pia_cb1_r));
+	m_pia->cb1_w(0);
 	m_pia->irqa_handler().set(FUNC(ss50_mpt_device::pia_irqa_w));
 	m_pia->irqb_handler().set(FUNC(ss50_mpt_device::pia_irqb_w));
 }
 
 void ss50_mpt_device::device_start()
 {
-	m_mpt_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(ss50_mpt_device::mpt_timer_callback),this));
+	m_mpt_timer = timer_alloc(FUNC(ss50_mpt_device::mpt_timer_callback), this);
 	m_mpt_timer_state = 0;
 
 	save_item(NAME(m_mpt_timer_state));
@@ -115,7 +114,7 @@ void ss50_mpt_device::register_write(offs_t offset, u8 data)
 }
 
 
-WRITE8_MEMBER(ss50_mpt_device::pia_b_w)
+void ss50_mpt_device::pia_b_w(uint8_t data)
 {
 	if (data & 0x80)
 	{
@@ -171,11 +170,6 @@ WRITE8_MEMBER(ss50_mpt_device::pia_b_w)
 	m_mpt_timer->enable(true);
 }
 
-READ8_MEMBER(ss50_mpt_device::pia_cb1_r)
-{
-	return m_mpt_timer_state;
-}
-
 TIMER_CALLBACK_MEMBER(ss50_mpt_device::mpt_timer_callback)
 {
 	m_mpt_timer_state = !m_mpt_timer_state;
@@ -184,13 +178,13 @@ TIMER_CALLBACK_MEMBER(ss50_mpt_device::mpt_timer_callback)
 	m_mpt_timer->enable(true);
 }
 
-WRITE_LINE_MEMBER(ss50_mpt_device::pia_irqa_w)
+void ss50_mpt_device::pia_irqa_w(int state)
 {
 	if (m_irqa_jumper->read())
 		write_irq(state);
 }
 
-WRITE_LINE_MEMBER(ss50_mpt_device::pia_irqb_w)
+void ss50_mpt_device::pia_irqb_w(int state)
 {
 	if (m_irqb_jumper->read())
 		write_irq(state);

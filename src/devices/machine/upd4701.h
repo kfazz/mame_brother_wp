@@ -39,14 +39,14 @@ public:
 	auto sf_cb() { return m_sf_cb.bind(); }
 	auto open_bus_cb() { return m_open_bus_cb.bind(); }
 
-	void x_add(s16 data);
-	void y_add(s16 data);
+	void update();
+	void recalibrate();
 
-	DECLARE_WRITE_LINE_MEMBER(cs_w);
-	DECLARE_WRITE_LINE_MEMBER(xy_w);
-	DECLARE_WRITE_LINE_MEMBER(ul_w);
-	DECLARE_WRITE_LINE_MEMBER(resetx_w);
-	DECLARE_WRITE_LINE_MEMBER(resety_w);
+	void cs_w(int state);
+	void xy_w(int state);
+	void ul_w(int state);
+	void resetx_w(int state);
+	void resety_w(int state);
 	u8 reset_x_r();
 	void reset_x_w(u8 data);
 	u8 reset_y_r();
@@ -59,12 +59,12 @@ public:
 	u8 read_y(offs_t offset);
 	u8 read_xy(offs_t offset);
 
-	DECLARE_WRITE_LINE_MEMBER(left_w);
-	DECLARE_WRITE_LINE_MEMBER(right_w);
-	DECLARE_WRITE_LINE_MEMBER(middle_w);
+	void left_w(int state);
+	void right_w(int state);
+	void middle_w(int state);
 
-	DECLARE_READ_LINE_MEMBER(cf_r);
-	DECLARE_READ_LINE_MEMBER(sf_r);
+	int cf_r();
+	int sf_r();
 
 protected:
 	// device-level overrides
@@ -72,7 +72,8 @@ protected:
 
 private:
 	// internal helpers
-	void analog_update();
+	void x_add(s16 data);
+	void y_add(s16 data);
 	void switch_update(u8 mask, bool state);
 
 	// control lines
@@ -91,6 +92,8 @@ private:
 	s16 m_starty;
 	s16 m_x;
 	s16 m_y;
+	u16 m_last_x_read;
+	u16 m_last_y_read;
 
 	// switch state
 	u8 m_switches;

@@ -50,10 +50,9 @@
 #include "machine/mc14411.h"
 #include "machine/6821pia.h"
 
-//#define LOG_GENERAL (1U <<  0)
-#define LOG_SETUP   (1U <<  1)
-#define LOG_PIA     (1U <<  2)
-#define LOG_ACIA    (1U <<  3)
+#define LOG_SETUP   (1U << 1)
+#define LOG_PIA     (1U << 2)
+#define LOG_ACIA    (1U << 3)
 
 //#define VERBOSE (LOG_PIA) // (LOG_PIA | LOG_GENERAL | LOG_SETUP)
 //#define LOG_OUTPUT_STREAM std::cout
@@ -95,29 +94,29 @@ namespace
 	{
 	public:
 		// construction/destruction
-		coco_t4426_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+		coco_t4426_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
 
 		// optional information overrides
 		virtual void device_add_mconfig(machine_config &config) override;
 		virtual const tiny_rom_entry *device_rom_region() const override;
 		virtual ioport_constructor device_input_ports() const override;
 
-		virtual uint8_t* get_cart_base() override;
-		DECLARE_WRITE8_MEMBER(pia_A_w);
+		virtual u8 *get_cart_base() override;
+		void pia_A_w(u8 data);
 
 		// Clocks
 		void write_acia_clocks(int id, int state);
-		DECLARE_WRITE_LINE_MEMBER (write_f1_clock){ write_acia_clocks(mc14411_device::TIMER_F1, state); }
-		DECLARE_WRITE_LINE_MEMBER (write_f3_clock){ write_acia_clocks(mc14411_device::TIMER_F3, state); }
-		DECLARE_WRITE_LINE_MEMBER (write_f5_clock){ write_acia_clocks(mc14411_device::TIMER_F5, state); }
-		DECLARE_WRITE_LINE_MEMBER (write_f7_clock){ write_acia_clocks(mc14411_device::TIMER_F7, state); }
-		DECLARE_WRITE_LINE_MEMBER (write_f8_clock){ write_acia_clocks(mc14411_device::TIMER_F8, state); }
-		DECLARE_WRITE_LINE_MEMBER (write_f9_clock){ write_acia_clocks(mc14411_device::TIMER_F9, state); }
-		DECLARE_WRITE_LINE_MEMBER (write_f11_clock){ write_acia_clocks(mc14411_device::TIMER_F11, state); }
-		DECLARE_WRITE_LINE_MEMBER (write_f13_clock){ write_acia_clocks(mc14411_device::TIMER_F13, state); }
-		DECLARE_WRITE_LINE_MEMBER (write_f15_clock){ write_acia_clocks(mc14411_device::TIMER_F15, state); }
+		void write_f1_clock(int state) { write_acia_clocks(mc14411_device::TIMER_F1, state); }
+		void write_f3_clock(int state) { write_acia_clocks(mc14411_device::TIMER_F3, state); }
+		void write_f5_clock(int state) { write_acia_clocks(mc14411_device::TIMER_F5, state); }
+		void write_f7_clock(int state) { write_acia_clocks(mc14411_device::TIMER_F7, state); }
+		void write_f8_clock(int state) { write_acia_clocks(mc14411_device::TIMER_F8, state); }
+		void write_f9_clock(int state) { write_acia_clocks(mc14411_device::TIMER_F9, state); }
+		void write_f11_clock(int state) { write_acia_clocks(mc14411_device::TIMER_F11, state); }
+		void write_f13_clock(int state) { write_acia_clocks(mc14411_device::TIMER_F13, state); }
+		void write_f15_clock(int state) { write_acia_clocks(mc14411_device::TIMER_F15, state); }
 	protected:
-		coco_t4426_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
+		coco_t4426_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock);
 
 		// device-level overrides
 		virtual void device_start() override;
@@ -125,13 +124,13 @@ namespace
 
 		// internal state
 		device_image_interface *m_cart;
-		uint8_t m_select;
+		u8 m_select;
 
 		optional_ioport m_autostart;
 
-		virtual DECLARE_READ8_MEMBER(cts_read) override;
-		virtual DECLARE_READ8_MEMBER(scs_read) override;
-		virtual DECLARE_WRITE8_MEMBER(scs_write) override;
+		virtual u8 cts_read(offs_t offset) override;
+		virtual u8 scs_read(offs_t offset) override;
+		virtual void scs_write(offs_t offset, u8 data) override;
 	private:
 		// internal state
 		required_memory_region m_eprom;
@@ -151,7 +150,7 @@ namespace
 
 void coco_t4426_device::device_add_mconfig(machine_config &config)
 {
-	PIA6821(config, m_pia, 0);
+	PIA6821(config, m_pia);
 	m_pia->writepa_handler().set(FUNC(coco_t4426_device::pia_A_w));
 
 	ACIA6850(config, m_uart, 0);
@@ -236,7 +235,7 @@ DEFINE_DEVICE_TYPE_PRIVATE(COCO_T4426, device_cococart_interface, coco_t4426_dev
 //  coco_t4426_device - constructor
 //-------------------------------------------------
 
-coco_t4426_device::coco_t4426_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
+coco_t4426_device::coco_t4426_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock)
 	: device_t(mconfig, type, tag, owner, clock)
 	, device_cococart_interface(mconfig, *this)
 	, m_cart(nullptr)
@@ -251,7 +250,7 @@ coco_t4426_device::coco_t4426_device(const machine_config &mconfig, device_type 
 {
 }
 
-coco_t4426_device::coco_t4426_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+coco_t4426_device::coco_t4426_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
 	: coco_t4426_device(mconfig, COCO_T4426, tag, owner, clock)
 {
 }
@@ -264,6 +263,9 @@ void coco_t4426_device::device_start()
 {
 	LOG("%s()\n", FUNCNAME );
 	m_cart = dynamic_cast<device_image_interface *>(owner());
+
+	// save state support
+	save_item(NAME(m_select));
 }
 
 
@@ -326,9 +328,9 @@ void coco_t4426_device::write_acia_clocks(int id, int state)
   ACIA is located at ff48-ff4F with A1 = 1
 -------------------------------------------------*/
 
-READ8_MEMBER(coco_t4426_device::scs_read)
+u8 coco_t4426_device::scs_read(offs_t offset)
 {
-	uint8_t result = 0x00;
+	u8 result = 0x00;
 
 	LOG("%s Offs:%d\n", FUNCNAME, offset);
 
@@ -358,7 +360,7 @@ READ8_MEMBER(coco_t4426_device::scs_read)
   ACIA is located at ff48-ff4F with A1 = 1
 -------------------------------------------------*/
 
-WRITE8_MEMBER(coco_t4426_device::scs_write)
+void coco_t4426_device::scs_write(offs_t offset, u8 data)
 {
 	LOG("%s Offs:%d Data:%02x\n", FUNCNAME, offset, data);
 	LOGSETUP(" * Offs:%02x <- %02x\n", offset, data);
@@ -397,7 +399,7 @@ WRITE8_MEMBER(coco_t4426_device::scs_write)
 #define ROM6 (~0x40 & 0xff)
 #define ROM7 (~0x80 & 0xff)
 
-WRITE8_MEMBER( coco_t4426_device::pia_A_w )
+void coco_t4426_device::pia_A_w(u8 data)
 {
 	LOGPIA("%s(%02x)\n", FUNCNAME, data);
 	m_select = data;
@@ -407,9 +409,9 @@ WRITE8_MEMBER( coco_t4426_device::pia_A_w )
     cts_read
 -------------------------------------------------*/
 
-READ8_MEMBER(coco_t4426_device::cts_read)
+u8 coco_t4426_device::cts_read(offs_t offset)
 {
-	uint8_t result = 0x00;
+	u8 result = 0x00;
 
 	switch (offset & 0x2000)
 	{
@@ -440,7 +442,7 @@ READ8_MEMBER(coco_t4426_device::cts_read)
     get_cart_base
 -------------------------------------------------*/
 
-uint8_t* coco_t4426_device::get_cart_base()
+u8 *coco_t4426_device::get_cart_base()
 {
 	LOG("%s - m_select %02x -> %02x\n", FUNCNAME, m_select, ~m_select & 0xff );
 	return memregion(CARTSLOT_TAG)->base();

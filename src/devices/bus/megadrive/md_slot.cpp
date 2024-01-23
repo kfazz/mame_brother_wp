@@ -43,7 +43,6 @@
 
  ***********************************************************************************************************/
 
-
 #include "emu.h"
 #include "md_slot.h"
 
@@ -83,11 +82,11 @@ device_md_cart_interface::~device_md_cart_interface()
 //  rom_alloc - alloc the space for the cart
 //-------------------------------------------------
 
-void device_md_cart_interface::rom_alloc(size_t size, const char *tag)
+void device_md_cart_interface::rom_alloc(size_t size)
 {
 	if (m_rom == nullptr)
 	{
-		m_rom = (uint16_t *)device().machine().memory().region_alloc(std::string(tag).append(MDSLOT_ROM_REGION_TAG).c_str(), size, 2, ENDIANNESS_BIG)->base();
+		m_rom = (uint16_t *)device().machine().memory().region_alloc(device().subtag("^cart:rom"), size, 2, ENDIANNESS_BIG)->base();
 		m_rom_size = size;
 	}
 }
@@ -162,10 +161,9 @@ uint32_t device_md_cart_interface::get_padded_size(uint32_t size)
 //-------------------------------------------------
 base_md_cart_slot_device::base_md_cart_slot_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, type, tag, owner, clock),
-	device_image_interface(mconfig, *this),
+	device_cartrom_image_interface(mconfig, *this),
 	device_single_card_slot_interface<device_md_cart_interface>(mconfig, *this),
-	m_type(SEGA_STD), m_cart(nullptr),
-	m_must_be_loaded(1)
+	m_type(SEGA_STD), m_cart(nullptr)
 {
 }
 
@@ -271,6 +269,7 @@ static const md_slot slot_list[] =
 	{ SMOUSE, "rom_smouse" },
 	{ SOULBLAD, "rom_soulblad" },
 	{ SQUIRRELK, "rom_squir" },
+	{ SRAM_ARG96, "rom_sram_arg96" },
 	{ TEKKENSP, "rom_tekkesp" },
 	{ TOPFIGHTER, "rom_topf" },
 
@@ -282,7 +281,7 @@ static int md_get_pcb_id(const char *slot)
 {
 	for (auto & elem : slot_list)
 	{
-		if (!core_stricmp(elem.slot_option, slot))
+		if (!strcmp(elem.slot_option, slot))
 			return elem.pcb_id;
 	}
 
@@ -310,12 +309,12 @@ static const char *md_get_slot(int type)
  -------------------------------------------------*/
 
 
-image_init_result base_md_cart_slot_device::call_load()
+std::pair<std::error_condition, std::string> base_md_cart_slot_device::call_load()
 {
 	if (m_cart)
 	{
 		m_type = SEGA_STD;
-		image_init_result res;
+		std::error_condition res;
 
 		// STEP 1: load the file image and keep a copy for later banking
 		// STEP 2: identify the cart type
@@ -327,7 +326,7 @@ image_init_result base_md_cart_slot_device::call_load()
 
 		//printf("cart type: %d\n", m_type);
 
-		if (res == image_init_result::PASS)
+		if (!res)
 		{
 			//speed-up rom access from SVP add-on, if present
 			if (m_type == SEGA_SVP)
@@ -345,14 +344,14 @@ image_init_result base_md_cart_slot_device::call_load()
 			file_logging((uint8_t *)m_cart->get_rom_base(), m_cart->get_rom_size(), m_cart->get_nvram_size());
 		}
 
-		return res;
+		return std::make_pair(res, std::string());
 	}
 
-	return image_init_result::PASS;
+	return std::make_pair(std::error_condition(), std::string());
 }
 
 
-image_init_result base_md_cart_slot_device::load_list()
+std::error_condition base_md_cart_slot_device::load_list()
 {
 	uint16_t *ROM;
 	uint32_t length = get_software_region_length("rom");
@@ -361,7 +360,7 @@ image_init_result base_md_cart_slot_device::load_list()
 	// if cart size is not (2^n * 64K), the system will see anyway that size so we need to alloc a bit more space
 	length = m_cart->get_padded_size(length);
 
-	m_cart->rom_alloc(length, tag());
+	m_cart->rom_alloc(length);
 	ROM = m_cart->get_rom_base();
 	memcpy((uint8_t *)ROM, get_software_region("rom"), get_software_region_length("rom"));
 
@@ -378,7 +377,7 @@ image_init_result base_md_cart_slot_device::load_list()
 	if (m_type != SSF2 && m_type != PSOLAR && m_type != CM_2IN1)
 		m_cart->rom_map_setup(length);
 
-	return image_init_result::PASS;
+	return std::error_condition();
 }
 
 
@@ -454,7 +453,7 @@ static int genesis_is_SMD(unsigned char *buf, unsigned int len)
  *  softlist
  *************************************/
 
-image_init_result base_md_cart_slot_device::load_nonlist()
+std::error_condition base_md_cart_slot_device::load_nonlist()
 {
 	unsigned char *ROM;
 	bool is_smd, is_md;
@@ -473,8 +472,8 @@ image_init_result base_md_cart_slot_device::load_nonlist()
 	// if cart size is not (2^n * 64K), the system will see anyway that size so we need to alloc a bit more space
 	len = m_cart->get_padded_size(tmplen - offset);
 
-	// this contains an hack for SSF2: its current bankswitch code needs larger rom space to work
-	m_cart->rom_alloc((len == 0x500000) ? 0x900000 : len, tag());
+	// this contains an hack for SSF2: its current bankswitch code needs larger ROM space to work
+	m_cart->rom_alloc((len == 0x500000) ? 0x900000 : len);
 
 	// STEP 3: copy the game data in the appropriate way
 	ROM = (unsigned char *)m_cart->get_rom_base();
@@ -534,7 +533,7 @@ image_init_result base_md_cart_slot_device::load_nonlist()
 	}
 #endif
 
-	return image_init_result::PASS;
+	return std::error_condition();
 }
 
 /*-------------------------------------------------
@@ -615,6 +614,7 @@ void base_md_cart_slot_device::setup_nvram()
 
 		// These types only come from softlist loading
 		case SEGA_SRAM:
+		case SRAM_ARG96:
 			m_cart->m_nvram_start = 0x200000;
 			m_cart->m_nvram_end = m_cart->m_nvram_start + get_software_region_length("sram") - 1;
 			m_cart->nvram_alloc(m_cart->m_nvram_end - m_cart->m_nvram_start + 1);
@@ -905,18 +905,17 @@ std::string base_md_cart_slot_device::get_default_card_software(get_default_card
 {
 	if (hook.image_file())
 	{
-		const char *slot_string;
-		uint32_t len = hook.image_file()->size(), offset = 0;
+		uint64_t len;
+		hook.image_file()->length(len); // FIXME: check error return, guard against excessively large files
 		std::vector<uint8_t> rom(len);
-		int type;
 
-		hook.image_file()->read(&rom[0], len);
+		size_t actual;
+		hook.image_file()->read(&rom[0], len, actual); // FIXME: check error return or read returning short
 
-		if (genesis_is_SMD(&rom[0x200], len - 0x200))
-				offset = 0x200;
+		uint32_t const offset = genesis_is_SMD(&rom[0x200], len - 0x200) ? 0x200 : 0;
 
-		type = get_cart_type(&rom[offset], len - offset);
-		slot_string = md_get_slot(type);
+		int const type = get_cart_type(&rom[offset], len - offset);
+		char const *const slot_string = md_get_slot(type);
 
 		return std::string(slot_string);
 	}
@@ -930,26 +929,26 @@ std::string base_md_cart_slot_device::get_default_card_software(get_default_card
  read
  -------------------------------------------------*/
 
-READ16_MEMBER(base_md_cart_slot_device::read)
+uint16_t base_md_cart_slot_device::read(offs_t offset)
 {
 	if (m_cart)
-		return m_cart->read(space, offset, mem_mask);
+		return m_cart->read(offset);
 	else
 		return 0xffff;
 }
 
-READ16_MEMBER(base_md_cart_slot_device::read_a13)
+uint16_t base_md_cart_slot_device::read_a13(offs_t offset)
 {
 	if (m_cart)
-		return m_cart->read_a13(space, offset, mem_mask);
+		return m_cart->read_a13(offset);
 	else
 		return 0xffff;
 }
 
-READ16_MEMBER(base_md_cart_slot_device::read_a15)
+uint16_t base_md_cart_slot_device::read_a15(offs_t offset)
 {
 	if (m_cart)
-		return m_cart->read_a15(space, offset, mem_mask);
+		return m_cart->read_a15(offset);
 	else
 		return 0xffff;
 }
@@ -959,22 +958,22 @@ READ16_MEMBER(base_md_cart_slot_device::read_a15)
  write
  -------------------------------------------------*/
 
-WRITE16_MEMBER(base_md_cart_slot_device::write)
+void base_md_cart_slot_device::write(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	if (m_cart)
-		m_cart->write(space, offset, data, mem_mask);
+		m_cart->write(offset, data, mem_mask);
 }
 
-WRITE16_MEMBER(base_md_cart_slot_device::write_a13)
+void base_md_cart_slot_device::write_a13(offs_t offset, uint16_t data)
 {
 	if (m_cart)
-		m_cart->write_a13(space, offset, data, mem_mask);
+		m_cart->write_a13(offset, data);
 }
 
-WRITE16_MEMBER(base_md_cart_slot_device::write_a15)
+void base_md_cart_slot_device::write_a15(offs_t offset, uint16_t data)
 {
 	if (m_cart)
-		m_cart->write_a15(space, offset, data, mem_mask);
+		m_cart->write_a15(offset, data);
 }
 
 /*-------------------------------------------------
@@ -1033,8 +1032,8 @@ void base_md_cart_slot_device::file_logging(uint8_t *ROM8, uint32_t rom_len, uin
 
 	rom_start = (ROM8[0x1a1] << 24 | ROM8[0x1a0] << 16 | ROM8[0x1a3] << 8 | ROM8[0x1a2]);
 	rom_end = (ROM8[0x1a5] << 24 | ROM8[0x1a4] << 16 | ROM8[0x1a7] << 8 | ROM8[0x1a6]);
-	ram_start =  (ROM8[0x1a9] << 24 | ROM8[0x1a8] << 16 | ROM8[0x1ab] << 8 | ROM8[0x1aa]);;
-	ram_end = (ROM8[0x1ad] << 24 | ROM8[0x1ac] << 16 | ROM8[0x1af] << 8 | ROM8[0x1ae]);;
+	ram_start =  (ROM8[0x1a9] << 24 | ROM8[0x1a8] << 16 | ROM8[0x1ab] << 8 | ROM8[0x1aa]);
+	ram_end = (ROM8[0x1ad] << 24 | ROM8[0x1ac] << 16 | ROM8[0x1af] << 8 | ROM8[0x1ae]);
 	if (ROM8[0x1b1] == 'R' && ROM8[0x1b0] == 'A')
 	{
 		valid_sram = true;
@@ -1081,10 +1080,10 @@ void base_md_cart_slot_device::file_logging(uint8_t *ROM8, uint32_t rom_len, uin
 	}
 	logerror("Checksum: %X\n", checksum);
 	logerror(" - Calculated Checksum: %X\n", csum);
-	logerror("Supported I/O Devices: %.16s\n%s", io, ctrl.c_str());
+	logerror("Supported I/O Devices: %.16s\n%s", io, ctrl);
 	logerror("Modem: %.12s\n", modem);
 	logerror("Memo: %.40s\n", memo);
-	logerror("Country: %.16s\n%s", country, reg.c_str());
+	logerror("Country: %.16s\n%s", country, reg);
 	logerror("ROM Start:  0x%.8X\n", rom_start);
 	logerror("ROM End:    0x%.8X\n", rom_end);
 	logerror("RAM Start:  0x%.8X\n", ram_start);

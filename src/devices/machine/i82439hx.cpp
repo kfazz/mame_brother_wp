@@ -8,7 +8,11 @@ DEFINE_DEVICE_TYPE(I82439HX, i82439hx_host_device, "i82439hx", "Intel 82439HX no
 void i82439hx_host_device::config_map(address_map &map)
 {
 	pci_host_device::config_map(map);
+	map(0x06, 0x07).rw(FUNC(i82439hx_host_device::status_r), FUNC(i82439hx_host_device::status_w));
+	map(0x0d, 0x0d).rw(FUNC(i82439hx_host_device::latency_timer_r), FUNC(i82439hx_host_device::latency_timer_w));
+	map(0x0f, 0x0f).rw(FUNC(i82439hx_host_device::bist_r), FUNC(i82439hx_host_device::bist_w));
 	map(0x10, 0x4f).noprw();
+	map(0x4f, 0x4f).rw(FUNC(i82439hx_host_device::acon_r), FUNC(i82439hx_host_device::acon_w));
 	map(0x50, 0x50).rw(FUNC(i82439hx_host_device::pcon_r), FUNC(i82439hx_host_device::pcon_w));
 	map(0x52, 0x52).rw(FUNC(i82439hx_host_device::cc_r), FUNC(i82439hx_host_device::cc_w));
 	map(0x56, 0x56).rw(FUNC(i82439hx_host_device::dramec_r), FUNC(i82439hx_host_device::dramec_w));
@@ -24,10 +28,16 @@ void i82439hx_host_device::config_map(address_map &map)
 	map(0x92, 0x92).r(FUNC(i82439hx_host_device::errsyn_r));
 }
 
-i82439hx_host_device::i82439hx_host_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: pci_host_device(mconfig, I82439HX, tag, owner, clock)
+i82439hx_host_device::i82439hx_host_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
+	: pci_host_device(mconfig, type, tag, owner, clock)
 	, cpu(*this, finder_base::DUMMY_TAG)
 {
+}
+
+i82439hx_host_device::i82439hx_host_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: i82439hx_host_device(mconfig, I82439HX, tag, owner, clock)
+{
+	set_ids_host(0x80861250, 0x03, 0x00000000);
 }
 
 void i82439hx_host_device::set_ram_size(int _ram_size)
@@ -48,7 +58,7 @@ void i82439hx_host_device::device_start()
 	io_window_end   = 0xffff;
 	io_offset       = 0;
 	command = 0x0006;
-	command_mask = 0x0106;
+	command_mask = 0x0102;
 	status = 0x0200;
 
 	ram.resize(ram_size/4);
@@ -63,6 +73,9 @@ void i82439hx_host_device::device_reset()
 {
 	pci_host_device::device_reset();
 
+	latency_timer = 0x00;
+	bist = 0x00;
+	acon = 0x00;
 	pcon = 0x00;
 	cc = 0xa2;
 	dramec = 0x00;
@@ -79,18 +92,27 @@ void i82439hx_host_device::device_reset()
 	smiact_n = 1;
 }
 
+std::tuple<bool, bool> i82439hx_host_device::read_memory_holes()
+{
+	const bool lower_hole = (dramc & 0xc0) == 0x40;
+	const bool upper_hole = (dramc & 0xc0) != 0x80;
+	return std::make_tuple(lower_hole, upper_hole);
+}
+
 void i82439hx_host_device::map_extra(uint64_t memory_window_start, uint64_t memory_window_end, uint64_t memory_offset, address_space *memory_space,
 									 uint64_t io_window_start, uint64_t io_window_end, uint64_t io_offset, address_space *io_space)
 {
 	io_space->install_device(0, 0xffff, *static_cast<pci_host_device *>(this), &pci_host_device::io_configuration_access_map);
 
+	auto [memory_hole_lower, memory_hole_upper] = read_memory_holes();
+
 	// memory hole at 512-640 kbytes
-	if((dramc & 0xc0) == 0x40)
+	if(memory_hole_lower)
 		memory_space->install_ram      (0x00000000, 0x0007ffff, &ram[0x00000000/4]);
 	else
 		memory_space->install_ram      (0x00000000, 0x0009ffff, &ram[0x00000000/4]);
 
-	// assume that map_extra of the northbridge is called after the video card has mepped its memory here
+	// assume that map_extra of the northbridge is called after the video card has mapped its memory here
 	if (smram & 0x08)
 	{
 		if (smiact_n == 0)
@@ -156,159 +178,228 @@ void i82439hx_host_device::map_extra(uint64_t memory_window_start, uint64_t memo
 
 	memory_space->install_ram          (0x00100000, 0x00efffff, &ram[0x00100000/4]);
 	// memory hole at 15-16 mbytes
-	if((dramc & 0xc0) != 0x80)
+	if(memory_hole_upper)
 		memory_space->install_ram      (0x00f00000, 0x00ffffff, &ram[0x00f00000/4]);
 
 	memory_space->install_ram          (0x01000000, ram_size-1, &ram[0x01000000/4]);
 }
 
 
-READ8_MEMBER (i82439hx_host_device::header_type_r)
+uint8_t i82439hx_host_device::header_type_r()
 {
 	return 0x00; // from datasheet
 }
 
-READ8_MEMBER (i82439hx_host_device::pcon_r)
+void i82439hx_host_device::status_w(offs_t offset, uint16_t data, uint16_t mem_mask)
+{
+	// bits 12-14 are clear on write
+	status = status & ~(data & (0x7000 & mem_mask));
+}
+
+uint8_t i82439hx_host_device::latency_timer_r()
+{
+	return latency_timer;
+}
+
+void i82439hx_host_device::latency_timer_w(uint8_t data)
+{
+	latency_timer = data;
+	logerror("latency_timer = %02x\n", latency_timer);
+}
+
+uint8_t i82439hx_host_device::bist_r()
+{
+	return bist;
+}
+
+void i82439hx_host_device::bist_w(uint8_t data)
+{
+	bist = data;
+	logerror("bist = %02x\n", bist);
+}
+
+uint8_t i82439hx_host_device::acon_r()
+{
+	return acon;
+}
+
+void i82439hx_host_device::acon_w(uint8_t data)
+{
+	acon = data;
+	logerror("acon = %02x\n", acon);
+}
+
+uint8_t i82439hx_host_device::pcon_r()
 {
 	return pcon;
 }
 
-WRITE8_MEMBER(i82439hx_host_device::pcon_w)
+void i82439hx_host_device::pcon_w(uint8_t data)
 {
 	pcon = data;
 	logerror("pcon = %02x\n", pcon);
 }
 
-READ8_MEMBER (i82439hx_host_device::cc_r)
+uint8_t i82439hx_host_device::cc_r()
 {
 	return cc;
 }
 
-WRITE8_MEMBER(i82439hx_host_device::cc_w)
+void i82439hx_host_device::cc_w(uint8_t data)
 {
 	cc = data;
 	logerror("cc = %02x\n", cc);
 }
 
-READ8_MEMBER (i82439hx_host_device::dramec_r)
+uint8_t i82439hx_host_device::dramec_r()
 {
 	return dramec;
 }
 
-WRITE8_MEMBER(i82439hx_host_device::dramec_w)
+void i82439hx_host_device::dramec_w(uint8_t data)
 {
 	dramec = data;
 	logerror("dramec = %02x\n", dramec);
 }
 
-READ8_MEMBER (i82439hx_host_device::dramc_r)
+uint8_t i82439hx_host_device::dramc_r()
 {
 	return dramc;
 }
 
-WRITE8_MEMBER(i82439hx_host_device::dramc_w)
+void i82439hx_host_device::dramc_w(uint8_t data)
 {
 	dramc = data;
 	logerror("dramc = %02x\n", dramc);
 	remap_cb();
 }
 
-READ8_MEMBER (i82439hx_host_device::dramt_r)
+uint8_t i82439hx_host_device::dramt_r()
 {
 	return dramt;
 }
 
-WRITE8_MEMBER(i82439hx_host_device::dramt_w)
+void i82439hx_host_device::dramt_w(uint8_t data)
 {
 	dramt = data;
 	logerror("dramt = %02x\n", dramt);
 }
 
-READ8_MEMBER (i82439hx_host_device::pam_r)
+uint8_t i82439hx_host_device::pam_r(offs_t offset)
 {
 	return pam[offset - 1];
 }
 
-WRITE8_MEMBER(i82439hx_host_device::pam_w)
+void i82439hx_host_device::pam_w(offs_t offset, uint8_t data)
 {
 	pam[offset - 1] = data;
 	logerror("pam[%d] = %02x\n", offset - 1, pam[offset - 1]);
+	switch (offset - 1)
+	{
+	case 0:
+		logerror("  F0000-FFFFF BIOS Area RE:%d WE:%d CE:%d R:%d\n", (data >> 4) & 1, (data >> 5) & 1, (data >> 6) & 1, (data >> 7) & 1);
+		break;
+	case 1:
+		logerror("  C0000-C3FFF Add-On BIOS RE:%d WE:%d CE:%d R:%d\n", (data >> 0) & 1, (data >> 1) & 1, (data >> 2) & 1, (data >> 3) & 1);
+		logerror("  C4000-C7FFF Add-On BIOS RE:%d WE:%d CE:%d R:%d\n", (data >> 4) & 1, (data >> 5) & 1, (data >> 6) & 1, (data >> 7) & 1);
+		break;
+	case 2:
+		logerror("  C8000-CBFFF Add-On BIOS RE:%d WE:%d CE:%d R:%d\n", (data >> 0) & 1, (data >> 1) & 1, (data >> 2) & 1, (data >> 3) & 1);
+		logerror("  CC000-CFFFF Add-On BIOS RE:%d WE:%d CE:%d R:%d\n", (data >> 4) & 1, (data >> 5) & 1, (data >> 6) & 1, (data >> 7) & 1);
+		break;
+	case 3:
+		logerror("  D0000-D3FFF Add-On BIOS RE:%d WE:%d CE:%d R:%d\n", (data >> 0) & 1, (data >> 1) & 1, (data >> 2) & 1, (data >> 3) & 1);
+		logerror("  D4000-D7FFF Add-On BIOS RE:%d WE:%d CE:%d R:%d\n", (data >> 4) & 1, (data >> 5) & 1, (data >> 6) & 1, (data >> 7) & 1);
+		break;
+	case 4:
+		logerror("  D8000-DBFFF Add-On BIOS RE:%d WE:%d CE:%d R:%d\n", (data >> 0) & 1, (data >> 1) & 1, (data >> 2) & 1, (data >> 3) & 1);
+		logerror("  DC000-DFFFF Add-On BIOS RE:%d WE:%d CE:%d R:%d\n", (data >> 4) & 1, (data >> 5) & 1, (data >> 6) & 1, (data >> 7) & 1);
+		break;
+	case 5:
+		logerror("  E0000-E3FFF BIOS Extension RE:%d WE:%d CE:%d R:%d\n", (data >> 0) & 1, (data >> 1) & 1, (data >> 2) & 1, (data >> 3) & 1);
+		logerror("  E4000-E7FFF BIOS Extension RE:%d WE:%d CE:%d R:%d\n", (data >> 4) & 1, (data >> 5) & 1, (data >> 6) & 1, (data >> 7) & 1);
+		break;
+	case 6:
+		logerror("  E8000-EBFFF BIOS Extension RE:%d WE:%d CE:%d R:%d\n", (data >> 0) & 1, (data >> 1) & 1, (data >> 2) & 1, (data >> 3) & 1);
+		logerror("  EC000-EFFFF BIOS Extension RE:%d WE:%d CE:%d R:%d\n", (data >> 4) & 1, (data >> 5) & 1, (data >> 6) & 1, (data >> 7) & 1);
+		break;
+	}
 	remap_cb();
 }
 
-READ8_MEMBER (i82439hx_host_device::drb_r)
+uint8_t i82439hx_host_device::drb_r(offs_t offset)
 {
 	return drb[offset];
 }
 
-WRITE8_MEMBER(i82439hx_host_device::drb_w)
+void i82439hx_host_device::drb_w(offs_t offset, uint8_t data)
 {
 	drb[offset] = data;
 	logerror("drb[%d] = %02x\n", offset, drb[offset]);
 }
 
-READ8_MEMBER (i82439hx_host_device::drt_r)
+uint8_t i82439hx_host_device::drt_r()
 {
 	return drt;
 }
 
-WRITE8_MEMBER(i82439hx_host_device::drt_w)
+void i82439hx_host_device::drt_w(uint8_t data)
 {
 	drt = data;
 	logerror("drt = %02x\n", drt);
 }
 
-READ8_MEMBER (i82439hx_host_device::drat_r)
+uint8_t i82439hx_host_device::drat_r()
 {
 	return drat;
 }
 
-WRITE8_MEMBER(i82439hx_host_device::drat_w)
+void i82439hx_host_device::drat_w(uint8_t data)
 {
 	drat = data;
 	logerror("drat = %02x\n", drat);
 }
 
-READ8_MEMBER (i82439hx_host_device::smram_r)
+uint8_t i82439hx_host_device::smram_r()
 {
 	return smram;
 }
 
-WRITE8_MEMBER(i82439hx_host_device::smram_w)
+void i82439hx_host_device::smram_w(uint8_t data)
 {
 	smram = data;
 	logerror("smram = %02x\n", smram);
 	remap_cb();
 }
 
-READ8_MEMBER (i82439hx_host_device::errcmd_r)
+uint8_t i82439hx_host_device::errcmd_r()
 {
 	return errcmd;
 }
 
-WRITE8_MEMBER(i82439hx_host_device::errcmd_w)
+void i82439hx_host_device::errcmd_w(uint8_t data)
 {
 	errcmd = data;
 	logerror("errcmd = %02x\n", errcmd);
 }
 
-READ8_MEMBER (i82439hx_host_device::errsts_r)
+uint8_t i82439hx_host_device::errsts_r()
 {
 	return errsts;
 }
 
-WRITE8_MEMBER(i82439hx_host_device::errsts_w)
+void i82439hx_host_device::errsts_w(uint8_t data)
 {
 	errsts = data;
 	logerror("errsts = %02x\n", errsts);
 }
 
-READ8_MEMBER (i82439hx_host_device::errsyn_r)
+uint8_t i82439hx_host_device::errsyn_r()
 {
 	return errsyn;
 }
 
-WRITE_LINE_MEMBER(i82439hx_host_device::smi_act_w)
+void i82439hx_host_device::smi_act_w(int state)
 {
 	// state is 0 when smm is not active
 	// but smiact_n reflects the state of the SMIACT# pin

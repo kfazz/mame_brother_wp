@@ -14,6 +14,7 @@
 #import "debugview.h"
 
 #include "debugger.h"
+#include "debug/debugcon.h"
 
 #include "util/xmlfile.h"
 
@@ -78,7 +79,7 @@ NSString *const MAMESaveDebuggerConfigurationNotification = @"MAMESaveDebuggerCo
 	[[stepMenu addItemWithTitle:@"Out"
 						 action:@selector(debugStepOut:)
 				  keyEquivalent:[NSString stringWithFormat:@"%C", (short)NSF10FunctionKey]]
-	 setKeyEquivalentModifierMask:NSShiftKeyMask];
+	 setKeyEquivalentModifierMask:NSEventModifierFlagShift];
 
 	NSMenuItem *resetParentItem = [menu addItemWithTitle:@"Reset" action:NULL keyEquivalent:@""];
 	NSMenu *resetMenu = [[NSMenu alloc] initWithTitle:@"Reset"];
@@ -91,7 +92,7 @@ NSString *const MAMESaveDebuggerConfigurationNotification = @"MAMESaveDebuggerCo
 	[[resetMenu addItemWithTitle:@"Hard"
 						  action:@selector(debugHardReset:)
 				   keyEquivalent:[NSString stringWithFormat:@"%C", (short)NSF3FunctionKey]]
-	 setKeyEquivalentModifierMask:NSShiftKeyMask];
+	 setKeyEquivalentModifierMask:NSEventModifierFlagShift];
 
 	[menu addItem:[NSMenuItem separatorItem]];
 
@@ -113,7 +114,7 @@ NSString *const MAMESaveDebuggerConfigurationNotification = @"MAMESaveDebuggerCo
 				keyEquivalent:@"b"];
 	[newMenu addItemWithTitle:@"Devices Window"
 					   action:@selector(debugNewDevicesWindow:)
-				keyEquivalent:@"D"];
+				keyEquivalent:@""];
 
 	[menu addItem:[NSMenuItem separatorItem]];
 
@@ -126,7 +127,7 @@ NSString *const MAMESaveDebuggerConfigurationNotification = @"MAMESaveDebuggerCo
 	NSPopUpButton *actionButton = [[NSPopUpButton alloc] initWithFrame:frame pullsDown:YES];
 	[actionButton setTitle:@""];
 	[actionButton addItemWithTitle:@""];
-	[actionButton setBezelStyle:NSShadowlessSquareBezelStyle];
+	[actionButton setBezelStyle:NSBezelStyleShadowlessSquare];
 	[actionButton setFocusRingType:NSFocusRingTypeNone];
 	[[actionButton cell] setArrowPosition:NSPopUpArrowAtCenter];
 	[[self class] addCommonActionItems:[actionButton menu]];
@@ -139,10 +140,10 @@ NSString *const MAMESaveDebuggerConfigurationNotification = @"MAMESaveDebuggerCo
 		return nil;
 
 	window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 320, 240)
-										 styleMask:(NSTitledWindowMask |
-													NSClosableWindowMask |
-													NSMiniaturizableWindowMask |
-													NSResizableWindowMask)
+										 styleMask:(NSWindowStyleMaskTitled |
+													NSWindowStyleMaskClosable |
+													NSWindowStyleMaskMiniaturizable |
+													NSWindowStyleMaskResizable)
 										   backing:NSBackingStoreBuffered
 											 defer:YES];
 	[window setReleasedWhenClosed:NO];
@@ -189,12 +190,12 @@ NSString *const MAMESaveDebuggerConfigurationNotification = @"MAMESaveDebuggerCo
 
 - (IBAction)debugBreak:(id)sender {
 	if (machine->debug_flags & DEBUG_FLAG_ENABLED)
-		machine->debugger().cpu().get_visible_cpu()->debug()->halt_on_next_instruction("User-initiated break\n");
+		machine->debugger().console().get_visible_cpu()->debug()->halt_on_next_instruction("User-initiated break\n");
 }
 
 
 - (IBAction)debugRun:(id)sender {
-	machine->debugger().cpu().get_visible_cpu()->debug()->go();
+	machine->debugger().console().get_visible_cpu()->debug()->go();
 }
 
 
@@ -203,43 +204,43 @@ NSString *const MAMESaveDebuggerConfigurationNotification = @"MAMESaveDebuggerCo
 														object:self
 													  userInfo:[NSDictionary dictionaryWithObject:[NSValue valueWithPointer:machine]
 																						   forKey:@"MAMEDebugMachine"]];
-	machine->debugger().cpu().get_visible_cpu()->debug()->go();
+	machine->debugger().console().get_visible_cpu()->debug()->go();
 }
 
 
 - (IBAction)debugRunToNextCPU:(id)sender {
-	machine->debugger().cpu().get_visible_cpu()->debug()->go_next_device();
+	machine->debugger().console().get_visible_cpu()->debug()->go_next_device();
 }
 
 
 - (IBAction)debugRunToNextInterrupt:(id)sender {
-	machine->debugger().cpu().get_visible_cpu()->debug()->go_interrupt();
+	machine->debugger().console().get_visible_cpu()->debug()->go_interrupt();
 }
 
 
 - (IBAction)debugRunToNextVBLANK:(id)sender {
-	machine->debugger().cpu().get_visible_cpu()->debug()->go_vblank();
+	machine->debugger().console().get_visible_cpu()->debug()->go_vblank();
 }
 
 
 - (IBAction)debugStepInto:(id)sender {
-	machine->debugger().cpu().get_visible_cpu()->debug()->single_step();
+	machine->debugger().console().get_visible_cpu()->debug()->single_step();
 }
 
 
 - (IBAction)debugStepOver:(id)sender {
-	machine->debugger().cpu().get_visible_cpu()->debug()->single_step_over();
+	machine->debugger().console().get_visible_cpu()->debug()->single_step_over();
 }
 
 
 - (IBAction)debugStepOut:(id)sender {
-	machine->debugger().cpu().get_visible_cpu()->debug()->single_step_out();
+	machine->debugger().console().get_visible_cpu()->debug()->single_step_out();
 }
 
 
 - (IBAction)debugSoftReset:(id)sender {
 	machine->schedule_soft_reset();
-	machine->debugger().cpu().get_visible_cpu()->debug()->go();
+	machine->debugger().console().get_visible_cpu()->debug()->go();
 }
 
 
@@ -275,7 +276,7 @@ NSString *const MAMESaveDebuggerConfigurationNotification = @"MAMESaveDebuggerCo
 	if (m == machine)
 	{
 		util::xml::data_node *parentnode = (util::xml::data_node *)[[[notification userInfo] objectForKey:@"MAMEDebugParentNode"] pointerValue];
-		util::xml::data_node *node = parentnode->add_child("window", nullptr);
+		util::xml::data_node *node = parentnode->add_child(osd::debugger::NODE_WINDOW, nullptr);
 		if (node)
 			[self saveConfigurationToNode:node];
 	}
@@ -284,19 +285,19 @@ NSString *const MAMESaveDebuggerConfigurationNotification = @"MAMESaveDebuggerCo
 
 - (void)saveConfigurationToNode:(util::xml::data_node *)node {
 	NSRect frame = [window frame];
-	node->set_attribute_float("position_x", frame.origin.x);
-	node->set_attribute_float("position_y", frame.origin.y);
-	node->set_attribute_float("size_x", frame.size.width);
-	node->set_attribute_float("size_y", frame.size.height);
+	node->set_attribute_float(osd::debugger::ATTR_WINDOW_POSITION_X, frame.origin.x);
+	node->set_attribute_float(osd::debugger::ATTR_WINDOW_POSITION_Y, frame.origin.y);
+	node->set_attribute_float(osd::debugger::ATTR_WINDOW_WIDTH, frame.size.width);
+	node->set_attribute_float(osd::debugger::ATTR_WINDOW_HEIGHT, frame.size.height);
 }
 
 
 - (void)restoreConfigurationFromNode:(util::xml::data_node const *)node {
 	NSRect frame = [window frame];
-	frame.origin.x = node->get_attribute_float("position_x", frame.origin.x);
-	frame.origin.y = node->get_attribute_float("position_y", frame.origin.y);
-	frame.size.width = node->get_attribute_float("size_x", frame.size.width);
-	frame.size.height = node->get_attribute_float("size_y", frame.size.height);
+	frame.origin.x = node->get_attribute_float(osd::debugger::ATTR_WINDOW_POSITION_X, frame.origin.x);
+	frame.origin.y = node->get_attribute_float(osd::debugger::ATTR_WINDOW_POSITION_Y, frame.origin.y);
+	frame.size.width = node->get_attribute_float(osd::debugger::ATTR_WINDOW_WIDTH, frame.size.width);
+	frame.size.height = node->get_attribute_float(osd::debugger::ATTR_WINDOW_HEIGHT, frame.size.height);
 
 	NSSize min = [window minSize];
 	frame.size.width = std::max(frame.size.width, min.width);
@@ -492,15 +493,17 @@ NSString *const MAMESaveDebuggerConfigurationNotification = @"MAMESaveDebuggerCo
 
 - (void)saveConfigurationToNode:(util::xml::data_node *)node {
 	[super saveConfigurationToNode:node];
-	node->add_child("expression", util::xml::normalize_string([[self expression] UTF8String]));
+	node->add_child(osd::debugger::NODE_WINDOW_EXPRESSION, [[self expression] UTF8String]);
+	[history saveConfigurationToNode:node];
 }
 
 
 - (void)restoreConfigurationFromNode:(util::xml::data_node const *)node {
 	[super restoreConfigurationFromNode:node];
-	util::xml::data_node const *const expr = node->get_child("expression");
+	util::xml::data_node const *const expr = node->get_child(osd::debugger::NODE_WINDOW_EXPRESSION);
 	if (expr && expr->get_value())
 		[self setExpression:[NSString stringWithUTF8String:expr->get_value()]];
+	[history restoreConfigurationFromNode:node];
 }
 
 @end

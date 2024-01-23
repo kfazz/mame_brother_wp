@@ -160,12 +160,8 @@ DWORD create_path_recursive(TCHAR *path)
 //  osd_open
 //============================================================
 
-osd_file::error osd_file::open(std::string const &orig_path, uint32_t openflags, ptr &file, std::uint64_t &filesize)
+osd_file::error osd_file::open(std::string const &path, uint32_t openflags, ptr &file, std::uint64_t &filesize)
 {
-	std::string path;
-	try { osd_subst_env(path, orig_path); }
-	catch (...) { return error::OUT_OF_MEMORY; }
-
 	if (win_check_socket_path(path))
 		return win_open_socket(path, openflags, file, filesize);
 	else if (win_check_ptty_path(path))
@@ -350,7 +346,7 @@ osd_file::error osd_get_full_path(std::string &dst, std::string const &path)
 
 	// canonicalize the path
 	TCHAR buffer[MAX_PATH];
-	if (!GetFullPathName(t_path.c_str(), ARRAY_LENGTH(buffer), buffer, nullptr))
+	if (!GetFullPathName(t_path.c_str(), std::size(buffer), buffer, nullptr))
 		return win_error_to_file_error(GetLastError());
 
 	// convert the result back to UTF-8
@@ -380,9 +376,19 @@ bool osd_is_absolute_path(std::string const &path)
 //  osd_get_volume_name
 //============================================================
 
-const char *osd_get_volume_name(int idx)
+std::string osd_get_volume_name(int idx)
 {
-	return nullptr;
+	return std::string();
+}
+
+
+//============================================================
+//  osd_get_volume_names
+//============================================================
+
+std::vector<std::string> osd_get_volume_names()
+{
+	return std::vector<std::string>();
 }
 
 

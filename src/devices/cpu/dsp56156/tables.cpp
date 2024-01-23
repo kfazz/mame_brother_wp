@@ -1,15 +1,16 @@
 // license:BSD-3-Clause
 // copyright-holders:Andrew Gardner
 #include "emu.h"
-#include <cstdio>
-#include <cstring>
-#include <cstdlib>
-
 #include "tables.h"
+
 #include "dsp56def.h"
 
-namespace DSP_56156
-{
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+namespace DSP_56156 {
+
 /******************/
 /* Table decoding */
 /******************/
@@ -488,13 +489,11 @@ void decode_Z_table(const uint16_t Z, std::string& ea)
 
 void assemble_ea_from_m_table(const uint16_t m, const int n, std::string& ea)
 {
-	char temp[32];
 	switch(m)
 	{
-		case 0x0: sprintf(temp, "(R%d)+",n)       ; break;
-		case 0x1: sprintf(temp, "(R%d)+N%d", n, n); break;
+		case 0x0: ea = util::string_format("(R%d)+", n)      ; break;
+		case 0x1: ea = util::string_format("(R%d)+N%d", n, n); break;
 	}
-	ea = temp;
 }
 
 void assemble_eas_from_mm_table(uint16_t mm, int n1, int n2, std::string& ea1, std::string& ea2)
@@ -503,14 +502,14 @@ void assemble_eas_from_mm_table(uint16_t mm, int n1, int n2, std::string& ea1, s
 	char temp2[32];
 	switch(mm)
 	{
-		case 0x0: sprintf(temp1, "(R%d)+",  n1) ;
-					sprintf(temp2, "(R%d)+",    n2) ; break;
-		case 0x1: sprintf(temp1, "(R%d)+",  n1) ;
-					sprintf(temp2, "(R%d)+N%d", n2, n2); break;
-		case 0x2: sprintf(temp1, "(R%d)+N%d", n1, n1);
-					sprintf(temp2, "(R%d)+",    n2) ; break;
-		case 0x3: sprintf(temp1, "(R%d)+N%d", n1, n1);
-					sprintf(temp2, "(R%d)+N%d", n2, n2); break;
+		case 0x0: snprintf(temp1, 32, "(R%d)+",  n1) ;
+					snprintf(temp2, 32, "(R%d)+",    n2) ; break;
+		case 0x1: snprintf(temp1, 32, "(R%d)+",  n1) ;
+					snprintf(temp2, 32, "(R%d)+N%d", n2, n2); break;
+		case 0x2: snprintf(temp1, 32, "(R%d)+N%d", n1, n1);
+					snprintf(temp2, 32, "(R%d)+",    n2) ; break;
+		case 0x3: snprintf(temp1, 32, "(R%d)+N%d", n1, n1);
+					snprintf(temp2, 32, "(R%d)+N%d", n2, n2); break;
 	}
 	ea1 = temp1;
 	ea2 = temp2;
@@ -518,26 +517,22 @@ void assemble_eas_from_mm_table(uint16_t mm, int n1, int n2, std::string& ea1, s
 
 void assemble_ea_from_MM_table(uint16_t MM, int n, std::string& ea)
 {
-	char temp[32];
 	switch(MM)
 	{
-		case 0x0: sprintf(temp, "(R%d)",     n)   ; break;
-		case 0x1: sprintf(temp, "(R%d)+",   n)   ; break;
-		case 0x2: sprintf(temp, "(R%d)-",   n)   ; break;
-		case 0x3: sprintf(temp, "(R%d)+N%d", n, n); break;
+		case 0x0: ea = util::string_format("(R%d)",     n)   ; break;
+		case 0x1: ea = util::string_format("(R%d)+",    n)   ; break;
+		case 0x2: ea = util::string_format("(R%d)-",    n)   ; break;
+		case 0x3: ea = util::string_format("(R%d)+N%d", n, n); break;
 	}
-	ea = temp;
 }
 
 void assemble_ea_from_q_table(uint16_t q, int n, std::string& ea)
 {
-	char temp[32];
 	switch(q)
 	{
-		case 0x0: sprintf(temp, "(R%d+N%d)", n, n); break;
-		case 0x1: sprintf(temp, "-(R%d)",   n)   ; break;
+		case 0x0: ea = util::string_format("(R%d+N%d)", n, n); break;
+		case 0x1: ea = util::string_format("-(R%d)",    n)   ; break;
 	}
-	ea = temp;
 }
 
 void assemble_ea_from_t_table(uint16_t t, uint16_t val, std::string& ea)
@@ -545,8 +540,8 @@ void assemble_ea_from_t_table(uint16_t t, uint16_t val, std::string& ea)
 	char temp[32];
 	switch(t)
 	{
-		case 0x0: sprintf(temp, "X:>$%x", val); break;
-		case 0x1: sprintf(temp, "#>$%x", val);  break;
+		case 0x0: snprintf(temp, 32, "X:>$%x", val); break;
+		case 0x1: snprintf(temp, 32, "#>$%x", val);  break;
 		// NEW // case 0x0: sprintf(ea, "X:$%04x", val); break;
 		// NEW // case 0x1: sprintf(ea, "#$%04x", val);  break;
 	}
@@ -555,13 +550,11 @@ void assemble_ea_from_t_table(uint16_t t, uint16_t val, std::string& ea)
 
 void assemble_ea_from_z_table(uint16_t z, int n, std::string& ea)
 {
-	char temp[32];
 	switch(z)
 	{
-		case 0x0: sprintf(temp, "(R%d)-",   n)   ; break;
-		case 0x1: sprintf(temp, "(R%d)+N%d", n, n); break;
+		case 0x0: ea = util::string_format("(R%d)-",    n)   ; break;
+		case 0x1: ea = util::string_format("(R%d)+N%d", n, n); break;
 	}
-	ea = temp;
 }
 
 void assemble_D_from_P_table(uint16_t P, uint16_t ppppp, std::string& D)
@@ -572,12 +565,12 @@ void assemble_D_from_P_table(uint16_t P, uint16_t ppppp, std::string& D)
 	switch(P)
 	{
 		case 0x0:
-			sprintf(temp, "X:<$%x", ppppp);
+			snprintf(temp, 32, "X:<$%x", ppppp);
 			// NEW // sprintf(temp, "X:$%02x", ppppp);
 			break;
 		case 0x1:
 			assemble_address_from_IO_short_address(ppppp, fullAddy);
-			sprintf(temp, "X:<<$%s", fullAddy.c_str());
+			snprintf(temp, 32, "X:<<$%s", fullAddy.c_str());
 			// NEW // sprintf(temp, "X:$%s", fullAddy.c_str());
 			break;
 	}
@@ -587,58 +580,42 @@ void assemble_D_from_P_table(uint16_t P, uint16_t ppppp, std::string& D)
 void assemble_arguments_from_W_table(uint16_t W, char ma, const reg_id& SD, const std::string& ea,
 	std::string& source, std::string& destination)
 {
-	char temp[32];
-	sprintf(temp, "%c:%s", ma, ea.c_str());
+	std::string temp = util::string_format("%c:%s", ma, ea);
 	switch(W)
 	{
-		case 0x0: source = regIdAsString(SD); destination = temp; break;
-		case 0x1: source = temp; destination = regIdAsString(SD); break;
+		case 0x0: source = regIdAsString(SD); destination = std::move(temp); break;
+		case 0x1: source = std::move(temp); destination = regIdAsString(SD); break;
 	}
 }
 
 void assemble_arguments_from_W_table(uint16_t W, char ma, const std::string& SD, const std::string& ea,
 	std::string& source, std::string& destination)
 {
-	char temp[32];
-	sprintf(temp, "%c:%s", ma, ea.c_str());
+	std::string temp = util::string_format("%c:%s", ma, ea);
 	switch(W)
 	{
-		case 0x0: source = SD;   destination = temp; break;
-		case 0x1: source = temp; destination = SD;   break;
+		case 0x0: source = SD;   destination = std::move(temp); break;
+		case 0x1: source = std::move(temp); destination = SD;   break;
 	}
 }
 
 void assemble_reg_from_W_table(uint16_t W, char ma, const reg_id& SD, const int8_t xx, std::string& S, std::string& D)
 {
-	uint8_t abs_xx;
-	char temp[32];
-	char operation[32];
-
-	if(xx < 0)
-		sprintf(operation,"-");
-	else
-		sprintf(operation,"+");
-
-	abs_xx = abs(xx);
-
-	sprintf(temp, "%c:(R2%s$%x)", ma, operation, abs_xx);
-	// NEW // sprintf(temp, "%c:(R2%s$%02x)", ma, operation, abs_xx);
+	std::string temp = util::string_format("%c:(R2%s$%x)", ma, (xx < 0) ? "-" : "+", std::abs(xx));
+	// NEW // temp = util::string_format("%c:(R2%s$%02x)", ma, (xx < 0) ? "-" : "+", std::abs(xx));
 	switch(W)
 	{
-		case 0x0: S = regIdAsString(SD); D = temp; break;
-		case 0x1: S = temp; D = regIdAsString(SD); break;
+		case 0x0: S = regIdAsString(SD); D = std::move(temp); break;
+		case 0x1: S = std::move(temp); D = regIdAsString(SD); break;
 	}
 }
 
 void assemble_address_from_IO_short_address(uint16_t pp, std::string& ea)
 {
-	char temp[32];
-
 	uint16_t fullAddy = 0xffe0;
 	fullAddy |= pp;
 
-	sprintf(temp, "%.04x", fullAddy);
-	ea = temp;
+	ea = util::string_format("%.04x", fullAddy);
 }
 
 int8_t get_6_bit_signed_value(uint16_t bits)
@@ -657,18 +634,15 @@ int8_t get_6_bit_signed_value(uint16_t bits)
 
 uint16_t dsp56156_op_maskn(uint16_t cur, uint16_t mask)
 {
-	int i;
-
-	uint16_t retVal = (cur & mask);
 	uint16_t temp = 0x0000;
 	int offsetCount = 0;
 
 	/* Shift everything right, eliminating 'whitespace'... */
-	for (i = 0; i < 16; i++)
+	for (int i = 0; i < 16; i++)
 	{
-		if (mask & (0x1<<i))        /* If mask bit is non-zero */
+		if (BIT(mask, i))        /* If mask bit is non-zero */
 		{
-			temp |= (((retVal >> i) & 0x1) << offsetCount);
+			temp |= BIT(cur, i) << offsetCount;
 			offsetCount++;
 		}
 	}
@@ -897,4 +871,4 @@ uint8_t regIDAsNum(const reg_id& regId)
 	return 255;
 }
 
-}
+} // namespace DSP_56156

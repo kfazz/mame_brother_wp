@@ -56,6 +56,18 @@ public:
 		RII_VOCON
 	};
 
+	enum
+	{
+		PA0_LINE = 0,
+		PA1_LINE,
+		PA2_LINE,
+		PA3_LINE,
+		PA4_LINE,
+		PA5_LINE,
+		PA6_LINE,
+		PA7_LINE
+	};
+
 	// callback configuration
 	auto in_porta_cb() { return m_porta_in_cb.bind(); }
 	auto in_portb_cb() { return m_port_in_cb[0].bind(); }
@@ -82,19 +94,18 @@ public:
 protected:
 	riscii_series_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock, unsigned addrbits, unsigned pcbits, unsigned bankbits, u8 maxbank, u8 post_id_mask, address_map_constructor regs);
 
-	// device-level overrides
-	virtual void device_resolve_objects() override;
+	// device_t implementation
 	virtual void device_start() override;
 	virtual void device_reset() override;
 
-	// device_execute_interface overrides
+	// device_execute_interface implementation
 	virtual void execute_run() override;
 	virtual void execute_set_input(int inputnum, int state) override;
 
-	// device_memory_interface overrides
+	// device_memory_interface implementation
 	virtual space_config_vector memory_space_config() const override;
 
-	// device_state_interface overrides
+	// device_state_interface implementation
 	virtual void state_string_export(const device_state_entry &entry, std::string &str) const override;
 
 	void core_regs_map(address_map &map);
@@ -173,6 +184,15 @@ protected:
 	void sprm_w(u8 data);
 	u8 sprh_r();
 	void sprh_w(u8 data);
+	void timer0_reload();
+	TIMER_CALLBACK_MEMBER(timer0);
+	u16 timer0_count() const;
+	void timer1_reload();
+	TIMER_CALLBACK_MEMBER(timer1);
+	u8 timer1_count() const;
+	void timer2_reload();
+	TIMER_CALLBACK_MEMBER(timer2);
+	u8 timer2_count() const;
 	u8 trl0l_r();
 	void trl0l_w(u8 data);
 	u8 trl0h_r();
@@ -264,6 +284,7 @@ private:
 	void execute_undef(u16 opcode);
 	void execute_cycle1(u16 opcode);
 	void execute_tbrd(u32 ptr);
+	void idle_wakeup();
 
 	// interrupt helpers
 	bool interrupt_active() const;
@@ -281,15 +302,16 @@ private:
 		EXEC_L0CALL, EXEC_L1CALL, EXEC_L2CALL, EXEC_L3CALL,
 		EXEC_L4CALL, EXEC_L5CALL, EXEC_L6CALL, EXEC_L7CALL,
 		EXEC_L8CALL, EXEC_L9CALL, EXEC_LACALL, EXEC_LBCALL,
-		EXEC_LCCALL, EXEC_LDCALL, EXEC_LECALL, EXEC_LFCALL
+		EXEC_LCCALL, EXEC_LDCALL, EXEC_LECALL, EXEC_LFCALL,
+		EXEC_IDLE
 	};
 
 	// address spaces
 	address_space_config m_program_config;
 	address_space_config m_regs_config;
-	address_space *m_program;
-	address_space *m_regs;
-	memory_access_cache<1, -1, ENDIANNESS_LITTLE> *m_cache;
+	memory_access<22, 1, -1, ENDIANNESS_LITTLE>::cache m_cache;
+	memory_access<22, 1, -1, ENDIANNESS_LITTLE>::specific m_program;
+	memory_access<13, 0,  0, ENDIANNESS_LITTLE>::specific m_regs;
 
 	// device callbacks
 	devcb_read8 m_porta_in_cb;
@@ -325,6 +347,7 @@ private:
 	u8 m_port_dcr[6];
 	u8 m_port_control[2];
 	u8 m_stbcon;
+	u8 m_pa;
 	u8 m_painten;
 	u8 m_paintsta;
 	u8 m_pawake;
@@ -344,9 +367,10 @@ private:
 	u8 m_tr01con;
 	u8 m_tr2con;
 	u8 m_trlir;
-	u8 m_sfcr;
+	emu_timer *m_timer[3];
 
 	// synthesizer state
+	u8 m_sfcr;
 	u32 m_add[4];
 	u8 m_env[4];
 	u8 m_mtcon[4];
@@ -371,7 +395,7 @@ public:
 	epg3231_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
 
 protected:
-	// device_disasm_interface overrides
+	// device_disasm_interface implementation
 	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
 
 private:

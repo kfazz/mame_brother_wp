@@ -10,10 +10,13 @@
 
 #include "emu.h"
 #include "hp9845_io.h"
+
 #include "98032.h"
 #include "98035.h"
+#include "98036.h"
 #include "98034.h"
 #include "98046.h"
+
 
 // device type definition
 DEFINE_DEVICE_TYPE(HP9845_IO_SLOT, hp9845_io_slot_device, "hp98x5_io_slot", "HP98x5 I/O Slot")
@@ -36,6 +39,7 @@ hp9845_io_slot_device::hp9845_io_slot_device(const machine_config &mconfig, cons
 	option_add("98032_gpio" , HP98032_IO_CARD);
 	option_add("98034_hpib" , HP98034_IO_CARD);
 	option_add("98035_rtc" , HP98035_IO_CARD);
+	option_add("98036" , HP98036_IO_CARD);
 	option_add("98046" , HP98046_IO_CARD);
 	set_default_option(nullptr);
 	set_fixed(false);
@@ -47,14 +51,6 @@ hp9845_io_slot_device::~hp9845_io_slot_device()
 
 void hp9845_io_slot_device::device_start()
 {
-	m_irq_cb_func.resolve_safe();
-	m_sts_cb_func.resolve_safe();
-	m_flg_cb_func.resolve_safe();
-	m_irq_nextsc_cb_func.resolve_safe();
-	m_sts_nextsc_cb_func.resolve_safe();
-	m_flg_nextsc_cb_func.resolve_safe();
-	m_dmar_cb_func.resolve_safe();
-
 	device_hp9845_io_interface *card = get_card_device();
 
 	if (card != nullptr) {
@@ -62,48 +58,48 @@ void hp9845_io_slot_device::device_start()
 	}
 }
 
-WRITE_LINE_MEMBER(hp9845_io_slot_device::irq_w)
+void hp9845_io_slot_device::irq_w(int state)
 {
 	m_irq_cb_func(state);
 }
 
-WRITE_LINE_MEMBER(hp9845_io_slot_device::sts_w)
+void hp9845_io_slot_device::sts_w(int state)
 {
 	m_sts_cb_func(state);
 }
 
-WRITE_LINE_MEMBER(hp9845_io_slot_device::flg_w)
+void hp9845_io_slot_device::flg_w(int state)
 {
 	m_flg_cb_func(state);
 }
 
-WRITE_LINE_MEMBER(hp9845_io_slot_device::irq_nextsc_w)
+void hp9845_io_slot_device::irq_nextsc_w(int state)
 {
 	m_irq_nextsc_cb_func(state);
 }
 
-WRITE_LINE_MEMBER(hp9845_io_slot_device::sts_nextsc_w)
+void hp9845_io_slot_device::sts_nextsc_w(int state)
 {
 	m_sts_nextsc_cb_func(state);
 }
 
-WRITE_LINE_MEMBER(hp9845_io_slot_device::flg_nextsc_w)
+void hp9845_io_slot_device::flg_nextsc_w(int state)
 {
 	m_flg_nextsc_cb_func(state);
 }
 
-WRITE_LINE_MEMBER(hp9845_io_slot_device::dmar_w)
+void hp9845_io_slot_device::dmar_w(int state)
 {
 	m_dmar_cb_func(state);
 }
 
-int hp9845_io_slot_device::get_rw_handlers(read16_delegate& rhandler , write16_delegate& whandler)
+int hp9845_io_slot_device::get_rw_handlers(read16m_delegate& rhandler , write16m_delegate& whandler)
 {
 	device_hp9845_io_interface *card = get_card_device();
 
 	if (card) {
-		rhandler = read16_delegate(*card, FUNC(device_hp9845_io_interface::reg_r));
-		whandler = write16_delegate(*card, FUNC(device_hp9845_io_interface::reg_w));
+		rhandler = read16m_delegate(*card, FUNC(device_hp9845_io_interface::reg_r));
+		whandler = write16m_delegate(*card, FUNC(device_hp9845_io_interface::reg_w));
 		return card->get_sc();
 	} else {
 		return -1;
@@ -156,49 +152,49 @@ void device_hp9845_io_interface::interface_pre_start()
 		throw device_missing_dependencies();
 }
 
-WRITE_LINE_MEMBER(device_hp9845_io_interface::irq_w)
+void device_hp9845_io_interface::irq_w(int state)
 {
 	if (m_slot_dev) {
 		m_slot_dev->irq_w(state);
 	}
 }
 
-WRITE_LINE_MEMBER(device_hp9845_io_interface::sts_w)
+void device_hp9845_io_interface::sts_w(int state)
 {
 	if (m_slot_dev) {
 		m_slot_dev->sts_w(state);
 	}
 }
 
-WRITE_LINE_MEMBER(device_hp9845_io_interface::flg_w)
+void device_hp9845_io_interface::flg_w(int state)
 {
 	if (m_slot_dev) {
 		m_slot_dev->flg_w(state);
 	}
 }
 
-WRITE_LINE_MEMBER(device_hp9845_io_interface::irq_nextsc_w)
+void device_hp9845_io_interface::irq_nextsc_w(int state)
 {
 	if (m_slot_dev) {
 		m_slot_dev->irq_nextsc_w(state);
 	}
 }
 
-WRITE_LINE_MEMBER(device_hp9845_io_interface::sts_nextsc_w)
+void device_hp9845_io_interface::sts_nextsc_w(int state)
 {
 	if (m_slot_dev) {
 		m_slot_dev->sts_nextsc_w(state);
 	}
 }
 
-WRITE_LINE_MEMBER(device_hp9845_io_interface::flg_nextsc_w)
+void device_hp9845_io_interface::flg_nextsc_w(int state)
 {
 	if (m_slot_dev) {
 		m_slot_dev->flg_nextsc_w(state);
 	}
 }
 
-WRITE_LINE_MEMBER(device_hp9845_io_interface::dmar_w)
+void device_hp9845_io_interface::dmar_w(int state)
 {
 	if (m_slot_dev) {
 		m_slot_dev->dmar_w(state);

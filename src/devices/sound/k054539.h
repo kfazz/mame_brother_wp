@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Aaron Giles
+// copyright-holders:Olivier Galibert
 /*********************************************************
 
     Konami 054539 PCM Sound Chip
@@ -11,13 +11,17 @@
 
 #pragma once
 
+#include "dirom.h"
+
 #define K054539_CB_MEMBER(_name)   void _name(double left, double right)
 
 class k054539_device : public device_t,
-						public device_sound_interface,
-						public device_rom_interface
+					   public device_sound_interface,
+					   public device_rom_interface<24>
 {
 public:
+	static constexpr feature_type imperfect_features() { return feature::SOUND; } // effector and/or some registers aren't verified/emulated
+
 	// control flags, may be set at DRIVER_INIT().
 	enum {
 		RESET_FLAGS     = 0,
@@ -60,13 +64,14 @@ protected:
 	virtual void device_clock_changed() override;
 	virtual void device_reset() override;
 	virtual void device_post_load() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// device_sound_interface overrides
-	virtual void sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples) override;
+	virtual void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
 
 	// device_rom_interface overrides
-	virtual void rom_bank_updated() override;
+	virtual void rom_bank_pre_change() override;
+
+	TIMER_CALLBACK_MEMBER(call_timer_handler);
 
 private:
 	struct channel {
@@ -84,7 +89,7 @@ private:
 	int flags;
 
 	unsigned char regs[0x230];
-	std::unique_ptr<uint8_t[]> ram;
+	std::unique_ptr<uint8_t []> ram;
 	int reverb_pos;
 
 	int32_t cur_ptr;

@@ -42,7 +42,7 @@ public:
 
 	a2eauxslot_slot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock = 0);
 
-	// device-level overrides
+	// device_t implementation
 	virtual void device_resolve_objects() override;
 	virtual void device_start() override { }
 
@@ -75,14 +75,13 @@ public:
 	void set_irq_line(int state);
 	void set_nmi_line(int state);
 
-	DECLARE_WRITE_LINE_MEMBER( irq_w );
-	DECLARE_WRITE_LINE_MEMBER( nmi_w );
+	void irq_w(int state);
+	void nmi_w(int state);
 
 protected:
 	a2eauxslot_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
 
-	// device-level overrides
-	virtual void device_resolve_objects() override;
+	// device_t implementation
 	virtual void device_start() override;
 
 	// internal state
@@ -108,26 +107,34 @@ public:
 	// construction/destruction
 	virtual ~device_a2eauxslot_card_interface();
 
-	virtual uint8_t read_auxram(uint16_t offset) { printf("a2eauxslot: unhandled auxram read @ %04x\n", offset); return 0xff; }
-	virtual void write_auxram(uint16_t offset, uint8_t data) { printf("a2eauxslot: unhandled auxram write %02x @ %04x\n", data, offset); }
-	virtual void write_c07x(uint8_t offset, uint8_t data) {}
-	virtual uint8_t *get_vram_ptr() = 0;
-	virtual uint8_t *get_auxbank_ptr() = 0;
+	virtual u8 read_auxram(u16 offset) { printf("a2eauxslot: unhandled auxram read @ %04x\n", offset); return 0xff; }
+	virtual void write_auxram(u16 offset, u8 data) { printf("a2eauxslot: unhandled auxram write %02x @ %04x\n", data, offset); }
+	virtual void write_c07x(u8 offset, u8 data) {}
+	virtual u8 *get_vram_ptr() = 0;
+	virtual u8 *get_auxbank_ptr() = 0;
+	virtual u16 get_auxbank_mask() = 0;
 	virtual bool allow_dhr() { return true; }
 
 	device_a2eauxslot_card_interface *next() const { return m_next; }
 
-	void set_a2eauxslot_device(a2eauxslot_device *a2eauxslot);
+	// inline configuration
+	void set_a2eauxslot(a2eauxslot_device *a2eauxslot, const char *slottag) { m_a2eauxslot = a2eauxslot; m_a2eauxslot_slottag = slottag; }
+	template <typename T> void set_onboard(T &&a2eauxslot) { m_a2eauxslot_finder.set_tag(std::forward<T>(a2eauxslot)); m_a2eauxslot_slottag = device().tag(); }
 
 	void raise_slot_irq() { m_a2eauxslot->set_irq_line(ASSERT_LINE); }
 	void lower_slot_irq() { m_a2eauxslot->set_irq_line(CLEAR_LINE); }
 	void raise_slot_nmi() { m_a2eauxslot->set_nmi_line(ASSERT_LINE); }
 	void lower_slot_nmi() { m_a2eauxslot->set_nmi_line(CLEAR_LINE); }
 
+	virtual void interface_validity_check(validity_checker &valid) const override;
+	virtual void interface_pre_start() override;
+
 protected:
 	device_a2eauxslot_card_interface(const machine_config &mconfig, device_t &device);
 
+	optional_device<a2eauxslot_device> m_a2eauxslot_finder;
 	a2eauxslot_device  *m_a2eauxslot;
+	const char *m_a2eauxslot_slottag;
 	int m_slot;
 	device_a2eauxslot_card_interface *m_next;
 };

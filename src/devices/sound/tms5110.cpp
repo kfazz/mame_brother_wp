@@ -149,13 +149,10 @@ static int16_t clip_analog(int16_t cliptemp);
 
 void tms5110_device::new_int_write(uint8_t rc, uint8_t m0, uint8_t m1, uint8_t addr)
 {
-	if (!m_m0_cb.isnull())
-		m_m0_cb(m0);
-	if (!m_m1_cb.isnull())
-		m_m1_cb(m1);
-	if (!m_addr_cb.isnull())
-		m_addr_cb((offs_t)0, addr);
-	if (!m_romclk_cb.isnull())
+	m_m0_cb(m0);
+	m_m1_cb(m1);
+	m_addr_cb(offs_t(0), addr);
+	if (!m_romclk_cb.isunset())
 	{
 		//printf("rc %d\n", rc);
 		m_romclk_cb(rc);
@@ -176,7 +173,7 @@ uint8_t tms5110_device::new_int_read()
 	new_int_write(0, 1, 0, 0); // romclk 0, m0 1, m1 0, addr bus nybble = 0/open bus
 	new_int_write(1, 0, 0, 0); // romclk 1, m0 0, m1 0, addr bus nybble = 0/open bus
 	new_int_write(0, 0, 0, 0); // romclk 0, m0 0, m1 0, addr bus nybble = 0/open bus
-	if (!m_data_cb.isnull())
+	if (!m_data_cb.isunset())
 		return m_data_cb();
 	if (DEBUG_5110) logerror("WARNING: CALLBACK MISSING, RETURNING 0!\n");
 	return 0;
@@ -1040,18 +1037,11 @@ void tms5110_device::device_start()
 		fatalerror("Unknown variant in tms5110_create\n");
 	}
 
-	/* resolve lines */
-	m_m0_cb.resolve();
-	m_m1_cb.resolve();
-	m_romclk_cb.resolve();
-	m_addr_cb.resolve();
-	m_data_cb.resolve();
-
 	/* initialize a stream */
-	m_stream = machine().sound().stream_alloc(*this, 0, 1, clock() / 80);
+	m_stream = stream_alloc(0, 1, clock() / 80);
 
 	m_state = CTL_STATE_INPUT; /* most probably not defined */
-	m_romclk_hack_timer = timer_alloc(0);
+	m_romclk_hack_timer = timer_alloc(FUNC(tms5110_device::romclk_hack_toggle), this);
 
 	register_for_save_states();
 }
@@ -1108,6 +1098,10 @@ void tms5110_device::device_reset()
 	m_next_is_address = false;
 	m_address = 0;
 	m_addr_bit = 0;
+
+	m_romclk_hack_timer->adjust(attotime::never);
+	m_romclk_hack_timer_started = false;
+	m_romclk_hack_state = false;
 }
 
 
@@ -1187,16 +1181,14 @@ uint8_t m58817_device::status_r()
 	return (TALK_STATUS() << 0); /*CTL1 = still talking ? */
 }
 
-/******************************************************************************
-
-     tms5110_romclk_hack_r -- read status of romclk
-
-******************************************************************************/
-
-void tms5110_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(tms5110_device::romclk_hack_toggle)
 {
 	m_romclk_hack_state = !m_romclk_hack_state;
 }
+
+//-------------------------------------------------
+//  romclk_hack_r - read status of romclk
+//-------------------------------------------------
 
 int tms5110_device::romclk_hack_r()
 {
@@ -1223,24 +1215,22 @@ int tms5110_device::romclk_hack_r()
 //  sound_stream_update - handle a stream update
 //-------------------------------------------------
 
-void tms5110_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void tms5110_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
 	int16_t sample_data[MAX_SAMPLE_CHUNK];
-	stream_sample_t *buffer = outputs[0];
+	auto &buffer = outputs[0];
 
 	/* loop while we still have samples to generate */
-	while (samples)
+	for (int sampindex = 0; sampindex < buffer.samples(); )
 	{
-		int length = (samples > MAX_SAMPLE_CHUNK) ? MAX_SAMPLE_CHUNK : samples;
-		int index;
+		int length = buffer.samples() - sampindex;
+		if (length > MAX_SAMPLE_CHUNK)
+			length = MAX_SAMPLE_CHUNK;
 
 		/* generate the samples and copy to the target buffer */
 		process(sample_data, length);
-		for (index = 0; index < length; index++)
-			*buffer++ = sample_data[index];
-
-		/* account for the samples */
-		samples -= length;
+		for (int index = 0; index < length; index++)
+			buffer.put_int(sampindex++, sample_data[index], 32768);
 	}
 }
 
@@ -1324,7 +1314,7 @@ void tmsprom_device::update_prom_cnt()
 		m_prom_cnt &= 0x0f;
 }
 
-void tmsprom_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(tmsprom_device::update_romclk)
 {
 	/* only 16 bytes needed ... The original dump is bad. This
 	 * is what is needed to get speech to work. The prom data has
@@ -1334,10 +1324,8 @@ void tmsprom_device::device_timer(emu_timer &timer, device_timer_id id, int para
 	 * static const int prom[16] = {0x00, 0x00, 0x02, 0x00, 0x00, 0x02, 0x00, 0x00,
 	 *              0x02, 0x00, 0x40, 0x00, 0x04, 0x06, 0x04, 0x84 };
 	 */
-	uint16_t ctrl;
-
 	update_prom_cnt();
-	ctrl = (m_prom[m_prom_cnt] | 0x200);
+	uint16_t ctrl = (m_prom[m_prom_cnt] | 0x200);
 
 	//if (m_enable && m_prom_cnt < 0x10) printf("ctrl %04x, enable %d cnt %d\n", ctrl, m_enable, m_prom_cnt);
 	m_prom_cnt = ((m_prom_cnt + 1) & 0x0f) | (m_prom_cnt & 0x10);
@@ -1357,11 +1345,7 @@ void tmsprom_device::device_timer(emu_timer &timer, device_timer_id id, int para
 
 void tmsprom_device::device_start()
 {
-	/* resolve lines */
-	m_pdc_cb.resolve_safe();
-	m_ctl_cb.resolve_safe();
-
-	m_romclk_timer = timer_alloc(0);
+	m_romclk_timer = timer_alloc(FUNC(tmsprom_device::update_romclk), this);
 	m_romclk_timer->adjust(attotime::zero, 0, attotime::from_hz(clock()));
 
 	m_bit = 0;
@@ -1452,7 +1436,7 @@ tms5110_device::tms5110_device(const machine_config &mconfig, device_type type, 
 	, m_m0_cb(*this)
 	, m_m1_cb(*this)
 	, m_addr_cb(*this)
-	, m_data_cb(*this)
+	, m_data_cb(*this, 0)
 	, m_romclk_cb(*this)
 {
 }
@@ -1511,7 +1495,7 @@ DEFINE_DEVICE_TYPE(TMSPROM, tmsprom_device, "tmsprom", "TMSPROM")
 tmsprom_device::tmsprom_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: device_t(mconfig, TMSPROM, tag, owner, clock),
 		m_rom(*this, DEVICE_SELF),
-		m_prom(*this, finder_base::DUMMY_TAG, 0x20),
+		m_prom(*this, finder_base::DUMMY_TAG),
 		m_rom_size(0),
 		m_pdc_bit(0),
 		m_ctl1_bit(0),

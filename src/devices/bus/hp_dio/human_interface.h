@@ -14,8 +14,9 @@
 #include "bus/hp_hil/hp_hil.h"
 #include "bus/hp_hil/hil_devices.h"
 #include "bus/ieee488/ieee488.h"
-namespace bus {
-	namespace hp_dio {
+
+namespace bus::hp_dio {
+
 class human_interface_device :
 	public device_t,
 	public device_dio16_card_interface
@@ -35,26 +36,26 @@ protected:
 private:
 
 	/* 8042 interface */
-	DECLARE_WRITE8_MEMBER(iocpu_port1_w);
-	DECLARE_WRITE8_MEMBER(iocpu_port2_w);
-	DECLARE_READ8_MEMBER(iocpu_port1_r);
-	DECLARE_READ8_MEMBER(iocpu_test0_r);
+	void iocpu_port1_w(uint8_t data);
+	void iocpu_port2_w(uint8_t data);
+	uint8_t iocpu_port1_r();
+	uint8_t iocpu_test0_r();
 
 	/* GPIB */
-	DECLARE_READ8_MEMBER(gpib_r);
-	DECLARE_WRITE8_MEMBER(gpib_w);
-	DECLARE_WRITE8_MEMBER(ieee488_dio_w);
+	uint8_t gpib_r(offs_t offset);
+	void gpib_w(offs_t offset, uint8_t data);
+	void ieee488_dio_w(uint8_t data);
 
-	DECLARE_WRITE_LINE_MEMBER(gpib_irq);
-	DECLARE_WRITE_LINE_MEMBER(gpib_dreq);
+	void gpib_irq(int state);
+	void gpib_dreq(int state);
 
 	/* RTC */
-	DECLARE_WRITE_LINE_MEMBER(rtc_d0_w);
-	DECLARE_WRITE_LINE_MEMBER(rtc_d1_w);
-	DECLARE_WRITE_LINE_MEMBER(rtc_d2_w);
-	DECLARE_WRITE_LINE_MEMBER(rtc_d3_w);
+	void rtc_d0_w(int state);
+	void rtc_d1_w(int state);
+	void rtc_d2_w(int state);
+	void rtc_d3_w(int state);
 
-	DECLARE_WRITE_LINE_MEMBER(reset_in) override;
+	void reset_in(int state) override;
 
 	void dmack_w_in(int channel, uint8_t data) override;
 	uint8_t dmack_r_in(int channel) override;
@@ -96,7 +97,7 @@ private:
 	uint8_t m_ppoll_mask;
 };
 
-} } // namespace bus::hp_dio
+} // namespace bus::hp_dio
 
 // device type definition
 DECLARE_DEVICE_TYPE_NS(HPDIO_HUMAN_INTERFACE, bus::hp_dio, human_interface_device)

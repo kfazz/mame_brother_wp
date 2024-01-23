@@ -58,22 +58,21 @@ public:
 	void set_year0(int year0) { m_year0 = year0; }
 	void set_default_24h(bool default_24h) { m_default_24h = default_24h; }
 
-	DECLARE_WRITE_LINE_MEMBER( cs2_w );
-	DECLARE_WRITE_LINE_MEMBER( write_w );
-	DECLARE_WRITE_LINE_MEMBER( read_w );
-	DECLARE_WRITE_LINE_MEMBER( d0_w );
-	DECLARE_WRITE_LINE_MEMBER( d1_w );
-	DECLARE_WRITE_LINE_MEMBER( d2_w );
-	DECLARE_WRITE_LINE_MEMBER( d3_w );
-	DECLARE_WRITE_LINE_MEMBER( address_write_w );
-	DECLARE_WRITE_LINE_MEMBER( stop_w );
-	DECLARE_WRITE_LINE_MEMBER( test_w );
-	DECLARE_WRITE_LINE_MEMBER( cs1_w );
+	void cs2_w(int state);
+	void write_w(int state);
+	void read_w(int state);
+	void d0_w(int state);
+	void d1_w(int state);
+	void d2_w(int state);
+	void d3_w(int state);
+	void address_write_w(int state);
+	void stop_w(int state);
+	void test_w(int state);
+	void cs1_w(int state);
 
 protected:
 	// device-level overrides
 	virtual void device_start() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// device_rtc_interface overrides
 	virtual void rtc_clock_updated(int year, int month, int day, int day_of_week, int hour, int minute, int second) override;
@@ -81,15 +80,15 @@ protected:
 
 	// device_nvram_interface overrides
 	virtual void nvram_default() override;
-	virtual void nvram_read(emu_file &file) override;
-	virtual void nvram_write(emu_file &file) override;
+	virtual bool nvram_read(util::read_stream &file) override;
+	virtual bool nvram_write(util::write_stream &file) override;
 	virtual bool rtc_feature_leap_year() const override { return true; }
 
-private:
-	static constexpr device_timer_id TIMER_CLOCK = 0;
-	static constexpr device_timer_id TIMER_BUSY = 1;
-	static constexpr device_timer_id TIMER_STANDARD = 2;
+	TIMER_CALLBACK_MEMBER(clock_tick);
+	TIMER_CALLBACK_MEMBER(release_busy);
+	TIMER_CALLBACK_MEMBER(assert_standard);
 
+private:
 	void update_input();
 	void update_output();
 	void update_standard();

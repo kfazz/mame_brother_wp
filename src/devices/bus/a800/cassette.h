@@ -29,15 +29,16 @@ public:
 	// construction/destruction
 	a8sio_cassette_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	virtual DECLARE_WRITE_LINE_MEMBER( motor_w ) override;
+	virtual void motor_w(int state) override;
 
 protected:
 	a8sio_cassette_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
 
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 	virtual void device_add_mconfig(machine_config &config) override;
+
+	TIMER_CALLBACK_MEMBER(read_tick);
 
 	required_device<cassette_image_device> m_cassette;
 	emu_timer *m_read_timer;

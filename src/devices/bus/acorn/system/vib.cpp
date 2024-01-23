@@ -127,7 +127,7 @@ void acorn_vib_device::device_reset()
 //**************************************************************************
 
 template<mc14411_device::timer_id T>
-WRITE_LINE_MEMBER(acorn_vib_device::write_acia_clock)
+void acorn_vib_device::write_acia_clock(int state)
 {
 	if (T == m_txc->read())
 		m_acia->write_txc(state);
@@ -135,7 +135,7 @@ WRITE_LINE_MEMBER(acorn_vib_device::write_acia_clock)
 		m_acia->write_rxc(state);
 }
 
-WRITE_LINE_MEMBER(acorn_vib_device::irq_w)
+void acorn_vib_device::irq_w(int state)
 {
 	m_bus->irq_w(state);
 }
@@ -149,7 +149,7 @@ void acorn_vib_device::device_add_mconfig(machine_config &config)
 {
 	INPUT_MERGER_ANY_HIGH(config, m_irqs).output_handler().set(FUNC(acorn_vib_device::irq_w));
 
-	VIA6522(config, m_via6522, 1'000'000); // TODO: derive clock from bus (pin 29 = ϕ2)
+	MOS6522(config, m_via6522, 1'000'000); // TODO: derive clock from bus (pin 29 = ϕ2)
 	m_via6522->writepa_handler().set("cent_data_out", FUNC(output_latch_device::write));
 	m_via6522->ca2_handler().set(m_centronics, FUNC(centronics_device::write_strobe));
 	m_via6522->irq_handler().set(m_irqs, FUNC(input_merger_device::in_w<0>));

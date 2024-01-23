@@ -11,6 +11,7 @@
 
 #include "slot.h"
 #include "machine/6522via.h"
+#include "machine/input_merger.h"
 #include "bus/bbc/1mhzbus/1mhzbus.h"
 #include "bus/bbc/tube/tube.h"
 #include "bus/bbc/userport/userport.h"
@@ -30,21 +31,22 @@ public:
 	electron_ap5_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
 protected:
-	// device-level overrides
+	// device_t implementation
 	virtual void device_start() override;
 
 	// optional information overrides
 	virtual void device_add_mconfig(machine_config &config) override;
 
-	// electron_cart_interface overrides
+	// electron_cart_interface implementation
 	virtual uint8_t read(offs_t offset, int infc, int infd, int romqa, int oe, int oe2) override;
 	virtual void write(offs_t offset, uint8_t data, int infc, int infd, int romqa, int oe, int oe2) override;
 
 private:
-	image_init_result load_rom(device_image_interface &image, generic_slot_device *slot);
+	std::pair<std::error_condition, std::string> load_rom(device_image_interface &image, generic_slot_device *slot);
 	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(rom1_load) { return load_rom(image, m_romslot[0]); }
 	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(rom2_load) { return load_rom(image, m_romslot[1]); }
 
+	required_device<input_merger_device> m_irqs;
 	required_device<via6522_device> m_via;
 	required_device<bbc_tube_slot_device> m_tube;
 	required_device<bbc_1mhzbus_slot_device> m_1mhzbus;

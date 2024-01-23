@@ -45,12 +45,12 @@ protected:
 	virtual int vip_ef4_r() override;
 
 private:
-	DECLARE_READ_LINE_MEMBER( rd_r );
-	DECLARE_READ_LINE_MEMBER( bd_r );
-	DECLARE_READ_LINE_MEMBER( gd_r );
+	int rd_r();
+	int bd_r();
+	int gd_r();
 
 	required_device<cdp1862_device> m_cgc;
-	optional_shared_ptr<uint8_t> m_color_ram;
+	memory_share_creator<uint8_t> m_color_ram;
 	required_ioport m_j1;
 	required_ioport m_j2;
 

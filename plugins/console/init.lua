@@ -5,34 +5,36 @@ local exports = {}
 exports.name = "console"
 exports.version = "0.0.1"
 exports.description = "Console plugin"
-exports.license = "The BSD 3-Clause License"
+exports.license = "BSD-3-Clause"
 exports.author = { name = "Carl" }
 
 local console = exports
+local history_file = "console_history"
+
+local history_fullpath = nil
+
+local reset_subscription, stop_subscription
 
 function console.startplugin()
 	local conth = emu.thread()
+	local ln_started = false
 	local started = false
+	local stopped = false
 	local ln = require("linenoise")
 	local preload = false
 	local matches = {}
 	local lastindex = 0
 	local consolebuf
-	_G.history = function (index)
-		local history = ln.historyget()
-		if index then
-			ln.preload(history[index])
-			return
-		end
-		for num, line in ipairs(history) do
-			print(num, line)
-		end
-	end
-	print("    _/      _/    _/_/    _/      _/  _/_/_/_/");
-	print("   _/_/  _/_/  _/    _/  _/_/  _/_/  _/       ");
-	print("  _/  _/  _/  _/_/_/_/  _/  _/  _/  _/_/_/    ");
-	print(" _/      _/  _/    _/  _/      _/  _/         ");
-	print("_/      _/  _/    _/  _/      _/  _/_/_/_/    \n");
+	print("       /|  /|    /|     /|  /|    _______")
+	print("      / | / |   / |    / | / |   /      /")
+	print("     /  |/  |  /  |   /  |/  |  /  ____/ ")
+	print("    /       | /   |  /       | /  /_     ")
+	print("   /        |/    | /        |/  __/     ")
+	print("  /  /|  /|    /| |/  /|  /|    /____    ")
+	print(" /  / | / |   / |    / | / |        /    ")
+	print("/ _/  |/  /  /  |___/  |/  /_______/     ")
+	print("         /  /                            ")
+	print("        / _/                             \n")
 	print(emu.app_name() .. " " .. emu.app_version(), "\nCopyright (C) Nicola Salmoria and the MAME team\n");
 	print(_VERSION, "\nCopyright (C) Lua.org, PUC-Rio\n");
 	-- linenoise isn't thread safe but that means history can handled here
@@ -40,14 +42,21 @@ function console.startplugin()
 	-- especially the completion callback
 	ln.historysetmaxlen(50)
 	local scr = [[
-local ln = require('linenoise')
-ln.setcompletion(function(c, str, pos)
-	status = str .. "\x01" .. tostring(pos)
-	yield()
-	ln.addcompletion(c, status:match("([^\x01]*)\x01(.*)"))
-end)
-return ln.linenoise('$PROMPT')
-]]
+		local ln = require('linenoise')
+		ln.setcompletion(
+			function(c, str)
+				status = str
+				yield()
+				for candidate in status:gmatch('([^\001]+)') do
+					ln.addcompletion(c, candidate)
+				end
+			end)
+		local ret = ln.linenoise('$PROMPT')
+		if ret == nil then
+			return "\n"
+		end
+		return ret
+	]]
 	local keywords = {
 		'and', 'break', 'do', 'else', 'elseif', 'end', 'false', 'for',
 		'function', 'if', 'in', 'local', 'nil', 'not', 'or', 'repeat',
@@ -58,7 +67,7 @@ return ln.linenoise('$PROMPT')
 	-- Main completion function. It evaluates the current sub-expression
 	-- to determine its type. Currently supports tables fields, global
 	-- variables and function prototype completion.
-	local function contextual_list(expr, sep, str, word)
+	local function contextual_list(expr, sep, str, word, strs)
 		local function add(value)
 			value = tostring(value)
 			if value:match("^" .. word) then
@@ -78,7 +87,7 @@ return ln.linenoise('$PROMPT')
 		end
 
 		if expr and expr ~= "" then
-			local v = loadstring("return " .. expr)
+			local v = load("local STRING = {'" .. table.concat(strs,"','") .. "'} return " .. expr)
 			if v then
 				err, v = pcall(v)
 				if (not err) or (not v) then
@@ -144,6 +153,7 @@ return ln.linenoise('$PROMPT')
 	-- separator item ( '.', ':', '[', '(' ) and the current string in case
 	-- of an unfinished string literal.
 	local function simplify_expression(expr, word)
+		local strs = {}
 		-- Replace annoying sequences \' and \" inside literal strings
 		expr = expr:gsub("\\(['\"])", function (c)
 				return string.format("\\%03d", string.byte(c))
@@ -163,7 +173,10 @@ return ln.linenoise('$PROMPT')
 				idx, startpat, endpat = idx2, sign, sign
 			end
 			if expr:sub(idx):find("^" .. startpat .. ".-" .. endpat) then
-				expr = expr:gsub(startpat .. "(.-)" .. endpat, " STRING ")
+				expr = expr:gsub(startpat .. "(.-)" .. endpat, function (str)
+						strs[#strs + 1] = str
+						return " STRING[" .. #strs .. "] "
+					end)
 			else
 				expr = expr:gsub(startpat .. "(.*)", function (str)
 						curstring = str
@@ -180,14 +193,11 @@ return ln.linenoise('$PROMPT')
 		expr = expr:gsub("(%w)%s+(%w)","%1|%2")
 		expr = expr:gsub("%s+", "") -- Remove now useless spaces
 		-- This main regular expression looks for table indexes and function calls.
-		return curstring, expr:match("([%.:%w%(%)%[%]_]-)([:%.%[%(])" .. word .. "$")
+		return curstring, strs, expr:match("([%.:%w%(%)%[%]_]-)([:%.%[%(])" .. word .. "$")
 	end
 
-	local function get_completions(line, endpos)
+	local function get_completions(line)
 		matches = {}
-		local endstr = line:sub(endpos + 1, -1)
-		line = line:sub(1, endpos)
-		endstr = endstr or ""
 		local start, word = line:match("^(.*[ \t\n\"\\'><=;:%+%-%*/%%^~#{}%(%)%[%].,])(.-)$")
 		if not start then
 			start = ""
@@ -196,30 +206,44 @@ return ln.linenoise('$PROMPT')
 			word = word or ""
 		end
 
-		local str, expr, sep = simplify_expression(line, word)
-		contextual_list(expr, sep, str, word)
-		if #matches > 1 then
-			print("\n")
-			for k, v in pairs(matches) do
-				print(v)
-			end
-			return "\x01" .. "-1"
+		local str, strs, expr, sep = simplify_expression(line, word)
+		contextual_list(expr, sep, str, word, strs)
+		if #matches == 0 then
+			return line
 		elseif #matches == 1 then
-			return start .. matches[1] .. endstr .. "\x01" .. (#start + #matches[1])
+			return start .. matches[1]
 		end
-		return "\x01" .. "-1"
+		print("")
+		result = { }
+		for k, v in pairs(matches) do
+			print(v)
+			table.insert(result, start .. v)
+		end
+		return table.concat(result, '\001')
 	end
 
-	emu.register_start(function()
-		if not consolebuf and manager:machine():debugger() then
-			consolebuf = manager:machine():debugger().consolelog
+	reset_subscription = emu.add_machine_reset_notifier(function ()
+		if not consolebuf and manager.machine.debugger then
+			consolebuf = manager.machine.debugger.consolelog
 			lastindex = 0
 		end
 	end)
 
-	emu.register_stop(function() consolebuf = nil end)
+	stop_subscription = emu.add_machine_stop_notifier(function ()
+		consolebuf = nil
+	end)
 
-	emu.register_periodic(function()
+	emu.register_periodic(function ()
+		if stopped then
+			return
+		end
+		if (not started) then
+			-- options are not available in startplugin, so we load the history here
+			local homepath = manager.options.entries.homepath:value():match("([^;]+)")
+			history_fullpath = homepath .. '/' .. history_file
+			ln.loadhistory(history_fullpath)
+			started = true
+		end
 		local prompt = "\x1b[1;36m[MAME]\x1b[0m> "
 		if consolebuf and (#consolebuf > lastindex) then
 			local last = #consolebuf
@@ -228,22 +252,26 @@ return ln.linenoise('$PROMPT')
 				lastindex = lastindex + 1
 				print(consolebuf[lastindex])
 			end
-			ln.refresh()
+			-- ln.refresh() FIXME: how to replicate this now that the API has been removed?
 		end
 		if conth.yield then
-			conth:continue(get_completions(conth.result:match("([^\x01]*)\x01(.*)")))
+			conth:continue(get_completions(conth.result))
 			return
 		elseif conth.busy then
 			return
-		elseif started then
+		elseif ln_started then
 			local cmd = conth.result
-			if cmd == "" then
+			if cmd == "\n" then
+				stopped = true
+				return
+			elseif cmd == "" then
 				if cmdbuf ~= "" then
 					print("Incomplete command")
 					cmdbuf = ""
 				end
 			else
 				cmdbuf = cmdbuf .. "\n" .. cmd
+				ln.historyadd(cmd)
 				local func, err = load(cmdbuf)
 				if not func then
 					if err:match("<eof>") then
@@ -253,19 +281,28 @@ return ln.linenoise('$PROMPT')
 						cmdbuf = ""
 					end
 				else
+					cmdbuf = ""
+					stopped = true
 					local status
 					status, err = pcall(func)
 					if not status then
 						print("error: ", err)
 					end
-					cmdbuf = ""
+					stopped = false
 				end
-				ln.historyadd(cmd)
 			end
 		end
 		conth:start(scr:gsub("$PROMPT", prompt))
-		started = true
+		ln_started = true
 	end)
 end
+
+setmetatable(console, {
+			 __gc = function ()
+				 if history_fullpath then
+					 local ln = require("linenoise")
+					 ln.savehistory(history_fullpath)
+				 end
+end})
 
 return exports

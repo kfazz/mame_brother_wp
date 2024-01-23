@@ -63,25 +63,25 @@ public:
 	void write16(offs_t offset, u16 data);
 
 	// Source N inputs
-	DECLARE_WRITE_LINE_MEMBER(source1_w) { write_source(0, state); }
-	DECLARE_WRITE_LINE_MEMBER(source2_w) { write_source(1, state); }
-	DECLARE_WRITE_LINE_MEMBER(source3_w) { write_source(2, state); }
-	DECLARE_WRITE_LINE_MEMBER(source4_w) { write_source(3, state); }
-	DECLARE_WRITE_LINE_MEMBER(source5_w) { write_source(4, state); }
+	void source1_w(int state) { write_source(0, state); }
+	void source2_w(int state) { write_source(1, state); }
+	void source3_w(int state) { write_source(2, state); }
+	void source4_w(int state) { write_source(3, state); }
+	void source5_w(int state) { write_source(4, state); }
 
 	// Gate N inputs
-	DECLARE_WRITE_LINE_MEMBER(gate1_w) { write_gate(0, state); }
-	DECLARE_WRITE_LINE_MEMBER(gate2_w) { write_gate(1, state); }
-	DECLARE_WRITE_LINE_MEMBER(gate3_w) { write_gate(2, state); }
-	DECLARE_WRITE_LINE_MEMBER(gate4_w) { write_gate(3, state); }
-	DECLARE_WRITE_LINE_MEMBER(gate5_w) { write_gate(4, state); }
+	void gate1_w(int state) { write_gate(0, state); }
+	void gate2_w(int state) { write_gate(1, state); }
+	void gate3_w(int state) { write_gate(2, state); }
+	void gate4_w(int state) { write_gate(3, state); }
+	void gate5_w(int state) { write_gate(4, state); }
 
 	// Gate N alternate inputs (8-bit mode only; multiplexed with DB8-DB12)
-	DECLARE_WRITE_LINE_MEMBER(gate1a_w) { write_gate_alt(0, state); }
-	DECLARE_WRITE_LINE_MEMBER(gate2a_w) { write_gate_alt(1, state); }
-	DECLARE_WRITE_LINE_MEMBER(gate3a_w) { write_gate_alt(2, state); }
-	DECLARE_WRITE_LINE_MEMBER(gate4a_w) { write_gate_alt(3, state); }
-	DECLARE_WRITE_LINE_MEMBER(gate5a_w) { write_gate_alt(4, state); }
+	void gate1a_w(int state) { write_gate_alt(0, state); }
+	void gate2a_w(int state) { write_gate_alt(1, state); }
+	void gate3a_w(int state) { write_gate_alt(2, state); }
+	void gate4a_w(int state) { write_gate_alt(3, state); }
+	void gate5a_w(int state) { write_gate_alt(4, state); }
 
 	// diagnostic helper
 	std::string describe_register() const;
@@ -93,11 +93,11 @@ protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_clock_changed() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 private:
 	// internal helpers
 	TIMER_CALLBACK_MEMBER(clear_outputs);
+	TIMER_CALLBACK_MEMBER(timer_tick);
 	void master_reset();
 	void init_freq_timer(int f);
 	void select_freq_timer(int f, int c, bool selected, bool cycle);
@@ -161,14 +161,6 @@ private:
 
 	// frequency timer
 	u8 m_f;
-	enum
-	{
-		TIMER_F1,
-		TIMER_F2,
-		TIMER_F3,
-		TIMER_F4,
-		TIMER_F5
-	};
 	emu_timer *m_freq_timer[5];
 	u8 m_freq_timer_selected[5];
 	u8 m_freq_timer_cycle[5];

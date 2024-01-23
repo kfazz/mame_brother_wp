@@ -26,10 +26,10 @@ spg110_device::spg110_device(const machine_config &mconfig, device_type type, co
 	m_porta_out(*this),
 	m_portb_out(*this),
 	m_portc_out(*this),
-	m_porta_in(*this),
-	m_portb_in(*this),
-	m_portc_in(*this),
-	m_adc_in(*this),
+	m_porta_in(*this, 0),
+	m_portb_in(*this, 0),
+	m_portc_in(*this, 0),
+	m_adc_in(*this, 0x0fff),
 	m_chip_sel(*this),
 	m_is_spiderman(false)
 {
@@ -41,16 +41,16 @@ spg110_device::spg110_device(const machine_config &mconfig, const char *tag, dev
 {
 }
 
-WRITE_LINE_MEMBER(spg110_device::videoirq_w)
+void spg110_device::videoirq_w(int state)
 {
 	set_state_unsynced(UNSP_IRQ0_LINE, state);
 }
 
-WRITE_LINE_MEMBER(spg110_device::ffreq1_w)
+void spg110_device::ffreq1_w(int state)
 {
 }
 
-WRITE_LINE_MEMBER(spg110_device::ffreq2_w)
+void spg110_device::ffreq2_w(int state)
 {
 }
 
@@ -65,6 +65,8 @@ void spg110_device::configure_spg_io(spg2xx_io_device* io)
 	io->portc_out().set(FUNC(spg110_device::portc_w));
 	io->adc_in<0>().set(FUNC(spg110_device::adc_r<0>));
 	io->adc_in<1>().set(FUNC(spg110_device::adc_r<1>));
+	io->adc_in<2>().set(FUNC(spg110_device::adc_r<2>));
+	io->adc_in<3>().set(FUNC(spg110_device::adc_r<3>));
 	io->chip_select().set(FUNC(spg110_device::cs_w));
 //  io->pal_read_callback().set(FUNC(spg110_device::get_pal_r));
 //  io->write_timer_irq_callback().set(FUNC(spg110_device::timerirq_w));
@@ -74,13 +76,13 @@ void spg110_device::configure_spg_io(spg2xx_io_device* io)
 	io->write_ffrq_tmr2_irq_callback().set(FUNC(spg110_device::ffreq2_w));
 }
 
-READ16_MEMBER(spg110_device::space_r)
+uint16_t spg110_device::space_r(offs_t offset)
 {
 	address_space &cpuspace = this->space(AS_PROGRAM);
 	return cpuspace.read_word(offset);
 }
 
-WRITE_LINE_MEMBER(spg110_device::audioirq_w)
+void spg110_device::audioirq_w(int state)
 {
 	set_state_unsynced(UNSP_FIQ_LINE, state);
 }
@@ -166,22 +168,9 @@ void spg110_device::internal_map(address_map &map)
 }
 
 
-void spg110_device::device_start()
-{
-	unsp_device::device_start();
-
-	m_porta_out.resolve_safe();
-	m_portb_out.resolve_safe();
-	m_portc_out.resolve_safe();
-	m_porta_in.resolve_safe(0);
-	m_portb_in.resolve_safe(0);
-	m_portc_in.resolve_safe(0);
-	m_adc_in.resolve_all_safe(0x0fff);
-	m_chip_sel.resolve_safe();
-}
-
 void spg110_device::device_reset()
 {
 	unsp_device::device_reset();
+
 	m_spg_video->set_video_irq_spidman(m_is_spiderman);
 }

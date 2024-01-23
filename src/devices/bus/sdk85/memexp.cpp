@@ -16,20 +16,20 @@ DEFINE_DEVICE_TYPE(SDK85_ROMEXP, sdk85_romexp_device, "sdk85_romexp", "SDK-85 ex
 
 sdk85_romexp_device::sdk85_romexp_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
 	: device_t(mconfig, SDK85_ROMEXP, tag, owner, clock)
-	, device_image_interface(mconfig, *this)
+	, device_rom_image_interface(mconfig, *this)
 	, device_single_card_slot_interface<device_sdk85_romexp_card_interface>(mconfig, *this)
 	, m_dev(nullptr)
 {
 }
 
-image_init_result sdk85_romexp_device::call_load()
+std::pair<std::error_condition, std::string> sdk85_romexp_device::call_load()
 {
-	if (get_card_device() != nullptr)
+	if (get_card_device())
 	{
-		u32 size = loaded_through_softlist() ? get_software_region_length("rom") : length();
-		u8 *base = get_card_device()->get_rom_base(size);
-		if (base == nullptr)
-			return image_init_result::FAIL;
+		u32 const size = loaded_through_softlist() ? get_software_region_length("rom") : length();
+		u8 *const base = get_card_device()->get_rom_base(size);
+		if (!base)
+			return std::make_pair(image_error::INTERNAL, std::string());
 
 		if (loaded_through_softlist())
 			memcpy(base, get_software_region("rom"), size);
@@ -37,7 +37,7 @@ image_init_result sdk85_romexp_device::call_load()
 			fread(base, size);
 	}
 
-	return image_init_result::PASS;
+	return std::make_pair(std::error_condition(), std::string());
 }
 
 std::string sdk85_romexp_device::get_default_card_software(get_default_card_software_hook &hook) const

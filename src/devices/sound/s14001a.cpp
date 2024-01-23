@@ -116,19 +116,7 @@ uint8_t Mux8To2(bool bVoicedP2, uint8_t uPPQtrP2, uint8_t uDeltaAdrP2, uint8_t u
 		uDeltaAdrP2 ^= 0x03; // count backwards
 
 	// emulate 8 to 2 mux to obtain delta from byte (bigendian)
-	switch (uDeltaAdrP2)
-	{
-	case 0x00:
-		return (uRomDataP2 & 0xC0) >> 6;
-	case 0x01:
-		return (uRomDataP2 & 0x30) >> 4;
-	case 0x02:
-		return (uRomDataP2 & 0x0C) >> 2;
-	case 0x03:
-		return (uRomDataP2 & 0x03) >> 0;
-	default:
-		return 0xFF;
-	}
+	return uRomDataP2 >> (~uDeltaAdrP2 << 1 & 0x06) & 0x03;
 }
 
 
@@ -208,13 +196,13 @@ uint8_t CalculateOutput(bool bVoiced, bool bXSilence, uint8_t uPPQtr, bool bPPQS
 // device definition
 DEFINE_DEVICE_TYPE(S14001A, s14001a_device, "s14001a", "SSi TSI S14001A")
 
-s14001a_device::s14001a_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, S14001A, tag, owner, clock),
-		device_sound_interface(mconfig, *this),
-		m_SpeechRom(*this, DEVICE_SELF),
-		m_stream(nullptr),
-		m_bsy_handler(*this),
-		m_ext_read_handler(*this)
+s14001a_device::s14001a_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	device_t(mconfig, S14001A, tag, owner, clock),
+	device_sound_interface(mconfig, *this),
+	m_SpeechRom(*this, DEVICE_SELF),
+	m_stream(nullptr),
+	m_bsy_handler(*this),
+	m_ext_read_handler(*this, 0)
 {
 }
 
@@ -226,13 +214,39 @@ ALLOW_SAVE_TYPE(s14001a_device::states); // allow save_item on a non-fundamental
 
 void s14001a_device::device_start()
 {
-	m_stream = machine().sound().stream_alloc(*this, 0, 1, clock() ? clock() : machine().sample_rate());
+	m_stream = stream_alloc(0, 1, clock() ? clock() : machine().sample_rate());
 
-	// resolve callbacks
-	m_ext_read_handler.resolve();
-	m_bsy_handler.resolve();
+	// zero-fill
+	m_bPhase1 = false;
+	m_uStateP1 = m_uStateP2 = states::IDLE;
+	m_uDAR13To05P1 = 0;
+	m_uDAR13To05P2 = 0;
+	m_uDAR04To00P1 = 0;
+	m_uDAR04To00P2 = 0;
+	m_uCWARP1 = 0;
+	m_uCWARP2 = 0;
+	m_bStopP1 = false;
+	m_bStopP2 = false;
+	m_bVoicedP1 = false;
+	m_bVoicedP2 = false;
+	m_bSilenceP1 = false;
+	m_bSilenceP2 = false;
+	m_uLengthP1 = 0;
+	m_uLengthP2 = 0;
+	m_uXRepeatP1 = 0;
+	m_uXRepeatP2 = 0;
+	m_uDeltaOldP1 = 0;
+	m_uDeltaOldP2 = 0;
+	m_bDAR04To00CarryP2 = false;
+	m_bPPQCarryP2 = false;
+	m_bRepeatCarryP2 = false;
+	m_bLengthCarryP2 = false;
+	m_RomAddrP1 = 0;
+	m_uRomAddrP2 = 0;
+	m_bBusyP1 = false;
+	m_bStart = false;
+	m_uWord = 0;
 
-	// note: zerofill is done already by MAME core
 	ClearStatistics();
 	m_uOutputP1 = m_uOutputP2 = 7;
 
@@ -284,13 +298,13 @@ void s14001a_device::device_start()
 //  sound_stream_update - handle a stream update
 //-------------------------------------------------
 
-void s14001a_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void s14001a_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
-	for (int i = 0; i < samples; i++)
+	for (int i = 0; i < outputs[0].samples(); i++)
 	{
 		Clock();
 		int16_t sample = m_uOutputP2 - 7; // range -7..8
-		outputs[0][i] = sample * 0xf00;
+		outputs[0].put_int(i, sample, 8);
 	}
 }
 
@@ -343,7 +357,7 @@ void s14001a_device::set_clock(uint32_t clock)
 uint8_t s14001a_device::readmem(uint16_t offset, bool phase)
 {
 	offset &= 0xfff; // 11-bit internal
-	return ((m_ext_read_handler.isnull()) ? m_SpeechRom[offset & (m_SpeechRom.bytes() - 1)] : m_ext_read_handler(offset));
+	return (m_ext_read_handler.isunset()) ? m_SpeechRom[offset & (m_SpeechRom.bytes() - 1)] : m_ext_read_handler(offset);
 }
 
 bool s14001a_device::Clock()
@@ -395,7 +409,7 @@ bool s14001a_device::Clock()
 		m_uOutputP1 = 7;
 		if (m_bStart) m_uStateP1 = states::WORDWAIT;
 
-		if (m_bBusyP1 && !m_bsy_handler.isnull())
+		if (m_bBusyP1)
 			m_bsy_handler(0);
 		m_bBusyP1 = false;
 		break;
@@ -410,7 +424,7 @@ bool s14001a_device::Clock()
 		if (m_bStart) m_uStateP1 = states::WORDWAIT;
 		else          m_uStateP1 = states::CWARMSB;
 
-		if (!m_bBusyP1 && !m_bsy_handler.isnull())
+		if (!m_bBusyP1)
 			m_bsy_handler(1);
 		m_bBusyP1 = true;
 		break;

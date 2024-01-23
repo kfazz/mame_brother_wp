@@ -12,7 +12,6 @@
 #pragma once
 
 #include "bus/rs232/rs232.h"
-#include "formats/ccvf_dsk.h"
 #include "imagedev/floppy.h"
 
 
@@ -50,9 +49,9 @@ public:
 	}
 	compucolor_floppy_port_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_WRITE_LINE_MEMBER( rw_w ) { if (m_dev) m_dev->rw_w(state); }
+	void rw_w(int state) { if (m_dev) m_dev->rw_w(state); }
 	void stepper_w(uint8_t data) { if (m_dev) m_dev->stepper_w(data); }
-	DECLARE_WRITE_LINE_MEMBER( select_w ) { if (m_dev) m_dev->select_w(state); }
+	void select_w(int state) { if (m_dev) m_dev->select_w(state); }
 
 protected:
 	// device-level overrides
@@ -75,7 +74,6 @@ public:
 protected:
 	// device-level overrides
 	virtual void device_start() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// optional information overrides
 	virtual void device_add_mconfig(machine_config &config) override;
@@ -89,10 +87,11 @@ protected:
 	virtual void select_w(int state) override;
 
 private:
-	DECLARE_FLOPPY_FORMATS( floppy_formats );
+	static void floppy_formats(format_registration &fr);
 
 	required_device<floppy_connector> m_floppy;
 
+	TIMER_CALLBACK_MEMBER(rxd_tick);
 	bool read_bit();
 	void write_bit(bool bit);
 

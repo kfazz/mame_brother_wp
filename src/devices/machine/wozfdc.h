@@ -14,7 +14,6 @@
 #pragma once
 
 #include "imagedev/floppy.h"
-#include "formats/flopimg.h"
 #include "machine/74259.h"
 
 //**************************************************************************
@@ -39,7 +38,9 @@ protected:
 
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+
+	TIMER_CALLBACK_MEMBER(generic_tick);
+	TIMER_CALLBACK_MEMBER(delayed_tick);
 
 	void control(int offset);
 	void set_phase(uint8_t data);

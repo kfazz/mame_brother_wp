@@ -44,8 +44,7 @@ enum
 {
 	MCS51_INT0_LINE = 0,    /* P3.2: External Interrupt 0 */
 	MCS51_INT1_LINE,        /* P3.3: External Interrupt 1 */
-	MCS51_RX_LINE,          /* P3.0: Serial Port Receive Line */
-	MCS51_T0_LINE,          /* P3,4: Timer 0 External Input */
+	MCS51_T0_LINE,          /* P3.4: Timer 0 External Input */
 	MCS51_T1_LINE,          /* P3.5: Timer 1 External Input */
 	MCS51_T2_LINE,          /* P1.0: Timer 2 External Input */
 	MCS51_T2EX_LINE,        /* P1.1: Timer 2 Capture Reload Trigger */
@@ -64,14 +63,13 @@ public:
 
 	template <unsigned N> auto port_in_cb() { return m_port_in_cb[N].bind(); }
 	template <unsigned N> auto port_out_cb() { return m_port_out_cb[N].bind(); }
-	auto serial_rx_cb() { return m_serial_rx_cb.bind(); }
-	auto serial_tx_cb() { return m_serial_tx_cb.bind(); }
 
 	void program_internal(address_map &map);
 	void data_internal(address_map &map);
 protected:
 	// construction/destruction
 	mcs51_cpu_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, int program_width, int data_width, uint8_t features = 0);
+	mcs51_cpu_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, address_map_constructor program_map, address_map_constructor data_map, int program_width, int data_width, uint8_t features = 0);
 
 	// device-level overrides
 	virtual void device_start() override;
@@ -131,12 +129,14 @@ protected:
 	struct mcs51_uart
 	{
 		uint8_t   data_out;       //Data to send out
-		uint8_t   bits_to_send;   //How many bits left to send when transmitting out the serial port
+		uint8_t   data_in;
+		uint8_t   txbit;
+		uint8_t   rxbit;
+		uint8_t   rxb8;
 
 		int     smod_div;       /* signal divided by 2^SMOD */
 		int     rx_clk;         /* rx clock */
 		int     tx_clk;         /* tx clock */
-		uint8_t   delay_cycles;   //Gross Hack;
 	} m_uart;            /* internal uart */
 
 	/* Internal Ram */
@@ -147,18 +147,15 @@ protected:
 	virtual void sfr_write(size_t offset, uint8_t data);
 	virtual uint8_t sfr_read(size_t offset);
 
+	void transmit(int state);
+
 	/* Memory spaces */
-	address_space *m_program;
-	memory_access_cache<0, 0, ENDIANNESS_LITTLE> *m_cache;
-	address_space *m_data;
-	address_space *m_io;
+	memory_access<16, 0, 0, ENDIANNESS_LITTLE>::cache m_program;
+	memory_access< 9, 0, 0, ENDIANNESS_LITTLE>::specific m_data;
+	memory_access<17, 0, 0, ENDIANNESS_LITTLE>::specific m_io;
 
 	devcb_read8::array<4> m_port_in_cb;
 	devcb_write8::array<4> m_port_out_cb;
-
-	/* Serial Port TX/RX Callbacks */
-	devcb_write8 m_serial_tx_cb;    //Call back function when sending data out of serial port
-	devcb_read8 m_serial_rx_cb;    //Call back function to retrieve data when receiving serial port data
 
 	/* DS5002FP */
 	struct {
@@ -169,6 +166,7 @@ protected:
 		uint8_t   mcon;                   /* bootstrap loader MCON register */
 		uint8_t   rpctl;                  /* bootstrap loader RPCTL register */
 		uint8_t   crc;                    /* bootstrap loader CRC register */
+		int32_t   rnr_delay;              /* delay before new random number available */
 	} m_ds5002fp;
 
 	// for the debugger
@@ -181,7 +179,7 @@ protected:
 	void clear_current_irq();
 	uint8_t r_acc();
 	uint8_t r_psw();
-	offs_t external_ram_iaddr(offs_t offset, offs_t mem_mask);
+	virtual offs_t external_ram_iaddr(offs_t offset, offs_t mem_mask);
 	uint8_t iram_read(size_t offset);
 	void iram_write(size_t offset, uint8_t data);
 	void push_pc();
@@ -196,9 +194,7 @@ protected:
 	void update_timer_t1(int cycles);
 	void update_timer_t2(int cycles);
 	void update_timers(int cycles);
-	void serial_transmit(uint8_t data);
-	void serial_receive();
-	void update_serial(int cycles);
+	void update_serial(int source);
 	void update_irq_prio(uint8_t ipl, uint8_t iph);
 	void execute_op(uint8_t op);
 	void check_irqs();
@@ -316,7 +312,6 @@ protected:
 	void xrl_a_r(uint8_t r);
 	void illegal(uint8_t r);
 	uint8_t ds5002fp_protected(size_t offset, uint8_t data, uint8_t ta_mask, uint8_t mask);
-
 };
 
 
@@ -339,11 +334,17 @@ DECLARE_DEVICE_TYPE(I87C51, i87c51_device)
 DECLARE_DEVICE_TYPE(I80C32, i80c32_device)
 DECLARE_DEVICE_TYPE(I80C52, i80c52_device)
 DECLARE_DEVICE_TYPE(I87C52, i87c52_device)
+DECLARE_DEVICE_TYPE(I87C51FA, i87c51fa_device)
 DECLARE_DEVICE_TYPE(I80C51GB, i80c51gb_device)
 DECLARE_DEVICE_TYPE(AT89C52, at89c52_device)
 DECLARE_DEVICE_TYPE(AT89S52, at89s52_device)
+DECLARE_DEVICE_TYPE(DS80C320, ds80c320_device)
+DECLARE_DEVICE_TYPE(SAB80C535, sab80c535_device)
 /* 4k internal perom and 128 internal ram and 2 analog comparators */
 DECLARE_DEVICE_TYPE(AT89C4051, at89c4051_device)
+
+DECLARE_DEVICE_TYPE(I8344, i8344_device)
+DECLARE_DEVICE_TYPE(I8744, i8744_device)
 
 DECLARE_DEVICE_TYPE(DS5002FP, ds5002fp_device)
 
@@ -468,7 +469,19 @@ public:
 	i87c52_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 };
 
-class i80c51gb_device : public i80c52_device
+class i87c51fa_device : public i80c52_device
+{
+public:
+	// construction/destruction
+	i87c51fa_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	i87c51fa_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, int program_width, int data_width, uint8_t features = 0);
+
+	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
+};
+
+class i80c51gb_device : public i87c51fa_device
 {
 public:
 	// construction/destruction
@@ -497,6 +510,46 @@ class at89c4051_device : public i80c51_device
 public:
 	// construction/destruction
 	at89c4051_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+};
+
+class ds80c320_device : public i80c52_device
+{
+public:
+	// construction/destruction
+	ds80c320_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
+};
+
+class sab80c535_device : public i80c51_device
+{
+public:
+	// construction/destruction
+	sab80c535_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
+};
+
+class i8344_device : public mcs51_cpu_device
+{
+public:
+	// construction/destruction
+	i8344_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
+};
+
+class i8744_device : public mcs51_cpu_device
+{
+public:
+	// construction/destruction
+	i8744_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
 };
 
 /*
@@ -538,8 +591,8 @@ public:
 
 	// device_nvram_interface overrides
 	virtual void nvram_default() override;
-	virtual void nvram_read( emu_file &file ) override;
-	virtual void nvram_write( emu_file &file ) override;
+	virtual bool nvram_read( util::read_stream &file ) override;
+	virtual bool nvram_write( util::write_stream &file ) override;
 
 protected:
 	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
@@ -547,6 +600,9 @@ protected:
 	/* SFR Callbacks */
 	virtual void sfr_write(size_t offset, uint8_t data) override;
 	virtual uint8_t sfr_read(size_t offset) override;
+
+	uint8_t handle_rnr();
+	bool is_rnr_ready();
 
 private:
 	optional_memory_region m_region;

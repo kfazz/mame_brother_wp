@@ -2,13 +2,11 @@
 // copyright-holders:Olivier Galibert
 /*********************************************************************
 
-    formats/xdf_dsk.c
+    formats/xdf_dsk.cpp
 
     x68k bare-bones formats
 
 *********************************************************************/
-
-#include <cassert>
 
 #include "formats/xdf_dsk.h"
 
@@ -16,17 +14,17 @@ xdf_format::xdf_format() : upd765_format(formats)
 {
 }
 
-const char *xdf_format::name() const
+const char *xdf_format::name() const noexcept
 {
 	return "xdf";
 }
 
-const char *xdf_format::description() const
+const char *xdf_format::description() const noexcept
 {
 	return "XDF disk image";
 }
 
-const char *xdf_format::extensions() const
+const char *xdf_format::extensions() const noexcept
 {
 	return "xdf,hdm,2hd";
 }
@@ -44,4 +42,4 @@ const xdf_format::format xdf_format::formats[] = {
 	{}
 };
 
-const floppy_format_type FLOPPY_XDF_FORMAT = &floppy_image_format_creator<xdf_format>;
+const xdf_format FLOPPY_XDF_FORMAT;

@@ -1,6 +1,6 @@
 /* -*- mode: c; c-basic-offset: 2; tab-width: 2; indent-tabs-mode: nil -*- */
 /*
- *  Copyright (c) 2015 Steven G. Johnson, Jiahao Chen, Peter Colberg, Tony Kelman, Scott P. Jones, and other contributors.
+ *  Copyright (c) 2014-2021 Steven G. Johnson, Jiahao Chen, Peter Colberg, Tony Kelman, Scott P. Jones, and other contributors.
  *  Copyright (c) 2009 Public Software Group e. V., Berlin, Germany
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a
@@ -27,7 +27,7 @@
  *  Unicode data files.
  *
  *  The original data files are available at
- *  http://www.unicode.org/Public/UNIDATA/
+ *  https://www.unicode.org/Public/UNIDATA/
  *
  *  Please notice the copyright statement in the file "utf8proc_data.c".
  */
@@ -42,6 +42,14 @@
 
 
 #include "utf8proc.h"
+
+#ifndef SSIZE_MAX
+#define SSIZE_MAX ((size_t)SIZE_MAX/2)
+#endif
+#ifndef UINT16_MAX
+#  define UINT16_MAX 65535U
+#endif
+
 #include "utf8proc_data.c"
 
 
@@ -92,6 +100,10 @@ UTF8PROC_DLLEXPORT const char *utf8proc_version(void) {
   return STRINGIZE(UTF8PROC_VERSION_MAJOR) "." STRINGIZE(UTF8PROC_VERSION_MINOR) "." STRINGIZE(UTF8PROC_VERSION_PATCH) "";
 }
 
+UTF8PROC_DLLEXPORT const char *utf8proc_unicode_version(void) {
+  return "15.1.0";
+}
+
 UTF8PROC_DLLEXPORT const char *utf8proc_errmsg(utf8proc_ssize_t errcode) {
   switch (errcode) {
     case UTF8PROC_ERROR_NOMEM:
@@ -113,7 +125,7 @@ UTF8PROC_DLLEXPORT const char *utf8proc_errmsg(utf8proc_ssize_t errcode) {
 UTF8PROC_DLLEXPORT utf8proc_ssize_t utf8proc_iterate(
   const utf8proc_uint8_t *str, utf8proc_ssize_t strlen, utf8proc_int32_t *dst
 ) {
-  utf8proc_uint32_t uc;
+  utf8proc_int32_t uc;
   const utf8proc_uint8_t *end;
 
   *dst = -1;
@@ -125,7 +137,7 @@ UTF8PROC_DLLEXPORT utf8proc_ssize_t utf8proc_iterate(
     return 1;
   }
   // Must be between 0xc2 and 0xf4 inclusive to be valid
-  if ((uc - 0xc2) > (0xf4-0xc2)) return UTF8PROC_ERROR_INVALIDUTF8;
+  if ((utf8proc_uint32_t)(uc - 0xc2) > (0xf4-0xc2)) return UTF8PROC_ERROR_INVALIDUTF8;
   if (uc < 0xe0) {         // 2-byte sequence
      // Must have valid continuation character
      if (str >= end || !utf_cont(*str)) return UTF8PROC_ERROR_INVALIDUTF8;
@@ -188,9 +200,13 @@ UTF8PROC_DLLEXPORT utf8proc_ssize_t utf8proc_encode_char(utf8proc_int32_t uc, ut
   } else return 0;
 }
 
-/* internal "unsafe" version that does not check whether uc is in range */
-static utf8proc_ssize_t unsafe_encode_char(utf8proc_int32_t uc, utf8proc_uint8_t *dst) {
+/* internal version used for inserting 0xff bytes between graphemes */
+static utf8proc_ssize_t charbound_encode_char(utf8proc_int32_t uc, utf8proc_uint8_t *dst) {
    if (uc < 0x00) {
+      if (uc == -1) { /* internal value used for grapheme breaks */
+        dst[0] = (utf8proc_uint8_t)0xFF;
+        return 1;
+      }
       return 0;
    } else if (uc < 0x80) {
       dst[0] = (utf8proc_uint8_t)uc;
@@ -199,12 +215,6 @@ static utf8proc_ssize_t unsafe_encode_char(utf8proc_int32_t uc, utf8proc_uint8_t
       dst[0] = (utf8proc_uint8_t)(0xC0 + (uc >> 6));
       dst[1] = (utf8proc_uint8_t)(0x80 + (uc & 0x3F));
       return 2;
-   } else if (uc == 0xFFFF) {
-       dst[0] = (utf8proc_uint8_t)0xFF;
-       return 1;
-   } else if (uc == 0xFFFE) {
-       dst[0] = (utf8proc_uint8_t)0xFE;
-       return 1;
    } else if (uc < 0x10000) {
       dst[0] = (utf8proc_uint8_t)(0xE0 + (uc >> 12));
       dst[1] = (utf8proc_uint8_t)(0x80 + ((uc >> 6) & 0x3F));
@@ -271,48 +281,76 @@ static utf8proc_bool grapheme_break_simple(int lbc, int tbc) {
      tbc == UTF8PROC_BOUNDCLASS_ZWJ ||                // ---
      tbc == UTF8PROC_BOUNDCLASS_SPACINGMARK ||        // GB9a
      lbc == UTF8PROC_BOUNDCLASS_PREPEND) ? false :    // GB9b
-    ((lbc == UTF8PROC_BOUNDCLASS_E_BASE ||            // GB10 (requires additional handling below)
-      lbc == UTF8PROC_BOUNDCLASS_E_BASE_GAZ) &&       // ----
-     tbc == UTF8PROC_BOUNDCLASS_E_MODIFIER) ? false : // ----
-    (lbc == UTF8PROC_BOUNDCLASS_ZWJ &&                         // GB11
-     (tbc == UTF8PROC_BOUNDCLASS_GLUE_AFTER_ZWJ ||             // ----
-      tbc == UTF8PROC_BOUNDCLASS_E_BASE_GAZ)) ? false :        // ----
+    (lbc == UTF8PROC_BOUNDCLASS_E_ZWG &&              // GB11 (requires additional handling below)
+     tbc == UTF8PROC_BOUNDCLASS_EXTENDED_PICTOGRAPHIC) ? false : // ----
     (lbc == UTF8PROC_BOUNDCLASS_REGIONAL_INDICATOR &&          // GB12/13 (requires additional handling below)
      tbc == UTF8PROC_BOUNDCLASS_REGIONAL_INDICATOR) ? false :  // ----
     true; // GB999
 }
 
-static utf8proc_bool grapheme_break_extended(int lbc, int tbc, utf8proc_int32_t *state)
+static utf8proc_bool grapheme_break_extended(int lbc, int tbc, int licb, int ticb, utf8proc_int32_t *state)
 {
-  int lbc_override = lbc;
-  if (state && *state != UTF8PROC_BOUNDCLASS_START)
-    lbc_override = *state;
-  utf8proc_bool break_permitted = grapheme_break_simple(lbc_override, tbc);
   if (state) {
+    int state_bc, state_icb; /* boundclass and indic_conjunct_break state */
+    if (*state == 0) { /* state initialization */
+      state_bc = lbc;
+      state_icb = licb == UTF8PROC_INDIC_CONJUNCT_BREAK_CONSONANT ? licb : UTF8PROC_INDIC_CONJUNCT_BREAK_NONE;
+    }
+    else { /* lbc and licb are already encoded in *state */
+      state_bc = *state & 0xff;  // 1st byte of state is bound class
+      state_icb = *state >> 8;   // 2nd byte of state is indic conjunct break
+    }
+
+    utf8proc_bool break_permitted = grapheme_break_simple(state_bc, tbc) &&
+       !(state_icb == UTF8PROC_INDIC_CONJUNCT_BREAK_LINKER
+        && ticb == UTF8PROC_INDIC_CONJUNCT_BREAK_CONSONANT); // GB9c
+
+    // Special support for GB9c.  Don't break between two consonants
+    // separated 1+ linker characters and 0+ extend characters in any order.
+    // After a consonant, we enter LINKER state after at least one linker.
+    if (ticb == UTF8PROC_INDIC_CONJUNCT_BREAK_CONSONANT
+        || state_icb == UTF8PROC_INDIC_CONJUNCT_BREAK_CONSONANT
+        || state_icb == UTF8PROC_INDIC_CONJUNCT_BREAK_EXTEND)
+      state_icb = ticb;
+    else if (state_icb == UTF8PROC_INDIC_CONJUNCT_BREAK_LINKER)
+      state_icb = ticb == UTF8PROC_INDIC_CONJUNCT_BREAK_EXTEND ?
+                  UTF8PROC_INDIC_CONJUNCT_BREAK_LINKER : ticb;
+
     // Special support for GB 12/13 made possible by GB999. After two RI
     // class codepoints we want to force a break. Do this by resetting the
     // second RI's bound class to UTF8PROC_BOUNDCLASS_OTHER, to force a break
     // after that character according to GB999 (unless of course such a break is
     // forbidden by a different rule such as GB9).
-    if (*state == tbc && tbc == UTF8PROC_BOUNDCLASS_REGIONAL_INDICATOR)
-      *state = UTF8PROC_BOUNDCLASS_OTHER;
-    // Special support for GB10. Fold any EXTEND codepoints into the previous
-    // boundclass if we're dealing with an emoji base boundclass.
-    else if ((*state == UTF8PROC_BOUNDCLASS_E_BASE      ||
-              *state == UTF8PROC_BOUNDCLASS_E_BASE_GAZ) &&
-             tbc == UTF8PROC_BOUNDCLASS_EXTEND)
-      *state = UTF8PROC_BOUNDCLASS_E_BASE;
+    if (state_bc == tbc && tbc == UTF8PROC_BOUNDCLASS_REGIONAL_INDICATOR)
+      state_bc = UTF8PROC_BOUNDCLASS_OTHER;
+    // Special support for GB11 (emoji extend* zwj / emoji)
+    else if (state_bc == UTF8PROC_BOUNDCLASS_EXTENDED_PICTOGRAPHIC) {
+      if (tbc == UTF8PROC_BOUNDCLASS_EXTEND) // fold EXTEND codepoints into emoji
+        state_bc = UTF8PROC_BOUNDCLASS_EXTENDED_PICTOGRAPHIC;
+      else if (tbc == UTF8PROC_BOUNDCLASS_ZWJ)
+        state_bc = UTF8PROC_BOUNDCLASS_E_ZWG; // state to record emoji+zwg combo
+      else
+        state_bc = tbc;
+    }
     else
-      *state = tbc;
+      state_bc = tbc;
+
+    *state = state_bc + (state_icb << 8);
+    return break_permitted;
   }
-  return break_permitted;
+  else
+    return grapheme_break_simple(lbc, tbc);
 }
 
 UTF8PROC_DLLEXPORT utf8proc_bool utf8proc_grapheme_break_stateful(
     utf8proc_int32_t c1, utf8proc_int32_t c2, utf8proc_int32_t *state) {
 
-  return grapheme_break_extended(utf8proc_get_property(c1)->boundclass,
-                                 utf8proc_get_property(c2)->boundclass,
+  const utf8proc_property_t *p1 = utf8proc_get_property(c1);
+  const utf8proc_property_t *p2 = utf8proc_get_property(c2);
+  return grapheme_break_extended(p1->boundclass,
+                                 p2->boundclass,
+                                 p1->indic_conjunct_break,
+                                 p2->indic_conjunct_break,
                                  state);
 }
 
@@ -341,9 +379,9 @@ static utf8proc_int32_t seqindex_decode_index(const utf8proc_uint32_t seqindex)
 
 static utf8proc_ssize_t seqindex_write_char_decomposed(utf8proc_uint16_t seqindex, utf8proc_int32_t *dst, utf8proc_ssize_t bufsize, utf8proc_option_t options, int *last_boundclass) {
   utf8proc_ssize_t written = 0;
-  const utf8proc_uint16_t *entry = &utf8proc_sequences[seqindex & 0x1FFF];
-  int len = seqindex >> 13;
-  if (len >= 7) {
+  const utf8proc_uint16_t *entry = &utf8proc_sequences[seqindex & 0x3FFF];
+  int len = seqindex >> 14;
+  if (len >= 3) {
     len = *entry;
     entry++;
   }
@@ -361,19 +399,31 @@ static utf8proc_ssize_t seqindex_write_char_decomposed(utf8proc_uint16_t seqinde
 UTF8PROC_DLLEXPORT utf8proc_int32_t utf8proc_tolower(utf8proc_int32_t c)
 {
   utf8proc_int32_t cl = utf8proc_get_property(c)->lowercase_seqindex;
-  return cl != UINT16_MAX ? seqindex_decode_index(cl) : c;
+  return cl != UINT16_MAX ? seqindex_decode_index((utf8proc_uint32_t)cl) : c;
 }
 
 UTF8PROC_DLLEXPORT utf8proc_int32_t utf8proc_toupper(utf8proc_int32_t c)
 {
   utf8proc_int32_t cu = utf8proc_get_property(c)->uppercase_seqindex;
-  return cu != UINT16_MAX ? seqindex_decode_index(cu) : c;
+  return cu != UINT16_MAX ? seqindex_decode_index((utf8proc_uint32_t)cu) : c;
 }
 
 UTF8PROC_DLLEXPORT utf8proc_int32_t utf8proc_totitle(utf8proc_int32_t c)
 {
   utf8proc_int32_t cu = utf8proc_get_property(c)->titlecase_seqindex;
-  return cu != UINT16_MAX ? seqindex_decode_index(cu) : c;
+  return cu != UINT16_MAX ? seqindex_decode_index((utf8proc_uint32_t)cu) : c;
+}
+
+UTF8PROC_DLLEXPORT int utf8proc_islower(utf8proc_int32_t c)
+{
+  const utf8proc_property_t *p = utf8proc_get_property(c);
+  return p->lowercase_seqindex != p->uppercase_seqindex && p->lowercase_seqindex == UINT16_MAX;
+}
+
+UTF8PROC_DLLEXPORT int utf8proc_isupper(utf8proc_int32_t c)
+{
+  const utf8proc_property_t *p = utf8proc_get_property(c);
+  return p->lowercase_seqindex != p->uppercase_seqindex && p->uppercase_seqindex == UINT16_MAX && p->category != UTF8PROC_CATEGORY_LT;
 }
 
 /* return a character width analogous to wcwidth (except portable and
@@ -383,7 +433,7 @@ UTF8PROC_DLLEXPORT int utf8proc_charwidth(utf8proc_int32_t c) {
 }
 
 UTF8PROC_DLLEXPORT utf8proc_category_t utf8proc_category(utf8proc_int32_t c) {
-  return utf8proc_get_property(c)->category;
+  return (utf8proc_category_t) utf8proc_get_property(c)->category;
 }
 
 UTF8PROC_DLLEXPORT const char *utf8proc_category_string(utf8proc_int32_t c) {
@@ -393,7 +443,7 @@ UTF8PROC_DLLEXPORT const char *utf8proc_category_string(utf8proc_int32_t c) {
 
 #define utf8proc_decompose_lump(replacement_uc) \
   return utf8proc_decompose_char((replacement_uc), dst, bufsize, \
-  options & ~UTF8PROC_LUMP, last_boundclass)
+  options & ~(unsigned int)UTF8PROC_LUMP, last_boundclass)
 
 UTF8PROC_DLLEXPORT utf8proc_ssize_t utf8proc_decompose_char(utf8proc_int32_t uc, utf8proc_int32_t *dst, utf8proc_ssize_t bufsize, utf8proc_option_t options, int *last_boundclass) {
   const utf8proc_property_t *property;
@@ -423,6 +473,9 @@ UTF8PROC_DLLEXPORT utf8proc_ssize_t utf8proc_decompose_char(utf8proc_int32_t uc,
   }
   if (options & UTF8PROC_IGNORE) {
     if (property->ignorable) return 0;
+  }
+  if (options & UTF8PROC_STRIPNA) {
+    if (!category) return 0;
   }
   if (options & UTF8PROC_LUMP) {
     if (category == UTF8PROC_CATEGORY_ZS) utf8proc_decompose_lump(0x0020);
@@ -468,10 +521,10 @@ UTF8PROC_DLLEXPORT utf8proc_ssize_t utf8proc_decompose_char(utf8proc_int32_t uc,
   }
   if (options & UTF8PROC_CHARBOUND) {
     utf8proc_bool boundary;
-    int tbc = property->boundclass;
-    boundary = grapheme_break_extended(*last_boundclass, tbc, last_boundclass);
+    boundary = grapheme_break_extended(0, property->boundclass, 0, property->indic_conjunct_break,
+                                       last_boundclass);
     if (boundary) {
-      if (bufsize >= 1) dst[0] = 0xFFFF;
+      if (bufsize >= 1) dst[0] = -1; /* sentinel value for grapheme break */
       if (bufsize >= 2) dst[1] = uc;
       return 2;
     }
@@ -632,9 +685,9 @@ UTF8PROC_DLLEXPORT utf8proc_ssize_t utf8proc_normalize_utf32(utf8proc_int32_t *b
             current_property->comb_index != UINT16_MAX &&
             current_property->comb_index >= 0x8000) {
           int sidx = starter_property->comb_index;
-          int idx = (current_property->comb_index & 0x3FFF) - utf8proc_combinations[sidx];
-          if (idx >= 0 && idx <= utf8proc_combinations[sidx + 1] ) {
-            idx += sidx + 2;
+          int idx = current_property->comb_index & 0x3FFF;
+          if (idx >= utf8proc_combinations[sidx] && idx <= utf8proc_combinations[sidx + 1] ) {
+            idx += sidx + 2 - utf8proc_combinations[sidx];
             if (current_property->comb_index & 0x4000) {
               composition = (utf8proc_combinations[idx] << 16) | utf8proc_combinations[idx+1];
             } else
@@ -677,7 +730,7 @@ UTF8PROC_DLLEXPORT utf8proc_ssize_t utf8proc_reencode(utf8proc_int32_t *buffer, 
     if (options & UTF8PROC_CHARBOUND) {
         for (rpos = 0; rpos < length; rpos++) {
             uc = buffer[rpos];
-            wpos += unsafe_encode_char(uc, ((utf8proc_uint8_t *)buffer) + wpos);
+            wpos += charbound_encode_char(uc, ((utf8proc_uint8_t *)buffer) + wpos);
         }
     } else {
         for (rpos = 0; rpos < length; rpos++) {
@@ -705,7 +758,7 @@ UTF8PROC_DLLEXPORT utf8proc_ssize_t utf8proc_map_custom(
   *dstptr = NULL;
   result = utf8proc_decompose_custom(str, strlen, NULL, 0, options, custom_func, custom_data);
   if (result < 0) return result;
-  buffer = (utf8proc_int32_t *) malloc(result * sizeof(utf8proc_int32_t) + 1);
+  buffer = (utf8proc_int32_t *) malloc(((utf8proc_size_t)result) * sizeof(utf8proc_int32_t) + 1);
   if (!buffer) return UTF8PROC_ERROR_NOMEM;
   result = utf8proc_decompose_custom(str, strlen, buffer, result, options, custom_func, custom_data);
   if (result < 0) {
@@ -751,5 +804,12 @@ UTF8PROC_DLLEXPORT utf8proc_uint8_t *utf8proc_NFKC(const utf8proc_uint8_t *str) 
   utf8proc_uint8_t *retval;
   utf8proc_map(str, 0, &retval, UTF8PROC_NULLTERM | UTF8PROC_STABLE |
     UTF8PROC_COMPOSE | UTF8PROC_COMPAT);
+  return retval;
+}
+
+UTF8PROC_DLLEXPORT utf8proc_uint8_t *utf8proc_NFKC_Casefold(const utf8proc_uint8_t *str) {
+  utf8proc_uint8_t *retval;
+  utf8proc_map(str, 0, &retval, UTF8PROC_NULLTERM | UTF8PROC_STABLE |
+    UTF8PROC_COMPOSE | UTF8PROC_COMPAT | UTF8PROC_CASEFOLD | UTF8PROC_IGNORE);
   return retval;
 }

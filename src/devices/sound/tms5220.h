@@ -45,8 +45,8 @@ public:
 
 	// all lines with suffix q are active low!
 
-	WRITE_LINE_MEMBER( rsq_w );
-	WRITE_LINE_MEMBER( wsq_w );
+	void rsq_w(int state);
+	void wsq_w(int state);
 
 	void combined_rsq_wsq_w(u8 data);
 	/* this combined_rsq_wsq_w hack is necessary for specific systems such as
@@ -61,8 +61,8 @@ public:
 	void data_w(uint8_t data);
 	uint8_t status_r();
 
-	READ_LINE_MEMBER( readyq_r );
-	READ_LINE_MEMBER( intq_r );
+	int readyq_r();
+	int intq_r();
 
 protected:
 	tms5220_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, int variant);
@@ -72,10 +72,10 @@ protected:
 	virtual void device_reset() override;
 	virtual void device_clock_changed() override;
 
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
-
 	// sound stream update overrides
-	virtual void sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples) override;
+	virtual void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
+
+	TIMER_CALLBACK_MEMBER(set_io_ready);
 
 private:
 	static constexpr unsigned FIFO_SIZE = 16;

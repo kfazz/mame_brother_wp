@@ -68,15 +68,14 @@ public:
 	uint8_t pb_r();
 	uint8_t ackb_r();
 
-	DECLARE_WRITE_LINE_MEMBER( pc2_w );
-	DECLARE_WRITE_LINE_MEMBER( pc4_w );
-	DECLARE_WRITE_LINE_MEMBER( pc6_w );
+	void pc2_w(int state);
+	void pc4_w(int state);
+	void pc6_w(int state);
 
 protected:
 	i8255_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, bool is_ams40489);
 
-	// device-level overrides
-	virtual void device_resolve_objects() override;
+	// device_t implementation
 	virtual void device_start() override;
 	virtual void device_reset() override;
 
@@ -142,7 +141,7 @@ public:
 
 // device type definition
 DECLARE_DEVICE_TYPE(I8255, i8255_device)
-DECLARE_DEVICE_TYPE(I8255A, i8255_device)
+static auto &I8255A = I8255;
 DECLARE_DEVICE_TYPE(AMS40489_PPI, ams40489_ppi_device)
 
 #endif // MAME_MACHINE_I8255_H

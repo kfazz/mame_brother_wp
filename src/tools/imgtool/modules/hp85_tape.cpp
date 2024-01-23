@@ -7,11 +7,18 @@
     HP-85 tape format
 
 *********************************************************************/
-
 #include "imgtool.h"
-#include "formats/imageutl.h"
+
 #include "formats/hti_tape.h"
+
+#include "ioprocs.h"
+#include "multibyte.h"
+#include "opresolv.h"
+#include "strformat.h"
+
+#include <cstdio>
 #include <iostream>
+
 
 // Constants
 static constexpr unsigned CHARS_PER_FNAME = 6;  // Characters in a filename
@@ -109,9 +116,9 @@ private:
 	// Content
 	std::vector<sif_file_ptr_t> content;
 	// First file on track 1
-	file_no_t file_track_1;
+	file_no_t file_track_1{};
 	// No. of first record on track 1
-	uint16_t record_track_1;
+	uint16_t record_track_1 = 0;
 
 	bool dec_rec_header(const tape_word_t *hdr , file_no_t& file_no , uint16_t& rec_no , bool& has_body , unsigned& body_len);
 	bool load_whole_tape();
@@ -145,7 +152,7 @@ typedef struct {
 tape_image_85::tape_image_85(void)
 	: dirty(false)
 {
-	image.set_bits_per_word(16);
+	image.set_image_format(hti_format_t::HTI_DELTA_MOD_16_BITS);
 }
 
 void tape_image_85::format_img(void)
@@ -158,48 +165,13 @@ void tape_image_85::format_img(void)
 	finalize_allocation();
 }
 
-namespace {
-	int my_seekproc(void *file, int64_t offset, int whence)
-	{
-		reinterpret_cast<imgtool::stream *>(file)->seek(offset, whence);
-		return 0;
-	}
-
-	size_t my_readproc(void *file, void *buffer, size_t length)
-	{
-		return reinterpret_cast<imgtool::stream *>(file)->read(buffer, length);
-	}
-
-	size_t my_writeproc(void *file, const void *buffer, size_t length)
-	{
-		reinterpret_cast<imgtool::stream *>(file)->write(buffer, length);
-		return length;
-	}
-
-	uint64_t my_filesizeproc(void *file)
-	{
-		return reinterpret_cast<imgtool::stream *>(file)->size();
-	}
-
-	const struct io_procs my_stream_procs = {
-		nullptr,
-		my_seekproc,
-		my_readproc,
-		my_writeproc,
-		my_filesizeproc
-	};
-}
-
 imgtoolerr_t tape_image_85::load_from_file(imgtool::stream *stream)
 {
-	io_generic io;
-	io.file = (void *)stream;
-	io.procs = &my_stream_procs;
-	io.filler = 0;
-
-	if (!image.load_tape(&io)) {
+	auto io = imgtool::stream_read(*stream, 0);
+	if (!io || !image.load_tape(*io)) {
 		return IMGTOOLERR_READERROR;
 	}
+	io.reset();
 
 	// Prevent track boundary crossing when reading directory
 	file_track_1 = 0;
@@ -422,12 +394,7 @@ imgtoolerr_t tape_image_85::save_to_file(imgtool::stream *stream)
 	file_0.clear();
 	save_sif_file(track , pos , dir.size() + 1 , file_0);
 
-	io_generic io;
-	io.file = (void *)stream;
-	io.procs = &my_stream_procs;
-	io.filler = 0;
-
-	image.save_tape(&io);
+	image.save_tape(*imgtool::stream_read_write(*stream, 0));
 
 	return IMGTOOLERR_SUCCESS;
 }
@@ -667,7 +634,7 @@ bool tape_image_85::decode_dir(const sif_file_t& file_0)
 
 	// Get FL1TK1
 	file_track_1 = file_0[ 0xfd ];
-	record_track_1 = pick_integer_le(file_0.data() , 0xfe , 2);
+	record_track_1 = get_u16le(&file_0[ 0xfe ]);
 
 	file_no_t file_no = 1;
 
@@ -698,10 +665,10 @@ bool tape_image_85::decode_dir(const sif_file_t& file_0)
 		new_entry.file_no = file_no++;
 
 		// Physical records
-		new_entry.n_recs = pick_integer_le(p , 8 , 2);
+		new_entry.n_recs = get_u16le(&p[ 8 ]);
 
 		// Bytes per logical record
-		new_entry.record_len = pick_integer_le(p , 10 , 2);
+		new_entry.record_len = get_u16le(&p[ 10 ]);
 		if (new_entry.record_len < 4 || new_entry.record_len >= 32768) {
 			return false;
 		}
@@ -722,8 +689,8 @@ void tape_image_85::encode_dir(sif_file_t& file_0) const
 	file_0[ 0x1fc ] = 1;
 	// Set FL1TK1
 	file_0[ 0xfd ] = file_0[ 0x1fd ] = file_track_1;
-	place_integer_le(file_0.data() , 0xfe , 2 , record_track_1);
-	place_integer_le(file_0.data() , 0x1fe , 2 , record_track_1);
+	put_u16le(&file_0[ 0xfe ] , record_track_1);
+	put_u16le(&file_0[ 0x1fe ] , record_track_1);
 
 	unsigned i = 0;
 	file_no_t file_no = 1;
@@ -736,8 +703,8 @@ void tape_image_85::encode_dir(sif_file_t& file_0) const
 		memcpy(&p_entry[ 0 ] , &entry->filename[ 0 ] , CHARS_PER_FNAME);
 		p_entry[ 6 ] = file_no;
 		p_entry[ 7 ] = entry->filetype;
-		place_integer_le(p_entry , 8 , 2 , entry->n_recs);
-		place_integer_le(p_entry , 10 , 2 , entry->record_len);
+		put_u16le(&p_entry[ 8 ] , entry->n_recs);
+		put_u16le(&p_entry[ 10 ] , entry->record_len);
 	}
 
 	if (file_no <= MAX_FILE_NO) {
@@ -866,7 +833,7 @@ namespace {
 	tape_image_85& get_tape_image(tape_state_t& ts)
 	{
 		if (ts.img == nullptr) {
-			ts.img = global_alloc(tape_image_85);
+			ts.img = new tape_image_85;
 		}
 
 		return *(ts.img);
@@ -916,7 +883,7 @@ namespace {
 		delete state.stream;
 
 		// Free tape_image
-		global_free(&tape_image);
+		delete &tape_image;
 	}
 
 	imgtoolerr_t hp85_tape_begin_enum (imgtool::directory &enumeration, const char *path)

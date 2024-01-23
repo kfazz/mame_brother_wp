@@ -13,6 +13,7 @@
 #include "cpu/m6809/m6809.h"
 #include "machine/i8291a.h"
 #include "machine/wd_fdc.h"
+#include "formats/flopimg.h"
 #include "hp9122c.lh"
 
 DEFINE_DEVICE_TYPE(HP9122C, hp9122c_device, "hp9122c", "HP9122C Dual High density disk drive")
@@ -91,7 +92,7 @@ void hp9122c_device::device_start()
 	save_item(NAME(m_ds0));
 	save_item(NAME(m_ds1));
 
-	m_motor_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(hp9122c_device::motor_timeout), this));
+	m_motor_timer = timer_alloc(FUNC(hp9122c_device::motor_timeout), this);
 }
 
 TIMER_CALLBACK_MEMBER(hp9122c_device::motor_timeout)
@@ -155,65 +156,65 @@ void hp9122c_device::ieee488_ren(int state)
 	m_i8291a->ren_w(state);
 }
 
-WRITE_LINE_MEMBER(hp9122c_device::i8291a_eoi_w)
+void hp9122c_device::i8291a_eoi_w(int state)
 {
 	m_bus->eoi_w(this, state);
 }
 
-WRITE_LINE_MEMBER(hp9122c_device::i8291a_dav_w)
+void hp9122c_device::i8291a_dav_w(int state)
 {
 	m_bus->dav_w(this, state);
 }
 
-WRITE_LINE_MEMBER(hp9122c_device::i8291a_nrfd_w)
+void hp9122c_device::i8291a_nrfd_w(int state)
 {
 	m_bus->nrfd_w(this, state);
 }
 
-WRITE_LINE_MEMBER(hp9122c_device::i8291a_ndac_w)
+void hp9122c_device::i8291a_ndac_w(int state)
 {
 	m_bus->ndac_w(this, state);
 }
 
-WRITE_LINE_MEMBER(hp9122c_device::i8291a_ifc_w)
+void hp9122c_device::i8291a_ifc_w(int state)
 {
 	m_bus->ifc_w(this, state);
 }
 
-WRITE_LINE_MEMBER(hp9122c_device::i8291a_srq_w)
+void hp9122c_device::i8291a_srq_w(int state)
 {
 	m_bus->srq_w(this, state);
 }
 
-WRITE_LINE_MEMBER(hp9122c_device::i8291a_atn_w)
+void hp9122c_device::i8291a_atn_w(int state)
 {
 	m_bus->atn_w(this, state);
 }
 
-WRITE_LINE_MEMBER(hp9122c_device::i8291a_ren_w)
+void hp9122c_device::i8291a_ren_w(int state)
 {
 	m_bus->ren_w(this, state);
 }
 
-WRITE_LINE_MEMBER(hp9122c_device::i8291a_int_w)
+void hp9122c_device::i8291a_int_w(int state)
 {
 	m_i8291a_irq = state;
 	update_intsel();
 }
 
-WRITE_LINE_MEMBER(hp9122c_device::i8291a_dreq_w)
+void hp9122c_device::i8291a_dreq_w(int state)
 {
 	m_i8291a_drq = state;
 	update_intsel();
 }
 
-WRITE_LINE_MEMBER(hp9122c_device::fdc_intrq_w)
+void hp9122c_device::fdc_intrq_w(int state)
 {
 	m_fdc_irq = state;
 	update_intsel();
 }
 
-WRITE_LINE_MEMBER(hp9122c_device::fdc_drq_w)
+void hp9122c_device::fdc_drq_w(int state)
 {
 	m_fdc_drq = state;
 	update_intsel();
@@ -255,17 +256,17 @@ void hp9122c_device::update_intsel()
 	m_cpufirq = firq;
 }
 
-READ8_MEMBER(hp9122c_device::i8291a_dio_r)
+uint8_t hp9122c_device::i8291a_dio_r()
 {
-	return m_bus->read_dio();
+	return m_bus->dio_r();
 }
 
-WRITE8_MEMBER(hp9122c_device::i8291a_dio_w)
+void hp9122c_device::i8291a_dio_w(uint8_t data)
 {
 	m_bus->dio_w(this, data);
 }
 
-READ8_MEMBER(hp9122c_device::status_r)
+uint8_t hp9122c_device::status_r()
 {
 	uint8_t ret = REG_STATUS_DUAL|REG_STATUS_DISKCHG;
 	auto addr = m_hpib_addr->read();
@@ -290,7 +291,7 @@ READ8_MEMBER(hp9122c_device::status_r)
 	return ret;
 }
 
-WRITE8_MEMBER(hp9122c_device::cmd_w)
+void hp9122c_device::cmd_w(uint8_t data)
 {
 	floppy_image_device *floppy0 = m_floppy[0]->get_device();
 	floppy_image_device *floppy1 = m_floppy[1]->get_device();
@@ -338,7 +339,7 @@ void hp9122c_device::index_pulse_cb(floppy_image_device *floppy, int state)
 
 }
 
-WRITE8_MEMBER(hp9122c_device::clridx_w)
+void hp9122c_device::clridx_w(uint8_t data)
 {
 	m_index_int = false;
 	update_intsel();
@@ -354,12 +355,6 @@ static void hp9122c_floppies(device_slot_interface &device)
 	device.option_add("35dd" , FLOPPY_35_DD);
 	device.option_add("35hd" , FLOPPY_35_HD);
 }
-
-static const floppy_format_type hp9122c_floppy_formats[] = {
-	FLOPPY_MFI_FORMAT,
-	FLOPPY_TD0_FORMAT,
-	nullptr
-};
 
 const tiny_rom_entry *hp9122c_device::device_rom_region() const
 {
@@ -399,7 +394,7 @@ void hp9122c_device::device_add_mconfig(machine_config &config)
 	m_i8291a->int_write().set(FUNC(hp9122c_device::i8291a_int_w));
 	m_i8291a->dreq_write().set(FUNC(hp9122c_device::i8291a_dreq_w));
 
-	FLOPPY_CONNECTOR(config, "floppy0" , hp9122c_floppies , "35hd" , hp9122c_floppy_formats, true).enable_sound(true);
-	FLOPPY_CONNECTOR(config, "floppy1" , hp9122c_floppies , "35hd" , hp9122c_floppy_formats, true).enable_sound(true);
+	FLOPPY_CONNECTOR(config, "floppy0" , hp9122c_floppies , "35hd" , floppy_image_device::default_mfm_floppy_formats, true).enable_sound(true);
+	FLOPPY_CONNECTOR(config, "floppy1" , hp9122c_floppies , "35hd" , floppy_image_device::default_mfm_floppy_formats, true).enable_sound(true);
 	config.set_default_layout(layout_hp9122c);
 }

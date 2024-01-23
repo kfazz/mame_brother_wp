@@ -95,14 +95,36 @@ void cdp1869_device::cdp1869(address_map &map)
 
 
 //**************************************************************************
-//  INLINE HELPERS
+//  DEVICE FUNCTIONS
 //**************************************************************************
+
+//-------------------------------------------------
+//  get_rgb - get RGB value
+//-------------------------------------------------
+
+rgb_t cdp1869_device::get_rgb(int i, int c, int l)
+{
+	int luma = 0;
+
+	luma += (l & 4) ? CDP1869_WEIGHT_RED : 0;
+	luma += (l & 1) ? CDP1869_WEIGHT_GREEN : 0;
+	luma += (l & 2) ? CDP1869_WEIGHT_BLUE : 0;
+
+	luma = (luma * 0xff) / 100;
+
+	int const r = (c & 4) ? luma : 0;
+	int const g = (c & 1) ? luma : 0;
+	int const b = (c & 2) ? luma : 0;
+
+	return rgb_t(r, g, b);
+}
+
 
 //-------------------------------------------------
 //  is_ntsc - is device in NTSC mode
 //-------------------------------------------------
 
-inline bool cdp1869_device::is_ntsc()
+bool cdp1869_device::is_ntsc()
 {
 	return m_read_pal_ntsc() ? false : true;
 }
@@ -113,7 +135,7 @@ inline bool cdp1869_device::is_ntsc()
 //  the given address
 //-------------------------------------------------
 
-inline uint8_t cdp1869_device::read_page_ram_byte(offs_t pma)
+uint8_t cdp1869_device::read_page_ram_byte(offs_t pma)
 {
 	return space().read_byte(pma);
 }
@@ -124,7 +146,7 @@ inline uint8_t cdp1869_device::read_page_ram_byte(offs_t pma)
 //  the given address
 //-------------------------------------------------
 
-inline void cdp1869_device::write_page_ram_byte(offs_t pma, uint8_t data)
+void cdp1869_device::write_page_ram_byte(offs_t pma, uint8_t data)
 {
 	space().write_byte(pma, data);
 }
@@ -135,15 +157,9 @@ inline void cdp1869_device::write_page_ram_byte(offs_t pma, uint8_t data)
 //  the given address
 //-------------------------------------------------
 
-inline uint8_t cdp1869_device::read_char_ram_byte(offs_t pma, offs_t cma, uint8_t pmd)
+uint8_t cdp1869_device::read_char_ram_byte(offs_t pma, offs_t cma, uint8_t pmd)
 {
-	uint8_t data = 0;
-
-	if (!m_in_char_ram_func.isnull())
-	{
-		data = m_in_char_ram_func(pma, cma, pmd);
-	}
-
+	uint8_t const data = m_in_char_ram_func(pma, cma, pmd);
 	return data;
 }
 
@@ -153,12 +169,9 @@ inline uint8_t cdp1869_device::read_char_ram_byte(offs_t pma, offs_t cma, uint8_
 //  the given address
 //-------------------------------------------------
 
-inline void cdp1869_device::write_char_ram_byte(offs_t pma, offs_t cma, uint8_t pmd, uint8_t data)
+void cdp1869_device::write_char_ram_byte(offs_t pma, offs_t cma, uint8_t pmd, uint8_t data)
 {
-	if (!m_out_char_ram_func.isnull())
-	{
-		m_out_char_ram_func(pma, cma, pmd, data);
-	}
+	m_out_char_ram_func(pma, cma, pmd, data);
 }
 
 
@@ -166,15 +179,9 @@ inline void cdp1869_device::write_char_ram_byte(offs_t pma, offs_t cma, uint8_t 
 //  read_pcb - read page control bit
 //-------------------------------------------------
 
-inline int cdp1869_device::read_pcb(offs_t pma, offs_t cma, uint8_t pmd)
+int cdp1869_device::read_pcb(offs_t pma, offs_t cma, uint8_t pmd)
 {
-	int pcb = 0;
-
-	if (!m_in_pcb_func.isnull())
-	{
-		pcb = m_in_pcb_func(pma, cma, pmd);
-	}
-
+	int const pcb = m_in_pcb_func(pma, cma, pmd);
 	return pcb;
 }
 
@@ -183,7 +190,7 @@ inline int cdp1869_device::read_pcb(offs_t pma, offs_t cma, uint8_t pmd)
 //  update_prd_changed_timer -
 //-------------------------------------------------
 
-inline void cdp1869_device::update_prd_changed_timer()
+void cdp1869_device::update_prd_changed_timer()
 {
 	int start = SCANLINE_PREDISPLAY_START_PAL;
 	int end = SCANLINE_PREDISPLAY_END_PAL;
@@ -224,32 +231,10 @@ inline void cdp1869_device::update_prd_changed_timer()
 
 
 //-------------------------------------------------
-//  get_rgb - get RGB value
-//-------------------------------------------------
-
-inline rgb_t cdp1869_device::get_rgb(int i, int c, int l)
-{
-	int luma = 0;
-
-	luma += (l & 4) ? CDP1869_WEIGHT_RED : 0;
-	luma += (l & 1) ? CDP1869_WEIGHT_GREEN : 0;
-	luma += (l & 2) ? CDP1869_WEIGHT_BLUE : 0;
-
-	luma = (luma * 0xff) / 100;
-
-	int const r = (c & 4) ? luma : 0;
-	int const g = (c & 1) ? luma : 0;
-	int const b = (c & 2) ? luma : 0;
-
-	return rgb_t(r, g, b);
-}
-
-
-//-------------------------------------------------
 //  get_lines - get number of character lines
 //-------------------------------------------------
 
-inline int cdp1869_device::get_lines()
+int cdp1869_device::get_lines()
 {
 	if (m_line16 && !m_dblpage)
 	{
@@ -270,7 +255,7 @@ inline int cdp1869_device::get_lines()
 //  get_pmemsize - get page memory size
 //-------------------------------------------------
 
-inline uint16_t cdp1869_device::get_pmemsize(int cols, int rows)
+uint16_t cdp1869_device::get_pmemsize(int cols, int rows)
 {
 	int pmemsize = cols * rows;
 
@@ -285,7 +270,7 @@ inline uint16_t cdp1869_device::get_pmemsize(int cols, int rows)
 //  get_pma - get page memory address
 //-------------------------------------------------
 
-inline uint16_t cdp1869_device::get_pma()
+uint16_t cdp1869_device::get_pma()
 {
 	if (m_dblpage)
 	{
@@ -302,7 +287,7 @@ inline uint16_t cdp1869_device::get_pma()
 //  get_pen - get pen for color bits
 //-------------------------------------------------
 
-inline int cdp1869_device::get_pen(int ccb0, int ccb1, int pcb)
+int cdp1869_device::get_pen(int ccb0, int ccb1, int pcb)
 {
 	int r = 0, g = 0, b = 0;
 
@@ -355,7 +340,7 @@ cdp1869_device::cdp1869_device(const machine_config &mconfig, const char *tag, d
 	device_sound_interface(mconfig, *this),
 	device_video_interface(mconfig, *this),
 	device_memory_interface(mconfig, *this),
-	m_read_pal_ntsc(*this),
+	m_read_pal_ntsc(*this, 0),
 	m_write_prd(*this),
 	m_in_pcb_func(*this),
 	m_in_char_ram_func(*this),
@@ -385,14 +370,12 @@ void cdp1869_device::device_add_mconfig(machine_config &config)
 void cdp1869_device::device_start()
 {
 	// resolve callbacks
-	m_read_pal_ntsc.resolve_safe(0);
-	m_write_prd.resolve_safe();
-	m_in_pcb_func.resolve();
-	m_in_char_ram_func.resolve();
-	m_out_char_ram_func.resolve();
+	m_in_pcb_func.resolve_safe(0);
+	m_in_char_ram_func.resolve_safe(0);
+	m_out_char_ram_func.resolve_safe();
 
 	// allocate timers
-	m_prd_timer = timer_alloc();
+	m_prd_timer = timer_alloc(FUNC(cdp1869_device::prd_update), this);
 	m_dispoff = 0;
 	update_prd_changed_timer();
 
@@ -400,7 +383,7 @@ void cdp1869_device::device_start()
 	m_bkg = 0;
 
 	// create sound stream
-	m_stream = machine().sound().stream_alloc(*this, 0, 1, machine().sample_rate());
+	m_stream = stream_alloc(0, 1, SAMPLE_RATE_OUTPUT_ADAPTIVE);
 
 	// initialize other
 	m_tonediv = 0;
@@ -456,10 +439,10 @@ void cdp1869_device::device_post_load()
 
 
 //-------------------------------------------------
-//  device_timer - handler timer events
+//  prd_update -
 //-------------------------------------------------
 
-void cdp1869_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(cdp1869_device::prd_update)
 {
 	m_write_prd(param);
 	m_prd = param;
@@ -510,36 +493,33 @@ void cdp1869_device::cdp1869_palette(palette_device &palette) const
 //  our sound stream
 //-------------------------------------------------
 
-void cdp1869_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void cdp1869_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
-	// reset the output stream
-	memset(outputs[0], 0, samples * sizeof(*outputs[0]));
-
-	int16_t signal = m_signal;
-	stream_sample_t *buffer = outputs[0];
+	stream_buffer::sample_t signal = m_signal;
+	auto &buffer = outputs[0];
 
 	if (!m_toneoff && m_toneamp)
 	{
 		double frequency = (clock() / 2) / (512 >> m_tonefreq) / (m_tonediv + 1);
 //      double amplitude = m_toneamp * ((0.78*5) / 15);
 
-		int rate = machine().sample_rate() / 2;
+		int rate = buffer.sample_rate() / 2;
 
 		/* get progress through wave */
 		int incr = m_incr;
 
 		if (signal < 0)
 		{
-			signal = -(m_toneamp * (0x07fff / 15));
+			signal = -(stream_buffer::sample_t(m_toneamp) / 15.0);
 		}
 		else
 		{
-			signal = m_toneamp * (0x07fff / 15);
+			signal = stream_buffer::sample_t(m_toneamp) / 15.0;
 		}
 
-		while( samples-- > 0 )
+		for (int sampindex = 0; sampindex < buffer.samples(); sampindex++)
 		{
-			*buffer++ = signal;
+			buffer.put(sampindex, signal);
 			incr -= frequency;
 			while( incr < 0 )
 			{
@@ -552,6 +532,8 @@ void cdp1869_device::sound_stream_update(sound_stream &stream, stream_sample_t *
 		m_incr = incr;
 		m_signal = signal;
 	}
+	else
+		buffer.fill(0);
 /*
     if (!m_wnoff)
     {
@@ -575,29 +557,28 @@ void cdp1869_device::sound_stream_update(sound_stream &stream, stream_sample_t *
 
 void cdp1869_device::draw_line(bitmap_rgb32 &bitmap, const rectangle &rect, int x, int y, uint8_t data, int color)
 {
-	int i;
-	pen_t fg = m_palette->pen(color);
+	pen_t const fg = m_palette->pen(color);
 
 	data <<= 2;
 
-	for (i = 0; i < CH_WIDTH; i++)
+	for (int i = 0; i < CH_WIDTH; i++)
 	{
 		if (data & 0x80)
 		{
-			bitmap.pix32(y, x) = fg;
+			bitmap.pix(y, x) = fg;
 
 			if (!m_fresvert)
 			{
-				bitmap.pix32(y + 1, x) = fg;
+				bitmap.pix(y + 1, x) = fg;
 			}
 
 			if (!m_freshorz)
 			{
-				bitmap.pix32(y, x + 1) = fg;
+				bitmap.pix(y, x + 1) = fg;
 
 				if (!m_fresvert)
 				{
-					bitmap.pix32(y + 1, x + 1) = fg;
+					bitmap.pix(y + 1, x + 1) = fg;
 				}
 			}
 		}

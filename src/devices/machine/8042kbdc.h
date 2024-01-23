@@ -30,21 +30,35 @@ public:
 		KBDC8042_STANDARD,
 		KBDC8042_PS2
 	};
+	enum kbdc8042_interrupt_type_t
+	{
+		KBDC8042_SINGLE,
+		KBDC8042_DOUBLE
+	};
 
 	// construction/destruction
 	kbdc8042_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock = 0);
 
+	template <typename T> void set_keyboard_tag(T &&tag) { m_keyboard_dev.set_tag(std::forward<T>(tag)); }
+
 	void set_keyboard_type(kbdc8042_type_t keybtype) { m_keybtype = keybtype; }
+	void set_interrupt_type(kbdc8042_interrupt_type_t interrupttype) { m_interrupttype = interrupttype; }
 	auto system_reset_callback() { return m_system_reset_cb.bind(); }
 	auto gate_a20_callback() { return m_gate_a20_cb.bind(); }
 	auto input_buffer_full_callback() { return m_input_buffer_full_cb.bind(); }
+	auto input_buffer_full_mouse_callback() { return m_input_buffer_full_mouse_cb.bind(); }
 	auto output_buffer_empty_callback() { return m_output_buffer_empty_cb.bind(); }
 	auto speaker_callback() { return m_speaker_cb.bind(); }
 
 	uint8_t data_r(offs_t offset);
 	void data_w(offs_t offset, uint8_t data);
 
-	DECLARE_WRITE_LINE_MEMBER( write_out2 );
+	uint8_t port60_r(offs_t offset) { return data_r(0); }
+	void port60_w(offs_t offset, uint8_t data) { data_w(0, data); }
+	uint8_t port64_r(offs_t offset) { return data_r(4); }
+	void port64_w(offs_t offset, uint8_t data) { data_w(4, data); }
+
+	void write_out2(int state);
 
 	void at_8042_set_outport(uint8_t data, int initial);
 	void at_8042_receive(uint8_t data, bool mouse = false);
@@ -52,15 +66,17 @@ public:
 	void at_8042_check_mouse();
 	void at_8042_clear_keyboard_received();
 
+	void keyboard_w(int state);
+
 protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_add_mconfig(machine_config &config) override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 	virtual ioport_constructor device_input_ports() const override;
 
-	static const device_timer_id TIMER_UPDATE = 0;
+	TIMER_CALLBACK_MEMBER(update_timer);
+
+	void mouse_enqueue(uint8_t value);
 
 private:
 	uint8_t m_inport;
@@ -74,16 +90,19 @@ private:
 	} m_keyboard;
 	struct {
 		int received;
-		int on;
+		bool on;
+		bool reporting;
 		uint8_t sample_rate;
+		uint8_t resolution;
 		bool receiving_sample_rate;
+		bool receiving_resolution;
 		uint8_t transmit_buf[8];
-		uint8_t to_transmit;
+		int to_transmit;
+		int from_transmit;
 	} m_mouse;
 
 	int m_last_write_to_control;
 	int m_sending;
-	int m_send_to_mouse;
 
 	int m_operation_write_state;
 	int m_status_read_mode;
@@ -96,17 +115,19 @@ private:
 
 	int m_poll_delay;
 
-	required_device<at_keyboard_device> m_keyboard_dev;
+	optional_device<at_keyboard_device> m_keyboard_dev;
 	optional_ioport m_mousex_port;
 	optional_ioport m_mousey_port;
 	optional_ioport m_mousebtn_port;
 
 	kbdc8042_type_t     m_keybtype;
+	kbdc8042_interrupt_type_t   m_interrupttype;
 
 	devcb_write_line    m_system_reset_cb;
 	devcb_write_line    m_gate_a20_cb;
 	devcb_write_line    m_input_buffer_full_cb;
-	devcb_write_line    m_output_buffer_empty_cb;
+	devcb_write_line    m_input_buffer_full_mouse_cb;
+	devcb_write_line    m_output_buffer_empty_cb; // currently not used
 
 	devcb_write8        m_speaker_cb;
 
@@ -115,8 +136,6 @@ private:
 	uint8_t             m_mouse_btn;
 
 	emu_timer *         m_update_timer;
-
-	DECLARE_WRITE_LINE_MEMBER( keyboard_w );
 };
 
 // device type definition

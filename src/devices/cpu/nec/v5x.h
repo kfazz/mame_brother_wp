@@ -19,30 +19,29 @@ public:
 	// TCU
 	void set_tclk(double clk) { m_tclk = clk; }
 	void set_tclk(const XTAL &xtal) { set_tclk(xtal.dvalue()); }
-	template <unsigned Timer> auto out_handler() { return device().subdevice<pit8253_device>("tcu")->out_handler<Timer>(); }
-	DECLARE_WRITE_LINE_MEMBER(tclk_w);
+	void tclk_w(int state);
 
 	// DMAU
-	auto out_hreq_cb() { return device().subdevice<v5x_dmau_device>("dmau")->out_hreq_callback(); }
-	auto out_eop_cb() { return device().subdevice<v5x_dmau_device>("dmau")->out_eop_callback(); }
-	auto in_memr_cb() { return device().subdevice<v5x_dmau_device>("dmau")->in_memr_callback(); }
-	auto in_mem16r_cb() { return device().subdevice<v5x_dmau_device>("dmau")->in_mem16r_callback(); }
-	auto out_memw_cb() { return device().subdevice<v5x_dmau_device>("dmau")->out_memw_callback(); }
-	auto out_mem16w_cb() { return device().subdevice<v5x_dmau_device>("dmau")->out_mem16w_callback(); }
-	template <unsigned Channel> auto in_ior_cb() { return device().subdevice<v5x_dmau_device>("dmau")->in_ior_callback<Channel>(); }
-	template <unsigned Channel> auto in_io16r_cb() { return device().subdevice<v5x_dmau_device>("dmau")->in_io16r_callback<Channel>(); }
-	template <unsigned Channel> auto out_iow_cb() { return device().subdevice<v5x_dmau_device>("dmau")->out_iow_callback<Channel>(); }
-	template <unsigned Channel> auto out_io16w_cb() { return device().subdevice<v5x_dmau_device>("dmau")->out_io16w_callback<Channel>(); }
-	template <unsigned Channel> auto out_dack_cb() { return device().subdevice<v5x_dmau_device>("dmau")->out_dack_callback<Channel>(); }
+	auto out_hreq_cb() { return m_dmau.lookup()->out_hreq_callback(); }
+	auto out_eop_cb() { return m_dmau.lookup()->out_eop_callback(); }
+	auto in_memr_cb() { return m_dmau.lookup()->in_memr_callback(); }
+	auto in_mem16r_cb() { return m_dmau.lookup()->in_mem16r_callback(); }
+	auto out_memw_cb() { return m_dmau.lookup()->out_memw_callback(); }
+	auto out_mem16w_cb() { return m_dmau.lookup()->out_mem16w_callback(); }
+	template <unsigned Channel> auto in_ior_cb() { return m_dmau.lookup()->in_ior_callback<Channel>(); }
+	template <unsigned Channel> auto in_io16r_cb() { return m_dmau.lookup()->in_io16r_callback<Channel>(); }
+	template <unsigned Channel> auto out_iow_cb() { return m_dmau.lookup()->out_iow_callback<Channel>(); }
+	template <unsigned Channel> auto out_io16w_cb() { return m_dmau.lookup()->out_io16w_callback<Channel>(); }
+	template <unsigned Channel> auto out_dack_cb() { return m_dmau.lookup()->out_dack_callback<Channel>(); }
 
 	// SCU
-	auto txd_handler_cb() { return device().subdevice<v5x_scu_device>("scu")->txd_handler(); }
-	auto dtr_handler_cb() { return device().subdevice<v5x_scu_device>("scu")->dtr_handler(); }
-	auto rts_handler_cb() { return device().subdevice<v5x_scu_device>("scu")->rts_handler(); }
-	auto rxrdy_handler_cb() { return device().subdevice<v5x_scu_device>("scu")->rxrdy_handler(); }
-	auto txrdy_handler_cb() { return device().subdevice<v5x_scu_device>("scu")->txrdy_handler(); }
-	auto txempty_handler_cb() { return device().subdevice<v5x_scu_device>("scu")->txempty_handler(); }
-	auto syndet_handler_cb() { return device().subdevice<v5x_scu_device>("scu")->syndet_handler(); }
+	auto txd_handler_cb() { return m_scu.lookup()->txd_handler(); }
+	auto dtr_handler_cb() { return m_scu.lookup()->dtr_handler(); }
+	auto rts_handler_cb() { return m_scu.lookup()->rts_handler(); }
+	auto rxrdy_handler_cb() { return m_scu.lookup()->rxrdy_handler(); }
+	auto txrdy_handler_cb() { return m_scu.lookup()->txrdy_handler(); }
+	auto txempty_handler_cb() { return m_scu.lookup()->txempty_handler(); }
+	auto syndet_handler_cb() { return m_scu.lookup()->syndet_handler(); }
 
 protected:
 	device_v5x_interface(const machine_config &mconfig, nec_common_device &device, bool is_16bit);
@@ -51,7 +50,7 @@ protected:
 	virtual void interface_post_start() override;
 	virtual void interface_pre_reset() override;
 	virtual void interface_post_load() override;
-	virtual void interface_clock_changed() override;
+	virtual void interface_clock_changed(bool sync_on_new_clock_domain) override;
 
 	void v5x_set_input(int inputnum, int state);
 	void v5x_add_mconfig(machine_config &config);
@@ -86,6 +85,7 @@ protected:
 	void WCY1_w(u8 data) {}
 	void WCY0_w(u8 data) {}
 	void WAC_w(u8 data) {}
+	u8 TCKS_r();
 	void TCKS_w(u8 data);
 	void SBCR_w(u8 data) {}
 	void RFC_w(u8 data) {}
@@ -93,14 +93,20 @@ protected:
 	void WCY2_w(u8 data) {}
 	void WCY3_w(u8 data) {}
 	void WCY4_w(u8 data) {}
+	u8 SULA_r();
 	void SULA_w(u8 data);
+	u8 TULA_r();
 	void TULA_w(u8 data);
+	u8 IULA_r();
 	void IULA_w(u8 data);
+	u8 DULA_r();
 	void DULA_w(u8 data);
+	u8 OPHA_r();
 	void OPHA_w(u8 data);
+	u8 OPSEL_r();
 	void OPSEL_w(u8 data);
-	u8 get_pic_ack() { return 0; }
-	DECLARE_WRITE_LINE_MEMBER(internal_irq_w);
+	virtual u8 get_pic_ack(offs_t offset) { return 0; }
+	void internal_irq_w(int state);
 
 	void tcu_clock_update();
 
@@ -135,9 +141,14 @@ protected:
 class v50_base_device : public nec_common_device, public device_v5x_interface
 {
 public:
-	template <unsigned Channel> DECLARE_WRITE_LINE_MEMBER(dreq_w) { m_dmau->dreq_w<Channel>(state); }
-	DECLARE_WRITE_LINE_MEMBER(hack_w) { m_dmau->hack_w(state); }
-	DECLARE_WRITE_LINE_MEMBER(tctl2_w) { m_tcu->write_gate2(state); }
+	template <unsigned Channel> void dreq_w(int state) { m_dmau->dreq_w<Channel>(state); }
+	void hack_w(int state) { m_dmau->hack_w(state); }
+	void tctl2_w(int state) { m_tcu->write_gate2(state); }
+
+	auto tout1_cb() { return m_tout1_callback.bind(); }
+	auto tout2_cb() { return m_tcu.lookup()->out_handler<2>(); }
+
+	auto icu_slave_ack_cb() { return m_icu_slave_ack.bind(); }
 
 protected:
 	v50_base_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock, bool is_16bit, u8 prefetch_size, u8 prefetch_cycles, u32 chip_type);
@@ -165,10 +176,28 @@ protected:
 
 	void internal_port_map(address_map &map);
 
+	u8 OPCN_r();
 	void OPCN_w(u8 data);
 
+	// TODO: non-offset 7 configuration
+	// Currently used by pc88va only, which uses the canonical IRQ7 for cascading an external PIC to the internal one.
+	virtual u8 get_pic_ack(offs_t offset) override
+	{
+		if (offset == 7)
+			return m_icu_slave_ack(0);
+		return 0;
+	}
+
 private:
+	void tout1_w(int state);
+
+	devcb_write_line m_tout1_callback;
+	devcb_read8 m_icu_slave_ack;
+
 	u8 m_OPCN;
+	bool m_tout1;
+	bool m_intp1;
+	bool m_intp2;
 };
 
 class v40_device : public v50_base_device
@@ -194,7 +223,7 @@ class v53_device : public v33_base_device, public device_v5x_interface
 public:
 	v53_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
 
-	template <unsigned Channel> DECLARE_WRITE_LINE_MEMBER(dreq_w)
+	template <unsigned Channel> void dreq_w(int state)
 	{
 		// dreq0 could be wrong / nonexistent
 		if (!(m_SCTL & 0x02))
@@ -206,7 +235,9 @@ public:
 			logerror("dreq%d not in 71071mode\n", Channel);
 		}
 	}
-	DECLARE_WRITE_LINE_MEMBER(hack_w);
+	void hack_w(int state);
+
+	template <unsigned Timer> auto tout_handler() { return m_tcu.lookup()->out_handler<Timer>(); }
 
 protected:
 	v53_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock);
@@ -233,6 +264,7 @@ protected:
 	void internal_port_map(address_map &map);
 	virtual void install_peripheral_io() override;
 
+	u8 SCTL_r();
 	void SCTL_w(u8 data);
 
 private:

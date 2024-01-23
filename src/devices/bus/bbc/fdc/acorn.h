@@ -16,9 +16,6 @@
 #include "imagedev/floppy.h"
 #include "machine/i8271.h"
 #include "machine/wd_fdc.h"
-#include "formats/acorn_dsk.h"
-#include "formats/fsd_dsk.h"
-#include "formats/pc_dsk.h"
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -32,7 +29,7 @@ public:
 	// construction/destruction
 	bbc_acorn8271_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_FLOPPY_FORMATS(floppy_formats);
+	static void floppy_formats(format_registration &fr);
 
 protected:
 	// device-level overrides
@@ -46,12 +43,11 @@ protected:
 	virtual void write(offs_t offset, uint8_t data) override;
 
 private:
-	DECLARE_WRITE_LINE_MEMBER(motor_w);
-	DECLARE_WRITE_LINE_MEMBER(side_w);
+	void motor_w(int state);
+	void side_w(int state);
 
 	required_device<i8271_device> m_fdc;
-	required_device<floppy_connector> m_floppy0;
-	optional_device<floppy_connector> m_floppy1;
+	required_device_array<floppy_connector, 2> m_floppy;
 };
 
 class bbc_acorn1770_device :
@@ -74,12 +70,11 @@ protected:
 	virtual void write(offs_t offset, uint8_t data) override;
 
 private:
-	DECLARE_WRITE_LINE_MEMBER(fdc_intrq_w);
-	DECLARE_WRITE_LINE_MEMBER(fdc_drq_w);
+	void fdc_intrq_w(int state);
+	void fdc_drq_w(int state);
 
 	required_device<wd1770_device> m_fdc;
-	required_device<floppy_connector> m_floppy0;
-	optional_device<floppy_connector> m_floppy1;
+	required_device_array<floppy_connector, 2> m_floppy;
 
 	int m_fdc_ie;
 };

@@ -6,9 +6,10 @@
 
 **********************************************************************/
 
-
 #include "emu.h"
 #include "sdx.h"
+
+#include "formats/mtx_dsk.h"
 
 
 //**************************************************************************
@@ -29,9 +30,11 @@ static void sdx_floppies(device_slot_interface &device)
 	device.option_add("525qd", FLOPPY_525_QD);
 }
 
-FLOPPY_FORMATS_MEMBER(mtx_sdx_device::floppy_formats)
-	FLOPPY_MTX_FORMAT
-FLOPPY_FORMATS_END
+void mtx_sdx_device::floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_MTX_FORMAT);
+}
 
 //-------------------------------------------------
 //  ROM( sdx )
@@ -135,8 +138,8 @@ void mtx_sdxbas_device::device_add_mconfig(machine_config &config)
 	MB8877(config, m_fdc, 8_MHz_XTAL / 8);
 	m_fdc->hld_wr_callback().set(FUNC(mtx_sdx_device::motor_w));
 
-	FLOPPY_CONNECTOR(config, "fdc:0", sdx_floppies, "525qd", mtx_sdx_device::floppy_formats).enable_sound(true);
-	FLOPPY_CONNECTOR(config, "fdc:1", sdx_floppies, "525qd", mtx_sdx_device::floppy_formats).enable_sound(true);
+	for (auto &floppy : m_floppy)
+		FLOPPY_CONNECTOR(config, floppy, sdx_floppies, "525qd", mtx_sdx_device::floppy_formats).enable_sound(true);
 }
 
 void mtx_sdxcpm_device::device_add_mconfig(machine_config &config)
@@ -145,21 +148,18 @@ void mtx_sdxcpm_device::device_add_mconfig(machine_config &config)
 	MB8877(config, m_fdc, 8_MHz_XTAL / 8);
 	m_fdc->hld_wr_callback().set(FUNC(mtx_sdx_device::motor_w));
 
-	FLOPPY_CONNECTOR(config, "fdc:0", sdx_floppies, "525qd", mtx_sdx_device::floppy_formats).enable_sound(true);
-	FLOPPY_CONNECTOR(config, "fdc:1", sdx_floppies, "525qd", mtx_sdx_device::floppy_formats).enable_sound(true);
+	for (auto &floppy : m_floppy)
+		FLOPPY_CONNECTOR(config, floppy, sdx_floppies, "525qd", mtx_sdx_device::floppy_formats).enable_sound(true);
 
 	/* 80 column video card - required to be installed in MTX internally */
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
-	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(2500)); /* not accurate */
-	m_screen->set_refresh_hz(50);
-	m_screen->set_size(960, 313);
-	m_screen->set_visarea(00, 640 - 1, 0, 240 - 1);
-	m_screen->set_screen_update("crtc", FUNC(mc6845_device::screen_update));
+	m_screen->set_raw(15_MHz_XTAL, 960, 0, 640, 313, 0, 240);
+	m_screen->set_screen_update("crtc", FUNC(hd6845s_device::screen_update));
 
 	GFXDECODE(config, "gfxdecode", "palette", gfx_mtx_sdx);
 	PALETTE(config, "palette", palette_device::RGB_3BIT);
 
-	MC6845(config, m_crtc, 15_MHz_XTAL / 8);
+	HD6845S(config, m_crtc, 15_MHz_XTAL / 8);
 	m_crtc->set_screen("screen");
 	m_crtc->set_show_border_area(false);
 	m_crtc->set_char_width(8);
@@ -190,9 +190,8 @@ mtx_sdx_device::mtx_sdx_device(const machine_config &mconfig, device_type type, 
 	, device_mtx_exp_interface(mconfig, *this)
 	, m_sdx_rom(*this, "sdx_rom")
 	, m_fdc(*this, "fdc")
-	, m_floppy0(*this, "fdc:0")
-	, m_floppy1(*this, "fdc:1")
-	, m_dsw(*this, "DSW%u", 0)
+	, m_floppy(*this, "fdc:%u", 0U)
+	, m_dsw(*this, "DSW%u", 0U)
 {
 }
 
@@ -240,7 +239,7 @@ void mtx_sdxbas_device::device_reset()
 
 	/* SDX FDC */
 	io_space().install_readwrite_handler(0x10, 0x13, read8sm_delegate(*m_fdc, FUNC(mb8877_device::read)), write8sm_delegate(*m_fdc, FUNC(mb8877_device::write)));
-	io_space().install_readwrite_handler(0x14, 0x14, read8_delegate(*this, FUNC(mtx_sdx_device::sdx_status_r)), write8_delegate(*this, FUNC(mtx_sdx_device::sdx_control_w)));
+	io_space().install_readwrite_handler(0x14, 0x14, read8smo_delegate(*this, FUNC(mtx_sdx_device::sdx_status_r)), write8smo_delegate(*this, FUNC(mtx_sdx_device::sdx_control_w)));
 }
 
 void mtx_sdxcpm_device::device_reset()
@@ -249,12 +248,12 @@ void mtx_sdxcpm_device::device_reset()
 
 	/* SDX FDC */
 	io_space().install_readwrite_handler(0x10, 0x13, read8sm_delegate(*m_fdc, FUNC(mb8877_device::read)), write8sm_delegate(*m_fdc, FUNC(mb8877_device::write)));
-	io_space().install_readwrite_handler(0x14, 0x14, read8_delegate(*this, FUNC(mtx_sdx_device::sdx_status_r)), write8_delegate(*this, FUNC(mtx_sdx_device::sdx_control_w)));
+	io_space().install_readwrite_handler(0x14, 0x14, read8smo_delegate(*this, FUNC(mtx_sdx_device::sdx_status_r)), write8smo_delegate(*this, FUNC(mtx_sdx_device::sdx_control_w)));
 
 	/* 80 column */
-	io_space().install_readwrite_handler(0x30, 0x33, read8_delegate(*this, FUNC(mtx_sdxcpm_device::mtx_80col_r)), write8_delegate(*this, FUNC(mtx_sdxcpm_device::mtx_80col_w)));
-	io_space().install_readwrite_handler(0x38, 0x38, read8smo_delegate(*m_crtc, FUNC(mc6845_device::status_r)), write8smo_delegate(*m_crtc, FUNC(mc6845_device::address_w)));
-	io_space().install_readwrite_handler(0x39, 0x39, read8smo_delegate(*m_crtc, FUNC(mc6845_device::register_r)), write8smo_delegate(*m_crtc, FUNC(mc6845_device::register_w)));
+	io_space().install_readwrite_handler(0x30, 0x33, read8sm_delegate(*this, FUNC(mtx_sdxcpm_device::mtx_80col_r)), write8sm_delegate(*this, FUNC(mtx_sdxcpm_device::mtx_80col_w)));
+	io_space().install_readwrite_handler(0x38, 0x38, read8smo_delegate(*m_crtc, FUNC(hd6845s_device::status_r)), write8smo_delegate(*m_crtc, FUNC(mc6845_device::address_w)));
+	io_space().install_readwrite_handler(0x39, 0x39, read8smo_delegate(*m_crtc, FUNC(hd6845s_device::register_r)), write8smo_delegate(*m_crtc, FUNC(mc6845_device::register_w)));
 
 	memset(m_80col_char_ram, 0, sizeof(m_80col_char_ram));
 	memset(m_80col_attr_ram, 0, sizeof(m_80col_attr_ram));
@@ -265,7 +264,7 @@ void mtx_sdxcpm_device::device_reset()
 //  IMPLEMENTATION
 //**************************************************************************
 
-READ8_MEMBER(mtx_sdx_device::sdx_status_r)
+uint8_t mtx_sdx_device::sdx_status_r()
 {
 	/*
 	bit     description
@@ -281,12 +280,13 @@ READ8_MEMBER(mtx_sdx_device::sdx_status_r)
 
 	uint8_t data = 0x00;
 
-	data |= m_dsw[BIT(m_control, 0)].read_safe(0x0f) & 0x0f;
+	data |= m_dsw[BIT(m_control, 0)]->read() & 0x0f;
 
-	data |= (m_floppy0->get_device() && m_floppy1->get_device()) ? 0x10 : 0x00;
+	data |= (m_floppy[0]->get_device() && m_floppy[1]->get_device()) ? 0x10 : 0x00;
 
-	if (m_floppy)
-		data |= m_floppy->ready_r() ? 0x00 : 0x20;
+	floppy_image_device *floppy = m_floppy[BIT(m_control, 0)]->get_device();
+	if (floppy)
+		data |= floppy->ready_r() ? 0x00 : 0x20;
 
 	data |= m_fdc->intrq_r() ? 0x40 : 0x00;
 	data |= m_fdc->drq_r() ? 0x80 : 0x00;
@@ -294,7 +294,7 @@ READ8_MEMBER(mtx_sdx_device::sdx_status_r)
 	return data;
 }
 
-WRITE8_MEMBER(mtx_sdx_device::sdx_control_w)
+void mtx_sdx_device::sdx_control_w(uint8_t data)
 {
 	/*
 	bit     description
@@ -308,22 +308,22 @@ WRITE8_MEMBER(mtx_sdx_device::sdx_control_w)
 	m_control = data;
 
 	/* bit 0: drive select */
-	m_floppy = BIT(data, 0) ? m_floppy1->get_device() : m_floppy0->get_device();
+	floppy_image_device *floppy = m_floppy[BIT(data, 0)]->get_device();
 
-	m_fdc->set_floppy(m_floppy);
+	m_fdc->set_floppy(floppy);
 
-	if (m_floppy)
+	if (floppy)
 	{
 		/* bit 1: side select */
-		m_floppy->ss_w(BIT(data, 1));
+		floppy->ss_w(BIT(data, 1));
 		logerror("motor on %d\n", BIT(data, 2));
 		/* bit 2: motor on */
-		m_floppy->mon_w(!(BIT(data, 2) || m_fdc->hld_r()));
+		floppy->mon_w(!(BIT(data, 2) || m_fdc->hld_r()));
 		logerror("head load %d\n", m_fdc->hld_r());
 		/* bit 3: motor ready */
 		//if (BIT(data, 3))
-			//m_floppy->mon_w(!BIT(data, 2));
-			//m_floppy->mon_w(!BIT(data, 3));
+			//floppy->mon_w(!BIT(data, 2));
+			//floppy->mon_w(!BIT(data, 3));
 		logerror("motor ready %d\n", BIT(data, 3));
 	}
 
@@ -331,17 +331,17 @@ WRITE8_MEMBER(mtx_sdx_device::sdx_control_w)
 	m_fdc->dden_w(!BIT(data, 4));
 }
 
-WRITE_LINE_MEMBER(mtx_sdx_device::motor_w)
+void mtx_sdx_device::motor_w(int state)
 {
-	if (m_floppy0->get_device()) m_floppy0->get_device()->mon_w(0);
-	if (m_floppy1->get_device()) m_floppy1->get_device()->mon_w(0);
+	if (m_floppy[0]->get_device()) m_floppy[0]->get_device()->mon_w(0);
+	if (m_floppy[1]->get_device()) m_floppy[1]->get_device()->mon_w(0);
 }
 
 //-------------------------------------------------
 //  80 column video board
 //-------------------------------------------------
 
-READ8_MEMBER(mtx_sdxcpm_device::mtx_80col_r)
+uint8_t mtx_sdxcpm_device::mtx_80col_r(offs_t offset)
 {
 	uint8_t data = 0xff;
 
@@ -362,7 +362,7 @@ READ8_MEMBER(mtx_sdxcpm_device::mtx_80col_r)
 	return data;
 }
 
-WRITE8_MEMBER(mtx_sdxcpm_device::mtx_80col_w)
+void mtx_sdxcpm_device::mtx_80col_w(offs_t offset, uint8_t data)
 {
 	switch (offset)
 	{
@@ -417,7 +417,7 @@ MC6845_UPDATE_ROW(mtx_sdxcpm_device::crtc_update_row)
 
 			int color = BIT(data, 7) ? fg : bg;
 
-			bitmap.pix32(y, x) = pen[de ? color : 0];
+			bitmap.pix(y, x) = pen[de ? color : 0];
 
 			data <<= 1;
 		}

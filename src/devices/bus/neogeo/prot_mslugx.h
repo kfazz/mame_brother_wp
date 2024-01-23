@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:S. Smith,David Haywood,Fabio Priuli
+// copyright-holders:S. Smith, David Haywood, Fabio Priuli, iq_132
 
 #ifndef MAME_BUS_NEOGEO_PROT_MSLUGX_H
 #define MAME_BUS_NEOGEO_PROT_MSLUGX_H
@@ -16,8 +16,8 @@ public:
 	// construction/destruction
 	mslugx_prot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock = 0);
 
-	DECLARE_WRITE16_MEMBER( protection_w );
-	DECLARE_READ16_MEMBER( protection_r );
+	void protection_w(offs_t offset, uint16_t data);
+	uint16_t protection_r(address_space &space, offs_t offset);
 
 protected:
 	virtual void device_start() override;

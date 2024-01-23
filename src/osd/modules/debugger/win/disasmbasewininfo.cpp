@@ -2,7 +2,7 @@
 // copyright-holders:Aaron Giles, Vas Crabb
 //============================================================
 //
-//  disasmbasewininfo.c - Win32 debug window handling
+//  disasmbasewininfo.cpp - Win32 debug window handling
 //
 //============================================================
 
@@ -15,9 +15,12 @@
 #include "debugger.h"
 #include "debug/debugcon.h"
 #include "debug/debugcpu.h"
+#include "debug/points.h"
 
 //#include "winutf8.h"
 
+
+namespace osd::debugger::win {
 
 disasmbasewin_info::disasmbasewin_info(debugger_windows_interface &debugger, bool is_main_console, LPCSTR title, WNDPROC handler) :
 	editwin_info(debugger, is_main_console, title, handler)
@@ -25,8 +28,8 @@ disasmbasewin_info::disasmbasewin_info(debugger_windows_interface &debugger, boo
 	if (!window())
 		return;
 
-	m_views[0].reset(global_alloc(disasmview_info(debugger, *this, window())));
-	if ((m_views[0] == nullptr) || !m_views[0]->is_valid())
+	m_views[0].reset(new disasmview_info(debugger, *this, window()));
+	if (!m_views[0] || !m_views[0]->is_valid())
 	{
 		m_views[0].reset();
 		return;
@@ -115,9 +118,9 @@ void disasmbasewin_info::update_menu()
 		device_debug *const debug = dasmview->source_device()->debug();
 
 		// first find an existing breakpoint at this address
-		const device_debug::breakpoint *bp = debug->breakpoint_find(address);
+		const debug_breakpoint *bp = debug->breakpoint_find(address);
 
-		if (bp == nullptr)
+		if (!bp)
 		{
 			ModifyMenu(menu, ID_TOGGLE_BREAKPOINT, MF_BYCOMMAND, ID_TOGGLE_BREAKPOINT, TEXT("Set breakpoint at cursor\tF9"));
 			ModifyMenu(menu, ID_DISABLE_BREAKPOINT, MF_BYCOMMAND, ID_DISABLE_BREAKPOINT, TEXT("Disable breakpoint at cursor\tShift+F9"));
@@ -130,7 +133,7 @@ void disasmbasewin_info::update_menu()
 			else
 				ModifyMenu(menu, ID_DISABLE_BREAKPOINT, MF_BYCOMMAND, ID_DISABLE_BREAKPOINT, TEXT("Enable breakpoint at cursor\tShift+F9"));
 		}
-		bool const available = (bp != nullptr) && (!is_main_console() || dasmview->source_is_visible_cpu());
+		bool const available = bp && (!is_main_console() || dasmview->source_is_visible_cpu());
 		EnableMenuItem(menu, ID_DISABLE_BREAKPOINT, MF_BYCOMMAND | (available ? MF_ENABLED : MF_GRAYED));
 	}
 	else
@@ -166,14 +169,14 @@ bool disasmbasewin_info::handle_command(WPARAM wparam, LPARAM lparam)
 				device_debug *const debug = dasmview->source_device()->debug();
 
 				// first find an existing breakpoint at this address
-				const device_debug::breakpoint *bp = debug->breakpoint_find(address);
+				const debug_breakpoint *bp = debug->breakpoint_find(address);
 
 				// if it doesn't exist, add a new one
 				if (!is_main_console())
 				{
 					if (bp == nullptr)
 					{
-						int32_t bpindex = debug->breakpoint_set(address, nullptr, nullptr);
+						int32_t bpindex = debug->breakpoint_set(address);
 						machine().debugger().console().printf("Breakpoint %X set\n", bpindex);
 					}
 					else
@@ -204,7 +207,7 @@ bool disasmbasewin_info::handle_command(WPARAM wparam, LPARAM lparam)
 				device_debug *const debug = dasmview->source_device()->debug();
 
 				// first find an existing breakpoint at this address
-				const device_debug::breakpoint *bp = debug->breakpoint_find(address);
+				const debug_breakpoint *bp = debug->breakpoint_find(address);
 
 				// if it doesn't exist, add a new one
 				if (bp != nullptr)
@@ -262,3 +265,19 @@ bool disasmbasewin_info::handle_command(WPARAM wparam, LPARAM lparam)
 	}
 	return editwin_info::handle_command(wparam, lparam);
 }
+
+
+void disasmbasewin_info::restore_configuration_from_node(util::xml::data_node const &node)
+{
+	editwin_info::restore_configuration_from_node(node);
+	m_views[0]->restore_configuration_from_node(node);
+}
+
+
+void disasmbasewin_info::save_configuration_to_node(util::xml::data_node &node)
+{
+	editwin_info::save_configuration_to_node(node);
+	m_views[0]->save_configuration_to_node(node);
+}
+
+} // namespace osd::debugger::win

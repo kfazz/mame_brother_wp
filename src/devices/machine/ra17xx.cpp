@@ -55,7 +55,7 @@ DEFINE_DEVICE_TYPE(RA17XX, ra17xx_device, "ra17xx", "Rockwell A17xx")
 ra17xx_device::ra17xx_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: device_t(mconfig, RA17XX, tag, owner, clock)
 	, m_enable(false)
-	, m_iord(*this)
+	, m_iord(*this, 0)
 	, m_iowr(*this)
 	, m_cpu(*this, finder_base::DUMMY_TAG)
 {
@@ -66,9 +66,6 @@ ra17xx_device::ra17xx_device(const machine_config &mconfig, const char *tag, dev
  */
 void ra17xx_device::device_start()
 {
-	m_iord.resolve();
-	m_iowr.resolve();
-
 	save_item(NAME(m_line));
 }
 
@@ -97,14 +94,14 @@ void ra17xx_device::io_w(address_space &space, offs_t offset, uint8_t data)
 {
 	assert(offset < 16);
 
-	m_bl = m_cpu->address_bus_r(space, 0) & 63;
+	m_bl = m_cpu->address_bus_r(space) & 63;
 
 	if (offset & 1)
 	{
 		// SOS command
 		if (m_bl >= 16)
 		{
-			logerror("Attempt to write to nonexistent output %d\n");
+			logerror("Attempt to write to nonexistent output 0x%02X\n",m_bl);
 		}
 		else if (data & (1 << 3))
 		{

@@ -45,6 +45,9 @@ public:
 	// CLK rate callback (8085A only)
 	template <typename... T> void set_clk_out(T &&... args) { m_clk_out_func.set(std::forward<T>(args)...); }
 
+	// INTA vector fetch callback
+	auto in_inta_func() { return m_in_inta_func.bind(); }
+
 	// STATUS changed callback
 	auto out_status_func() { return m_out_status_func.bind(); }
 
@@ -58,7 +61,7 @@ public:
 	auto out_sod_func() { return m_out_sod_func.bind(); }
 
 protected:
-	i8085a_cpu_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock, int cputype);
+	i8085a_cpu_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock);
 
 	// device-level overrides
 	virtual void device_config_complete() override;
@@ -88,27 +91,16 @@ protected:
 	// device_disasm_interface overrides
 	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
 
-	enum
-	{
-		CPUTYPE_8080 = 0,
-		CPUTYPE_8080A,
-		CPUTYPE_8085A
-	};
-
-private:
 	address_space_config m_program_config;
 	address_space_config m_io_config;
 	address_space_config m_opcode_config;
 
+	devcb_read8 m_in_inta_func;
 	devcb_write8 m_out_status_func;
 	devcb_write_line m_out_inte_func;
 	devcb_read_line m_in_sid_func;
 	devcb_write_line m_out_sod_func;
 	clock_update_delegate m_clk_out_func;
-
-	inline bool is_8080() { return m_cputype == CPUTYPE_8080 || m_cputype == CPUTYPE_8080A; }
-	inline bool is_8085() { return m_cputype == CPUTYPE_8085A; }
-	int m_cputype;
 
 	PAIR m_PC,m_SP,m_AF,m_BC,m_DE,m_HL,m_WZ;
 	u8 m_halt;
@@ -121,13 +113,13 @@ private:
 	u8 m_trap_pending;   /* TRAP interrupt latched? */
 	u8 m_trap_im_copy;   /* copy of IM register when TRAP was taken */
 	u8 m_sod_state;      /* state of the SOD line */
+	bool m_in_acknowledge;
 
 	bool m_ietemp;       /* import/export temp space */
 
-	address_space *m_program;
-	memory_access_cache<0, 0, ENDIANNESS_LITTLE> *m_cache;
-	memory_access_cache<0, 0, ENDIANNESS_LITTLE> *m_opcode_cache;
-	address_space *m_io;
+	memory_access<16, 0, 0, ENDIANNESS_LITTLE>::cache m_cprogram, m_copcodes;
+	memory_access<16, 0, 0, ENDIANNESS_LITTLE>::specific m_program;
+	memory_access< 8, 0, 0, ENDIANNESS_LITTLE>::specific m_io;
 	int m_icount;
 
 	/* cycles lookup */
@@ -138,12 +130,18 @@ private:
 	u8 lut_zs[256];
 	u8 lut_zsp[256];
 
+	virtual int ret_taken() { return 6; }
+	virtual int jmp_taken() { return 3; }
+	virtual int call_taken() { return 9; }
+	virtual bool is_8085() { return true; }
+
 	void set_sod(int state);
 	void set_inte(int state);
 	void set_status(u8 status);
 	u8 get_rim_value();
 	void break_halt_for_interrupt();
 	u8 read_op();
+	u8 read_inta();
 	u8 read_arg();
 	PAIR read_arg16();
 	u8 read_mem(u32 a);
@@ -171,30 +169,29 @@ private:
 	void op_rst(u8 v);
 };
 
-
 class i8080_cpu_device : public i8085a_cpu_device
 {
 public:
-	// construction/destruction
 	i8080_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
 
 protected:
+	i8080_cpu_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock);
+
 	virtual u32 execute_input_lines() const noexcept override { return 1; }
 	virtual u64 execute_clocks_to_cycles(u64 clocks) const noexcept override { return clocks; }
 	virtual u64 execute_cycles_to_clocks(u64 cycles) const noexcept override { return cycles; }
+
+	virtual void state_string_export(const device_state_entry &entry, std::string &str) const override;
+
+	virtual int jmp_taken() override { return 0; }
+	virtual int call_taken() override { return 6; }
+	virtual bool is_8085() override { return false; }
 };
 
-
-class i8080a_cpu_device : public i8085a_cpu_device
+class i8080a_cpu_device : public i8080_cpu_device
 {
 public:
-	// construction/destruction
 	i8080a_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
-
-protected:
-	virtual u32 execute_input_lines() const noexcept override { return 1; }
-	virtual u64 execute_clocks_to_cycles(u64 clocks) const noexcept override { return clocks; }
-	virtual u64 execute_cycles_to_clocks(u64 cycles) const noexcept override { return cycles; }
 };
 
 

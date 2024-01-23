@@ -9,6 +9,10 @@
 #include "emu.h"
 #include "c8280.h"
 
+#include "cpu/m6502/m6502.h"
+#include "formats/c8280_dsk.h"
+
+
 
 
 //**************************************************************************
@@ -76,10 +80,10 @@ const tiny_rom_entry *c8280_device::device_rom_region() const
 
 void c8280_device::c8280_main_mem(address_map &map)
 {
-	map(0x0000, 0x007f).mirror(0x100).m(M6532_0_TAG, FUNC(mos6532_new_device::ram_map));
-	map(0x0080, 0x00ff).mirror(0x100).m(M6532_1_TAG, FUNC(mos6532_new_device::ram_map));
-	map(0x0200, 0x021f).mirror(0xd60).m(M6532_0_TAG, FUNC(mos6532_new_device::io_map));
-	map(0x0280, 0x029f).mirror(0xd60).m(M6532_1_TAG, FUNC(mos6532_new_device::io_map));
+	map(0x0000, 0x007f).mirror(0x100).m(M6532_0_TAG, FUNC(mos6532_device::ram_map));
+	map(0x0080, 0x00ff).mirror(0x100).m(M6532_1_TAG, FUNC(mos6532_device::ram_map));
+	map(0x0200, 0x021f).mirror(0xd60).m(M6532_0_TAG, FUNC(mos6532_device::io_map));
+	map(0x0280, 0x029f).mirror(0xd60).m(M6532_1_TAG, FUNC(mos6532_device::io_map));
 	map(0x1000, 0x13ff).mirror(0xc00).ram().share("share1");
 	map(0x2000, 0x23ff).mirror(0xc00).ram().share("share2");
 	map(0x3000, 0x33ff).mirror(0xc00).ram().share("share3");
@@ -110,7 +114,7 @@ void c8280_device::c8280_fdc_mem(address_map &map)
 //  riot6532 0
 //-------------------------------------------------
 
-READ8_MEMBER( c8280_device::dio_r )
+uint8_t c8280_device::dio_r()
 {
 	/*
 
@@ -127,10 +131,10 @@ READ8_MEMBER( c8280_device::dio_r )
 
 	*/
 
-	return m_bus->read_dio();
+	return m_bus->dio_r();
 }
 
-WRITE8_MEMBER( c8280_device::dio_w )
+void c8280_device::dio_w(uint8_t data)
 {
 	/*
 
@@ -155,7 +159,7 @@ WRITE8_MEMBER( c8280_device::dio_w )
 //  riot6532 1
 //-------------------------------------------------
 
-READ8_MEMBER( c8280_device::riot1_pa_r )
+uint8_t c8280_device::riot1_pa_r()
 {
 	/*
 
@@ -186,7 +190,7 @@ READ8_MEMBER( c8280_device::riot1_pa_r )
 	return data;
 }
 
-WRITE8_MEMBER( c8280_device::riot1_pa_w )
+void c8280_device::riot1_pa_w(uint8_t data)
 {
 	/*
 
@@ -221,7 +225,7 @@ WRITE8_MEMBER( c8280_device::riot1_pa_w )
 	update_ieee_signals();
 }
 
-READ8_MEMBER( c8280_device::riot1_pb_r )
+uint8_t c8280_device::riot1_pb_r()
 {
 	/*
 
@@ -252,7 +256,7 @@ READ8_MEMBER( c8280_device::riot1_pb_r )
 	return data;
 }
 
-WRITE8_MEMBER( c8280_device::riot1_pb_w )
+void c8280_device::riot1_pb_w(uint8_t data)
 {
 	/*
 
@@ -284,9 +288,11 @@ static void c8280_floppies(device_slot_interface &device)
 	device.option_add("8dsdd", FLOPPY_8_DSDD);
 }
 
-FLOPPY_FORMATS_MEMBER( c8280_device::floppy_formats )
-	FLOPPY_C8280_FORMAT
-FLOPPY_FORMATS_END
+void c8280_device::floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_C8280_FORMAT);
+}
 
 
 //-------------------------------------------------
@@ -298,11 +304,11 @@ void c8280_device::device_add_mconfig(machine_config &config)
 	M6502(config, m_maincpu, XTAL(12'000'000)/8);
 	m_maincpu->set_addrmap(AS_PROGRAM, &c8280_device::c8280_main_mem);
 
-	MOS6532_NEW(config, m_riot0, XTAL(12'000'000)/8);
+	MOS6532(config, m_riot0, XTAL(12'000'000)/8);
 	m_riot0->pa_rd_callback().set(FUNC(c8280_device::dio_r));
 	m_riot0->pb_wr_callback().set(FUNC(c8280_device::dio_w));
 
-	MOS6532_NEW(config, m_riot1, XTAL(12'000'000)/8);
+	MOS6532(config, m_riot1, XTAL(12'000'000)/8);
 	m_riot1->pa_rd_callback().set(FUNC(c8280_device::riot1_pa_r));
 	m_riot1->pa_wr_callback().set(FUNC(c8280_device::riot1_pa_w));
 	m_riot1->pb_rd_callback().set(FUNC(c8280_device::riot1_pb_r));
@@ -315,8 +321,9 @@ void c8280_device::device_add_mconfig(machine_config &config)
 	FD1797(config, m_fdc, XTAL(12'000'000)/6);
 	m_fdc->intrq_wr_callback().set_inputline(m_fdccpu, M6502_IRQ_LINE);
 	m_fdc->drq_wr_callback().set_inputline(m_fdccpu, M6502_SET_OVERFLOW);
-	FLOPPY_CONNECTOR(config, m_floppy0, c8280_floppies, "8dsdd", c8280_device::floppy_formats);
-	FLOPPY_CONNECTOR(config, m_floppy1, c8280_floppies, "8dsdd", c8280_device::floppy_formats);
+
+	for (auto &floppy : m_floppy)
+		FLOPPY_CONNECTOR(config, floppy, c8280_floppies, "8dsdd", c8280_device::floppy_formats);
 }
 
 
@@ -385,10 +392,9 @@ c8280_device::c8280_device(const machine_config &mconfig, const char *tag, devic
 	m_riot0(*this, M6532_0_TAG),
 	m_riot1(*this, M6532_1_TAG),
 	m_fdc(*this, WD1797_TAG),
-	m_floppy0(*this, WD1797_TAG ":0"),
-	m_floppy1(*this, WD1797_TAG ":1"),
+	m_floppy(*this, WD1797_TAG ":%u", 0U),
 	m_address(*this, "ADDRESS"),
-	m_floppy(nullptr),
+	m_selected_floppy(nullptr),
 	m_leds(*this, "led%u", 0U),
 	m_rfdo(1),
 	m_daco(1),
@@ -432,11 +438,11 @@ void c8280_device::device_reset()
 	m_riot1->reset();
 	m_fdc->reset();
 
-	m_riot1->pa7_w(1);
+	m_riot1->pa_bit_w<7>(1);
 
 	m_fk5 = 0;
-	m_floppy = nullptr;
-	m_fdc->set_floppy(m_floppy);
+	m_selected_floppy = nullptr;
+	m_fdc->set_floppy(m_selected_floppy);
 	m_fdc->dden_w(0);
 }
 
@@ -449,7 +455,7 @@ void c8280_device::ieee488_atn(int state)
 {
 	update_ieee_signals();
 
-	m_riot1->pa7_w(state);
+	m_riot1->pa_bit_w<7>(state);
 }
 
 
@@ -467,7 +473,7 @@ void c8280_device::ieee488_ifc(int state)
 	m_ifc = state;
 }
 
-READ8_MEMBER( c8280_device::fk5_r )
+uint8_t c8280_device::fk5_r()
 {
 	/*
 
@@ -486,13 +492,13 @@ READ8_MEMBER( c8280_device::fk5_r )
 
 	uint8_t data = m_fk5;
 
-	data |= (m_floppy ? m_floppy->dskchg_r() : 1) << 3;
-	data |= (m_floppy ? m_floppy->twosid_r() : 1) << 4;
+	data |= (m_selected_floppy ? m_selected_floppy->dskchg_r() : 1) << 3;
+	data |= (m_selected_floppy ? m_selected_floppy->twosid_r() : 1) << 4;
 
 	return data;
 }
 
-WRITE8_MEMBER( c8280_device::fk5_w )
+void c8280_device::fk5_w(uint8_t data)
 {
 	/*
 
@@ -512,14 +518,17 @@ WRITE8_MEMBER( c8280_device::fk5_w )
 	m_fk5 = data & 0x27;
 
 	// drive select
-	m_floppy = nullptr;
+	m_selected_floppy = nullptr;
+	for (int n = 0; n < 2; n++)
+	{
+		if (BIT(data, n))
+			m_selected_floppy = m_floppy[n]->get_device();
+	}
 
-	if (BIT(data, 0)) m_floppy = m_floppy0->get_device();
-	if (BIT(data, 1)) m_floppy = m_floppy1->get_device();
+	m_fdc->set_floppy(m_selected_floppy);
 
-	m_fdc->set_floppy(m_floppy);
-
-	if (m_floppy) m_floppy->mon_w(!BIT(data, 5));
+	if (m_selected_floppy)
+		m_selected_floppy->mon_w(!BIT(data, 5));
 
 	// density select
 	m_fdc->dden_w(BIT(data, 2));

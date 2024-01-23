@@ -1,15 +1,19 @@
 // license:BSD-3-Clause
 // copyright-holders:Carl, Miodrag Milanovic
+
 #include "emu.h"
+#include "dinetwork.h"
 #include "osdnet.h"
 
-device_network_interface::device_network_interface(const machine_config &mconfig, device_t &device, float bandwidth)
+device_network_interface::device_network_interface(const machine_config &mconfig, device_t &device, u32 bandwidth, u32 mtu)
 	: device_interface(device, "network")
 {
 	m_promisc = false;
-	m_bandwidth = bandwidth;
-	set_mac("\0\0\0\0\0\0");
-	m_intf = 0;
+	// Convert to Mibps to Bps
+	m_bandwidth = bandwidth << (20 - 3);
+	m_mtu = mtu;
+	memset(m_mac, 0, 6);
+	m_intf = -1;
 	m_loopback_control = false;
 }
 
@@ -28,7 +32,7 @@ void device_network_interface::interface_post_start()
 	device().save_item(NAME(m_loopback_control));
 }
 
-int device_network_interface::send(u8 *buf, int len)
+int device_network_interface::send(u8 *buf, int len, int fcs)
 {
 	// TODO: enable this check when other devices implement delayed transmit
 	//if (m_send_timer->enabled())
@@ -44,17 +48,19 @@ int device_network_interface::send(u8 *buf, int len)
 		if (result)
 		{
 			// schedule receive complete callback
-			m_recv_timer->adjust(attotime::from_ticks(len, m_bandwidth * 1'000'000 / 8), result);
+			m_recv_timer->adjust(attotime::from_ticks(len, m_bandwidth), result);
 		}
 	}
 	else if (m_dev)
 	{
-		// send the data
-		result = m_dev->send(buf, len);
+		// send the data (excluding fcs)
+		result = m_dev->send(buf, len - fcs);
+		if (result)
+			result += fcs;
 	}
 
 	// schedule transmit complete callback
-	m_send_timer->adjust(attotime::from_ticks(len, m_bandwidth * 1'000'000 / 8), result);
+	m_send_timer->adjust(attotime::from_ticks(len, m_bandwidth), result);
 
 	return result;
 }
@@ -82,7 +88,7 @@ void device_network_interface::recv_cb(u8 *buf, int len)
 			m_dev->stop();
 
 		// schedule receive complete callback
-		m_recv_timer->adjust(attotime::from_ticks(len, m_bandwidth * 1'000'000 / 8), result);
+		m_recv_timer->adjust(attotime::from_ticks(len, m_bandwidth), result);
 	}
 }
 
@@ -101,7 +107,7 @@ void device_network_interface::set_promisc(bool promisc)
 	if(m_dev) m_dev->set_promisc(promisc);
 }
 
-void device_network_interface::set_mac(const char *mac)
+void device_network_interface::set_mac(const u8 *mac)
 {
 	memcpy(m_mac, mac, 6);
 	if(m_dev) m_dev->set_mac(m_mac);
@@ -111,7 +117,8 @@ void device_network_interface::set_interface(int id)
 {
 	if(m_dev)
 		m_dev->stop();
-	m_dev.reset(open_netdev(id, this, (int)(m_bandwidth*1000000/8.0f/1500)));
+	// Set device polling time to transfer time for one mtu
+	m_dev.reset(open_netdev(id, this, (int)(m_bandwidth / m_mtu)));
 	if(!m_dev) {
 		device().logerror("Network interface %d not found\n", id);
 		id = -1;

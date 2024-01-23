@@ -21,7 +21,7 @@
 
 #include "joyport.h"
 
-namespace bus { namespace ti99 { namespace joyport {
+namespace bus::ti99::joyport {
 
 class ti99_handset_device : public device_t, public device_ti99_joyport_interface
 {
@@ -38,7 +38,7 @@ protected:
 	virtual void device_reset() override;
 	virtual ioport_constructor device_input_ports() const override;
 
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+	TIMER_CALLBACK_MEMBER(delayed_data_ack);
 
 private:
 	static constexpr unsigned MAX_HANDSETS = 4;
@@ -48,6 +48,10 @@ private:
 	bool poll_keyboard(int num);
 	bool poll_joystick(int num);
 	void set_acknowledge(int data);
+
+	required_ioport_array<4> m_joyx;
+	required_ioport_array<4> m_joyy;
+	required_ioport_array<5> m_keys;
 
 	int     m_ack;
 	bool    m_clock_high;
@@ -78,8 +82,11 @@ private:
 	// In reality this is no latch but GND is put on one of the selector lines
 	// and then routed back to the port via the joystick
 	int m_joystick;
+
+	required_ioport_array<2> m_joys;
 };
-} } } // end namespace bus::ti99::joyport
+
+} // end namespace bus::ti99::joyport
 
 DECLARE_DEVICE_TYPE_NS(TI99_HANDSET, bus::ti99::joyport, ti99_handset_device)
 DECLARE_DEVICE_TYPE_NS(TI99_JOYSTICK, bus::ti99::joyport, ti99_twin_joystick_device)

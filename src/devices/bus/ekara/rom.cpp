@@ -14,6 +14,7 @@ DEFINE_DEVICE_TYPE(EKARA_ROM_I2C_24C08_EPITCH,     ekara_rom_i2c_24c08_epitch_de
 DEFINE_DEVICE_TYPE(EKARA_ROM_I2C_24LC04,    ekara_rom_i2c_24lc04_device,  "ekara_rom_i2c_24lc04",   "EKARA Cartridge with I2C 24LC04")
 DEFINE_DEVICE_TYPE(EKARA_ROM_I2C_24LC02,    ekara_rom_i2c_24lc02_device,  "ekara_rom_i2c_24lc02",   "EKARA Cartridge with I2C 24LC02")
 DEFINE_DEVICE_TYPE(EKARA_ROM_I2C_24LC02_GC0010,    ekara_rom_i2c_24lc02_gc0010_device,  "ekara_rom_i2c_24lc02_gc0010",   "EKARA Cartridge with I2C 24LC02 (GC0010 direct access)")
+DEFINE_DEVICE_TYPE(EKARA_ROM_I2C_24LC08_EVIO,    ekara_rom_i2c_24lc08_evio_device,  "ekara_rom_i2c_24lc08_evio",   "EKARA Cartridge with I2C 24LC08 (evio direct access)")
 
 
 ekara_rom_plain_device::ekara_rom_plain_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock) :
@@ -56,7 +57,17 @@ ekara_rom_i2c_24lc02_device::ekara_rom_i2c_24lc02_device(const machine_config &m
 }
 
 ekara_rom_i2c_24lc02_gc0010_device::ekara_rom_i2c_24lc02_gc0010_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
-	ekara_rom_i2c_base_device(mconfig, EKARA_ROM_I2C_24LC02_GC0010, tag, owner, clock)
+	ekara_rom_i2c_24lc02_gc0010_device(mconfig, EKARA_ROM_I2C_24LC02_GC0010, tag, owner, clock)
+{
+}
+
+ekara_rom_i2c_24lc02_gc0010_device::ekara_rom_i2c_24lc02_gc0010_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock) :
+	ekara_rom_i2c_base_device(mconfig, type, tag, owner, clock)
+{
+}
+
+ekara_rom_i2c_24lc08_evio_device::ekara_rom_i2c_24lc08_evio_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	ekara_rom_i2c_24lc02_gc0010_device(mconfig, EKARA_ROM_I2C_24LC08_EVIO, tag, owner, clock)
 {
 }
 
@@ -66,22 +77,22 @@ ekara_rom_i2c_24lc02_gc0010_device::ekara_rom_i2c_24lc02_gc0010_device(const mac
 
 // plain
 
-READ8_MEMBER(ekara_rom_plain_device::read_cart)
+uint8_t ekara_rom_plain_device::read_cart(offs_t offset)
 {
-	return read_rom(space, offset, mem_mask);
+	return read_rom(offset);
 }
 
-READ8_MEMBER(ekara_rom_plain_device::read_rom)
+uint8_t ekara_rom_plain_device::read_rom(offs_t offset)
 {
 	return m_rom[offset & (m_rom_size-1)];
 }
 
-WRITE8_MEMBER(ekara_rom_plain_device::write_cart)
+void ekara_rom_plain_device::write_cart(offs_t offset, uint8_t data)
 {
-	write_rom(space, offset, data, mem_mask);
+	write_rom(offset, data);
 }
 
-WRITE8_MEMBER(ekara_rom_plain_device::write_rom)
+void ekara_rom_plain_device::write_rom(offs_t offset, uint8_t data)
 {
 	logerror("ekara_rom_plain_device::write_rom %08x %02x\n", offset, data);
 }
@@ -98,30 +109,30 @@ bool ekara_rom_i2c_base_device::is_write_access_not_rom(void)
 	return (m_buscontrol[0] & 0x08) ? true : false;
 }
 
-WRITE8_MEMBER(ekara_rom_i2c_base_device::write_bus_control)
+void ekara_rom_i2c_base_device::write_bus_control(offs_t offset, uint8_t data)
 {
 	logerror("ekara_rom_i2c_base_device::write_bus_control %08x %02x\n", offset, data);
 	m_buscontrol[offset] = data;
 }
 
-WRITE8_MEMBER(ekara_rom_i2c_base_device::write_rom)
+void ekara_rom_i2c_base_device::write_rom(offs_t offset, uint8_t data)
 {
 	logerror("ekara_rom_i2c_base_device::write_rom %08x %02x\n", offset, data);
 }
 
-READ8_MEMBER(ekara_rom_i2c_base_device::read_rom)
+uint8_t ekara_rom_i2c_base_device::read_rom(offs_t offset)
 {
 	return m_rom[offset & (m_rom_size - 1)];
 }
 
-READ8_MEMBER(ekara_rom_i2c_base_device::read_extra)
+uint8_t ekara_rom_i2c_base_device::read_extra(offs_t offset)
 {
 	logerror("ekara_rom_i2c_base_device::read_extra %08x\n", offset);
 
 	return (m_i2cmem->read_sda() & 1) ? 0xff : 0x00;
 }
 
-WRITE8_MEMBER(ekara_rom_i2c_base_device::write_extra)
+void ekara_rom_i2c_base_device::write_extra(offs_t offset, uint8_t data)
 {
 	logerror("ekara_rom_i2c_base_device::write_extra %08x %02x\n", offset, data);
 
@@ -148,21 +159,21 @@ bool ekara_rom_i2c_24c08_epitch_device::is_write_access_not_rom(void)
 
 void ekara_rom_i2c_24c08_epitch_device::device_add_mconfig(machine_config &config)
 {
-	I2CMEM(config, "i2cmem", 0).set_page_size(16).set_data_size(0x400); // 24C08
+	I2C_24C08(config, "i2cmem", 0);
 }
 
 // i2c 24lc04
 
 void ekara_rom_i2c_24lc04_device::device_add_mconfig(machine_config &config)
 {
-	I2CMEM(config, "i2cmem", 0).set_page_size(16).set_data_size(0x200); // 24LC04
+	I2C_24C04(config, "i2cmem", 0); // 24LC04
 }
 
 // i2c 24lc02
 
 void ekara_rom_i2c_24lc02_device::device_add_mconfig(machine_config &config)
 {
-	I2CMEM(config, "i2cmem", 0).set_page_size(16).set_data_size(0x100); // 24LC02
+	I2C_24C02(config, "i2cmem", 0); // 24LC02
 }
 
 // i2c 24lc02 with direct IO port access
@@ -177,27 +188,27 @@ bool ekara_rom_i2c_24lc02_gc0010_device::is_write_access_not_rom(void)
 	return false;
 }
 
-READ8_MEMBER(ekara_rom_i2c_24lc02_gc0010_device::read_extra)
+uint8_t ekara_rom_i2c_24lc02_gc0010_device::read_extra(offs_t offset)
 {
 	return 0;
 }
 
-WRITE8_MEMBER(ekara_rom_i2c_24lc02_gc0010_device::write_extra)
+void ekara_rom_i2c_24lc02_gc0010_device::write_extra(offs_t offset, uint8_t data)
 {
 }
 
 
-WRITE_LINE_MEMBER(ekara_rom_i2c_24lc02_gc0010_device::write_sda)
+void ekara_rom_i2c_24lc02_gc0010_device::write_sda(int state)
 {
 	m_i2cmem->write_sda(state);
 }
 
-WRITE_LINE_MEMBER(ekara_rom_i2c_24lc02_gc0010_device::write_scl)
+void ekara_rom_i2c_24lc02_gc0010_device::write_scl(int state)
 {
 	m_i2cmem->write_scl(state);
 }
 
-READ_LINE_MEMBER(ekara_rom_i2c_24lc02_gc0010_device::read_sda )
+int ekara_rom_i2c_24lc02_gc0010_device::read_sda()
 {
 	return m_i2cmem->read_sda();
 }
@@ -206,9 +217,14 @@ READ_LINE_MEMBER(ekara_rom_i2c_24lc02_gc0010_device::read_sda )
 
 void ekara_rom_i2c_24lc02_gc0010_device::device_add_mconfig(machine_config &config)
 {
-	I2CMEM(config, "i2cmem", 0)/*.set_page_size(16)*/.set_data_size(0x100); // 24LC02
+	I2C_24C02(config, "i2cmem", 0); // 24LC02
 }
 
+
+void ekara_rom_i2c_24lc08_evio_device::device_add_mconfig(machine_config &config)
+{
+	I2C_24C08(config, "i2cmem", 0);
+}
 
 /*-------------------------------------------------
  slot interface
@@ -221,5 +237,5 @@ void ekara_cart(device_slot_interface &device)
 	device.option_add_internal("rom_24lc04",  EKARA_ROM_I2C_24LC04);
 	device.option_add_internal("rom_24lc02",  EKARA_ROM_I2C_24LC02);
 	device.option_add_internal("rom_24lc02_gc0010",  EKARA_ROM_I2C_24LC02_GC0010);
-
+	device.option_add_internal("rom_24lc08_evio",  EKARA_ROM_I2C_24LC08_EVIO);
 }

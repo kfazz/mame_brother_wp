@@ -6,8 +6,9 @@
 #pragma once
 
 #include "isa.h"
-#include "video/pc_vga.h"
-#include "s3virge.h"
+#include "video/pc_vga_s3.h"
+#include "video/s3virge.h"
+
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -23,7 +24,7 @@ public:
 	// construction/destruction
 	isa16_svga_s3_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(input_port_0_r);
+	uint8_t input_port_0_r();
 
 protected:
 	// device-level overrides
@@ -33,6 +34,8 @@ protected:
 	// optional information overrides
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual const tiny_rom_entry *device_rom_region() const override;
+
+	void io_isa_map(address_map &map);
 
 private:
 	required_device<s3_vga_device> m_vga;
@@ -47,7 +50,7 @@ public:
 	// construction/destruction
 	isa16_s3virge_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(input_port_0_r);
+	uint8_t input_port_0_r();
 
 protected:
 	// device-level overrides
@@ -58,7 +61,9 @@ protected:
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual const tiny_rom_entry *device_rom_region() const override;
 
-	DECLARE_WRITE_LINE_MEMBER(linear_config_changed_w);
+	void linear_config_changed_w(int state);
+
+	void io_isa_map(address_map &map);
 
 private:
 	required_device<s3virge_vga_device> m_vga;
@@ -72,7 +77,7 @@ public:
 	// construction/destruction
 	isa16_s3virgedx_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(input_port_0_r);
+	uint8_t input_port_0_r();
 
 protected:
 	// device-level overrides
@@ -83,7 +88,9 @@ protected:
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual const tiny_rom_entry *device_rom_region() const override;
 
-	DECLARE_WRITE_LINE_MEMBER(linear_config_changed_w);
+	void linear_config_changed_w(int state);
+
+	void io_isa_map(address_map &map);
 
 private:
 	required_device<s3virgedx_vga_device> m_vga;
@@ -100,7 +107,7 @@ public:
 	// construction/destruction
 	isa16_stealth3d2kpro_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(input_port_0_r);
+	uint8_t input_port_0_r();
 
 protected:
 	// device-level overrides
@@ -111,7 +118,9 @@ protected:
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual const tiny_rom_entry *device_rom_region() const override;
 
-	DECLARE_WRITE_LINE_MEMBER(linear_config_changed_w);
+	void linear_config_changed_w(int state);
+
+	void io_isa_map(address_map &map);
 
 private:
 	required_device<s3virgedx_vga_device> m_vga;

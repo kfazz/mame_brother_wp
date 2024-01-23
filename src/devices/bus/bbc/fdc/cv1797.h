@@ -6,7 +6,6 @@
 
 **********************************************************************/
 
-
 #ifndef MAME_BUS_BBC_FDC_CV1797_H
 #define MAME_BUS_BBC_FDC_CV1797_H
 
@@ -15,8 +14,6 @@
 #include "fdc.h"
 #include "imagedev/floppy.h"
 #include "machine/wd_fdc.h"
-#include "formats/acorn_dsk.h"
-#include "formats/fsd_dsk.h"
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -27,8 +24,6 @@ class bbc_cv1797_device :
 	public device_bbc_fdc_interface
 {
 public:
-	static constexpr feature_type imperfect_features() { return feature::DISK; }
-
 	// construction/destruction
 	bbc_cv1797_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
@@ -44,15 +39,14 @@ protected:
 	virtual void write(offs_t offset, uint8_t data) override;
 
 private:
-	DECLARE_FLOPPY_FORMATS(floppy_formats);
+	static void floppy_formats(format_registration &fr);
 
-	DECLARE_WRITE_LINE_MEMBER(motor_w);
+	void fdc_sso_w(int state);
+	void fdc_hld_w(int state);
 
 	required_device<fd1797_device> m_fdc;
-	required_device<floppy_connector> m_floppy0;
-	optional_device<floppy_connector> m_floppy1;
-
-	int m_drive_control;
+	required_device_array<floppy_connector, 2> m_floppies;
+	floppy_image_device* m_floppy;
 };
 
 

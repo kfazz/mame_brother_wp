@@ -25,9 +25,10 @@
 
  ***********************************************************************************************************/
 
-
 #include "emu.h"
 #include "a78_slot.h"
+
+#include "multibyte.h"
 
 //**************************************************************************
 //  GLOBAL VARIABLES
@@ -62,11 +63,11 @@ device_a78_cart_interface::~device_a78_cart_interface ()
 //  rom_alloc - alloc the space for the cart
 //-------------------------------------------------
 
-void device_a78_cart_interface::rom_alloc(uint32_t size, const char *tag)
+void device_a78_cart_interface::rom_alloc(uint32_t size)
 {
 	if (m_rom == nullptr)
 	{
-		m_rom = device().machine().memory().region_alloc(std::string(tag).append(A78SLOT_ROM_REGION_TAG).c_str(), size, 1, ENDIANNESS_LITTLE)->base();
+		m_rom = device().machine().memory().region_alloc(device().subtag("^cart:rom"), size, 1, ENDIANNESS_LITTLE)->base();
 		m_rom_size = size;
 
 		// setup other helpers
@@ -114,7 +115,7 @@ void device_a78_cart_interface::nvram_alloc(uint32_t size)
 //-------------------------------------------------
 a78_cart_slot_device::a78_cart_slot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: device_t(mconfig, A78_CART_SLOT, tag, owner, clock)
-	, device_image_interface(mconfig, *this)
+	, device_cartrom_image_interface(mconfig, *this)
 	, device_slot_interface(mconfig, *this)
 	, m_cart(nullptr)
 	, m_type(0)
@@ -315,7 +316,7 @@ static int a78_get_pcb_id(const char *slot)
 {
 	for (auto & elem : slot_list)
 	{
-		if (!core_stricmp(elem.slot_option, slot))
+		if (!strcmp(elem.slot_option, slot))
 			return elem.pcb_id;
 	}
 
@@ -333,7 +334,7 @@ static const char *a78_get_slot(int type)
 	return "a78_rom";
 }
 
-image_init_result a78_cart_slot_device::call_load()
+std::pair<std::error_condition, std::string> a78_cart_slot_device::call_load()
 {
 	if (m_cart)
 	{
@@ -346,7 +347,7 @@ image_init_result a78_cart_slot_device::call_load()
 			bool has_nvram = get_software_region("nvram") ? true : false;
 			len = get_software_region_length("rom");
 
-			m_cart->rom_alloc(len, tag());
+			m_cart->rom_alloc(len);
 			memcpy(m_cart->get_rom_base(), get_software_region("rom"), len);
 
 			if ((pcb_name = get_feature("slot")) != nullptr)
@@ -366,13 +367,14 @@ image_init_result a78_cart_slot_device::call_load()
 		{
 			// Load and check the header
 			int mapper;
-			char head[128];
+			uint8_t head[128];
 			fread(head, 128);
 
-			if (verify_header((char *)head) != image_verify_result::PASS)
-				return image_init_result::FAIL;
+			auto err = verify_header(head);
+			if (err.first)
+				return err;
 
-			len = (head[49] << 24) | (head[50] << 16) | (head[51] << 8) | head[52];
+			len = get_u32be(&head[49]);
 			if (len + 128 > length())
 			{
 				logerror("Invalid length in the header. The game might be corrupted.\n");
@@ -380,7 +382,7 @@ image_init_result a78_cart_slot_device::call_load()
 			}
 
 			// let's try to auto-fix some common errors in the header
-			mapper = validate_header((head[53] << 8) | head[54], true);
+			mapper = validate_header(get_u16be(&head[53]), true);
 
 			switch (mapper & 0x2e)
 			{
@@ -444,9 +446,9 @@ image_init_result a78_cart_slot_device::call_load()
 				osd_printf_info("Run it through the expansion to exploit this feature.\n");
 			}
 
-			internal_header_logging((uint8_t *)head, length());
+			internal_header_logging(head, length());
 
-			m_cart->rom_alloc(len, tag());
+			m_cart->rom_alloc(len);
 			fread(m_cart->get_rom_base(), len);
 
 			if (m_type == A78_TYPE6 || m_type == A78_TYPE8)
@@ -464,7 +466,7 @@ image_init_result a78_cart_slot_device::call_load()
 
 		//printf("Type: %s\n", a78_get_slot(m_type));
 	}
-	return image_init_result::PASS;
+	return std::make_pair(std::error_condition(), std::string());
 }
 
 
@@ -485,18 +487,15 @@ void a78_cart_slot_device::call_unload()
  has an admissible header
  -------------------------------------------------*/
 
-image_verify_result a78_cart_slot_device::verify_header(char *header)
+std::pair<std::error_condition, std::string> a78_cart_slot_device::verify_header(const uint8_t *header)
 {
 	const char *magic = "ATARI7800";
 
-	if (strncmp(magic, header + 1, 9))
-	{
-		logerror("Not a valid A7800 image\n");
-		return image_verify_result::FAIL;
-	}
+	if (strncmp(magic, reinterpret_cast<const char *>(header + 1), 9))
+		return std::make_pair(image_error::INVALIDIMAGE, "Not a valid A7800 image");
 
 	logerror("returning ID_OK\n");
-	return image_verify_result::PASS;
+	return std::make_pair(std::error_condition(), std::string());
 }
 
 
@@ -508,16 +507,18 @@ std::string a78_cart_slot_device::get_default_card_software(get_default_card_sof
 {
 	if (hook.image_file())
 	{
-		const char *slot_string;
-		std::vector<uint8_t> head(128);
-		int type = A78_TYPE0, mapper;
+		uint64_t len;
+		hook.image_file()->length(len); // FIXME: check error return
 
 		// Load and check the header
-		hook.image_file()->read(&head[0], 128);
+		uint8_t head[128];
+		std::size_t actual;
+		hook.image_file()->read(&head[0], 128, actual); // FIXME: check error return or read returning short
 
 		// let's try to auto-fix some common errors in the header
-		mapper = validate_header((head[53] << 8) | head[54], false);
+		int const mapper = validate_header(get_u16be(&head[53]), false);
 
+		int type = A78_TYPE0;
 		switch (mapper & 0x2e)
 		{
 			case 0x0000:
@@ -534,7 +535,7 @@ std::string a78_cart_slot_device::get_default_card_software(get_default_card_sof
 				break;
 			case 0x0022:
 			case 0x0026:
-				if (hook.image_file()->size() > 0x40000)
+				if (len > 0x40000)
 					type = A78_MEGACART;
 				else
 					type = A78_VERSABOARD;
@@ -560,7 +561,7 @@ std::string a78_cart_slot_device::get_default_card_software(get_default_card_sof
 			type = A78_TYPE8;
 
 		logerror("Cart type: %x\n", type);
-		slot_string = a78_get_slot(type);
+		char const *const slot_string = a78_get_slot(type);
 
 		return std::string(slot_string);
 	}
@@ -573,34 +574,34 @@ std::string a78_cart_slot_device::get_default_card_software(get_default_card_sof
  read
  -------------------------------------------------*/
 
-READ8_MEMBER(a78_cart_slot_device::read_04xx)
+uint8_t a78_cart_slot_device::read_04xx(offs_t offset)
 {
 	if (m_cart)
-		return m_cart->read_04xx(space, offset, mem_mask);
+		return m_cart->read_04xx(offset);
 	else
 		return 0xff;
 }
 
-READ8_MEMBER(a78_cart_slot_device::read_10xx)
+uint8_t a78_cart_slot_device::read_10xx(offs_t offset)
 {
 	if (m_cart)
-		return m_cart->read_10xx(space, offset, mem_mask);
+		return m_cart->read_10xx(offset);
 	else
 		return 0xff;
 }
 
-READ8_MEMBER(a78_cart_slot_device::read_30xx)
+uint8_t a78_cart_slot_device::read_30xx(offs_t offset)
 {
 	if (m_cart)
-		return m_cart->read_30xx(space, offset, mem_mask);
+		return m_cart->read_30xx(offset);
 	else
 		return 0xff;
 }
 
-READ8_MEMBER(a78_cart_slot_device::read_40xx)
+uint8_t a78_cart_slot_device::read_40xx(offs_t offset)
 {
 	if (m_cart)
-		return m_cart->read_40xx(space, offset, mem_mask);
+		return m_cart->read_40xx(offset);
 	else
 		return 0xff;
 }
@@ -610,28 +611,28 @@ READ8_MEMBER(a78_cart_slot_device::read_40xx)
  write
  -------------------------------------------------*/
 
-WRITE8_MEMBER(a78_cart_slot_device::write_04xx)
+void a78_cart_slot_device::write_04xx(offs_t offset, uint8_t data)
 {
 	if (m_cart)
-		m_cart->write_04xx(space, offset, data, mem_mask);
+		m_cart->write_04xx(offset, data);
 }
 
-WRITE8_MEMBER(a78_cart_slot_device::write_10xx)
+void a78_cart_slot_device::write_10xx(offs_t offset, uint8_t data)
 {
 	if (m_cart)
-		m_cart->write_10xx(space, offset, data, mem_mask);
+		m_cart->write_10xx(offset, data);
 }
 
-WRITE8_MEMBER(a78_cart_slot_device::write_30xx)
+void a78_cart_slot_device::write_30xx(offs_t offset, uint8_t data)
 {
 	if (m_cart)
-		m_cart->write_30xx(space, offset, data, mem_mask);
+		m_cart->write_30xx(offset, data);
 }
 
-WRITE8_MEMBER(a78_cart_slot_device::write_40xx)
+void a78_cart_slot_device::write_40xx(offs_t offset, uint8_t data)
 {
 	if (m_cart)
-		m_cart->write_40xx(space, offset, data, mem_mask);
+		m_cart->write_40xx(offset, data);
 }
 
 
@@ -700,11 +701,11 @@ WRITE8_MEMBER(a78_cart_slot_device::write_40xx)
 
  -------------------------------------------------*/
 
-void a78_cart_slot_device::internal_header_logging(uint8_t *header, uint32_t len)
+void a78_cart_slot_device::internal_header_logging(const uint8_t *header, uint32_t len)
 {
 	char head_title[35];
-	uint32_t head_length = (header[49] << 24) | (header[50] << 16) | (header[51] << 8) | header[52];
-	uint16_t head_mapper = (header[53] << 8) | header[54];
+	uint32_t head_length = get_u32be(&header[49]);
+	uint16_t head_mapper = get_u16be(&header[53]);
 	uint8_t head_ctrl1 = header[55];
 	uint8_t head_ctrl2 = header[56];
 	uint8_t head_ispal = header[57];
@@ -790,7 +791,7 @@ void a78_cart_slot_device::internal_header_logging(uint8_t *header, uint32_t len
 	logerror( "==============\n\n" );
 	logerror( "\tTitle:           %.32s\n", head_title);
 	logerror( "\tLength:          0x%X [real 0x%X]\n", head_length, len);
-	logerror( "\tMapper:          %s [0x%X]\n", cart_mapper.c_str(), head_mapper);
+	logerror( "\tMapper:          %s [0x%X]\n", cart_mapper, head_mapper);
 	logerror( "\t\tPOKEY:           %s\n", BIT(head_mapper, 0) ? "Yes" : "No");
 	logerror( "\t\tSC Bankswitch:   %s\n", BIT(head_mapper, 1) ? "Yes" : "No");
 	logerror( "\t\tRAM at $4000:    %s\n", BIT(head_mapper, 2) ? "Yes" : "No");
@@ -807,7 +808,7 @@ void a78_cart_slot_device::internal_header_logging(uint8_t *header, uint32_t len
 	}
 	else
 		logerror( "\n");
-	logerror( "\tController 1:    0x%.2X [%s]\n", head_ctrl1, ctrl1.c_str());
-	logerror( "\tController 2:    0x%.2X [%s]\n", head_ctrl2, ctrl2.c_str());
+	logerror( "\tController 1:    0x%.2X [%s]\n", head_ctrl1, ctrl1);
+	logerror( "\tController 2:    0x%.2X [%s]\n", head_ctrl2, ctrl2);
 	logerror( "\tVideo:           %s\n", (head_ispal) ? "PAL" : "NTSC");
 }

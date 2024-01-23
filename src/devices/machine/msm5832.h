@@ -45,25 +45,24 @@ public:
 
 	void address_w(uint8_t data);
 
-	DECLARE_WRITE_LINE_MEMBER( adj_w );
-	DECLARE_WRITE_LINE_MEMBER( test_w );
-	DECLARE_WRITE_LINE_MEMBER( hold_w );
+	void adj_w(int state);
+	void test_w(int state);
+	void hold_w(int state);
 
-	DECLARE_WRITE_LINE_MEMBER( read_w );
-	DECLARE_WRITE_LINE_MEMBER( write_w );
-	DECLARE_WRITE_LINE_MEMBER( cs_w );
+	void read_w(int state);
+	void write_w(int state);
+	void cs_w(int state);
 
 protected:
 	// device-level overrides
 	virtual void device_start() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// device_rtc_interface overrides
 	virtual void rtc_clock_updated(int year, int month, int day, int day_of_week, int hour, int minute, int second) override;
 
-private:
-	static constexpr device_timer_id TIMER_CLOCK = 0;
+	TIMER_CALLBACK_MEMBER(clock_tick);
 
+private:
 	inline int read_counter(int counter);
 	inline void write_counter(int counter, int value);
 

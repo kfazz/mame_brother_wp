@@ -35,8 +35,8 @@ protected:
 	virtual ioport_constructor device_input_ports() const override;
 	virtual const tiny_rom_entry *device_rom_region() const override;
 
-	virtual DECLARE_WRITE_LINE_MEMBER(clock_write) override;
-	virtual DECLARE_WRITE_LINE_MEMBER(data_write) override;
+	virtual void clock_write(int state) override;
+	virtual void data_write(int state) override;
 
 private:
 	required_device<i8051_device> m_cpu;
@@ -49,12 +49,12 @@ private:
 	uint8_t   m_p2;
 	uint8_t   m_p3;
 
-	DECLARE_READ8_MEMBER(p0_read);
-	DECLARE_WRITE8_MEMBER(p0_write);
-	DECLARE_WRITE8_MEMBER(p1_write);
-	DECLARE_WRITE8_MEMBER(p2_write);
-	DECLARE_READ8_MEMBER(p3_read);
-	DECLARE_WRITE8_MEMBER(p3_write);
+	uint8_t p0_read();
+	void p0_write(uint8_t data);
+	void p1_write(uint8_t data);
+	void p2_write(uint8_t data);
+	uint8_t p3_read();
+	void p3_write(uint8_t data);
 };
 
 

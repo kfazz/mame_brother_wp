@@ -80,9 +80,9 @@
 #include "ioport.h"
 #include "bus/ti99/peb/peribox.h"
 
-DEFINE_DEVICE_TYPE_NS(TI99_IOPORT, bus::ti99::internal, ioport_device, "ti99_ioport", "TI-99 I/O Port")
+DEFINE_DEVICE_TYPE(TI99_IOPORT, bus::ti99::internal::ioport_device, "ti99_ioport", "TI-99 I/O Port")
 
-namespace bus { namespace ti99 { namespace internal {
+namespace bus::ti99::internal {
 
 ioport_device::ioport_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	:   device_t(mconfig, TI99_IOPORT, tag, owner, clock),
@@ -93,7 +93,7 @@ ioport_device::ioport_device(const machine_config &mconfig, const char *tag, dev
 {
 }
 
-READ8Z_MEMBER(ioport_device::readz)
+void ioport_device::readz(offs_t offset, uint8_t *value)
 {
 	if (m_connected != nullptr)
 		m_connected->readz(offset, value);
@@ -105,13 +105,13 @@ void ioport_device::write(offs_t offset, uint8_t data)
 		m_connected->write(offset, data);
 }
 
-SETADDRESS_DBIN_MEMBER(ioport_device::setaddress_dbin)
+void ioport_device::setaddress_dbin(offs_t offset, int state)
 {
 	if (m_connected != nullptr)
 		m_connected->setaddress_dbin(offset, state);
 }
 
-READ8Z_MEMBER(ioport_device::crureadz)
+void ioport_device::crureadz(offs_t offset, uint8_t *value)
 {
 	if (m_connected != nullptr)
 		m_connected->crureadz(offset, value);
@@ -123,25 +123,25 @@ void ioport_device::cruwrite(offs_t offset, uint8_t data)
 		m_connected->cruwrite(offset, data);
 }
 
-WRITE_LINE_MEMBER(ioport_device::memen_in)
+void ioport_device::memen_in(int state)
 {
 	if (m_connected != nullptr)
 		m_connected->memen_in(state);
 }
 
-WRITE_LINE_MEMBER(ioport_device::msast_in)
+void ioport_device::msast_in(int state)
 {
 	if (m_connected != nullptr)
 		m_connected->msast_in(state);
 }
 
-WRITE_LINE_MEMBER(ioport_device::clock_in)
+void ioport_device::clock_in(int state)
 {
 	if (m_connected != nullptr)
 		m_connected->clock_in(state);
 }
 
-WRITE_LINE_MEMBER(ioport_device::reset_in)
+void ioport_device::reset_in(int state)
 {
 	if (m_connected != nullptr)
 		m_connected->reset_in(state);
@@ -149,8 +149,6 @@ WRITE_LINE_MEMBER(ioport_device::reset_in)
 
 void ioport_device::device_start()
 {
-	m_console_extint.resolve();
-	m_console_ready.resolve();
 	if (m_connected != nullptr)
 		m_connected->set_ioport(this);
 }
@@ -161,17 +159,17 @@ void ioport_device::device_config_complete()
 }
 
 
-WRITE_LINE_MEMBER(ioport_attached_device::set_extint)
+void ioport_attached_device::set_extint(int state)
 {
 	m_ioport->m_console_extint(state);
 }
 
-WRITE_LINE_MEMBER(ioport_attached_device::set_ready)
+void ioport_attached_device::set_ready(int state)
 {
 	m_ioport->m_console_ready(state);
 }
 
-}   }   } // end namespace bus::ti99::internal
+} // end namespace bus::ti99::internal
 
 void ti99_ioport_options_plain(device_slot_interface &device)
 {

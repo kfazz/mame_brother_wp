@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "flopimg.h"
+#include "flopimg_legacy.h"
 #include "wd177x_dsk.h"
 
 /**************************************************************************/
@@ -28,15 +28,15 @@ class fsd_format : public floppy_image_format_t
 public:
 	fsd_format();
 
-	virtual const char *name() const override;
-	virtual const char *description() const override;
-	virtual const char *extensions() const override;
-	virtual bool supports_save() const override;
+	virtual const char *name() const noexcept override;
+	virtual const char *description() const noexcept override;
+	virtual const char *extensions() const noexcept override;
+	virtual bool supports_save() const noexcept override;
 
-	virtual int identify(io_generic *io, uint32_t form_factor) override;
-	virtual bool load(io_generic *io, uint32_t form_factor, floppy_image *image) override;
+	virtual int identify(util::random_read &io, uint32_t form_factor, const std::vector<uint32_t> &variants) const override;
+	virtual bool load(util::random_read &io, uint32_t form_factor, const std::vector<uint32_t> &variants, floppy_image &image) const override;
 };
 
-extern const floppy_format_type FLOPPY_FSD_FORMAT;
+extern const fsd_format FLOPPY_FSD_FORMAT;
 
 #endif // MAME_FORMATS_FSD_DSK_H

@@ -40,15 +40,15 @@ public:
 	void set_ram(uint8_t *ram) { m_ram = ram; }
 
 	// input lines
-	DECLARE_WRITE_LINE_MEMBER( configin_w );
-	DECLARE_WRITE_LINE_MEMBER( ramsz_w );
-	DECLARE_WRITE_LINE_MEMBER( rst_w );
-	DECLARE_WRITE_LINE_MEMBER( intx_w );
-	DECLARE_WRITE_LINE_MEMBER( xdreq_w );
+	void configin_w(int state);
+	void ramsz_w(int state);
+	void rst_w(int state);
+	void intx_w(int state);
+	void xdreq_w(int state);
 
 	// dmac register access
-	DECLARE_READ16_MEMBER( register_read );
-	DECLARE_WRITE16_MEMBER( register_write );
+	uint16_t register_read(address_space &space, offs_t offset, uint16_t mem_mask = ~0);
+	void register_write(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
 
 protected:
 	// device-level overrides

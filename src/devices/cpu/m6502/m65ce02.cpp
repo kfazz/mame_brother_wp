@@ -2,7 +2,7 @@
 // copyright-holders:Olivier Galibert
 /***************************************************************************
 
-    m65ce02.c
+    m65ce02.cpp
 
     6502 with Z register and some more stuff
 
@@ -12,7 +12,7 @@
 #include "m65ce02.h"
 #include "m65ce02d.h"
 
-DEFINE_DEVICE_TYPE(M65CE02, m65ce02_device, "m65ce02", "MOS Technology M65CE02")
+DEFINE_DEVICE_TYPE(M65CE02, m65ce02_device, "m65ce02", "CSG 65CE02")
 
 m65ce02_device::m65ce02_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	m65ce02_device(mconfig, M65CE02, tag, owner, clock)

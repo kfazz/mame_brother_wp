@@ -164,20 +164,19 @@ ROM_END
 //-------------------------------------------------
 //  qs1000_device - constructor
 //-------------------------------------------------
-qs1000_device::qs1000_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, QS1000, tag, owner, clock),
-		device_sound_interface(mconfig, *this),
-		device_rom_interface(mconfig, *this, 24),
-		m_external_rom(false),
-		m_in_p1_cb(*this),
-		m_in_p2_cb(*this),
-		m_in_p3_cb(*this),
-		m_out_p1_cb(*this),
-		m_out_p2_cb(*this),
-		m_out_p3_cb(*this),
-		//m_serial_w_cb(*this),
-		m_stream(nullptr),
-		m_cpu(*this, "cpu")
+qs1000_device::qs1000_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	device_t(mconfig, QS1000, tag, owner, clock),
+	device_sound_interface(mconfig, *this),
+	device_rom_interface(mconfig, *this),
+	m_external_rom(false),
+	m_in_p1_cb(*this, 0),
+	m_in_p2_cb(*this, 0),
+	m_in_p3_cb(*this, 0),
+	m_out_p1_cb(*this),
+	m_out_p2_cb(*this),
+	m_out_p3_cb(*this),
+	m_stream(nullptr),
+	m_cpu(*this, "cpu")
 {
 }
 
@@ -207,15 +206,15 @@ void qs1000_device::device_add_mconfig(machine_config &config)
 	m_cpu->port_out_cb<2>().set(FUNC(qs1000_device::p2_w));
 	m_cpu->port_in_cb<3>().set(FUNC(qs1000_device::p3_r));
 	m_cpu->port_out_cb<3>().set(FUNC(qs1000_device::p3_w));
-	m_cpu->serial_rx_cb().set(FUNC(qs1000_device::data_to_i8052));
 }
 
 
 //-------------------------------------------------
-//  rom_bank_updated - the rom bank has changed
+//  rom_bank_pre_change - refresh the stream if the
+//  ROM banking changes
 //-------------------------------------------------
 
-void qs1000_device::rom_bank_updated()
+void qs1000_device::rom_bank_pre_change()
 {
 	m_stream->update();
 }
@@ -231,18 +230,6 @@ void qs1000_device::device_start()
 	// gives reasonable results
 	m_stream = stream_alloc(0, 2, clock() / 32);
 
-	// Resolve CPU port callbacks
-	m_in_p1_cb.resolve_safe(0);
-	m_in_p2_cb.resolve_safe(0);
-	m_in_p3_cb.resolve_safe(0);
-
-	m_out_p1_cb.resolve_safe();
-	m_out_p2_cb.resolve_safe();
-	m_out_p3_cb.resolve_safe();
-
-	//m_serial_w_cb.resolve_safe();
-
-	save_item(NAME(m_serial_data_in));
 	save_item(NAME(m_wave_regs));
 
 	for (int i = 0; i < QS1000_CHANNELS; i++)
@@ -259,20 +246,10 @@ void qs1000_device::device_start()
 		save_item(NAME(m_channels[i].m_regs), i);
 		save_item(NAME(m_channels[i].m_adpcm.m_signal), i);
 		save_item(NAME(m_channels[i].m_adpcm.m_step), i);
+		save_item(NAME(m_channels[i].m_adpcm.m_loop_signal), i);
+		save_item(NAME(m_channels[i].m_adpcm.m_loop_step), i);
+		save_item(NAME(m_channels[i].m_adpcm.m_saved), i);
 	}
-}
-
-
-//-------------------------------------------------
-//  serial_in - send data to the chip
-//-------------------------------------------------
-void qs1000_device::serial_in(uint8_t data)
-{
-	m_serial_data_in = data;
-
-	// Signal to the CPU that data is available
-	m_cpu->set_input_line(MCS51_RX_LINE, ASSERT_LINE);
-	m_cpu->set_input_line(MCS51_RX_LINE, CLEAR_LINE);
 }
 
 
@@ -287,16 +264,6 @@ void qs1000_device::set_irq(int state)
 
 
 //-------------------------------------------------
-//  data_to_i8052 - called by the 8052 core to
-//  receive serial data
-//-------------------------------------------------
-uint8_t qs1000_device::data_to_i8052()
-{
-	return m_serial_data_in;
-}
-
-
-//-------------------------------------------------
 //  device_reset - device-specific reset
 //-------------------------------------------------
 void qs1000_device::device_reset()
@@ -305,15 +272,6 @@ void qs1000_device::device_reset()
 	{
 		elem.m_flags = 0;
 	}
-}
-
-
-//-------------------------------------------------
-//  device_timer - handle deferred writes and
-//  resets as a timer callback
-//-------------------------------------------------
-void qs1000_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
-{
 }
 
 
@@ -465,11 +423,11 @@ void qs1000_device::wave_w(offs_t offset, uint8_t data)
 //-------------------------------------------------
 //  sound_stream_update -
 //-------------------------------------------------
-void qs1000_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void qs1000_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
 	// Rset the output stream
-	memset(outputs[0], 0x0, samples * sizeof(*outputs[0]));
-	memset(outputs[1], 0x0, samples * sizeof(*outputs[1]));
+	outputs[0].fill(0);
+	outputs[1].fill(0);
 
 	// Iterate over voices and accumulate sample data
 	for (auto & chan : m_channels)
@@ -482,7 +440,7 @@ void qs1000_device::sound_stream_update(sound_stream &stream, stream_sample_t **
 		{
 			if (chan.m_flags & QS1000_ADPCM)
 			{
-				for (int samp = 0; samp < samples; samp++)
+				for (int samp = 0; samp < outputs[0].samples(); samp++)
 				{
 					if (chan.m_addr >= chan.m_loop_end)
 					{
@@ -504,8 +462,17 @@ void qs1000_device::sound_stream_update(sound_stream &stream, stream_sample_t **
 					{
 						chan.m_adpcm_addr++;
 
-						if (chan.m_start + chan.m_adpcm_addr >=  chan.m_loop_end)
+						if (chan.m_start + chan.m_adpcm_addr >= chan.m_loop_end)
+						{
 							chan.m_adpcm_addr = chan.m_loop_start - chan.m_start;
+#if 0 // Looping disabled until envelopes work
+							chan.m_adpcm.restore();
+						}
+						if (chan.m_start + chan.m_adpcm_addr == chan.m_loop_start)
+						{
+							chan.m_adpcm.save();
+#endif
+						}
 
 						uint8_t data = read_byte(chan.m_start + (chan.m_adpcm_addr >> 1));
 						uint8_t nibble = (chan.m_adpcm_addr & 1 ? data : data >> 4) & 0xf;
@@ -517,13 +484,13 @@ void qs1000_device::sound_stream_update(sound_stream &stream, stream_sample_t **
 					chan.m_addr = (chan.m_addr + (chan.m_acc >> 18)) & QS1000_ADDRESS_MASK;
 					chan.m_acc &= ((1 << 18) - 1);
 
-					outputs[0][samp] += (result * 4 * lvol * vol) >> 12;
-					outputs[1][samp] += (result * 4 * rvol * vol) >> 12;
+					outputs[0].add_int(samp, result * 4 * lvol * vol, 32768 << 12);
+					outputs[1].add_int(samp, result * 4 * rvol * vol, 32768 << 12);
 				}
 			}
 			else
 			{
-				for (int samp = 0; samp < samples; samp++)
+				for (int samp = 0; samp < outputs[0].samples(); samp++)
 				{
 					if (chan.m_addr >= chan.m_loop_end)
 					{
@@ -546,8 +513,8 @@ void qs1000_device::sound_stream_update(sound_stream &stream, stream_sample_t **
 					chan.m_addr = (chan.m_addr + (chan.m_acc >> 18)) & QS1000_ADDRESS_MASK;
 					chan.m_acc &= ((1 << 18) - 1);
 
-					outputs[0][samp] += (result * lvol * vol) >> 12;
-					outputs[1][samp] += (result * rvol * vol) >> 12;
+					outputs[0].add_int(samp, result * lvol * vol, 32768 << 12);
+					outputs[1].add_int(samp, result * rvol * vol, 32768 << 12);
 				}
 			}
 		}

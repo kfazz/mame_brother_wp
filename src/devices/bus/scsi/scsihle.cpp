@@ -82,9 +82,9 @@ void scsihle_device::device_start()
 {
 	t10_start(*this);
 
-	req_timer = timer_alloc(0);
-	sel_timer = timer_alloc(1);
-	dataout_timer = timer_alloc(2);
+	req_timer = timer_alloc(FUNC(scsihle_device::req_tick), this);
+	sel_timer = timer_alloc(FUNC(scsihle_device::sel_tick), this);
+	dataout_timer = timer_alloc(FUNC(scsihle_device::dataout_tick), this);
 }
 
 void scsihle_device::device_reset()
@@ -206,27 +206,24 @@ void scsihle_device::scsibus_write_data()
 	data_idx=0;
 }
 
-void scsihle_device::device_timer(emu_timer &timer, device_timer_id tid, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(scsihle_device::req_tick)
 {
-	switch (tid)
+	output_req(param);
+}
+
+TIMER_CALLBACK_MEMBER(scsihle_device::sel_tick)
+{
+	output_bsy(param);
+}
+
+TIMER_CALLBACK_MEMBER(scsihle_device::dataout_tick)
+{
+	// Some drives, notably the ST225N and ST125N, accept fromat unit commands
+	// with flags set indicating that bad block data should be transferred but
+	// don't then implemnt a data in phase, this timeout it to catch these
+	if (IS_COMMAND(SCSI_CMD_FORMAT_UNIT) && (data_idx==0))
 	{
-	case 0:
-		output_req(param);
-		break;
-
-	case 1:
-		output_bsy(param);
-		break;
-
-	case 2:
-		// Some drives, notably the ST225N and ST125N, accept fromat unit commands
-		// with flags set indicating that bad block data should be transferred but
-		// don't then implemnt a data in phase, this timeout it to catch these !
-		if (IS_COMMAND(SCSI_CMD_FORMAT_UNIT) && (data_idx==0))
-		{
-			scsi_change_phase(SCSI_PHASE_STATUS);
-		}
-		break;
+		scsi_change_phase(SCSI_PHASE_STATUS);
 	}
 }
 
@@ -408,7 +405,7 @@ void scsihle_device::scsi_change_phase(uint8_t newphase)
 	}
 }
 
-WRITE_LINE_MEMBER( scsihle_device::input_sel )
+void scsihle_device::input_sel(int state)
 {
 //  printf( "sel %d %d %02x\n", state, m_phase, m_input_data );
 	switch (m_phase)
@@ -418,11 +415,9 @@ WRITE_LINE_MEMBER( scsihle_device::input_sel )
 		// only one line active.
 		if (scsibus_driveno(m_input_data) == scsiID)
 		{
-			void *hdfile = nullptr;
 			// Check to see if device had image file mounted, if not, do not set busy,
 			// and stay busfree.
-			GetDevice(&hdfile);
-			if (hdfile != nullptr)
+			if (exists())
 			{
 				if (!state)
 				{
@@ -438,7 +433,7 @@ WRITE_LINE_MEMBER( scsihle_device::input_sel )
 	}
 }
 
-WRITE_LINE_MEMBER( scsihle_device::input_ack )
+void scsihle_device::input_ack(int state)
 {
 	switch (m_phase)
 	{
@@ -497,7 +492,7 @@ WRITE_LINE_MEMBER( scsihle_device::input_ack )
 
 				if (IS_COMMAND(SCSI_CMD_FORMAT_UNIT))
 				{
-					// If we have the first byte, then cancel the dataout timout
+					// If we have the first byte, then cancel the dataout timeout
 					if (data_idx == 1)
 						dataout_timer->adjust(attotime::never);
 
@@ -576,7 +571,7 @@ WRITE_LINE_MEMBER( scsihle_device::input_ack )
 	}
 }
 
-WRITE_LINE_MEMBER( scsihle_device::input_rst )
+void scsihle_device::input_rst(int state)
 {
 	if (state)
 	{

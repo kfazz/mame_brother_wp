@@ -52,12 +52,12 @@ void device_electron_cart_interface::rom_alloc(uint32_t size, const char *tag)
 	{
 		if (size <= 0x8000)
 		{
-			m_rom = device().machine().memory().region_alloc(std::string(tag).append(ELECTRON_CART_ROM_REGION_TAG).c_str(), 0x8000, 1, ENDIANNESS_LITTLE)->base();
+			m_rom = device().machine().memory().region_alloc(std::string(tag).append(ELECTRON_CART_ROM_REGION_TAG), 0x8000, 1, ENDIANNESS_LITTLE)->base();
 			m_rom_size = 0x8000;
 		}
 		else
 		{
-			m_rom = device().machine().memory().region_alloc(std::string(tag).append(ELECTRON_CART_ROM_REGION_TAG).c_str(), size, 1, ENDIANNESS_LITTLE)->base();
+			m_rom = device().machine().memory().region_alloc(std::string(tag).append(ELECTRON_CART_ROM_REGION_TAG), size, 1, ENDIANNESS_LITTLE)->base();
 			m_rom_size = size;
 		}
 	}
@@ -91,7 +91,7 @@ void device_electron_cart_interface::nvram_alloc(uint32_t size)
 //-------------------------------------------------
 electron_cartslot_device::electron_cartslot_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, type, tag, owner, clock),
-	device_image_interface(mconfig, *this),
+	device_cartrom_image_interface(mconfig, *this),
 	device_single_card_slot_interface<device_electron_cart_interface>(mconfig, *this),
 	m_cart(nullptr),
 	m_irq_handler(*this),
@@ -111,10 +111,6 @@ electron_cartslot_device::electron_cartslot_device(const machine_config &mconfig
 void electron_cartslot_device::device_start()
 {
 	m_cart = get_card_device();
-
-	// resolve callbacks
-	m_irq_handler.resolve_safe();
-	m_nmi_handler.resolve_safe();
 }
 
 
@@ -122,19 +118,16 @@ void electron_cartslot_device::device_start()
 //  call load
 //-------------------------------------------------
 
-image_init_result electron_cartslot_device::call_load()
+std::pair<std::error_condition, std::string> electron_cartslot_device::call_load()
 {
 	if (m_cart)
 	{
 		if (!loaded_through_softlist())
 		{
-			uint32_t size = length();
+			uint32_t const size = length();
 
 			if (size % 0x2000)
-			{
-				seterror(IMAGE_ERROR_UNSPECIFIED, "Unsupported cartridge size");
-				return image_init_result::FAIL;
-			}
+				return std::make_pair(image_error::INVALIDLENGTH, "Unsupported cartridge size (must be a multiple of 8K)");
 
 			m_cart->rom_alloc(size, tag());
 			fread(m_cart->get_rom_base(), size);
@@ -150,11 +143,8 @@ image_init_result electron_cartslot_device::call_load()
 			uint32_t ramsize = get_software_region_length("ram");
 			uint32_t nvramsize = get_software_region_length("nvram");
 
-			if ((upsize % 0x2000 && upsize != 0) || (losize % 0x2000 && losize != 0) || (romsize % 0x2000 && romsize != 0))
-			{
-				seterror(IMAGE_ERROR_UNSPECIFIED, "Unsupported cartridge size");
-				return image_init_result::FAIL;
-			}
+			if ((upsize % 0x2000) || (losize % 0x2000) || (romsize % 0x2000))
+				return std::make_pair(image_error::INVALIDLENGTH, "Unsupported ROM size (must be a multiple of 8K)");
 
 			// load standard 2x16K ROM cartridges
 			if (losize != 0 || upsize != 0)
@@ -197,7 +187,7 @@ image_init_result electron_cartslot_device::call_load()
 		}
 	}
 
-	return image_init_result::PASS;
+	return std::make_pair(std::error_condition(), std::string());
 }
 
 
@@ -261,11 +251,12 @@ void electron_cartslot_device::write(offs_t offset, uint8_t data, int infc, int 
 #include "aqr.h"
 #include "click.h"
 #include "cumana.h"
+#include "elksdp1.h"
 #include "mgc.h"
 #include "peg400.h"
 //#include "pmse2p.h"
 #include "romp144.h"
-//#include "rs423.h"
+#include "rs423.h"
 #include "sndexp.h"
 #include "sndexp3.h"
 #include "sp64.h"
@@ -283,11 +274,12 @@ void electron_cart(device_slot_interface &device)
 	device.option_add_internal("aqr", ELECTRON_AQR);
 	device.option_add_internal("click", ELECTRON_CLICK);
 	device.option_add_internal("cumana", ELECTRON_CUMANA);
+	device.option_add_internal("elksdp1", ELECTRON_ELKSDP1);
 	device.option_add_internal("mgc", ELECTRON_MGC);
 	device.option_add_internal("peg400", ELECTRON_PEG400);
 	//device.option_add_internal("pmse2p", ELECTRON_PMSE2P);
 	device.option_add_internal("romp144", ELECTRON_ROMP144);
-	//device.option_add_internal("rs423", ELECTRON_RS423);
+	device.option_add_internal("rs423", ELECTRON_RS423);
 	device.option_add_internal("sndexp", ELECTRON_SNDEXP);
 	device.option_add_internal("sndexp3", ELECTRON_SNDEXP3);
 	device.option_add_internal("sp64", ELECTRON_SP64);

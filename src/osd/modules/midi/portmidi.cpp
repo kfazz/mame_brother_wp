@@ -2,34 +2,41 @@
 // copyright-holders:R. Belmont
 /***************************************************************************
 
-    portmap.c
+    portmidi.cpp
 
     Midi implementation based on portmidi library
 
 *******************************************************************c********/
 
+#include "midi_module.h"
+
+#include "modules/osdmodule.h"
+
 #ifndef NO_USE_MIDI
 
 #include <portmidi.h>
-#include "osdcore.h"
-#include "corealloc.h"
-#include "modules/osdmodule.h"
-#include "midi_module.h"
+
+#include <cstdio>
+#include <cstring>
+
+
+namespace osd {
+
+namespace {
 
 class pm_module : public osd_module, public midi_module
 {
 public:
 
-	pm_module()
-	: osd_module(OSD_MIDI_PROVIDER, "pm"), midi_module()
+	pm_module() : osd_module(OSD_MIDI_PROVIDER, "pm"), midi_module()
 	{
 	}
 	virtual ~pm_module() { }
 
-	virtual int init(const osd_options &options)override;
-	virtual void exit()override;
+	virtual int init(osd_interface &osd, const osd_options &options) override;
+	virtual void exit() override;
 
-	virtual osd_midi_device *create_midi_device() override;
+	virtual std::unique_ptr<osd_midi_device> create_midi_device() override;
 	virtual void list_midi_devices() override;
 };
 
@@ -60,13 +67,13 @@ private:
 	bool rx_sysex;
 };
 
-osd_midi_device *pm_module::create_midi_device()
+std::unique_ptr<osd_midi_device> pm_module::create_midi_device()
 {
-	return global_alloc(osd_midi_device_pm());
+	return std::make_unique<osd_midi_device_pm>();
 }
 
 
-int pm_module::init(const osd_options &options)
+int pm_module::init(osd_interface &osd, const osd_options &options)
 {
 	Pm_Initialize();
 	return 0;
@@ -465,12 +472,16 @@ void osd_midi_device_pm::write(uint8_t data)
 	}
 
 }
-#else
-	#include "modules/osdmodule.h"
-	#include "midi_module.h"
 
-	MODULE_NOT_SUPPORTED(pm_module, OSD_MIDI_PROVIDER, "pm")
+} // anonymous namespace
+
+} // namespace osd
+
+#else
+
+namespace osd { namespace { MODULE_NOT_SUPPORTED(pm_module, OSD_MIDI_PROVIDER, "pm") } }
+
 #endif
 
 
-MODULE_DEFINITION(MIDI_PM, pm_module)
+MODULE_DEFINITION(MIDI_PM, osd::pm_module)

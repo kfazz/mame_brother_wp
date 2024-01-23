@@ -39,17 +39,17 @@ protected:
 private:
 	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(socket_load);
 
-	DECLARE_WRITE_LINE_MEMBER(intrq_w);
+	void intrq_w(int state);
 
 	TIMER_DEVICE_CALLBACK_MEMBER(timer_callback);
 
-	DECLARE_READ8_MEMBER(irq_r);
-	DECLARE_WRITE8_MEMBER(select_w);
-	DECLARE_WRITE8_MEMBER(command_w);
+	uint8_t irq_r();
+	void select_w(uint8_t data);
+	void command_w(uint8_t data);
 
 	void mmio(address_map &map);
 
-	DECLARE_FLOPPY_FORMATS(floppy_formats);
+	static void floppy_formats(format_registration &fr);
 
 	required_device<wd2793_device> m_fdc;
 	required_device<floppy_connector> m_floppy0;

@@ -43,7 +43,7 @@ DEFINE_DEVICE_TYPE(C64_PARTNER, c64_partner_cartridge_device, "c64_partner", "C6
 //  INPUT_PORTS( c64_partner )
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( c64_partner_cartridge_device::nmi_w )
+void c64_partner_cartridge_device::nmi_w(int state)
 {
 	if (!state && !m_a6 && !m_nmi)
 	{
@@ -80,7 +80,7 @@ ioport_constructor c64_partner_cartridge_device::device_input_ports() const
 c64_partner_cartridge_device::c64_partner_cartridge_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, C64_PARTNER, tag, owner, clock),
 	device_c64_expansion_card_interface(mconfig, *this),
-	m_ram(*this, "ram"),
+	m_ram(*this, "ram", 0x2000, ENDIANNESS_LITTLE),
 	m_a0(1),
 	m_a6(1),
 	m_nmi(0)
@@ -94,8 +94,6 @@ c64_partner_cartridge_device::c64_partner_cartridge_device(const machine_config 
 
 void c64_partner_cartridge_device::device_start()
 {
-	// allocate memory
-	m_ram.allocate(0x2000);
 }
 
 

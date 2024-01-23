@@ -109,15 +109,10 @@ void cdp1861_device::device_config_complete()
 
 void cdp1861_device::device_start()
 {
-	// resolve callbacks
-	m_write_int.resolve_safe();
-	m_write_dma_out.resolve_safe();
-	m_write_efx.resolve_safe();
-
 	// allocate timers
-	m_int_timer = timer_alloc(TIMER_INT);
-	m_efx_timer = timer_alloc(TIMER_EFX);
-	m_dma_timer = timer_alloc(TIMER_DMA);
+	m_int_timer = timer_alloc(FUNC(cdp1861_device::int_tick), this);
+	m_efx_timer = timer_alloc(FUNC(cdp1861_device::efx_tick), this);
+	m_dma_timer = timer_alloc(FUNC(cdp1861_device::dma_tick), this);
 
 	// find devices
 	screen().register_screen_bitmap(m_bitmap);
@@ -151,91 +146,87 @@ void cdp1861_device::device_reset()
 
 
 //-------------------------------------------------
-//  device_timer - handle timer events
+//  timer events
 //-------------------------------------------------
 
-void cdp1861_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(cdp1861_device::int_tick)
+{
+	if (screen().vpos() == SCANLINE_INT_START)
+	{
+		if (m_disp)
+		{
+			m_write_int(ASSERT_LINE);
+		}
+
+		m_int_timer->adjust(screen().time_until_pos( SCANLINE_INT_END, 0));
+	}
+	else
+	{
+		if (m_disp)
+		{
+			m_write_int(CLEAR_LINE);
+		}
+
+		m_int_timer->adjust(screen().time_until_pos(SCANLINE_INT_START, 0));
+	}
+}
+
+TIMER_CALLBACK_MEMBER(cdp1861_device::efx_tick)
+{
+	switch (screen().vpos())
+	{
+	case SCANLINE_EFX_TOP_START:
+		m_write_efx(ASSERT_LINE);
+		m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_TOP_END, 0));
+		break;
+
+	case SCANLINE_EFX_TOP_END:
+		m_write_efx(CLEAR_LINE);
+		m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_BOTTOM_START, 0));
+		break;
+
+	case SCANLINE_EFX_BOTTOM_START:
+		m_write_efx(ASSERT_LINE);
+		m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_BOTTOM_END, 0));
+		break;
+
+	case SCANLINE_EFX_BOTTOM_END:
+		m_write_efx(CLEAR_LINE);
+		m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_TOP_START, 0));
+		break;
+	}
+}
+
+TIMER_CALLBACK_MEMBER(cdp1861_device::dma_tick)
 {
 	int scanline = screen().vpos();
-
-	switch (id)
+	if (m_dmaout)
 	{
-	case TIMER_INT:
-		if (scanline == SCANLINE_INT_START)
+		if (m_disp)
 		{
-			if (m_disp)
+			if (scanline >= SCANLINE_DISPLAY_START && scanline < SCANLINE_DISPLAY_END)
 			{
-				m_write_int(ASSERT_LINE);
+				m_write_dma_out(CLEAR_LINE);
 			}
-
-			m_int_timer->adjust(screen().time_until_pos( SCANLINE_INT_END, 0));
 		}
-		else
+
+		m_dma_timer->adjust(clocks_to_attotime(CDP1861_CYCLES_DMA_WAIT));
+
+		m_dmaout = CLEAR_LINE;
+	}
+	else
+	{
+		if (m_disp)
 		{
-			if (m_disp)
+			if (scanline >= SCANLINE_DISPLAY_START && scanline < SCANLINE_DISPLAY_END)
 			{
-				m_write_int(CLEAR_LINE);
+				m_write_dma_out(ASSERT_LINE);
 			}
-
-			m_int_timer->adjust(screen().time_until_pos(SCANLINE_INT_START, 0));
 		}
-		break;
 
-	case TIMER_EFX:
-		switch (scanline)
-		{
-		case SCANLINE_EFX_TOP_START:
-			m_write_efx(ASSERT_LINE);
-			m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_TOP_END, 0));
-			break;
+		m_dma_timer->adjust(clocks_to_attotime(CDP1861_CYCLES_DMA_ACTIVE));
 
-		case SCANLINE_EFX_TOP_END:
-			m_write_efx(CLEAR_LINE);
-			m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_BOTTOM_START, 0));
-			break;
-
-		case SCANLINE_EFX_BOTTOM_START:
-			m_write_efx(ASSERT_LINE);
-			m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_BOTTOM_END, 0));
-			break;
-
-		case SCANLINE_EFX_BOTTOM_END:
-			m_write_efx(CLEAR_LINE);
-			m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_TOP_START, 0));
-			break;
-		}
-		break;
-
-	case TIMER_DMA:
-		if (m_dmaout)
-		{
-			if (m_disp)
-			{
-				if (scanline >= SCANLINE_DISPLAY_START && scanline < SCANLINE_DISPLAY_END)
-				{
-					m_write_dma_out(CLEAR_LINE);
-				}
-			}
-
-			m_dma_timer->adjust(clocks_to_attotime(CDP1861_CYCLES_DMA_WAIT));
-
-			m_dmaout = CLEAR_LINE;
-		}
-		else
-		{
-			if (m_disp)
-			{
-				if (scanline >= SCANLINE_DISPLAY_START && scanline < SCANLINE_DISPLAY_END)
-				{
-					m_write_dma_out(ASSERT_LINE);
-				}
-			}
-
-			m_dma_timer->adjust(clocks_to_attotime(CDP1861_CYCLES_DMA_ACTIVE));
-
-			m_dmaout = ASSERT_LINE;
-		}
-		break;
+		m_dmaout = ASSERT_LINE;
 	}
 }
 
@@ -248,12 +239,11 @@ void cdp1861_device::dma_w(uint8_t data)
 {
 	int sx = screen().hpos() + 4;
 	int y = screen().vpos();
-	int x;
 
-	for (x = 0; x < 8; x++)
+	for (int x = 0; x < 8; x++)
 	{
 		pen_t color = BIT(data, 7) ? rgb_t::white() : rgb_t::black();
-		m_bitmap.pix32(y, sx + x) = color;
+		m_bitmap.pix(y, sx + x) = color;
 		data <<= 1;
 	}
 }

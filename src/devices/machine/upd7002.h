@@ -30,7 +30,7 @@ public:
 	template <typename... T> void set_get_analogue_callback(T &&... args) { m_get_analogue_cb.set(std::forward<T>(args)...); }
 	template <typename... T> void set_eoc_callback(T &&... args) { m_eoc_cb.set(std::forward<T>(args)...); }
 
-	DECLARE_READ_LINE_MEMBER(eoc_r);
+	int eoc_r();
 	uint8_t read(offs_t offset);
 	void write(offs_t offset, uint8_t data);
 
@@ -38,7 +38,8 @@ protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+
+	TIMER_CALLBACK_MEMBER(conversion_complete);
 
 private:
 	// internal state
@@ -77,10 +78,7 @@ private:
 	get_analogue_delegate m_get_analogue_cb;
 	eoc_delegate          m_eoc_cb;
 
-	enum
-	{
-		TIMER_CONVERSION_COMPLETE
-	};
+	emu_timer *m_conversion_timer;
 };
 
 DECLARE_DEVICE_TYPE(UPD7002, upd7002_device)

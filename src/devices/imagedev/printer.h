@@ -29,19 +29,19 @@ public:
 
 	auto online_callback() { return m_online_cb.bind(); }
 
-	// image-level overrides
-	virtual image_init_result call_load() override;
-	virtual image_init_result call_create(int format_type, util::option_resolution *format_options) override;
+	// device_image_interface implementation
+	virtual std::pair<std::error_condition, std::string> call_load() override;
+	virtual std::pair<std::error_condition, std::string> call_create(int format_type, util::option_resolution *format_options) override;
 	virtual void call_unload() override;
 
-	// image device
-	virtual iodevice_t image_type() const noexcept override { return IO_PRINTER; }
 	virtual bool is_readable()  const noexcept override { return false; }
 	virtual bool is_writeable() const noexcept override { return true; }
 	virtual bool is_creatable() const noexcept override { return true; }
-	virtual bool must_be_loaded() const noexcept override { return false; }
 	virtual bool is_reset_on_load() const noexcept override { return false; }
+	virtual bool support_command_line_image_creation() const noexcept override { return true; }
 	virtual const char *file_extensions() const noexcept override { return "prn"; }
+	virtual const char *image_type_name() const noexcept override { return "printout"; }
+	virtual const char *image_brief_type_name() const noexcept override { return "prin"; }
 
 	// specific implementation
 
@@ -51,7 +51,7 @@ public:
 	void output(uint8_t data);
 
 protected:
-	// device-level overrides
+	// device_t implementation
 	virtual void device_start() override;
 
 	devcb_write_line m_online_cb;

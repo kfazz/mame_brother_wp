@@ -98,25 +98,36 @@ void bbc_usersplit_device::pb_w(uint8_t data)
 	m_userport[m_selected]->pb_w(data);
 }
 
-WRITE_LINE_MEMBER(bbc_usersplit_device::cb1a_w)
+void bbc_usersplit_device::write_cb1(int state)
+{
+	m_userport[m_selected]->write_cb1(state);
+}
+
+void bbc_usersplit_device::write_cb2(int state)
+{
+	m_userport[m_selected]->write_cb2(state);
+}
+
+
+void bbc_usersplit_device::cb1a_w(int state)
 {
 	if (m_selected == 0x00)
 		m_slot->cb1_w(state);
 }
 
-WRITE_LINE_MEMBER(bbc_usersplit_device::cb2a_w)
+void bbc_usersplit_device::cb2a_w(int state)
 {
 	if (m_selected == 0x00)
 		m_slot->cb2_w(state);
 }
 
-WRITE_LINE_MEMBER(bbc_usersplit_device::cb1b_w)
+void bbc_usersplit_device::cb1b_w(int state)
 {
 	if (m_selected == 0x01)
 		m_slot->cb1_w(state);
 }
 
-WRITE_LINE_MEMBER(bbc_usersplit_device::cb2b_w)
+void bbc_usersplit_device::cb2b_w(int state)
 {
 	if (m_selected == 0x01)
 		m_slot->cb2_w(state);

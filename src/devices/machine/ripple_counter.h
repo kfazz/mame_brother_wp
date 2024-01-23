@@ -11,41 +11,43 @@
 
 #pragma once
 
+#include "dirom.h"
+
 //**************************************************************************
 //  TYPE DEFINITIONS
 //**************************************************************************
 
 // ======================> ripple_counter_device
 
-class ripple_counter_device : public device_t, public device_rom_interface
+class ripple_counter_device : public device_t, public device_rom_interface<14>
 {
 public:
 	// construction/destruction
 	ripple_counter_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock = 0);
 
 	// configuration
-	void set_stages(u8 stages) { m_count_mask = (1U << stages) - 1; set_rom_addr_width(stages); }
+	void set_stages(u8 stages) { m_count_mask = (1U << stages) - 1; override_address_width(stages); }
 	auto count_out_cb() { return m_count_out_cb.bind(); }
 	auto rom_out_cb() { return m_rom_out_cb.bind(); }
 
 	// control line handlers
-	DECLARE_WRITE_LINE_MEMBER(clock_w);
-	DECLARE_WRITE_LINE_MEMBER(reset_w);
+	void clock_w(int state);
+	void reset_w(int state);
 
 	// getters
 	u32 count() const { return m_count; }
 
 protected:
-	// device-level overrides
+	// device_t implementation
 	virtual void device_validity_check(validity_checker &valid) const override;
-	virtual void device_resolve_objects() override;
 	virtual void device_start() override;
 	virtual void device_clock_changed() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
-	// device_rom_interface overrides
+	// device_rom_interface implementation
 	virtual space_config_vector memory_space_config() const override;
-	virtual void rom_bank_updated() override;
+	virtual void rom_bank_post_change() override;
+
+	TIMER_CALLBACK_MEMBER(advance_counter);
 
 private:
 	// internal helpers
@@ -56,10 +58,6 @@ private:
 	devcb_write8 m_rom_out_cb;
 
 	// device timers
-	enum
-	{
-		TIMER_COUNT
-	};
 	emu_timer *m_count_timer;
 
 	// configuration parameters

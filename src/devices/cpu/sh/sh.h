@@ -51,8 +51,8 @@
 #define CPU_TYPE_SH3    (2)
 #define CPU_TYPE_SH4    (3)
 
-#define Rn  ((opcode>>8)&15)
-#define Rm  ((opcode>>4)&15)
+#define REG_N  ((opcode >> 8) & 15)
+#define REG_M  ((opcode >> 4) & 15)
 
 /* Bits in SR */
 #define SH_T   0x00000001
@@ -84,9 +84,9 @@
     MACROS
 ***************************************************************************/
 
-#define SH2_CODE_XOR(a)     ((a) ^ NATIVE_ENDIAN_VALUE_LE_BE(2,0)) // sh2
-#define SH34LE_CODE_XOR(a)  ((a) ^ NATIVE_ENDIAN_VALUE_LE_BE(0,6)) // naomi
-#define SH34BE_CODE_XOR(a)  ((a) ^ NATIVE_ENDIAN_VALUE_LE_BE(6,0)) // cave
+#define SH2_CODE_XOR(a)     ((a) ^ NATIVE_ENDIAN_VALUE_LE_BE(2, 0)) // sh2
+#define SH34LE_CODE_XOR(a)  ((a) ^ NATIVE_ENDIAN_VALUE_LE_BE(0, 6)) // naomi
+#define SH34BE_CODE_XOR(a)  ((a) ^ NATIVE_ENDIAN_VALUE_LE_BE(6, 0)) // cave
 
 #define R32(reg)        m_regmap[reg]
 
@@ -94,7 +94,7 @@ enum
 {
 	SH4_PC = 1, SH_SR, SH4_PR, SH4_GBR, SH4_VBR, SH4_DBR, SH4_MACH, SH4_MACL,
 	SH4_R0, SH4_R1, SH4_R2, SH4_R3, SH4_R4, SH4_R5, SH4_R6, SH4_R7,
-	SH4_R8, SH4_R9, SH4_R10, SH4_R11, SH4_R12, SH4_R13, SH4_R14, SH4_R15, SH4_EA
+	SH4_R8, SH4_R9, SH4_R10, SH4_R11, SH4_R12, SH4_R13, SH4_R14, SH4_R15, SH4_EA, SH4_SP
 };
 
 class sh_common_execution : public cpu_device
@@ -168,12 +168,13 @@ public:
 
 	internal_sh2_state *m_sh2_state;
 
-	virtual uint8_t RB(offs_t A) = 0;
-	virtual uint16_t RW(offs_t A) = 0;
-	virtual uint32_t RL(offs_t A) = 0;
-	virtual void WB(offs_t A, uint8_t V) = 0;
-	virtual void WW(offs_t A, uint16_t V) = 0;
-	virtual void WL(offs_t A, uint32_t V) = 0;
+	virtual uint8_t read_byte(offs_t offset) = 0;
+	virtual uint16_t read_word(offs_t offset) = 0;
+	virtual uint32_t read_long(offs_t offset) = 0;
+	virtual uint16_t decrypted_read_word(offs_t offset) = 0;
+	virtual void write_byte(offs_t offset, uint8_t data) = 0;
+	virtual void write_word(offs_t offset, uint16_t data) = 0;
+	virtual void write_long(offs_t offset, uint32_t data) = 0;
 
 	virtual void set_frt_input(int state) = 0;
 	void pulse_frt_input() { set_frt_input(ASSERT_LINE); set_frt_input(CLEAR_LINE); }
@@ -385,6 +386,9 @@ public:
 	std::function<u16 (offs_t)> m_pr16;
 	std::function<const void * (offs_t)> m_prptr;
 	address_space *m_program;
+	memory_access<32, 2, 0, ENDIANNESS_BIG>::cache m_cache32;
+	memory_access<32, 3, 0, ENDIANNESS_BIG>::cache m_cache64be;
+	memory_access<32, 3, 0, ENDIANNESS_LITTLE>::cache m_cache64le;
 
 	std::unique_ptr<drcuml_state>      m_drcuml;                 /* DRC UML generator state */
 	uint32_t              m_drcoptions;         /* configurable DRC options */
@@ -417,7 +421,7 @@ public:
 		uml::code_label  labelnum;                   /* index for local labels */
 	};
 
-	virtual void sh2_exception(const char *message, int irqline) { fatalerror("sh2_exception in base classs\n"); };
+	virtual void sh2_exception(const char *message, int irqline) { fatalerror("sh2_exception in base classs\n"); }
 
 	virtual void generate_update_cycles(drcuml_block &block, compiler_state &compiler, uml::parameter param, bool allow_exception) = 0;
 
@@ -503,4 +507,4 @@ protected:
 	sh_common_execution *m_sh;
 };
 
-#endif // MAME_CPU_SH2_SH2_H
+#endif // MAME_CPU_SH_SH_H

@@ -32,7 +32,7 @@ public:
 	void indir_reg_w(uint8_t data);
 
 	// Master Reset (MR) Interface
-	DECLARE_WRITE_LINE_MEMBER(reset_w);
+	void reset_w(int state);
 
 	// DMA Interface (for use with DRQ)
 	uint8_t dma_r();
@@ -43,7 +43,8 @@ protected:
 
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+
+	TIMER_CALLBACK_MEMBER(update_step);
 
 	virtual void scsi_ctrl_changed() override;
 

@@ -22,10 +22,10 @@ public:
 	// construction/destruction
 	cpc_rs232_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(dart_r);
-	DECLARE_WRITE8_MEMBER(dart_w);
-	DECLARE_READ8_MEMBER(pit_r);
-	DECLARE_WRITE8_MEMBER(pit_w);
+	uint8_t dart_r(offs_t offset);
+	void dart_w(offs_t offset, uint8_t data);
+	uint8_t pit_r(offs_t offset);
+	void pit_w(offs_t offset, uint8_t data);
 
 protected:
 	cpc_rs232_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
@@ -43,9 +43,9 @@ protected:
 	required_device<rs232_port_device> m_rs232;
 
 private:
-	DECLARE_WRITE_LINE_MEMBER(pit_out0_w);
-	DECLARE_WRITE_LINE_MEMBER(pit_out1_w);
-	DECLARE_WRITE_LINE_MEMBER(pit_out2_w);
+	void pit_out0_w(int state);
+	void pit_out1_w(int state);
+	void pit_out2_w(int state);
 
 	cpc_expansion_slot_device *m_slot;
 };

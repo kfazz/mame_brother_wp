@@ -237,7 +237,7 @@ bool dmv_k220_device::write(offs_t offset, uint8_t data)
 	return false;
 }
 
-WRITE8_MEMBER( dmv_k220_device::porta_w )
+void dmv_k220_device::porta_w(uint8_t data)
 {
 	// 74LS247 BCD-to-Seven-Segment Decoder
 	static uint8_t bcd2hex[] = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f, 0x58, 0x4c, 0x62, 0x69, 0x78, 0x00 };
@@ -247,7 +247,7 @@ WRITE8_MEMBER( dmv_k220_device::porta_w )
 }
 
 
-WRITE8_MEMBER( dmv_k220_device::portc_w )
+void dmv_k220_device::portc_w(uint8_t data)
 {
 	/*
 	    xxxx ---- not connected
@@ -264,18 +264,18 @@ WRITE8_MEMBER( dmv_k220_device::portc_w )
 }
 
 
-WRITE_LINE_MEMBER( dmv_k220_device::write_out0 )
+void dmv_k220_device::write_out0(int state)
 {
 	m_pit->write_clk1(state);
 	m_pit->write_clk2(state);
 }
 
 
-WRITE_LINE_MEMBER( dmv_k220_device::write_out1 )
+void dmv_k220_device::write_out1(int state)
 {
 }
 
 
-WRITE_LINE_MEMBER( dmv_k220_device::write_out2 )
+void dmv_k220_device::write_out2(int state)
 {
 }

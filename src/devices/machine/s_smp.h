@@ -31,7 +31,8 @@ protected:
 	virtual void device_start() override;
 	virtual void device_reset() override;
 	virtual void device_clock_changed() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+
+	TIMER_CALLBACK_MEMBER(update_timers);
 
 	// device_memory_interface configuration
 	virtual space_config_vector memory_space_config() const override;
@@ -39,27 +40,23 @@ protected:
 	address_space_config m_data_config;
 
 private:
-	address_space                                *m_data;
-	memory_access_cache<0, 0, ENDIANNESS_LITTLE> *m_dcache;
+	memory_access<16, 0, 0, ENDIANNESS_LITTLE>::cache m_dcache;
+	memory_access<16, 0, 0, ENDIANNESS_LITTLE>::specific m_data;
 	inline u8 data_read_byte(offs_t a)
 	{
 		/* IPL ROM enabled */
 		if (a >= 0xffc0 && m_ctrl & 0x80)
 			return m_ipl_region[a & 0x3f];
 
-		return m_dcache->read_byte(a);
+		return m_dcache.read_byte(a);
 	}
-	inline void data_write_byte(offs_t a, u8 d) { m_data->write_byte(a, d); }
+	inline void data_write_byte(offs_t a, u8 d) { m_data.write_byte(a, d); }
 
 	required_region_ptr<u8> m_ipl_region;     /* SPC top 64 bytes */
 
 	u8 io_r(offs_t offset);
 	void io_w(offs_t offset, u8 data);
 
-	enum
-	{
-		TIMER_TICK_ID = 1
-	};
 	/* timers */
 	emu_timer             *m_tick_timer;
 	bool                  m_timer_enabled[3];

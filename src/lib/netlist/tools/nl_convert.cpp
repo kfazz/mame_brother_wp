@@ -1,15 +1,20 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
 
 #include "plib/palloc.h"
 #include "plib/pstonum.h"
+#include "plib/pstrutil.h"
 #include "plib/putil.h"
 
 #include "nl_convert.h"
 
+#include <cstdio>
 #include <algorithm>
 #include <unordered_map>
 #include <vector>
+
+namespace netlist::convert
+{
 
 // FIXME: temporarily defined here - should be in a file
 // FIXME: family logic in netlist is convoluted, create
@@ -43,13 +48,13 @@ using lib_map_t = std::unordered_map<pstring, lib_map_entry>;
 
 static lib_map_t read_lib_map(const pstring &lm)
 {
-	auto reader = plib::putf8_reader(plib::make_unique<std::istringstream>(lm));
+	auto reader = plib::putf8_reader(std::make_unique<std::istringstream>(putf8string(lm)));
 	reader.stream().imbue(std::locale::classic());
 	lib_map_t m;
-	pstring line;
-	while (reader.readline(line))
+	putf8string line;
+	while (reader.read_line(line))
 	{
-		std::vector<pstring> split(plib::psplit(line, ","));
+		std::vector<pstring> split(plib::psplit(pstring(line), ','));
 		m[plib::trim(split[0])] = { plib::trim(split[1]), plib::trim(split[2]) };
 	}
 	return m;
@@ -61,7 +66,7 @@ static lib_map_t read_lib_map(const pstring &lm)
 
 nl_convert_base_t::nl_convert_base_t()
 	: out(&m_buf)
-	, m_numberchars("0123456789-+Ee.")
+	, m_number_chars("0123456789-+Ee.")
 {
 	m_buf.imbue(std::locale::classic());
 	m_units = {
@@ -106,7 +111,7 @@ nl_convert_base_t::~nl_convert_base_t()
 void nl_convert_base_t::add_pin_alias(const pstring &devname, const pstring &name, const pstring &alias)
 {
 	pstring pname = devname + "." + name;
-	m_pins.emplace(pname, plib::make_unique<pin_alias_t>(pname, devname + "." + alias));
+	m_pins.emplace(pname, plib::make_unique<pin_alias_t, arena>(pname, devname + "." + alias));
 }
 
 void nl_convert_base_t::add_ext_alias(const pstring &alias)
@@ -119,7 +124,7 @@ void nl_convert_base_t::add_ext_alias(const pstring &alias, const pstring &net)
 	m_ext_alias.emplace_back(alias, net);
 }
 
-void nl_convert_base_t::add_device(plib::unique_ptr<dev_t> dev)
+void nl_convert_base_t::add_device(arena::unique_ptr<dev_t> dev)
 {
 	for (auto & d : m_devs)
 		if (d->name() == dev->name())
@@ -132,15 +137,15 @@ void nl_convert_base_t::add_device(plib::unique_ptr<dev_t> dev)
 
 void nl_convert_base_t::add_device(const pstring &atype, const pstring &aname, const pstring &amodel)
 {
-	add_device(plib::make_unique<dev_t>(atype, aname, amodel));
+	add_device(plib::make_unique<dev_t, arena>(atype, aname, amodel));
 }
 void nl_convert_base_t::add_device(const pstring &atype, const pstring &aname, double aval)
 {
-	add_device(plib::make_unique<dev_t>(atype, aname, aval));
+	add_device(plib::make_unique<dev_t, arena>(atype, aname, aval));
 }
 void nl_convert_base_t::add_device(const pstring &atype, const pstring &aname)
 {
-	add_device(plib::make_unique<dev_t>(atype, aname));
+	add_device(plib::make_unique<dev_t, arena>(atype, aname));
 }
 
 void nl_convert_base_t::add_term(const pstring &netname, const pstring &termname)
@@ -155,7 +160,7 @@ void nl_convert_base_t::add_term(const pstring &netname, const pstring &termname
 		net = m_nets[netname].get();
 	else
 	{
-		auto nets = plib::make_unique<net_t>(netname);
+		auto nets = plib::make_unique<net_t, arena>(netname);
 		net = nets.get();
 		m_nets.emplace(netname, std::move(nets));
 	}
@@ -239,6 +244,7 @@ void nl_convert_base_t::dump_nl()
 	}
 
 	std::vector<size_t> sorted;
+	sorted.reserve(m_devs.size());
 	for (size_t i=0; i < m_devs.size(); i++)
 		sorted.push_back(i);
 	std::sort(sorted.begin(), sorted.end(),
@@ -317,7 +323,7 @@ double nl_convert_base_t::get_sp_unit(const pstring &unit) const
 double nl_convert_base_t::get_sp_val(const pstring &sin) const
 {
 	std::size_t p = 0;
-	while (p < sin.length() && (m_numberchars.find(sin.substr(p, 1)) != pstring::npos))
+	while (p < sin.length() && (m_number_chars.find(sin.substr(p, 1)) != pstring::npos))
 		++p;
 	pstring val = plib::left(sin, p);
 	pstring unit = sin.substr(p);
@@ -327,15 +333,27 @@ double nl_convert_base_t::get_sp_val(const pstring &sin) const
 
 void nl_convert_spice_t::convert_block(const str_list &contents)
 {
+	int linenumber = 1;
 	for (const auto &line : contents)
-		process_line(line);
+	{
+		try
+		{
+			process_line(line);
+		}
+		catch (const plib::pexception &e)
+		{
+			fprintf(stderr, "Error on line: <%d>\n", linenumber);
+			throw;
+		}
+		linenumber++;
+	}
 }
 
 
 void nl_convert_spice_t::convert(const pstring &contents)
 {
-	std::vector<pstring> spnl(plib::psplit(contents, "\n"));
-	std::vector<pstring> after_linecontinuation;
+	std::vector<pstring> spnl(plib::psplit(contents, '\n'));
+	std::vector<pstring> after_line_continuation;
 
 	// Add gnd net
 
@@ -343,7 +361,7 @@ void nl_convert_spice_t::convert(const pstring &contents)
 
 	pstring line = "";
 
-	// process linecontinuation
+	// process line continuation
 
 	for (const auto &i : spnl)
 	{
@@ -353,24 +371,24 @@ void nl_convert_spice_t::convert(const pstring &contents)
 			line += inl.substr(1);
 		else
 		{
-			after_linecontinuation.push_back(line);
+			after_line_continuation.push_back(line);
 			line = inl;
 		}
 	}
-	after_linecontinuation.push_back(line);
+	after_line_continuation.push_back(line);
 	spnl.clear(); // no longer needed
 
-	// Process subcircuits
+	// Process sub circuits
 
 	std::vector<std::vector<pstring>> subckts;
 	std::vector<pstring> nl;
-	auto inp = after_linecontinuation.begin();
-	while (inp != after_linecontinuation.end())
+	auto inp = after_line_continuation.begin();
+	while (inp != after_line_continuation.end())
 	{
 		if (plib::startsWith(*inp, ".SUBCKT"))
 		{
 			std::vector<pstring> sub;
-			while (inp != after_linecontinuation.end())
+			while (inp != after_line_continuation.end())
 			{
 				auto s(*inp);
 				sub.push_back(s);
@@ -395,13 +413,14 @@ void nl_convert_spice_t::convert(const pstring &contents)
 	}
 
 	out("NETLIST_START(dummy)\n");
+	out("{\n");
 	add_term("0", "GND");
 	add_term("GND", "GND"); // For Kicad
 
 	convert_block(nl);
 	dump_nl();
 	// FIXME: Parameter
-	out("NETLIST_END()\n");
+	out("}\n");
 }
 
 static pstring rem(const std::vector<pstring> &vps, std::size_t start)
@@ -412,7 +431,7 @@ static pstring rem(const std::vector<pstring> &vps, std::size_t start)
 	return r;
 }
 
-static int npoly(const pstring &s)
+static int get_poly_count(const pstring &s)
 {
 	// Brute force
 	if (s=="POLY(1)")
@@ -430,10 +449,10 @@ static int npoly(const pstring &s)
 
 void nl_convert_spice_t::process_line(const pstring &line)
 {
-	if (line != "")
+	if (!line.empty())
 	{
 		//printf("// %s\n", line.c_str());
-		std::vector<pstring> tt(plib::psplit(line, " ", true));
+		std::vector<pstring> tt(plib::psplit(line, ' ', true));
 		double val = 0.0;
 		switch (tt[0].at(0))
 		{
@@ -446,19 +465,20 @@ void nl_convert_spice_t::process_line(const pstring &line)
 				{
 					m_subckt = tt[1] + "_";
 					out("NETLIST_START({})\n", tt[1]);
+					out("{\n");
 					for (std::size_t i=2; i<tt.size(); i++)
 						add_ext_alias(tt[i]);
 				}
 				else if (tt[0] == ".ENDS")
 				{
 					dump_nl();
-					out("NETLIST_END()\n");
+					out("}\n");
 					m_subckt = "";
 				}
 				else if (tt[0] == ".MODEL")
 				{
 					pstring mod(rem(tt,2));
-					// Filter out ngspice X=X model declarations
+					// Filter out `ngspice` X=X model declarations
 					if (tt[1] != mod)
 						out("NET_MODEL(\"{} {}\")\n", m_subckt + tt[1], mod);
 				}
@@ -472,19 +492,18 @@ void nl_convert_spice_t::process_line(const pstring &line)
 			case 'Q':
 			{
 				// check for fourth terminal ... should be numeric net
-				// including "0" or start with "N" (ltspice)
+				// including "0" or start with "N" (`ltspice`)
 
 				pstring model;
 				pstring pins ="CBE";
 				bool err(false);
-				auto nval = plib::pstonum_ne<long>(tt[4], err);
-				plib::unused_var(nval);
+				[[maybe_unused]] auto nval = plib::pstonum_ne<long>(tt[4], err);
 
 				if ((!err || plib::startsWith(tt[4], "N")) && tt.size() > 5)
 					model = tt[5];
 				else
 					model = tt[4];
-				std::vector<pstring> m(plib::psplit(model,"{"));
+				std::vector<pstring> m(plib::psplit(model, '{'));
 				if (m.size() == 2)
 				{
 					if (m[1].length() != 4)
@@ -506,6 +525,17 @@ void nl_convert_spice_t::process_line(const pstring &line)
 					add_term(tt[2], tt[0] + ".2");
 					add_term(tt[3], tt[0] + ".3");
 				}
+				else if (plib::startsWith(tt[0], "RA"))
+				{
+					val = get_sp_val(tt.back());
+					for (unsigned int res = 2; res < tt.size(); res++)
+					{
+						pstring devname = plib::pfmt("{}.{}")(tt[0], res);
+						add_device("RES", devname, val);
+						add_term(tt[1], devname);
+						add_term(tt[res], devname);
+					}
+				}
 				else
 				{
 					val = get_sp_val(tt[3]);
@@ -520,14 +550,14 @@ void nl_convert_spice_t::process_line(const pstring &line)
 				add_term(tt[1], tt[0] + ".1");
 				add_term(tt[2], tt[0] + ".2");
 				break;
-			case 'B':  // arbitrary behavioural current source - needs manual work afterwords
+			case 'B':  // arbitrary behavioural current source - needs manual work afterwards
 				add_device("CS", tt[0], "/*" + rem(tt, 3) + "*/");
 				add_term(tt[1], tt[0] + ".P");
 				add_term(tt[2], tt[0] + ".N");
 				break;
 			case 'E':
 			{
-				auto n=npoly(tt[3]);
+				auto n=get_poly_count(tt[3]);
 				if (n<0)
 				{
 					add_device("VCVS", tt[0], get_sp_val(tt[5]));
@@ -546,26 +576,26 @@ void nl_convert_spice_t::process_line(const pstring &line)
 						out("// IGNORED {}: {}\n", tt[0], line);
 						break;
 					}
-					pstring lastnet = tt[1];
+					pstring last_net = tt[1];
 					for (std::size_t i=0; i < static_cast<std::size_t>(n); i++)
 					{
 						pstring devname = plib::pfmt("{}{}")(tt[0], i);
-						pstring nextnet = (i<static_cast<std::size_t>(n)-1) ? plib::pfmt("{}a{}")(tt[1], i) : tt[2];
-						auto net2 = plib::psplit(plib::replace_all(plib::replace_all(tt[sce+i],")",""),"(",""),",");
+						pstring next_net = (i<static_cast<std::size_t>(n)-1) ? plib::pfmt("{}a{}")(tt[1], i) : tt[2];
+						auto net2 = plib::psplit(plib::replace_all(plib::replace_all(tt[sce+i],")",""),"(",""),',');
 						add_device("VCVS", devname, get_sp_val(tt[scoeff+i]));
-						add_term(lastnet, devname, 0);
-						add_term(nextnet, devname, 1);
+						add_term(last_net, devname, 0);
+						add_term(next_net, devname, 1);
 						add_term(net2[0], devname, 2);
 						add_term(net2[1], devname, 3);
-						//add_device_extra(devname, "PARAM({}, {})", devname + ".G", tt[scoeff+i]);
-						lastnet = nextnet;
+						//# add_device_extra(devname, "PARAM({}, {})", devname + ".G", tt[scoeff+i]);
+						last_net = next_net;
 					}
 				}
 			}
 				break;
 			case 'F':
 				{
-					auto n=npoly(tt[3]);
+					auto n=get_poly_count(tt[3]);
 					unsigned sce(4);
 					unsigned scoeff(5 + static_cast<unsigned>(n));
 					if (n<0)
@@ -589,10 +619,10 @@ void nl_convert_spice_t::process_line(const pstring &line)
 						add_term(tt[1], devname, 0);
 						add_term(tt[2], devname, 1);
 
-						pstring extranetname = devname + "net";
-						m_replace.push_back({tt[sce+i], devname + ".IP", extranetname });
-						add_term(extranetname, devname + ".IN");
-						//add_device_extra(devname, "PARAM({}, {})", devname + ".G", tt[scoeff+i]);
+						pstring extra_net_name = devname + "net";
+						m_replace.push_back({tt[sce+i], devname + ".IP", extra_net_name });
+						add_term(extra_net_name, devname + ".IN");
+						//# add_device_extra(devname, "PARAM({}, {})", devname + ".G", tt[scoeff+i]);
 					}
 				}
 				break;
@@ -723,14 +753,14 @@ void nl_convert_spice_t::process_line(const pstring &line)
 //    Eagle converter
 // -------------------------------------------------
 
-nl_convert_eagle_t::tokenizer::tokenizer(nl_convert_eagle_t &convert, plib::putf8_reader &&strm)
-	: plib::ptokenizer(std::move(strm))
+nl_convert_eagle_t::tokenizer::tokenizer(nl_convert_eagle_t &convert)
+	: plib::tokenizer_t()
 	, m_convert(convert)
 {
 	this->identifier_chars("abcdefghijklmnopqrstuvwvxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890_.-")
 		.number_chars(".0123456789", "0123456789eE-.") //FIXME: processing of numbers
 		.whitespace(pstring("") + ' ' + static_cast<char>(9) +  static_cast<char>(10) + static_cast<char>(13))
-		// FIXME: gnetlist doesn't print comments
+		// FIXME: netlist doesn't print comments
 		.comment("/*", "*/", "//")
 		.string_char('\'');
 	m_tok_ADD = register_token("ADD");
@@ -751,10 +781,16 @@ void nl_convert_eagle_t::tokenizer::verror(const pstring &msg)
 void nl_convert_eagle_t::convert(const pstring &contents)
 {
 
-	tokenizer tok(*this, plib::putf8_reader(plib::make_unique<std::istringstream>(contents)));
-	tok.stream().stream().imbue(std::locale::classic());
+	tokenizer tok(*this);
+
+	tokenizer::token_store tokstor;
+	plib::putf8_reader u8reader(std::make_unique<std::istringstream>(putf8string(contents)));
+
+	tok.append_to_store(&u8reader, tokstor);
+	tok.set_token_source(&tokstor);
 
 	out("NETLIST_START(dummy)\n");
+	out("{\n");
 	add_term("GND", "GND");
 	add_term("VCC", "VCC");
 	tokenizer::token_t token = tok.get_token();
@@ -764,7 +800,7 @@ void nl_convert_eagle_t::convert(const pstring &contents)
 		{
 			dump_nl();
 			// FIXME: Parameter
-			out("NETLIST_END()\n");
+			out("}\n");
 			return;
 		}
 
@@ -861,14 +897,14 @@ void nl_convert_eagle_t::convert(const pstring &contents)
 //    RINF converter
 // -------------------------------------------------
 
-nl_convert_rinf_t::tokenizer::tokenizer(nl_convert_rinf_t &convert, plib::putf8_reader &&strm)
-	: plib::ptokenizer(std::move(strm))
+nl_convert_rinf_t::tokenizer::tokenizer(nl_convert_rinf_t &convert)
+	: plib::tokenizer_t()
 	, m_convert(convert)
 {
 	this->identifier_chars(".abcdefghijklmnopqrstuvwvxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890_-")
 		.number_chars("0123456789", "0123456789eE-.") //FIXME: processing of numbers
 		.whitespace(pstring("") + ' ' + static_cast<char>(9) +  static_cast<char>(10) + static_cast<char>(13))
-		// FIXME: gnetlist doesn't print comments
+		// FIXME: netlist doesn't print comments
 		.comment("","","//") // FIXME:needs to be confirmed
 		.string_char('"');
 	m_tok_HEA = register_token(".HEA");
@@ -898,11 +934,18 @@ void nl_convert_rinf_t::tokenizer::verror(const pstring &msg)
 
 void nl_convert_rinf_t::convert(const pstring &contents)
 {
-	tokenizer tok(*this, plib::putf8_reader(plib::make_unique<std::istringstream>(contents)));
-	tok.stream().stream().imbue(std::locale::classic());
+	tokenizer tok(*this);
+
+	tokenizer::token_store tokstor;
+	plib::putf8_reader u8reader(std::make_unique<std::istringstream>(putf8string(contents)));
+
+	tok.append_to_store(&u8reader, tokstor);
+	tok.set_token_source(&tokstor);
+
 	auto lm = read_lib_map(s_lib_map);
 
 	out("NETLIST_START(dummy)\n");
+	out("{\n");
 	add_term("GND", "GND");
 	add_term("VCC", "VCC");
 	tokenizer::token_t token = tok.get_token();
@@ -912,7 +955,7 @@ void nl_convert_rinf_t::convert(const pstring &contents)
 		{
 			dump_nl();
 			// FIXME: Parameter
-			out("NETLIST_END()\n");
+			out("}\n");
 			return;
 		}
 
@@ -970,7 +1013,7 @@ void nl_convert_rinf_t::convert(const pstring &contents)
 			pstring sim = attr["Simulation"];
 			pstring val = attr["Value"];
 			pstring com = attr["Comment"];
-			if (val == "")
+			if (val.empty())
 				val = com;
 
 			if (sim == "CAP")
@@ -1001,7 +1044,7 @@ void nl_convert_rinf_t::convert(const pstring &contents)
 			if (token.is(tok.m_tok_TER))
 			{
 				token = tok.get_token();
-				while (token.is_type(plib::ptokenizer::token_type::IDENTIFIER))
+				while (token.is_type(plib::token_reader_t::token_type::IDENTIFIER))
 				{
 					pin = tok.get_identifier_or_number();
 					add_term(net, token.str() + "." + pin);
@@ -1092,3 +1135,5 @@ void nl_convert_rinf_t::convert(const pstring &contents)
 	}
 
 }
+
+} // namespace netlist::convert

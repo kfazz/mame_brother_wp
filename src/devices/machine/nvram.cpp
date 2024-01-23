@@ -22,14 +22,14 @@ DEFINE_DEVICE_TYPE(NVRAM, nvram_device, "nvram", "NVRAM")
 //  nvram_device - constructor
 //-------------------------------------------------
 
-nvram_device::nvram_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, NVRAM, tag, owner, clock),
-		device_nvram_interface(mconfig, *this),
-		m_region(*this, DEVICE_SELF),
-		m_default_value(DEFAULT_ALL_1),
-		m_custom_handler(*this),
-		m_base(nullptr),
-		m_length(0)
+nvram_device::nvram_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	device_t(mconfig, NVRAM, tag, owner, clock),
+	device_nvram_interface(mconfig, *this),
+	m_region(*this, DEVICE_SELF),
+	m_default_value(DEFAULT_ALL_1),
+	m_custom_handler(*this),
+	m_base(nullptr),
+	m_length(0)
 {
 }
 
@@ -102,12 +102,13 @@ void nvram_device::nvram_default()
 //  .nv file
 //-------------------------------------------------
 
-void nvram_device::nvram_read(emu_file &file)
+bool nvram_device::nvram_read(util::read_stream &file)
 {
 	// make sure we have a valid base pointer
 	determine_final_base();
 
-	file.read(m_base, m_length);
+	size_t actual;
+	return !file.read(m_base, m_length, actual) && actual == m_length;
 }
 
 
@@ -116,9 +117,10 @@ void nvram_device::nvram_read(emu_file &file)
 //  .nv file
 //-------------------------------------------------
 
-void nvram_device::nvram_write(emu_file &file)
+bool nvram_device::nvram_write(util::write_stream &file)
 {
-	file.write(m_base, m_length);
+	size_t actual;
+	return !file.write(m_base, m_length, actual) && actual == m_length;
 }
 
 

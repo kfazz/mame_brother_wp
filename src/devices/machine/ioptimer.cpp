@@ -36,13 +36,11 @@ iop_timer_device::iop_timer_device(const machine_config &mconfig, const char *ta
 
 void iop_timer_device::device_start()
 {
-	m_int_cb.resolve_safe();
-
 	if (!m_compare_timer)
-		m_compare_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(iop_timer_device::compare), this));
+		m_compare_timer = timer_alloc(FUNC(iop_timer_device::compare), this);
 
 	if (!m_overflow_timer)
-		m_overflow_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(iop_timer_device::overflow), this));
+		m_overflow_timer = timer_alloc(FUNC(iop_timer_device::overflow), this);
 }
 
 void iop_timer_device::device_reset()
@@ -79,11 +77,8 @@ void iop_timer_device::update_gate()
 
 void iop_timer_device::update_interrupts()
 {
-	if (!m_int_cb.isnull())
-	{
-		bool interrupt = m_ienable && ((m_ovf_int && m_ovf_int_enabled) || (m_cmp_int && m_cmp_int_enabled));
-		m_int_cb(interrupt);
-	}
+	bool interrupt = m_ienable && ((m_ovf_int && m_ovf_int_enabled) || (m_cmp_int && m_cmp_int_enabled));
+	m_int_cb(interrupt);
 }
 
 void iop_timer_device::update_compare_timer()
@@ -198,7 +193,7 @@ TIMER_CALLBACK_MEMBER(iop_timer_device::overflow)
 	update_interrupts();
 }
 
-READ32_MEMBER(iop_timer_device::read)
+uint32_t iop_timer_device::read(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t ret = 0;
 	switch (offset)
@@ -229,7 +224,7 @@ READ32_MEMBER(iop_timer_device::read)
 	return ret;
 }
 
-WRITE32_MEMBER(iop_timer_device::write)
+void iop_timer_device::write(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	switch (offset)
 	{

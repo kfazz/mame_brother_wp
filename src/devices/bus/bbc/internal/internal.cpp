@@ -69,10 +69,6 @@ bbc_internal_slot_device::bbc_internal_slot_device(const machine_config &mconfig
 void bbc_internal_slot_device::device_start()
 {
 	m_card = get_card_device();
-
-	// resolve callbacks
-	m_irq_handler.resolve_safe();
-	m_nmi_handler.resolve_safe();
 }
 
 
@@ -146,7 +142,7 @@ void bbc_internal_slot_device::latch_fe60_w(uint8_t data)
 		m_card->latch_fe60_w(data);
 }
 
-WRITE_LINE_MEMBER(bbc_internal_slot_device::irq6502_w)
+void bbc_internal_slot_device::irq6502_w(int state)
 {
 	if (m_card)
 		m_card->irq6502_w(state);
@@ -162,6 +158,7 @@ WRITE_LINE_MEMBER(bbc_internal_slot_device::irq6502_w)
 #include "atpl.h"
 #include "cumana68k.h"
 #include "integrab.h"
+#include "memex.h"
 #include "morleyaa.h"
 #include "overlay.h"
 #include "peartree.h"
@@ -186,6 +183,7 @@ void bbcb_internal_devices(device_slot_interface &device)
 	device.option_add("atplsw", BBC_ATPLSW);            /* ATPL Sidewise ROM/RAM expansion */
 	device.option_add("cumana68k", BBC_CUMANA68K);      /* Cumana 68008 Upgrade Board */
 	device.option_add("integrab", BBC_INTEGRAB);        /* Computech Integra-B */
+	device.option_add("memexb20", BBC_MEMEXB20);        /* Memex-B20 RAM expansion */
 	device.option_add("mr3000", BBC_MR3000);            /* Peartree MR3000 ROM board */
 	device.option_add("mr4200", BBC_MR4200);            /* Peartree MR4200 RAM board */
 	device.option_add("mr4300", BBC_MR4300);            /* Peartree MR4300 ROM/RAM board */

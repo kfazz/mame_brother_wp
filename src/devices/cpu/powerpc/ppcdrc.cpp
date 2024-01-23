@@ -18,12 +18,10 @@
 #include "ppc.h"
 #include "ppccom.h"
 #include "ppcfe.h"
-#include "ppc_dasm.h"
 
 #include "cpu/drcfe.h"
 #include "cpu/drcuml.h"
 #include "cpu/drcumlsh.h"
-#include "debugger.h"
 
 
 
@@ -118,7 +116,7 @@ inline void ppc_device::load_fast_iregs(drcuml_block &block)
 {
 	int regnum;
 
-	for (regnum = 0; regnum < ARRAY_LENGTH(m_regmap); regnum++)
+	for (regnum = 0; regnum < std::size(m_regmap); regnum++)
 	{
 		if (m_regmap[regnum].is_int_register())
 		{
@@ -137,7 +135,7 @@ void ppc_device::save_fast_iregs(drcuml_block &block)
 {
 	int regnum;
 
-	for (regnum = 0; regnum < ARRAY_LENGTH(m_regmap); regnum++)
+	for (regnum = 0; regnum < std::size(m_regmap); regnum++)
 	{
 		if (m_regmap[regnum].is_int_register())
 		{
@@ -149,7 +147,7 @@ void ppc_device::save_fast_iregs(drcuml_block &block)
 
 inline void ppc_device::load_fast_fregs(drcuml_block &block)
 {
-	for (int regnum = 0; regnum < ARRAY_LENGTH(m_fdregmap); regnum++)
+	for (int regnum = 0; regnum < std::size(m_fdregmap); regnum++)
 	{
 		if (m_fdregmap[regnum].is_float_register())
 		{
@@ -160,7 +158,7 @@ inline void ppc_device::load_fast_fregs(drcuml_block &block)
 
 void ppc_device::save_fast_fregs(drcuml_block &block)
 {
-	for (int regnum = 0; regnum < ARRAY_LENGTH(m_fdregmap); regnum++)
+	for (int regnum = 0; regnum < std::size(m_fdregmap); regnum++)
 	{
 		if (m_fdregmap[regnum].is_float_register())
 		{
@@ -268,7 +266,7 @@ void ppc_device::ppcdrc_set_options(uint32_t options)
 
 void ppc_device::ppcdrc_add_fastram(offs_t start, offs_t end, uint8_t readonly, void *base)
 {
-	if (m_fastram_select < ARRAY_LENGTH(m_fastram))
+	if (m_fastram_select < std::size(m_fastram))
 	{
 		m_fastram[m_fastram_select].start = start;
 		m_fastram[m_fastram_select].end = end;
@@ -285,7 +283,7 @@ void ppc_device::ppcdrc_add_fastram(offs_t start, offs_t end, uint8_t readonly, 
 
 void ppc_device::ppcdrc_add_hotspot(offs_t pc, uint32_t opcode, uint32_t cycles)
 {
-	if (m_hotspot_select < ARRAY_LENGTH(m_hotspot))
+	if (m_hotspot_select < std::size(m_hotspot))
 	{
 		m_hotspot[m_hotspot_select].pc = pc;
 		m_hotspot[m_hotspot_select].opcode = opcode;
@@ -383,7 +381,7 @@ void ppc_device::code_compile_block(uint8_t mode, offs_t pc)
 	const opcode_desc *desclist;
 	bool override = false;
 
-	g_profiler.start(PROFILER_DRC_COMPILE);
+	auto profile = g_profiler.start(PROFILER_DRC_COMPILE);
 
 	/* get a description of this sequence */
 	desclist = m_drcfe->describe_code(pc);
@@ -467,7 +465,6 @@ void ppc_device::code_compile_block(uint8_t mode, offs_t pc)
 
 			/* end the sequence */
 			block.end();
-			g_profiler.stop();
 			succeeded = true;
 		}
 		catch (drcuml_block::abort_compilation &)
@@ -778,11 +775,11 @@ void ppc_device::static_generate_tlb_mismatch()
 	UML_SHR(block, I1, I0, 12);                                             // shr     i1,i0,12
 	UML_LOAD(block, I2, (void *)vtlb_table(), I1, SIZE_DWORD, SCALE_x4);    // load    i2,[vtlb],i1,dword
 	UML_MOV(block, mem(&m_core->param0), I0);                               // mov     [param0],i0
-	UML_MOV(block, mem(&m_core->param1), TRANSLATE_FETCH);                  // mov     [param1],TRANSLATE_FETCH
+	UML_MOV(block, mem(&m_core->param1), TR_FETCH);                         // mov     [param1],TR_FETCH
 	UML_CALLC(block, (c_function)cfunc_ppccom_mismatch, this);
 	UML_CALLC(block, (c_function)cfunc_ppccom_tlb_fill, this);              // callc   tlbfill,ppc
 	UML_LOAD(block, I1, (void *)vtlb_table(), I1, SIZE_DWORD, SCALE_x4);    // load    i1,[vtlb],i1,dword
-	UML_TEST(block, I1, VTLB_FETCH_ALLOWED);                                // test    i1,VTLB_FETCH_ALLOWED
+	UML_TEST(block, I1, FETCH_ALLOWED);                                     // test    i1,FETCH_ALLOWED
 	UML_JMPc(block, COND_Z, isi = label++);                                 // jmp     isi,z
 	UML_CMP(block, I2, 0);                                                  // cmp     i2,0
 	UML_JMPc(block, COND_NZ, exit = label++);                               // jmp     exit,nz
@@ -1010,9 +1007,9 @@ void ppc_device::static_generate_memory_accessor(int mode, int size, int iswrite
 	int ramnum;
 
 	if (mode & MODE_USER)
-		translate_type = iswrite ? TRANSLATE_WRITE_USER : TRANSLATE_READ_USER;
+		translate_type = iswrite ? TR_UWRITE : TR_UREAD;
 	else
-		translate_type = iswrite ? TRANSLATE_WRITE : TRANSLATE_READ;
+		translate_type = iswrite ? TR_WRITE : TR_READ;
 
 	/* begin generating */
 	drcuml_block &block(m_drcuml->begin_block(1024));
@@ -1468,7 +1465,7 @@ void ppc_device::static_generate_lsw_entries(int mode)
 		char temp[20];
 
 		/* allocate a handle */
-		sprintf(temp, "lsw%d", regnum);
+		snprintf(temp, 20, "lsw%d", regnum);
 		alloc_handle(m_drcuml.get(), &m_lsw[mode][regnum], temp);
 		UML_HANDLE(block, *m_lsw[mode][regnum]);                               // handle  lsw<regnum>
 		UML_LABEL(block, regnum);                                                       // regnum:
@@ -1520,7 +1517,7 @@ void ppc_device::static_generate_stsw_entries(int mode)
 		char temp[20];
 
 		/* allocate a handle */
-		sprintf(temp, "stsw%d", regnum);
+		snprintf(temp, 20, "stsw%d", regnum);
 		alloc_handle(m_drcuml.get(), &m_stsw[mode][regnum], temp);
 		UML_HANDLE(block, *m_stsw[mode][regnum]);                              // handle  stsw<regnum>
 		UML_LABEL(block, regnum);                                                       // regnum:
@@ -1739,7 +1736,10 @@ void ppc_device::generate_sequence_instruction(drcuml_block &block, compiler_sta
 		if (PRINTF_MMU)
 		{
 			const char *text = "Compiler page fault @ %08X\n";
-			UML_MOV(block, mem(&m_core->format), (uintptr_t)text);                    // mov     [format],text
+			if (sizeof(uintptr_t) == 8)
+				UML_DMOV(block, mem(&m_core->format), (uintptr_t)text);                   // mov     [format],text
+			else
+				UML_MOV(block, mem(&m_core->format), (uintptr_t)text);                    // mov     [format],text
 			UML_MOV(block, mem(&m_core->arg0), desc->pc);                        // mov     [arg0],desc->pc
 			UML_CALLC(block, cfunc_printf_debug, this);                                      // callc   printf_debug
 		}
@@ -1757,7 +1757,10 @@ void ppc_device::generate_sequence_instruction(drcuml_block &block, compiler_sta
 			if (PRINTF_MMU)
 			{
 				const char *text = "Checking TLB at @ %08X\n";
-				UML_MOV(block, mem(&m_core->format), (uintptr_t)text);                // mov     [format],text
+				if (sizeof(uintptr_t) == 8)
+					UML_DMOV(block, mem(&m_core->format), (uintptr_t)text);                   // mov     [format],text
+				else
+					UML_MOV(block, mem(&m_core->format), (uintptr_t)text);                    // mov     [format],text
 				UML_MOV(block, mem(&m_core->arg0), desc->pc);                    // mov     [arg0],desc->pc
 				UML_CALLC(block, cfunc_printf_debug, this);                                  // callc   printf_debug
 			}
@@ -1772,7 +1775,10 @@ void ppc_device::generate_sequence_instruction(drcuml_block &block, compiler_sta
 			if (PRINTF_MMU)
 			{
 				const char *text = "No valid TLB @ %08X\n";
-				UML_MOV(block, mem(&m_core->format), (uintptr_t)text);                // mov     [format],text
+				if (sizeof(uintptr_t) == 8)
+					UML_DMOV(block, mem(&m_core->format), (uintptr_t)text);                   // mov     [format],text
+				else
+					UML_MOV(block, mem(&m_core->format), (uintptr_t)text);                    // mov     [format],text
 				UML_MOV(block, mem(&m_core->arg0), desc->pc);                    // mov     [arg0],desc->pc
 				UML_CALLC(block, cfunc_printf_debug, this);                                  // callc   printf_debug
 			}
@@ -2250,12 +2256,15 @@ bool ppc_device::generate_opcode(drcuml_block &block, compiler_state *compiler, 
 		case 0x2e:  /* LMW */
 			UML_MAPVAR(block, MAPVAR_DSISR, DSISR_IMMU(op));                                // mapvar  dsisr,DSISR_IMMU(op)
 			UML_MOV(block, mem(&m_core->tempaddr), R32Z(G_RA(op)));                  // mov     [tempaddr],ra
+
 			for (int regnum = G_RD(op); regnum < 32; regnum++)
 			{
 				UML_ADD(block, I0, mem(&m_core->tempaddr), (int16_t)G_SIMM(op) + 4 * (regnum - G_RD(op)));
 																							// add     i0,[tempaddr],simm + 4*(regnum-rd)
 				UML_CALLH(block, *m_read32align[m_core->mode]);         // callh   read32align
-				UML_MOV(block, R32(regnum), I0);                                        // mov     regnum,i0
+
+				if (regnum != G_RA(op) || ((m_cap & PPCCAP_4XX) && regnum == 31))
+					UML_MOV(block, R32(regnum), I0);                                        // mov     regnum,i0
 			}
 			generate_update_cycles(block, compiler, desc->pc + 4, true);           // <update cycles>
 			return true;
@@ -3066,9 +3075,11 @@ bool ppc_device::generate_instruction_1f(drcuml_block &block, compiler_state *co
 
 		case 0x215: /* LSWX */
 			UML_ADD(block, mem(&m_core->updateaddr), R32Z(G_RA(op)), R32(G_RB(op))); // add     [updateaddr],ra,rb
-			UML_AND(block, mem(&m_core->swcount), SPR32(SPR_XER), 0x7f);     // and     [swcount],[xer],0x7f
-			UML_SUB(block, mem(&m_core->icount), mem(&m_core->icount), mem(&m_core->swcount));// sub  icount,icount,[swcount]
-			UML_CALLHc(block, COND_NZ, *m_lsw[m_core->mode][G_RD(op)]); // call    lsw[rd],nz
+			UML_AND(block, I0, SPR32(SPR_XER), 0x7f);   // and     i0,[xer],0x7f
+			UML_SUB(block, mem(&m_core->icount), mem(&m_core->icount), I0);// sub  icount,icount,i0
+			UML_MOV(block, mem(&m_core->swcount), I0);  // mov [swcount],i0
+			UML_TEST(block, I0, I0); // test i0,i0
+			UML_CALLHc(block, COND_NZ, *m_lsw[m_core->mode][G_RD(op)]);    // call   lsw[rd]
 			generate_update_cycles(block, compiler, desc->pc + 4, true);           // <update cycles>
 			return true;
 
@@ -3218,8 +3229,10 @@ bool ppc_device::generate_instruction_1f(drcuml_block &block, compiler_state *co
 
 		case 0x295: /* STSWX */
 			UML_ADD(block, mem(&m_core->updateaddr), R32Z(G_RA(op)), R32(G_RB(op))); // add     [updateaddr],ra,rb
-			UML_AND(block, mem(&m_core->swcount), SPR32(SPR_XER), 0x7f);     // and     [swcount],[xer],0x7f
-			UML_SUB(block, mem(&m_core->icount), mem(&m_core->icount), mem(&m_core->swcount));// sub  icount,icount,[swcount]
+			UML_AND(block, I0, SPR32(SPR_XER), 0x7f);   // and     i0,[xer],0x7f
+			UML_SUB(block, mem(&m_core->icount), mem(&m_core->icount), I0);// sub  icount,icount,i0
+			UML_MOV(block, mem(&m_core->swcount), I0);  // mov [swcount],i0
+			UML_TEST(block, I0, I0); // test i0,i0
 			UML_CALLHc(block, COND_NZ, *m_stsw[m_core->mode][G_RD(op)]);    // call   stsw[rd]
 			generate_update_cycles(block, compiler, desc->pc + 4, true);           // <update cycles>
 			return true;
@@ -3405,7 +3418,7 @@ bool ppc_device::generate_instruction_1f(drcuml_block &block, compiler_state *co
 			return true;
 
 		case 0x200: /* MCRXR */
-			UML_ROLAND(block, I0, SPR32(SPR_XER), 28, 0x0f);                    // roland  i0,[xer],28,0x0f
+			UML_ROLAND(block, I0, SPR32(SPR_XER), 4, 0x0f);                    // roland  i0,[xer],4,0x0f
 			UML_SHL(block, I1, XERSO32, 3);                                     // shl     i1,[xerso],3
 			UML_OR(block, CR32(G_CRFD(op)), I0, I1);                                // or      [crd],i0,i1
 			UML_AND(block, SPR32(SPR_XER), SPR32(SPR_XER), ~0xf0000000);                // and     [xer],[xer],~0xf0000000
@@ -3793,7 +3806,7 @@ void ppc_device::log_add_disasm_comment(drcuml_block &block, uint32_t pc, uint32
 	if (m_drcuml->logging())
 	{
 		std::ostringstream stream;
-		powerpc_disassembler::dasm_one(stream, pc, op);
+		m_dasm.dasm_one(stream, pc, op);
 		block.append_comment("%08X: %s", pc, stream.str());                                  // comment
 	}
 }
@@ -3982,7 +3995,7 @@ void ppc_device::log_opcode_desc(const opcode_desc *desclist, int indent)
 			if (desclist->flags & OPFLAG_VIRTUAL_NOOP)
 				buffer << "<virtual nop>";
 			else
-				powerpc_disassembler::dasm_one(buffer, desclist->pc, desclist->opptr.l[0]);
+				m_dasm.dasm_one(buffer, desclist->pc, desclist->opptr.l[0]);
 		}
 		else
 			buffer << "???";

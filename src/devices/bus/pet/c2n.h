@@ -12,7 +12,6 @@
 #pragma once
 
 #include "cass.h"
-#include "formats/cbm_tap.h"
 #include "imagedev/cassette.h"
 
 
@@ -35,7 +34,6 @@ protected:
 
 	// device-level overrides
 	virtual void device_start() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// optional information overrides
 	virtual void device_add_mconfig(machine_config &config) override;
@@ -45,6 +43,8 @@ protected:
 	virtual void datassette_write(int state) override;
 	virtual int datassette_sense() override;
 	virtual void datassette_motor(int state) override;
+
+	TIMER_CALLBACK_MEMBER(read_tick);
 
 private:
 	required_device<cassette_image_device> m_cassette;

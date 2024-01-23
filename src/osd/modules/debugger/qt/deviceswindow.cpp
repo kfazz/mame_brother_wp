@@ -2,11 +2,17 @@
 // copyright-holders:Andrew Gardner
 #include "emu.h"
 #include "deviceswindow.h"
+
 #include "deviceinformationwindow.h"
 
-DevicesWindowModel::DevicesWindowModel(running_machine *machine, QObject *parent)
+#include "util/xmlfile.h"
+
+
+namespace osd::debugger::qt {
+
+DevicesWindowModel::DevicesWindowModel(running_machine &machine, QObject *parent) :
+	m_machine(machine)
 {
-	m_machine = machine;
 }
 
 DevicesWindowModel::~DevicesWindowModel()
@@ -15,12 +21,13 @@ DevicesWindowModel::~DevicesWindowModel()
 
 QVariant DevicesWindowModel::data(const QModelIndex &index, int role) const
 {
-	if(!index.isValid() || role != Qt::DisplayRole)
+	if (!index.isValid() || role != Qt::DisplayRole)
 		return QVariant();
 
 	device_t *dev = static_cast<device_t *>(index.internalPointer());
-	switch(index.column()) {
-	case 0: return dev == &m_machine->root_device() ? QString("<root>") : QString(dev->basetag());
+	switch (index.column())
+	{
+	case 0: return (dev == &m_machine.root_device()) ? QString("<root>") : QString(dev->basetag());
 	case 1: return QString(dev->name());
 	}
 
@@ -29,38 +36,41 @@ QVariant DevicesWindowModel::data(const QModelIndex &index, int role) const
 
 Qt::ItemFlags DevicesWindowModel::flags(const QModelIndex &index) const
 {
-	if(!index.isValid())
-		return 0;
+	if (!index.isValid())
+		return Qt::NoItemFlags;
 
 	return QAbstractItemModel::flags(index);
 }
 
 QVariant DevicesWindowModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-	if(role != Qt::DisplayRole || section < 0 || section >= 2)
+	if (role != Qt::DisplayRole || section < 0 || section >= 2)
 		return QVariant();
 	return QString(section ? "Name" : "Tag");
 }
 
 QModelIndex DevicesWindowModel::index(int row, int column, const QModelIndex &parent) const
 {
-	if(!hasIndex(row, column, parent))
+	if (!hasIndex(row, column, parent))
 		return QModelIndex();
 
 	device_t *target = nullptr;
 
-	if(!parent.isValid()) {
-		if(row == 0)
-			target = &m_machine->root_device();
+	if (!parent.isValid())
+	{
+		if (row == 0)
+			target = &m_machine.root_device();
 
-	} else {
+	}
+	else
+	{
 		device_t *dparent = static_cast<device_t *>(parent.internalPointer());
 		int count = row;
 		for(target = dparent->subdevices().first(); count && target; target = target->next())
 			count--;
 	}
 
-	if(target)
+	if (target)
 		return createIndex(row, column, target);
 
 	return QModelIndex();
@@ -68,19 +78,20 @@ QModelIndex DevicesWindowModel::index(int row, int column, const QModelIndex &pa
 
 QModelIndex DevicesWindowModel::parent(const QModelIndex &index) const
 {
-	if(!index.isValid())
+	if (!index.isValid())
 		return QModelIndex();
 
 	device_t *dchild = static_cast<device_t *>(index.internalPointer());
 	device_t *dparent = dchild->owner();
 
-	if(!dparent)
+	if (!dparent)
 		return QModelIndex();
 
 	device_t *dpp = dparent->owner();
 	int row = 0;
-	if(dpp) {
-		for(device_t *child = dpp->subdevices().first(); child && child != dparent; child = child->next())
+	if (dpp)
+	{
+		for (device_t *child = dpp->subdevices().first(); child && child != dparent; child = child->next())
 			row++;
 	}
 	return createIndex(row, 0, dparent);
@@ -88,7 +99,7 @@ QModelIndex DevicesWindowModel::parent(const QModelIndex &index) const
 
 int DevicesWindowModel::rowCount(const QModelIndex &parent) const
 {
-	if(!parent.isValid())
+	if (!parent.isValid())
 		return 1;
 
 	device_t *dparent = static_cast<device_t *>(parent.internalPointer());
@@ -102,9 +113,9 @@ int DevicesWindowModel::columnCount(const QModelIndex &parent) const
 
 
 
-DevicesWindow::DevicesWindow(running_machine* machine, QWidget* parent) :
-	WindowQt(machine, nullptr),
-	m_devices_model(machine)
+DevicesWindow::DevicesWindow(DebuggerQt &debugger, QWidget *parent) :
+	WindowQt(debugger, nullptr),
+	m_devices_model(debugger.machine())
 {
 	m_selected_device = nullptr;
 
@@ -143,35 +154,15 @@ void DevicesWindow::currentRowChanged(const QModelIndex &current, const QModelIn
 void DevicesWindow::activated(const QModelIndex &index)
 {
 	device_t *dev = static_cast<device_t *>(index.internalPointer());
-	(new DeviceInformationWindow(m_machine, dev, this))->show();
+	(new DeviceInformationWindow(m_debugger, dev, this))->show();
 }
 
 
-
-//=========================================================================
-//  DevicesWindowQtConfig
-//=========================================================================
-void DevicesWindowQtConfig::buildFromQWidget(QWidget* widget)
+void DevicesWindow::saveConfigurationToNode(util::xml::data_node &node)
 {
-	WindowQtConfig::buildFromQWidget(widget);
-	//  DevicesWindow* window = dynamic_cast<DevicesWindow*>(widget);
+	WindowQt::saveConfigurationToNode(node);
+
+	node.set_attribute_int(ATTR_WINDOW_TYPE, WINDOW_TYPE_DEVICES_VIEWER);
 }
 
-
-void DevicesWindowQtConfig::applyToQWidget(QWidget* widget)
-{
-	WindowQtConfig::applyToQWidget(widget);
-	//  DevicesWindow* window = dynamic_cast<DevicesWindow*>(widget);
-}
-
-
-void DevicesWindowQtConfig::addToXmlDataNode(util::xml::data_node &node) const
-{
-	WindowQtConfig::addToXmlDataNode(node);
-}
-
-
-void DevicesWindowQtConfig::recoverFromXmlNode(util::xml::data_node const &node)
-{
-	WindowQtConfig::recoverFromXmlNode(node);
-}
+} // namespace osd::debugger::qt

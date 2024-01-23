@@ -64,7 +64,6 @@ enum
 //**************************************************************************
 
 DEFINE_DEVICE_TYPE(I8255, i8255_device, "i8255", "Intel 8255 PPI")
-decltype(I8255) I8255A = I8255;
 
 DEFINE_DEVICE_TYPE(AMS40489_PPI, ams40489_ppi_device, "ams40489_ppi", "Amstrad AMS40489 PPI")
 
@@ -221,15 +220,15 @@ i8255_device::i8255_device(const machine_config &mconfig, device_type type, cons
 	, m_force_portb_in(is_ams40489)
 	, m_force_portc_out(is_ams40489)
 	, m_dont_clear_output_latches(is_ams40489)
-	, m_in_pa_cb(*this)
-	, m_in_pb_cb(*this)
-	, m_in_pc_cb(*this)
+	, m_in_pa_cb(*this, 0)
+	, m_in_pb_cb(*this, 0)
+	, m_in_pc_cb(*this, 0)
 	, m_out_pa_cb(*this)
 	, m_out_pb_cb(*this)
 	, m_out_pc_cb(*this)
-	, m_tri_pa_cb(*this)
-	, m_tri_pb_cb(*this)
-	, m_tri_pc_cb(*this)
+	, m_tri_pa_cb(*this, 0xff)
+	, m_tri_pb_cb(*this, 0xff)
+	, m_tri_pc_cb(*this, 0xff)
 	, m_control(0)
 	, m_intr{ 0, 0 }
 {
@@ -238,20 +237,6 @@ i8255_device::i8255_device(const machine_config &mconfig, device_type type, cons
 i8255_device::i8255_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: i8255_device(mconfig, I8255, tag, owner, clock, false)
 {
-}
-
-void i8255_device::device_resolve_objects()
-{
-	// resolve callbacks
-	m_in_pa_cb.resolve_safe(0);
-	m_in_pb_cb.resolve_safe(0);
-	m_in_pc_cb.resolve_safe(0);
-	m_out_pa_cb.resolve_safe();
-	m_out_pb_cb.resolve_safe();
-	m_out_pc_cb.resolve_safe();
-	m_tri_pa_cb.resolve_safe(0xff);
-	m_tri_pb_cb.resolve_safe(0xff);
-	m_tri_pc_cb.resolve_safe(0xff);
 }
 
 //-------------------------------------------------
@@ -612,6 +597,7 @@ void i8255_device::set_mode(uint8_t data)
 	if (port_mode(PORT_A) == MODE_OUTPUT)
 	{
 		m_out_pa_cb((offs_t)0, m_output[PORT_A]);
+		m_ibf[PORT_A] = 1; // correct? needed by SAM Coupe Blue Alpha sampler
 	}
 	else
 	{
@@ -877,7 +863,7 @@ uint8_t i8255_device::ackb_r()
 }
 
 
-WRITE_LINE_MEMBER( i8255_device::pc2_w )
+void i8255_device::pc2_w(int state)
 {
 	if (group_mode(GROUP_B) == 1)
 	{
@@ -895,7 +881,7 @@ WRITE_LINE_MEMBER( i8255_device::pc2_w )
 		else
 		{
 			// port B strobe
-			if (!m_ibf[PORT_B] && !state)
+			if (!state)
 			{
 				LOG("I8255 Port B Strobe\n");
 
@@ -910,12 +896,12 @@ WRITE_LINE_MEMBER( i8255_device::pc2_w )
 }
 
 
-WRITE_LINE_MEMBER( i8255_device::pc4_w )
+void i8255_device::pc4_w(int state)
 {
 	if ((group_mode(GROUP_A) == 2) || ((group_mode(GROUP_A) == 1) && (port_mode(PORT_A) == MODE_INPUT)))
 	{
 		// port A strobe
-		if (!m_ibf[PORT_A] && !state)
+		if (!state)
 		{
 			LOG("I8255 Port A Strobe\n");
 
@@ -929,7 +915,7 @@ WRITE_LINE_MEMBER( i8255_device::pc4_w )
 }
 
 
-WRITE_LINE_MEMBER( i8255_device::pc6_w )
+void i8255_device::pc6_w(int state)
 {
 	if ((group_mode(GROUP_A) == 2) || ((group_mode(GROUP_A) == 1) && (port_mode(PORT_A) == MODE_OUTPUT)))
 	{

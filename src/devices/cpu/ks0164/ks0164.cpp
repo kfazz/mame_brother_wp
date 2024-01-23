@@ -6,14 +6,8 @@
 #include "emu.h"
 #include "ks0164.h"
 #include "ks0164d.h"
-#include "debugger.h"
 
 DEFINE_DEVICE_TYPE(KS0164CPU, ks0164_cpu_device, "ks0164cpu", "Samsung KS0164 audio processor")
-
-const u16 ks0164_cpu_device::imask[16] = {
-	0x0001, 0x0003, 0x0007, 0x000f, 0x001f, 0x003f, 0x007f, 0x00ff,
-	0x01ff, 0x03ff, 0x07ff, 0x0fff, 0x1fff, 0x3fff, 0x7fff, 0xffff
-};
 
 ks0164_cpu_device::ks0164_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: cpu_device(mconfig, KS0164CPU, tag, owner, clock)
@@ -23,12 +17,11 @@ ks0164_cpu_device::ks0164_cpu_device(const machine_config &mconfig, const char *
 
 void ks0164_cpu_device::device_start()
 {
-	m_program = &space(AS_PROGRAM);
-	m_program_cache = m_program->cache<1, 0, ENDIANNESS_BIG>();
+	space(AS_PROGRAM).cache(m_program_cache);
+	space(AS_PROGRAM).specific(m_program);
 
 	state_add(STATE_GENPC,     "GENPC",     m_r[R_PC]).callexport().noshow();
 	state_add(STATE_GENPCBASE, "CURPC",     m_r[R_PC]).callexport().noshow();
-	state_add(STATE_GENSP,     "GENSP",     m_r[R_SP]).noshow();
 	state_add(STATE_GENFLAGS,  "GENFLAGS",  m_r[R_PSW]).callimport().formatstr("%8s").noshow();
 	state_add(KS0164_PC,       "PC",        m_r[R_PC]).callimport();
 	state_add(KS0164_PSW,      "PSW",       m_r[R_PSW]).callimport();
@@ -107,7 +100,7 @@ void ks0164_cpu_device::state_string_export(const device_state_entry &entry, std
 
 void ks0164_cpu_device::handle_irq()
 {
-	u16 mask = m_irq & imask[m_r[R_PSW] & 15];
+	u16 mask = m_irq & util::make_bitmask<u16>((m_r[R_PSW] & 15) + 1);
 	if(mask) {
 		int index;
 		for(index = 0; !(mask & (1 << index)); index ++);
@@ -115,18 +108,17 @@ void ks0164_cpu_device::handle_irq()
 			// Normal irq (not reset), save pc and psw
 			if(m_r[R_PSW] & F_I)
 				return;
-			m_program->write_word(m_r[R_SP] - 2, m_r[R_PC]);
-			m_program->write_word(m_r[R_SP] - 4, m_r[R_PSW]);
+			standard_irq_callback(0, m_r[R_PC]);
+			m_program.write_word(m_r[R_SP] - 2, m_r[R_PC]);
+			m_program.write_word(m_r[R_SP] - 4, m_r[R_PSW]);
 			m_r[R_SP] -= 4;
 			m_icount -= 2;
 		} else
 			m_irq &= 0xfffe;
 
 		m_r[R_PSW] = (m_r[R_PSW] & 0xfff0) | (index ? index - 1 : 0);
-		m_r[R_PC] = m_program_cache->read_word(index*2);
+		m_r[R_PC] = m_program_cache.read_word(index*2);
 		m_icount --;
-		if(index)
-			standard_irq_callback(0);
 	}
 }
 
@@ -238,7 +230,7 @@ void ks0164_cpu_device::execute_run()
 		if(m_irq)
 			handle_irq();
 		debugger_instruction_hook(m_r[R_PC]);
-		u16 opcode = m_program_cache->read_word(m_r[R_PC]);
+		u16 opcode = m_program_cache.read_word(m_r[R_PC]);
 		m_r[R_PC] += 2;
 
 		// First switch level on bits 15-14 and 2-0
@@ -261,16 +253,13 @@ void ks0164_cpu_device::execute_run()
 			case 0x9: cond = !(m_r[R_PSW] & F_Z) && !(m_r[R_PSW] & F_C); break;
 			case 0xa: cond = (m_r[R_PSW] & F_Z) || (m_r[R_PSW] & F_C); break;
 			case 0xb: cond = (!(m_r[R_PSW] & F_Z) && (m_r[R_PSW] & F_N) && (m_r[R_PSW] & F_V)) || (!(m_r[R_PSW] & F_Z) && !(m_r[R_PSW] & F_V) && !(m_r[R_PSW] & F_N)); break;
-			case 0xc: cond = (m_r[R_PSW] & F_Z) || ((m_r[R_PSW] & F_N) && !(m_r[R_PSW] & F_V)) || ((m_r[R_PSW] & F_V) && !(m_r[R_PSW] & F_N)); break;
-			case 0xd: cond = ((m_r[R_PSW] & F_N) && (m_r[R_PSW] & F_V)) || (!(m_r[R_PSW] & F_V) && !(m_r[R_PSW] & F_N)); break;
+			case 0xc: cond = ((m_r[R_PSW] & F_N) && (m_r[R_PSW] & F_V)) || (!(m_r[R_PSW] & F_V) && !(m_r[R_PSW] & F_N)); break;
+			case 0xd: cond = (m_r[R_PSW] & F_Z) || ((m_r[R_PSW] & F_N) && !(m_r[R_PSW] & F_V)) || ((m_r[R_PSW] & F_V) && !(m_r[R_PSW] & F_N)); break;
 			case 0xe: cond = ((m_r[R_PSW] & F_N) && !(m_r[R_PSW] & F_V)) || ((m_r[R_PSW] & F_V) && !(m_r[R_PSW] & F_N)); break;
 			case 0xf: default: cond = true; break;
 			}
 			if(cond) {
-				if(opcode & 0x200)
-					m_r[R_PC] += opcode | 0xfc00;
-				else
-					m_r[R_PC] += opcode & 0x3ff;
+				m_r[R_PC] += util::sext(opcode, 10);
 			}
 			break;
 		}
@@ -296,7 +285,7 @@ void ks0164_cpu_device::execute_run()
 		case 0x15: {
 			// ALU functions with immediate
 			// 10ff frrr S... w101
-			u16 rv = m_program_cache->read_word(m_r[R_PC]);
+			u16 rv = m_program_cache.read_word(m_r[R_PC]);
 			m_r[R_PC] += 2;
 			u16 v = opcode & 0x0008 ? rv : opcode & 0x0080 ? s8(rv) : u8(rv);
 
@@ -308,7 +297,7 @@ void ks0164_cpu_device::execute_run()
 			// ALU functions from memory indexed
 			// 10ff frrr Ssss w110
 			u16 a = m_r[(opcode >> 4) & 7];
-			u16 v = opcode & 0x0008 ? m_program->read_word(a) : opcode & 0x0080 ? s8(m_program->read_byte(a)) : u8(m_program->read_byte(a));
+			u16 v = opcode & 0x0008 ? m_program.read_word(a) : opcode & 0x0080 ? s8(m_program.read_byte(a)) : u8(m_program.read_byte(a));
 			m_icount -= 2;
 
 			do_alu(opcode, v);
@@ -318,9 +307,9 @@ void ks0164_cpu_device::execute_run()
 		case 0x17: {
 			// ALU functions from memory indexed and offset
 			// 10ff frrr Ssss w111
-			u16 a = m_r[(opcode >> 4) & 7] + m_program_cache->read_word(m_r[R_PC]);
+			u16 a = m_r[(opcode >> 4) & 7] + m_program_cache.read_word(m_r[R_PC]);
 			m_r[R_PC] += 2;
-			u16 v = opcode & 0x0008 ? m_program->read_word(a) : opcode & 0x0080 ? s8(m_program->read_byte(a)) : u8(m_program->read_byte(a));
+			u16 v = opcode & 0x0008 ? m_program.read_word(a) : opcode & 0x0080 ? s8(m_program.read_byte(a)) : u8(m_program.read_byte(a));
 			m_icount -= 2;
 
 			do_alu(opcode, v);
@@ -336,8 +325,8 @@ void ks0164_cpu_device::execute_run()
 				int r1 = (opcode >> 8) & 7;
 				int r2 = (opcode >> 4) & 7;
 				switch(bitswap<3>(opcode, 11, 7, 3)) {
-				case 1: m_program->write_word(m_r[r1], m_r[r2]); m_r[r1] += 2; break;
-				case 4: m_r[r1] -= 2; m_program->write_word(m_r[r1], m_r[r2]); break;
+				case 1: m_program.write_word(m_r[r1], m_r[r2]); m_r[r1] += 2; break;
+				case 4: m_r[r1] -= 2; m_program.write_word(m_r[r1], m_r[r2]); break;
 				default: unk(opcode); break;
 				}
 				m_icount --;
@@ -346,16 +335,16 @@ void ks0164_cpu_device::execute_run()
 
 			case 1: {
 				// Min/max with immediate
-				// 1101 Mrrr Ssss 1000
-				u16 v1 = m_r[(opcode >> 4) & 7];
-				u16 v2 = m_program_cache->read_word(m_r[R_PC]);
+				// 1101 Mrrr S000 1000
+				u16 v1 = m_r[(opcode >> 8) & 7];
+				u16 v2 = m_program_cache.read_word(m_r[R_PC]);
 				m_r[R_PC] += 2;
 				u16 res;
 				switch(bitswap<2>(opcode, 11, 7)) {
-				case 0: res = v1 > v2 ? v1 : v2; break;
-				case 1: res = s16(v1) > s16(v2) ? v1 : v2; break;
-				case 2: res = v1 < v2 ? v1 : v2; break;
-				case 3: default: res = s16(v1) < s16(v2) ? v1 : v2; break;
+				case 0: res = std::max<u16>(v1, v2); break;
+				case 1: res = std::max<s16>(v1, v2); break;
+				case 2: res = std::min<u16>(v1, v2); break;
+				case 3: default: res = std::min<s16>(v1, v2); break;
 				}
 				m_r[(opcode >> 8) & 7] = res;
 				break;
@@ -385,10 +374,10 @@ void ks0164_cpu_device::execute_run()
 				// Push all registers
 				// 1100 .... .... .001
 
-				m_program->write_word(m_r[R_SP] - 2, m_r[0]);
-				m_program->write_word(m_r[R_SP] - 4, m_r[1]);
-				m_program->write_word(m_r[R_SP] - 6, m_r[2]);
-				m_program->write_word(m_r[R_SP] - 8, m_r[3]);
+				m_program.write_word(m_r[R_SP] - 2, m_r[0]);
+				m_program.write_word(m_r[R_SP] - 4, m_r[1]);
+				m_program.write_word(m_r[R_SP] - 6, m_r[2]);
+				m_program.write_word(m_r[R_SP] - 8, m_r[3]);
 				m_r[R_SP] -= 8;
 				break;
 			}
@@ -396,7 +385,7 @@ void ks0164_cpu_device::execute_run()
 			case 1: {
 				// Absolute jump
 				// 1101 .... .... .001
-				m_r[R_PC] = m_program->read_word(m_r[R_PC]);
+				m_r[R_PC] = m_program.read_word(m_r[R_PC]);
 				break;
 			}
 
@@ -429,7 +418,7 @@ void ks0164_cpu_device::execute_run()
 				int r1 = (opcode >> 8) & 7;
 				int r2 = (opcode >> 4) & 7;
 				switch(bitswap<3>(opcode, 11, 7, 3)) {
-				case 1: m_r[r1] = m_program->read_word(m_r[r2]); m_r[r2] += 2; break;
+				case 1: m_r[r1] = m_program.read_word(m_r[r2]); m_r[r2] += 2; break;
 				default: unk(opcode); break;
 				}
 				m_icount --;
@@ -440,8 +429,8 @@ void ks0164_cpu_device::execute_run()
 				// Absolute subroutine call
 				// 1101 .... .... .010
 
-				u16 a = m_program->read_word(m_r[R_PC]);
-				m_program->write_word(m_r[R_SP] - 2, m_r[R_PC] + 2);
+				u16 a = m_program.read_word(m_r[R_PC]);
+				m_program.write_word(m_r[R_SP] - 2, m_r[R_PC] + 2);
 				m_r[R_SP] -= 2;
 				m_r[R_PC] = a;
 				m_icount -= 2;
@@ -453,7 +442,7 @@ void ks0164_cpu_device::execute_run()
 				// 1110 .rrr bbbb w010
 
 				u16 a = m_r[(opcode >> 8) & 7];
-				u16 v = opcode & 0x0008 ? m_program->read_word(a) : m_program->read_byte(a);
+				u16 v = opcode & 0x0008 ? m_program.read_word(a) : m_program.read_byte(a);
 				if(v & (1 << ((opcode >> 4) & 0xf)))
 					m_r[R_PSW] &= ~F_Z;
 				else
@@ -473,13 +462,13 @@ void ks0164_cpu_device::execute_run()
 		case 0x1b: {
 			switch((opcode >> 12) & 3) {
 			case 0: {
-				// Push all registers
+				// Pop all registers
 				// 1100 .... .... .011
 
-				m_r[0] = m_program->read_word(m_r[R_SP] + 6);
-				m_r[1] = m_program->read_word(m_r[R_SP] + 4);
-				m_r[2] = m_program->read_word(m_r[R_SP] + 2);
-				m_r[3] = m_program->read_word(m_r[R_SP] + 0);
+				m_r[0] = m_program.read_word(m_r[R_SP] + 6);
+				m_r[1] = m_program.read_word(m_r[R_SP] + 4);
+				m_r[2] = m_program.read_word(m_r[R_SP] + 2);
+				m_r[3] = m_program.read_word(m_r[R_SP] + 0);
 				m_r[R_SP] += 8;
 				break;
 			}
@@ -488,7 +477,7 @@ void ks0164_cpu_device::execute_run()
 				// Return from subroutine
 				// 1101 .... .... .011
 
-				m_r[R_PC] = m_program->read_word(m_r[R_SP]);
+				m_r[R_PC] = m_program.read_word(m_r[R_SP]);
 				m_r[R_SP] += 2;
 				m_icount --;
 				break;
@@ -498,9 +487,9 @@ void ks0164_cpu_device::execute_run()
 				// Bit test from memory indexed and offset
 				// 1110 .rrr bbbb w011
 
-				u16 a = m_r[(opcode >> 8) & 7] + m_program_cache->read_word(m_r[R_PC]);
+				u16 a = m_r[(opcode >> 8) & 7] + m_program_cache.read_word(m_r[R_PC]);
 				m_r[R_PC] += 2;
-				u16 v = opcode & 0x0008 ? m_program->read_word(a) : m_program->read_byte(a);
+				u16 v = opcode & 0x0008 ? m_program.read_word(a) : m_program.read_byte(a);
 				if(v & (1 << ((opcode >> 4) & 0xf)))
 					m_r[R_PSW] &= ~F_Z;
 				else
@@ -552,8 +541,8 @@ void ks0164_cpu_device::execute_run()
 				// Return from interrupt
 				// 1101 .... .... .100
 
-				m_r[R_PSW] = m_program->read_word(m_r[R_SP] + 0);
-				m_r[R_PC]  = m_program->read_word(m_r[R_SP] + 2);
+				m_r[R_PSW] = m_program.read_word(m_r[R_SP] + 0);
+				m_r[R_PC]  = m_program.read_word(m_r[R_SP] + 2);
 				m_r[R_SP] += 4;
 				m_icount -= 2;
 				break;
@@ -561,7 +550,7 @@ void ks0164_cpu_device::execute_run()
 
 			case 2: {
 				// Bit clear in register
-				// 1110 .rrr bbbb .001
+				// 1110 .rrr bbbb .100
 				if(m_r[(opcode >> 8) & 7] & (1 << ((opcode >> 4) & 0xf))) {
 					m_r[(opcode >> 8) & 7] &= ~(1 << ((opcode >> 4) & 0xf));
 					m_r[R_PSW] &= ~F_Z;
@@ -572,8 +561,9 @@ void ks0164_cpu_device::execute_run()
 
 			case 3: {
 				// Decrement and branch
+				// 1111 .rrr .... .100
 				int r = (opcode >> 8) & 7;
-				u16 a = m_program_cache->read_word(m_r[R_PC]);
+				u16 a = m_program_cache.read_word(m_r[R_PC]);
 				m_r[R_PC] += 2;
 
 				m_r[r] --;
@@ -618,13 +608,14 @@ void ks0164_cpu_device::execute_run()
 
 			case 1: {
 				// Neg/not
-				// 1101 .rrr Ssss .101
+				// 1101 .rrr S... .101
 
-				u16 v = m_r[(opcode >> 4) & 7];
+				u16 v = m_r[(opcode >> 8) & 7];
 				if(opcode & 0x0080)
 					v = -s16(v);
 				else
 					v = ~v;
+				m_r[(opcode >> 8) & 7] = v;
 				m_r[R_PSW] = (m_r[R_PSW] & ~F_MASK) | (v ? v & 0x8000 ? F_N : 0 : F_Z);
 				break;
 			}
@@ -638,8 +629,8 @@ void ks0164_cpu_device::execute_run()
 				// Compare with immediate and branch if equal
 				// 1111 .rrr .... .101
 
-				u16 v = m_program_cache->read_word(m_r[R_PC]);
-				u16 a = m_program_cache->read_word(m_r[R_PC] + 2);
+				u16 v = m_program_cache.read_word(m_r[R_PC]);
+				u16 a = m_program_cache.read_word(m_r[R_PC] + 2);
 				m_r[R_PC] += 4;
 
 				do_alu((opcode & 0x07ff) | 0x1000, v);
@@ -654,7 +645,44 @@ void ks0164_cpu_device::execute_run()
 		case 0x1e: {
 			switch((opcode >> 12) & 3) {
 			case 0: {
-				unk(opcode);
+				// Rotate without carry?
+				// 1100 drrr nnnn .110
+				/*
+				From btplay2k flash.u22:
+				Surrounding code gives some context to usage here? + opcode is sandwiched between other shift/rotate commands
+				6E2C: 7010           r0 = 10
+				6E2E: 8817 0001      r0 -= (r1 + 1).bu
+				6E32: 0406           beq 6e3a
+				6E34: CA1C           r2 >>= 1
+				6E36: F004 6E34      dbra r0, 6e34
+				...
+				6E52: B017 0001      r0 = (r1 + 1).bu
+				6E56: CA1E           ?ca1e
+				6E58: F004 6E56      dbra r0, 6e56
+				*/
+
+				int r = (opcode >> 8) & 7;
+				int shift = (opcode >> 4) & 0xf;
+				u16 v1 = m_r[r];
+				u16 res;
+
+				if(!shift) {
+					m_r[R_PSW] = (m_r[R_PSW] & ~F_MASK) | (v1 ? v1 & 0x8000 ? F_N : 0 : F_Z);
+					res = v1;
+				} else if(opcode & 0x0800) {
+					res = (v1 >> shift) | (v1 << (16 - shift));
+					u16 f = res ? 0 : F_Z;
+					if(v1 & (1 << (shift - 1)))
+						f |= F_C;
+					m_r[R_PSW] = (m_r[R_PSW] & ~F_MASK) | f;
+				} else {
+					res = (v1 << shift) | (v1 >> (16 - shift));
+					u16 f = res ? res & 0x8000 ? F_N : 0 : F_Z;
+					if(v1 & (1 << (16-shift)))
+						f |= F_C;
+					m_r[R_PSW] = (m_r[R_PSW] & ~F_MASK) | f;
+				}
+				m_r[r] = res;
 				break;
 			}
 
@@ -668,9 +696,9 @@ void ks0164_cpu_device::execute_run()
 				// 1110 .rrr .sss w110
 				u16 a = m_r[(opcode >> 8) & 7];
 				if(opcode & 0x0008)
-					m_program->write_word(a, m_r[(opcode >> 4) & 7]);
+					m_program.write_word(a, m_r[(opcode >> 4) & 7]);
 				else
-					m_program->write_byte(a, m_r[(opcode >> 4) & 7]);
+					m_program.write_byte(a, m_r[(opcode >> 4) & 7]);
 				break;
 			}
 
@@ -721,12 +749,12 @@ void ks0164_cpu_device::execute_run()
 			case 2: {
 				// Write memory indexed and offset
 				// 1110 .rrr .sss w111
-				u16 a = m_r[(opcode >> 8) & 7] + m_program_cache->read_word(m_r[R_PC]);
+				u16 a = m_r[(opcode >> 8) & 7] + m_program_cache.read_word(m_r[R_PC]);
 				m_r[R_PC] += 2;
 				if(opcode & 0x0008)
-					m_program->write_word(a, m_r[(opcode >> 4) & 7]);
+					m_program.write_word(a, m_r[(opcode >> 4) & 7]);
 				else
-					m_program->write_byte(a, m_r[(opcode >> 4) & 7]);
+					m_program.write_byte(a, m_r[(opcode >> 4) & 7]);
 				break;
 			}
 

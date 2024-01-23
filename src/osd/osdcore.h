@@ -11,199 +11,16 @@
 
 #pragma once
 
-
 #include "osdcomm.h"
 
 #include "strformat.h"
 
-#include <chrono>
-#include <cstdarg>
 #include <cstdint>
 #include <iosfwd>
-#include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
-
-
-/***************************************************************************
-    FILE I/O INTERFACES
-***************************************************************************/
-
-/* Make sure we have a path separator (default to /) */
-#ifndef PATH_SEPARATOR
-#if defined(_WIN32)
-#define PATH_SEPARATOR          "\\"
-#else
-#define PATH_SEPARATOR          "/"
-#endif
-#endif
-
-/// \defgroup openflags File open flags
-/// \{
-
-/// Open file for reading.
-#define OPEN_FLAG_READ          0x0001
-
-/// Open file for writing.
-#define OPEN_FLAG_WRITE         0x0002
-
-/// Create the file, or truncate it if it exists.
-#define OPEN_FLAG_CREATE        0x0004
-
-/// Create non-existent directories in the path.
-#define OPEN_FLAG_CREATE_PATHS  0x0008
-
-/// Do not decompress into memory on open.
-#define OPEN_FLAG_NO_PRELOAD    0x0010
-
-/// \}
-
-
-/// \brief Interface to file-like resources
-///
-/// This interface is used to access file-like and stream-like
-/// resources.  Examples include plain files, TCP socket, named pipes,
-/// pseudo-terminals, and compressed archive members.
-class osd_file
-{
-public:
-	/// \brief Result of a file operation
-	///
-	/// Returned by most members of osd_file, and also used by other
-	/// classes that access files or other file-like resources.
-	enum class error
-	{
-		/// Operation completed successfully.
-		NONE,
-
-		/// Operation failed, but there is no more specific code to
-		/// describe the failure.
-		FAILURE,
-
-		/// Operation failed due to an error allocating memory.
-		OUT_OF_MEMORY,
-
-		/// The requested file, path or resource was not found.
-		NOT_FOUND,
-
-		/// Current permissions do not allow the requested access.
-		ACCESS_DENIED,
-
-		/// Requested access is not permitted because the file or
-		/// resource is currently open for exclusive access.
-		ALREADY_OPEN,
-
-		/// Request cannot be completed due to resource exhaustion
-		/// (maximum number of open files or other objects has been
-		/// reached).
-		TOO_MANY_FILES,
-
-		/// The request cannot be completed because invalid data was
-		/// encountered (for example an inconsistent filesystem, or a
-		/// corrupt archive file).
-		INVALID_DATA,
-
-		/// The requested access mode is invalid, or not appropriate for
-		/// the file or resource.
-		INVALID_ACCESS
-	};
-
-	/// \brief Smart pointer to a file handle
-	typedef std::unique_ptr<osd_file> ptr;
-
-	/// \brief Open a new file handle
-	///
-	/// This function is called by core_fopen and several other places
-	/// in the core to access files. These functions will construct
-	/// paths by concatenating various search paths held in the
-	/// options.c options database with partial paths specified by the
-	/// core.  The core assumes that the path separator is the first
-	/// character of the string PATH_SEPARATOR, but does not interpret
-	/// any path separators in the search paths, so if you use a
-	/// different path separator in a search path, you may get a mixture
-	/// of PATH_SEPARATORs (from the core) and alternate path separators
-	/// (specified by users and placed into the options database).
-	/// \param [in] path Path to the file to open.
-	/// \param [in] openflags Combination of #OPEN_FLAG_READ,
-	///   #OPEN_FLAG_WRITE, #OPEN_FLAG_CREATE and
-	///   #OPEN_FLAG_CREATE_PATHS specifying the requested access mode
-	///   and open behaviour.
-	/// \param [out] file Receives the file handle if the operation
-	///   succeeds.  Not valid if the operation fails.
-	/// \param [out] filesize Receives the size of the opened file if
-	///   the operation succeeded.  Not valid if the operation failed.
-	///   Will be zero for stream-like objects (e.g. TCP sockets or
-	///   named pipes).
-	/// \return Result of the operation.
-	static error open(std::string const &path, std::uint32_t openflags, ptr &file, std::uint64_t &filesize);
-
-	/// \brief Create a new pseudo-terminal (PTY) pair
-	///
-	/// \param [out] file Receives the handle of the master side of the
-	///   pseudo-terminal if the operation succeeds.  Not valid if the
-	///   operation fails.
-	/// \param [out] name Receives the name of the slave side of the
-	///   pseudo-terminal if the operation succeeds.  Not valid if the
-	///   operation fails.
-	/// \return Result of the operation.
-	static error openpty(ptr &file, std::string &name);
-
-	/// \brief Close an open file
-	virtual ~osd_file() { }
-
-	/// \brief Read from an open file
-	///
-	/// Read data from an open file at specified offset.  Note that the
-	/// seek and read are not guaranteed to be atomic, which may cause
-	/// issues in multi-threaded applications.
-	/// \param [out] buffer Pointer to memory that will receive the data
-	///   read.
-	/// \param [in] offset Byte offset within the file to read at,
-	///   relative to the start of the file.  Ignored for stream-like
-	///   objects (e.g. TCP sockets or named pipes).
-	/// \param [in] length Number of bytes to read.  Fewer bytes may be
-	///   read if the end of file is reached, or if no data is
-	///   available.
-	/// \param [out] actual Receives the number of bytes read if the
-	///   operation succeeds.  Not valid if the operation fails.
-	/// \return Result of the operation.
-	virtual error read(void *buffer, std::uint64_t offset, std::uint32_t length, std::uint32_t &actual) = 0;
-
-	/// \brief Write to an open file
-	///
-	/// Write data to an open file at specified offset.  Note that the
-	/// seek and write are not guaranteed to be atomic, which may cause
-	/// issues in multi-threaded applications.
-	/// \param [in] buffer Pointer to memory containing data to write.
-	/// \param [in] offset Byte offset within the file to write at,
-	///   relative to the start of the file.  Ignored for stream-like
-	///   objects (e.g. TCP sockets or named pipes).
-	/// \param [in] length Number of bytes to write.
-	/// \param [out] actual Receives the number of bytes written if the
-	///   operation succeeds.  Not valid if the operation fails.
-	/// \return Result of the operation.
-	virtual error write(void const *buffer, std::uint64_t offset, std::uint32_t length, std::uint32_t &actual) = 0;
-
-	/// \brief Change the size of an open file
-	///
-	/// \param [in] offset Desired size of the file.
-	/// \return Result of the operation.
-	virtual error truncate(std::uint64_t offset) = 0;
-
-	/// \brief Flush file buffers
-	///
-	/// This flushes any data cached by the application, but does not
-	/// guarantee that all prior writes have reached persistent storage.
-	/// \return Result of the operation.
-	virtual error flush() = 0;
-
-	/// \brief Delete a file
-	///
-	/// \param [in] filename Path to the file to delete.
-	/// \return Result of the operation.
-	static error remove(std::string const &filename);
-};
 
 
 /// \brief Get environment variable value
@@ -218,36 +35,7 @@ const char *osd_getenv(const char *name);
 /// \brief Get current process ID
 ///
 /// \return The process ID of the current process.
-int osd_getpid();
-
-
-/*-----------------------------------------------------------------------------
-    osd_get_physical_drive_geometry: if the given path points to a physical
-        drive, return the geometry of that drive
-
-    Parameters:
-
-        filename - pointer to a path which might describe a physical drive
-
-        cylinders - pointer to a uint32_t to receive the number of cylinders
-            of the physical drive
-
-        heads - pointer to a uint32_t to receive the number of heads per
-            cylinder of the physical drive
-
-        sectors - pointer to a uint32_t to receive the number of sectors per
-            cylinder of the physical drive
-
-        bps - pointer to a uint32_t to receive the number of bytes per sector
-            of the physical drive
-
-    Return value:
-
-        true if the filename points to a physical drive and if the values
-        pointed to by cylinders, heads, sectors, and bps are valid; false in
-        any other case
------------------------------------------------------------------------------*/
-bool osd_get_physical_drive_geometry(const char *filename, uint32_t *cylinders, uint32_t *heads, uint32_t *sectors, uint32_t *bps);
+int osd_getpid() noexcept;
 
 
 /*-----------------------------------------------------------------------------
@@ -269,115 +57,6 @@ bool osd_get_physical_drive_geometry(const char *filename, uint32_t *cylinders, 
         The number of characters required to form a Unicode character.
 -----------------------------------------------------------------------------*/
 int osd_uchar_from_osdchar(char32_t *uchar, const char *osdchar, size_t count);
-
-
-/*-----------------------------------------------------------------------------
-    osd_is_valid_filename_char: is the given character legal for filenames?
-
-    Parameters:
-
-        uchar - the character to check
-
-    Return value:
-
-        Whether this character is legal in a filename
------------------------------------------------------------------------------*/
-
-bool osd_is_valid_filename_char(char32_t uchar);
-
-
-/*-----------------------------------------------------------------------------
-    osd_is_valid_filepath_char: is the given character legal for paths?
-
-    Parameters:
-
-        uchar - the character to check
-
-    Return value:
-
-        Whether this character is legal in a file path
------------------------------------------------------------------------------*/
-
-bool osd_is_valid_filepath_char(char32_t uchar);
-
-
-/***************************************************************************
-    DIRECTORY INTERFACES
-***************************************************************************/
-
-namespace osd
-{
-	// directory is an opaque type which represents an open directory
-	class directory
-	{
-	public:
-		typedef std::unique_ptr<directory> ptr;
-
-		// osd::directory::entry contains basic information about a file when iterating through
-		// a directory
-		class entry
-		{
-		public:
-			enum class entry_type
-			{
-				NONE,
-				FILE,
-				DIR,
-				OTHER
-			};
-
-			const char *                            name;           // name of the entry
-			entry_type                              type;           // type of the entry
-			std::uint64_t                           size;           // size of the entry
-			std::chrono::system_clock::time_point   last_modified;  // last modified time
-		};
-
-		// -----------------------------------------------------------------------------
-		// osd::directory::open: open a directory for iteration
-		//
-		// Parameters:
-		//
-		// dirname - path to the directory in question
-		//
-		// Return value:
-		//
-		// upon success, this function should return an directory pointer
-		// which contains opaque data necessary to traverse the directory; on
-		// failure, this function should return nullptr
-		// -----------------------------------------------------------------------------
-		static ptr open(std::string const &dirname);
-
-		// -----------------------------------------------------------------------------
-		// osd::directory::~directory: close an open directory
-		// -----------------------------------------------------------------------------
-		virtual ~directory() { }
-
-		// -----------------------------------------------------------------------------
-		// osd::directory::read: return information about the next entry in the directory
-		//
-		// Return value:
-		//
-		// a constant pointer to an entry representing the current item
-		// in the directory, or nullptr, indicating that no more entries are
-		// present
-		// -----------------------------------------------------------------------------
-		virtual const entry *read() = 0;
-	};
-};
-
-
-/*-----------------------------------------------------------------------------
-    osd_is_absolute_path: returns whether the specified path is absolute
-
-    Parameters:
-
-        path - the path in question
-
-    Return value:
-
-        non-zero if the path is absolute, zero otherwise
------------------------------------------------------------------------------*/
-bool osd_is_absolute_path(const std::string &path);
 
 
 
@@ -407,7 +86,7 @@ typedef uint64_t osd_ticks_t;
         accurate. It is ok if this call is not ultra-fast, since it is
         primarily used for once/frame synchronization.
 -----------------------------------------------------------------------------*/
-osd_ticks_t osd_ticks();
+osd_ticks_t osd_ticks() noexcept;
 
 
 /*-----------------------------------------------------------------------------
@@ -422,7 +101,7 @@ osd_ticks_t osd_ticks();
         an osd_ticks_t value which represents the number of ticks per
         second
 -----------------------------------------------------------------------------*/
-osd_ticks_t osd_ticks_per_second();
+osd_ticks_t osd_ticks_per_second() noexcept;
 
 
 /*-----------------------------------------------------------------------------
@@ -447,7 +126,7 @@ osd_ticks_t osd_ticks_per_second();
         sleep occurs for, the OSD layer should strive to sleep for less time
         than specified rather than sleeping too long.
 -----------------------------------------------------------------------------*/
-void osd_sleep(osd_ticks_t duration);
+void osd_sleep(osd_ticks_t duration) noexcept;
 
 /***************************************************************************
     WORK ITEM INTERFACES
@@ -662,27 +341,6 @@ void osd_work_item_release(osd_work_item *item);
     MISCELLANEOUS INTERFACES
 ***************************************************************************/
 
-/// \brief Allocate memory that can contain executable code
-///
-/// Allocated memory must be both writable and executable.  Allocated
-/// memory must be freed by calling #osd_free_executable passing the
-/// same size.
-/// \param [in] size Number of bytes to allocate.
-/// \return Pointer to allocated memory, or nullptr if allocation
-///   failed.
-/// \sa osd_free_executable
-void *osd_alloc_executable(size_t size);
-
-
-/// \brief Free memory allocated by osd_alloc_executable
-///
-/// \param [in] ptr Pointer returned by #osd_alloc_executable.
-/// \param [in] size Number of bytes originally requested.  Must match
-///   the value passed to #osd_alloc_executable.
-/// \sa osd_alloc_executable
-void osd_free_executable(void *ptr, size_t size);
-
-
 /// \brief Break into host debugger if attached
 ///
 /// This function is called when a fatal error occurs.  If a debugger is
@@ -692,103 +350,20 @@ void osd_free_executable(void *ptr, size_t size);
 void osd_break_into_debugger(const char *message);
 
 
-/// \brief Get clipboard text
-///
-/// Gets current clipboard content as UTF-8 text.  Returns an empty
-/// string if the clipboard contents cannot be converted to plain text.
-/// \return Clipboard contents or an empty string.
-std::string osd_get_clipboard_text();
-
-
-/***************************************************************************
-    DIRECTORY INTERFACES
-***************************************************************************/
-
-/*-----------------------------------------------------------------------------
-    osd_stat: return a directory entry for a path
-
-    Parameters:
-
-        path - path in question
-
-    Return value:
-
-        an allocated pointer to an osd::directory::entry representing
-        info on the path; even if the file does not exist.
-
------------------------------------------------------------------------------*/
-std::unique_ptr<osd::directory::entry> osd_stat(std::string const &path);
-
-/***************************************************************************
-    PATH INTERFACES
-***************************************************************************/
-
-/*-----------------------------------------------------------------------------
-    osd_get_full_path: retrieves the full path
-
-    Parameters:
-
-        path - the path in question
-        dst - reference to receive new path
-
-    Return value:
-
-        file error
-
------------------------------------------------------------------------------*/
-osd_file::error osd_get_full_path(std::string &dst, std::string const &path);
-
-
-/***************************************************************************
-    MIDI I/O INTERFACES
-***************************************************************************/
-
-class osd_midi_device
-{
-public:
-	virtual ~osd_midi_device() { }
-	// free result with osd_close_midi_channel()
-	virtual bool open_input(const char *devname) = 0;
-	// free result with osd_close_midi_channel()
-	virtual bool open_output(const char *devname) = 0;
-	virtual void close() = 0;
-	virtual bool poll() = 0;
-	virtual int read(uint8_t *pOut) = 0;
-	virtual void write(uint8_t data) = 0;
-};
-
-//FIXME: really needed here?
-void osd_list_network_adapters();
-
 
 /***************************************************************************
     UNCATEGORIZED INTERFACES
 ***************************************************************************/
 
 /*-----------------------------------------------------------------------------
-    osd_get_volume_name: retrieves the volume name
-
-    Parameters:
-
-        idx - order number of volume
-
-    Return value:
-
-        pointer to volume name
-
------------------------------------------------------------------------------*/
-const char *osd_get_volume_name(int idx);
-
-/*-----------------------------------------------------------------------------
     osd_subst_env: substitute environment variables with values
 
     Parameters:
 
-        dst - result pointer
         src - source string
 
 -----------------------------------------------------------------------------*/
-void osd_subst_env(std::string &dst, std::string const &src);
+std::string osd_subst_env(std::string_view src);
 
 class osd_gpu
 {
@@ -963,14 +538,14 @@ public:
 	osd_output() { }
 	virtual ~osd_output() { }
 
-	virtual void output_callback(osd_output_channel channel, util::format_argument_pack<std::ostream> const &args) = 0;
+	virtual void output_callback(osd_output_channel channel, util::format_argument_pack<char> const &args) = 0;
 
 	static void push(osd_output *delegate);
 	static void pop(osd_output *delegate);
 
 protected:
 
-	void chain_output(osd_output_channel channel, util::format_argument_pack<std::ostream> const &args) const
+	void chain_output(osd_output_channel channel, util::format_argument_pack<char> const &args) const
 	{
 		if (m_chain)
 			m_chain->output_callback(channel, args);
@@ -980,11 +555,11 @@ private:
 	osd_output *m_chain = nullptr;
 };
 
-void osd_vprintf_error(util::format_argument_pack<std::ostream> const &args);
-void osd_vprintf_warning(util::format_argument_pack<std::ostream> const &args);
-void osd_vprintf_info(util::format_argument_pack<std::ostream> const &args);
-void osd_vprintf_verbose(util::format_argument_pack<std::ostream> const &args);
-void osd_vprintf_debug(util::format_argument_pack<std::ostream> const &args);
+void osd_vprintf_error(util::format_argument_pack<char> const &args);
+void osd_vprintf_warning(util::format_argument_pack<char> const &args);
+void osd_vprintf_info(util::format_argument_pack<char> const &args);
+void osd_vprintf_verbose(util::format_argument_pack<char> const &args);
+void osd_vprintf_debug(util::format_argument_pack<char> const &args);
 
 /// \brief Print error message
 ///

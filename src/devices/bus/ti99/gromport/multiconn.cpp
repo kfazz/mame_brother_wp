@@ -43,15 +43,15 @@
 #include "emu.h"
 #include "multiconn.h"
 
-#define LOG_WARN             (1U<<1)
-#define LOG_CHANGE          (1U<<2)
-#define VERBOSE ( LOG_WARN )
+#define LOG_WARN            (1U << 1)
+#define LOG_CHANGE          (1U << 2)
+#define VERBOSE (LOG_WARN)
 
 #include "logmacro.h"
 
-DEFINE_DEVICE_TYPE_NS(TI99_GROMPORT_MULTI,  bus::ti99::gromport, ti99_multi_cart_conn_device,  "ti99_mcartconn", "TI-99 Multi-cartridge extender")
+DEFINE_DEVICE_TYPE(TI99_GROMPORT_MULTI,  bus::ti99::gromport::ti99_multi_cart_conn_device,  "ti99_mcartconn", "TI-99 Multi-cartridge extender")
 
-namespace bus { namespace ti99 { namespace gromport {
+namespace bus::ti99::gromport {
 
 #define AUTO -1
 
@@ -137,7 +137,7 @@ void ti99_multi_cart_conn_device::remove(int index)
 	m_cartridge[index] = nullptr;
 }
 
-WRITE_LINE_MEMBER(ti99_multi_cart_conn_device::romgq_line)
+void ti99_multi_cart_conn_device::romgq_line(int state)
 {
 	m_readrom = state;
 
@@ -169,7 +169,7 @@ void ti99_multi_cart_conn_device::set_gromlines(line_state mline, line_state mol
 	}
 }
 
-WRITE_LINE_MEMBER(ti99_multi_cart_conn_device::gclock_in)
+void ti99_multi_cart_conn_device::gclock_in(int state)
 {
 	// Propagate to all slots
 	for (int i=0; i < NUMBER_OF_CARTRIDGE_SLOTS; i++)
@@ -181,7 +181,7 @@ WRITE_LINE_MEMBER(ti99_multi_cart_conn_device::gclock_in)
 	}
 }
 
-READ8Z_MEMBER(ti99_multi_cart_conn_device::readz)
+void ti99_multi_cart_conn_device::readz(offs_t offset, uint8_t *value)
 {
 	int slot = get_active_slot(true, offset);
 
@@ -237,7 +237,7 @@ void ti99_multi_cart_conn_device::write(offs_t offset, uint8_t data)
 	}
 }
 
-READ8Z_MEMBER(ti99_multi_cart_conn_device::crureadz)
+void ti99_multi_cart_conn_device::crureadz(offs_t offset, uint8_t *value)
 {
 	int slot = get_active_slot(false, offset);
 	/* Sanity check. Higher slots are always empty. */
@@ -330,5 +330,5 @@ ioport_constructor ti99_multi_cart_conn_device::device_input_ports() const
 	return INPUT_PORTS_NAME(multi_slot);
 }
 
-} } } // end namespace bus::ti99::gromport
+} // end namespace bus::ti99::gromport
 

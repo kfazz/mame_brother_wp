@@ -1,33 +1,31 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
-/*
- * nlid_proxy.h
- *
- * netlist proxy devices
- *
- * This file contains internal headers
- */
 
 #ifndef NLID_PROXY_H_
 #define NLID_PROXY_H_
 
-#include "netlist/analog/nlid_twoterm.h"
-#include "netlist/nl_setup.h"
+///
+/// \file nlid_proxy.h
+///
+/// netlist proxy devices
+///
+/// This file contains internal headers
+///
 
-namespace netlist
-{
-namespace devices
-{
+
+#include "analog/nlid_twoterm.h"
+#include "nl_base.h"
+
+namespace netlist::devices {
 
 	// -----------------------------------------------------------------------------
 	// nld_base_proxy
 	// -----------------------------------------------------------------------------
 
-	NETLIB_OBJECT(base_proxy)
+	class nld_base_proxy : public device_t
 	{
 	public:
-		nld_base_proxy(netlist_state_t &anetlist, const pstring &name,
-				const logic_t *inout_proxied);
+		nld_base_proxy(device_param_t data, const logic_t *inout_proxied);
 
 		// only used during setup
 		virtual detail::core_terminal_t &proxy_term() noexcept = 0;
@@ -44,22 +42,20 @@ namespace devices
 	// nld_a_to_d_proxy
 	// -----------------------------------------------------------------------------
 
-	NETLIB_OBJECT_DERIVED(base_a_to_d_proxy, base_proxy)
+	class nld_base_a_to_d_proxy : public nld_base_proxy
 	{
 	public:
 		virtual logic_output_t &out() noexcept = 0;
 
 	protected:
-		nld_base_a_to_d_proxy(netlist_state_t &anetlist, const pstring &name,
-				const logic_input_t *in_proxied);
+		nld_base_a_to_d_proxy(device_param_t data, const logic_input_t *in_proxied);
 
 	};
 
-	NETLIB_OBJECT_DERIVED(a_to_d_proxy, base_a_to_d_proxy)
+	class nld_a_to_d_proxy : public nld_base_a_to_d_proxy
 	{
 	public:
-		nld_a_to_d_proxy(netlist_state_t &anetlist, const pstring &name,
-			const logic_input_t *in_proxied);
+		nld_a_to_d_proxy(device_param_t data, const logic_input_t *in_proxied);
 
 		logic_output_t &out() noexcept override { return m_Q; }
 
@@ -69,10 +65,10 @@ namespace devices
 		}
 
 	protected:
-		NETLIB_RESETI();
-		NETLIB_UPDATEI();
-
+		//NETLIB_RESETI();
 	private:
+		NETLIB_HANDLERI(input);
+
 		logic_output_t m_Q;
 		analog_input_t m_I;
 	};
@@ -81,47 +77,44 @@ namespace devices
 	// nld_base_d_to_a_proxy
 	// -----------------------------------------------------------------------------
 
-	NETLIB_OBJECT_DERIVED(base_d_to_a_proxy, base_proxy)
+	class nld_base_d_to_a_proxy : public nld_base_proxy
 	{
 	public:
 		// only used in setup
 		virtual logic_input_t &in() noexcept = 0;
 
 	protected:
-		nld_base_d_to_a_proxy(netlist_state_t &anetlist, const pstring &name,
-				const logic_output_t *out_proxied);
+		nld_base_d_to_a_proxy(device_param_t data, const logic_output_t *out_proxied);
 
 	};
 
-	NETLIB_OBJECT_DERIVED(d_to_a_proxy, base_d_to_a_proxy)
+	class nld_d_to_a_proxy : public nld_base_d_to_a_proxy
 	{
 	public:
-		nld_d_to_a_proxy(netlist_state_t &anetlist, const pstring &name,
-			const logic_output_t *out_proxied);
+		nld_d_to_a_proxy(device_param_t data, const logic_output_t *out_proxied);
 
 		logic_input_t &in() noexcept override { return m_I; }
 
 		detail::core_terminal_t &proxy_term() noexcept override
 		{
-			return m_RN.setup_P();
+			return m_RN().setup_P();
 		}
 
 	protected:
 
 		NETLIB_RESETI();
-		NETLIB_UPDATEI();
 
 	private:
+		NETLIB_HANDLERI(input);
 
-		static constexpr const nl_fptype G_OFF = nlconst::magic(1e-9);
+		static constexpr const nl_fptype G_OFF = nlconst::cgmin();
 
 		logic_input_t m_I;
-		analog::NETLIB_NAME(twoterm) m_RP;
-		analog::NETLIB_NAME(twoterm) m_RN;
-		state_var<int> m_last_state;
+		NETLIB_SUB_NS(analog, two_terminal) m_RP;
+		NETLIB_SUB_NS(analog, two_terminal) m_RN;
+		state_var<netlist_sig_t> m_last_state;
 	};
 
-} // namespace devices
-} // namespace netlist
+} // namespace netlist::devices
 
-#endif /* NLD_PROXY_H_ */
+#endif // NLD_PROXY_H_

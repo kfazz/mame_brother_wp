@@ -76,9 +76,10 @@ void m6m80011ap_device::nvram_default()
 //  .nv file
 //-------------------------------------------------
 
-void m6m80011ap_device::nvram_read(emu_file &file)
+bool m6m80011ap_device::nvram_read(util::read_stream &file)
 {
-	file.read(m_eeprom_data, 0x100);
+	size_t actual;
+	return !file.read(m_eeprom_data, 0x100, actual) && actual == 0x100;
 }
 
 
@@ -87,9 +88,10 @@ void m6m80011ap_device::nvram_read(emu_file &file)
 //  .nv file
 //-------------------------------------------------
 
-void m6m80011ap_device::nvram_write(emu_file &file)
+bool m6m80011ap_device::nvram_write(util::write_stream &file)
 {
-	file.write(m_eeprom_data, 0x100);
+	size_t actual;
+	return !file.write(m_eeprom_data, 0x100, actual) && actual == 0x100;
 }
 
 //**************************************************************************
@@ -97,17 +99,17 @@ void m6m80011ap_device::nvram_write(emu_file &file)
 //**************************************************************************
 
 
-READ_LINE_MEMBER( m6m80011ap_device::read_bit )
+int m6m80011ap_device::read_bit()
 {
 	return m_read_latch;
 }
 
-READ_LINE_MEMBER( m6m80011ap_device::ready_line )
+int m6m80011ap_device::ready_line()
 {
 	return 1; // TODO
 }
 
-WRITE_LINE_MEMBER( m6m80011ap_device::set_cs_line )
+void m6m80011ap_device::set_cs_line(int state)
 {
 	m_reset_line = state;
 
@@ -120,12 +122,12 @@ WRITE_LINE_MEMBER( m6m80011ap_device::set_cs_line )
 }
 
 
-WRITE_LINE_MEMBER( m6m80011ap_device::write_bit )
+void m6m80011ap_device::write_bit(int state)
 {
 	m_latch = state;
 }
 
-WRITE_LINE_MEMBER( m6m80011ap_device::set_clock_line )
+void m6m80011ap_device::set_clock_line(int state)
 {
 	if (m_reset_line == CLEAR_LINE)
 	{

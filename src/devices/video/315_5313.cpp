@@ -1,6 +1,15 @@
 // license:BSD-3-Clause
 // copyright-holders:David Haywood
-/* Sega 315-5313 - Megadrive VDP */
+/*
+    Sega 315-5313 VDP emulation, used by Mega Drive/Genesis
+
+TODO:
+- Video, DMA timing and HV counter are incorrect,
+  they need verification on real hardware.
+- Support 128KB VRAM configuration, did any hardware use it?
+- Is border area displayable?
+- 32X overlay with H32 mode, did all known software use this?
+*/
 
 #include "emu.h"
 #include "video/315_5313.h"
@@ -159,6 +168,7 @@ static const unsigned hres_mul[4] = { 5, 5, 4, 4 };
 inline u8 sega315_5313_device::get_hres() { return (MEGADRIVE_REG0C_RS0 | (MEGADRIVE_REG0C_RS1 << 1)) & 3; }
 int sega315_5313_device::screen_hpos() { return screen().hpos() / (m_lcm_scaling ? hres_mul[get_hres()] : 1); }
 
+// TODO: 342(H32) or 427.5(H40), each scanline used 3420 cycle
 #define MAX_HPOSITION 480
 
 
@@ -289,10 +299,6 @@ void sega315_5313_device::device_post_load()
 
 void sega315_5313_device::device_start()
 {
-	m_sndirqline_callback.resolve_safe();
-	m_lv6irqline_callback.resolve_safe();
-	m_lv4irqline_callback.resolve_safe();
-
 	m_32x_scanline_func.resolve();
 	m_32x_interrupt_func.resolve();
 	m_32x_scanline_helper_func.resolve();
@@ -360,9 +366,9 @@ void sega315_5313_device::device_start()
 	if (m_use_alt_timing)
 		save_pointer(NAME(m_render_line), 1280);
 
-	m_irq6_on_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(sega315_5313_device::irq6_on_timer_callback), this));
-	m_irq4_on_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(sega315_5313_device::irq4_on_timer_callback), this));
-	m_render_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(sega315_5313_device::render_scanline), this));
+	m_irq6_on_timer = timer_alloc(FUNC(sega315_5313_device::irq6_on_timer_callback), this);
+	m_irq4_on_timer = timer_alloc(FUNC(sega315_5313_device::irq4_on_timer_callback), this);
+	m_render_timer = timer_alloc(FUNC(sega315_5313_device::render_scanline), this);
 
 	m_space68k = &m_cpu68k->space();
 
@@ -423,7 +429,7 @@ void sega315_5313_device::vdp_vram_write(u16 data)
 
 	if (m_vdp_address & 1)
 	{
-		data = ((data & 0x00ff) << 8) | ((data & 0xff00) >> 8);
+		data = swapendian_int16(data);
 	}
 
 	vram_w(m_vdp_address >> 1, data);
@@ -568,6 +574,9 @@ void sega315_5313_device::vdp_set_register(int regnum, u8 value)
 {
 	m_regs[regnum] = value;
 
+//  if (regnum == 1)
+//      printf("%02x %02x (%lld %d %d)\n", regnum, value, screen().frame_number(), screen().hpos(), screen().vpos());
+
 	/* We need special handling for the IRQ enable registers, some games turn
 	   off the irqs before they are taken, delaying them until the IRQ is turned
 	   back on */
@@ -576,6 +585,12 @@ void sega315_5313_device::vdp_set_register(int regnum, u8 value)
 	{
 	//osd_printf_debug("setting reg 0, irq enable is now %d\n", MEGADRIVE_REG0_IRQ4_ENABLE);
 
+		// fatalrew and sesame are very fussy about pending interrupts.
+		// Former in particular will quickly enable both after the EA logo (cfr. killshow at PC=0x2267a),
+		// and irq 6 will jump to illegal addresses because the correlated routine isn't set in stack
+		// but delayed a bit.
+		// Note that irq 6 is masked for about 5 frames, leaving the assumption that it mustn't
+		// be left on during all this time.
 		if (m_irq4_pending)
 		{
 			if (MEGADRIVE_REG0_IRQ4_ENABLE)
@@ -583,12 +598,6 @@ void sega315_5313_device::vdp_set_register(int regnum, u8 value)
 			else
 				m_lv4irqline_callback(false);
 		}
-
-		/* ??? Fatal Rewind needs this but I'm not sure it's accurate behavior
-		   it causes flickering in roadrash */
-	//  m_irq6_pending = 0;
-	//  m_irq4_pending = 0;
-
 	}
 
 	if (regnum == 0x01)
@@ -599,13 +608,7 @@ void sega315_5313_device::vdp_set_register(int regnum, u8 value)
 				m_lv6irqline_callback(true);
 			else
 				m_lv6irqline_callback(false);
-
 		}
-
-		/* ??? */
-	//  m_irq6_pending = 0;
-	//  m_irq4_pending = 0;
-
 	}
 
 //  if (regnum == 0x0a)
@@ -639,7 +642,8 @@ inline u16 sega315_5313_device::vdp_get_word_from_68k_mem(u32 source)
 		return m_space68k->read_word(source);
 	else
 	{
-		printf("DMA Read unmapped %06x\n", source);
+		// klaxp
+		logerror("DMA Read unmapped %06x\n", source);
 		return machine().rand();
 	}
 }
@@ -1078,12 +1082,14 @@ u16 sega315_5313_device::ctrl_port_r()
 	/* Megalo Mania also fussy - cares about pending flag*/
 
 	const int sprite_overflow = 0;
-	const int odd_frame = m_imode_odd_frame^1;
+	int odd_frame = 0;
 	int hblank_flag = 0;
 	const int dma_active = 0;
 	int vblank = m_vblank_flag;
 	const int fifo_empty = 1;
 	const int fifo_full = 0;
+
+	if (m_imode & 1) odd_frame = m_imode_odd_frame ^ 1;
 
 	const u16 hpos = get_hposition();
 
@@ -1231,7 +1237,7 @@ u16 sega315_5313_device::get_hposition()
 	{
 		attotime time_elapsed_since_megadriv_scanline_timer;
 
-		time_elapsed_since_megadriv_scanline_timer = m_megadriv_scanline_timer->time_elapsed();
+		time_elapsed_since_megadriv_scanline_timer = m_megadriv_scanline_timer->elapsed();
 
 		if (time_elapsed_since_megadriv_scanline_timer.attoseconds() < (ATTOSECONDS_PER_SECOND/get_framerate() /double(m_total_scanlines)))
 		{
@@ -1458,7 +1464,8 @@ void sega315_5313_device::render_spriteline_to_spritebuffer(int scanline)
 				if (pri == 1) pri = 0x80;
 				else pri = 0x40;
 
-				/* todo: fix me, I'm sure this isn't right but sprite 0 + other sprite seem to do something..
+				// FIXME: Checkout this portion
+				/* I'm sure this isn't right but sprite 0 + other sprite seem to do something..
 				   maybe spritemask |= 2 should be set for anything < 0x40 ?*/
 				if (xpos == 0x00) spritemask |= 1;
 
@@ -2108,7 +2115,7 @@ void sega315_5313_device::render_videobuffer_to_screenbuffer(int scanline)
 		if (scanline >= m_render_bitmap->height()) // safety, shouldn't happen now we allocate a fixed amount tho
 			return;
 
-		lineptr = &m_render_bitmap->pix32(scanline);
+		lineptr = &m_render_bitmap->pix(scanline);
 	}
 	else
 		lineptr = m_render_line.get();
@@ -2241,6 +2248,7 @@ void sega315_5313_device::vdp_handle_scanline_callback(int scanline)
 	{
 		if (!m_use_alt_timing) m_scanline_counter++;
 //      osd_printf_debug("scanline %d\n", get_scanline_counter());
+		// TODO: arbitrary timing
 		m_render_timer->adjust(attotime::from_usec(1));
 
 		if (get_scanline_counter() == m_irq6_scanline)
@@ -2255,11 +2263,11 @@ void sega315_5313_device::vdp_handle_scanline_callback(int scanline)
 	//  if (get_scanline_counter() == 0) m_irq4counter = MEGADRIVE_REG0A_HINT_VALUE;
 		// m_irq4counter = MEGADRIVE_REG0A_HINT_VALUE;
 
-		if (get_scanline_counter()<=224)
+		if (get_scanline_counter() <= 224)
 		{
 			m_irq4counter--;
 
-			if (m_irq4counter== - 1)
+			if (m_irq4counter == -1)
 			{
 				if (m_imode == 3) m_irq4counter = MEGADRIVE_REG0A_HINT_VALUE * 2;
 				else m_irq4counter = MEGADRIVE_REG0A_HINT_VALUE;
@@ -2268,9 +2276,12 @@ void sega315_5313_device::vdp_handle_scanline_callback(int scanline)
 
 				if (MEGADRIVE_REG0_IRQ4_ENABLE)
 				{
+					// TODO: arbitrary timing
 					m_irq4_on_timer->adjust(attotime::from_usec(1));
 					//osd_printf_debug("irq4 on scanline %d reload %d\n", get_scanline_counter(), MEGADRIVE_REG0A_HINT_VALUE);
 				}
+				else
+					m_irq4_on_timer->adjust(attotime::never);
 			}
 		}
 		else
@@ -2308,7 +2319,8 @@ void sega315_5313_device::vdp_handle_eof()
 	int scr_mul = 1;
 
 	m_vblank_flag = 0;
-	//m_irq6_pending = 0; /* NO! (breaks warlock) */
+	// Not here, breaks warlock
+	//m_irq6_pending = 0;
 
 	/* Set it to -1 here, so it becomes 0 when the first timer kicks in */
 	if (!m_use_alt_timing) m_scanline_counter = -1;
@@ -2319,7 +2331,7 @@ void sega315_5313_device::vdp_handle_eof()
 
 	if (MEGADRIVE_REG01_240_LINE)
 	{
-		/* this is invalid in PAL! */
+		/* this is invalid in NTSC! */
 		m_total_scanlines = m_base_total_scanlines;
 		m_visible_scanlines = 240;
 		m_irq6_scanline = 240;

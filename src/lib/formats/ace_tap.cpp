@@ -10,9 +10,9 @@ For more information see:
 
 ********************************************************************/
 
-#include <cassert>
-
 #include "ace_tap.h"
+
+#include "multibyte.h"
 
 
 #define SMPLO   -32768
@@ -97,11 +97,8 @@ static int ace_handle_tap(int16_t *buffer, const uint8_t *casdata)
 
 	while( data_pos < cas_size )
 	{
-		uint16_t  block_size;
-		int     i;
-
 		/* Handle a block of tape data */
-		block_size = casdata[data_pos] + ( casdata[data_pos + 1] << 8 );
+		uint16_t block_size = get_u16le( &casdata[data_pos] );
 		data_pos += 2;
 
 		/* Make sure there are enough bytes left */
@@ -112,7 +109,7 @@ static int ace_handle_tap(int16_t *buffer, const uint8_t *casdata)
 		sample_count += ace_tap_silence( buffer, sample_count, 2 * 44100 );
 
 		/* Add pilot tone samples: 4096 for header, 512 for data */
-		for( i = ( block_size == 0x001A ) ? 4096 : 512; i; i-- )
+		for( int i = ( block_size == 0x001A ) ? 4096 : 512; i; i-- )
 			sample_count += ace_tap_cycle( buffer, sample_count, 27, 27 );
 
 		/* Sync samples */
@@ -155,7 +152,7 @@ static int ace_tap_to_wav_size(const uint8_t *casdata, int caslen)
 }
 
 
-static const struct CassetteLegacyWaveFiller ace_legacy_fill_wave =
+static const cassette_image::LegacyWaveFiller ace_legacy_fill_wave =
 {
 	ace_tap_fill_wave,                  /* fill_wave */
 	-1,                                     /* chunk_size */
@@ -167,19 +164,19 @@ static const struct CassetteLegacyWaveFiller ace_legacy_fill_wave =
 };
 
 
-static cassette_image::error ace_tap_identify(cassette_image *cassette, struct CassetteOptions *opts)
+static cassette_image::error ace_tap_identify(cassette_image *cassette, cassette_image::Options *opts)
 {
-	return cassette_legacy_identify(cassette, opts, &ace_legacy_fill_wave);
+	return cassette->legacy_identify(opts, &ace_legacy_fill_wave);
 }
 
 
 static cassette_image::error ace_tap_load(cassette_image *cassette)
 {
-	return cassette_legacy_construct(cassette, &ace_legacy_fill_wave);
+	return cassette->legacy_construct(&ace_legacy_fill_wave);
 }
 
 
-static const struct CassetteFormat ace_tap_format =
+static const cassette_image::Format ace_tap_format =
 {
 	"tap",
 	ace_tap_identify,

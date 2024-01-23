@@ -16,14 +16,14 @@ class fga002_device :  public device_t
 	uint8_t read(offs_t offset);
 
 	void lirq_w(int status, int vector, int control, int state);
-	DECLARE_WRITE_LINE_MEMBER( lirq0_w );
-	DECLARE_WRITE_LINE_MEMBER( lirq1_w );
-	DECLARE_WRITE_LINE_MEMBER( lirq2_w );
-	DECLARE_WRITE_LINE_MEMBER( lirq3_w );
-	DECLARE_WRITE_LINE_MEMBER( lirq4_w );
-	DECLARE_WRITE_LINE_MEMBER( lirq5_w );
-	DECLARE_WRITE_LINE_MEMBER( lirq6_w );
-	DECLARE_WRITE_LINE_MEMBER( lirq7_w );
+	void lirq0_w(int state);
+	void lirq1_w(int state);
+	void lirq2_w(int state);
+	void lirq3_w(int state);
+	void lirq4_w(int state);
+	void lirq5_w(int state);
+	void lirq6_w(int state);
+	void lirq7_w(int state);
 
 	u16 iack();
 	int acknowledge();
@@ -57,7 +57,8 @@ class fga002_device :  public device_t
 	virtual int z80daisy_irq_ack() override;
 	virtual void z80daisy_irq_reti() override;
 #endif
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+
+	TIMER_CALLBACK_MEMBER(timer_tick);
 
 	devcb_write_line    m_out_int_cb;
 	devcb_read8         m_liack4_cb;
@@ -86,10 +87,7 @@ class fga002_device :  public device_t
 	uint8_t do_fga002reg_istim0_r();
 	void  do_fga002reg_istim0_w(uint8_t data);
 	emu_timer *fga_timer;
-	enum
-	{
-		TIMER_ID_FGA
-	};
+
 	enum {
 		REG_TIM0CTL_ZERO_STOP   = 0x80,
 		REG_TIM0CTL_AUTOPRELOAD = 0x40,

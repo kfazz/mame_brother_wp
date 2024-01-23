@@ -2,7 +2,6 @@
 // copyright-holders:Fabio Priuli
 /***************************************************************************
 
-
  Atari 2600 cart with DPC chip (Pitfall II)
 
 ***************************************************************************/
@@ -32,7 +31,7 @@ dpc_device::dpc_device(const machine_config& mconfig, const char* tag, device_t*
 
 void dpc_device::device_start()
 {
-	m_oscillator = timer_alloc(TIMER_OSC);
+	m_oscillator = timer_alloc(FUNC(dpc_device::oscillator_tick), this);
 	m_oscillator->reset();
 
 	save_item(STRUCT_MEMBER(m_df, top));
@@ -52,7 +51,7 @@ void dpc_device::device_start()
 
 void dpc_device::device_reset()
 {
-	for (auto & elem : m_df)
+	for (df_t & elem : m_df)
 	{
 		elem.osc_clk = 0;
 		elem.flag = 0;
@@ -88,20 +87,16 @@ void dpc_device::decrement_counter(uint8_t data_fetcher)
 
 
 //-------------------------------------------------
-//  device_timer - handler timer events
+//  oscillator_tick
 //-------------------------------------------------
 
-void dpc_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(dpc_device::oscillator_tick)
 {
-	if (id == TIMER_OSC)
+	for (int data_fetcher = 5; data_fetcher < 8; data_fetcher++)
 	{
-		// callback
-		for (int data_fetcher = 5; data_fetcher < 8; data_fetcher++)
+		if (m_df[data_fetcher].osc_clk)
 		{
-			if (m_df[data_fetcher].osc_clk)
-			{
-				decrement_counter(data_fetcher);
-			}
+			decrement_counter(data_fetcher);
 		}
 	}
 }
@@ -111,7 +106,7 @@ void dpc_device::device_timer(emu_timer &timer, device_timer_id id, int param, v
 //  Read / Write accesses
 //-------------------------------------------------
 
-READ8_MEMBER(dpc_device::read)
+uint8_t dpc_device::read(offs_t offset)
 {
 	static const uint8_t dpc_amplitude[8] = { 0x00, 0x04, 0x05, 0x09, 0x06, 0x0a, 0x0b, 0x0f };
 	uint8_t   data_fetcher = offset & 0x07;
@@ -128,6 +123,7 @@ READ8_MEMBER(dpc_device::read)
 				return m_shift_reg;
 			case 0x04:      // Sound value, MOVAMT value AND'd with Draw Line Carry; with Draw Line Add
 				m_latch_62 = m_latch_64;
+				[[fallthrough]];
 			case 0x06:      // Sound value, MOVAMT value AND'd with Draw Line Carry; without Draw Line Add
 				m_latch_64 = m_latch_62 + m_df[4].top;
 				m_dlc = (m_latch_62 + m_df[4].top > 0xff) ? 1 : 0;
@@ -181,7 +177,7 @@ READ8_MEMBER(dpc_device::read)
 	return data;
 }
 
-WRITE8_MEMBER(dpc_device::write)
+void dpc_device::write(offs_t offset, uint8_t data)
 {
 	uint8_t data_fetcher = offset & 0x07;
 
@@ -247,16 +243,6 @@ a26_rom_dpc_device::a26_rom_dpc_device(const machine_config &mconfig, const char
 //  mapper specific start/reset
 //-------------------------------------------------
 
-void a26_rom_dpc_device::device_start()
-{
-	save_item(NAME(m_base_bank));
-}
-
-void a26_rom_dpc_device::device_reset()
-{
-	m_base_bank = 0;
-}
-
 void a26_rom_dpc_device::setup_addon_ptr(uint8_t *ptr)
 {
 	m_dpc->set_display_data(ptr);
@@ -268,18 +254,9 @@ void a26_rom_dpc_device::device_add_mconfig(machine_config &config)
 	ATARI_DPC(config, m_dpc, 0);
 }
 
-READ8_MEMBER(a26_rom_dpc_device::read_rom)
+void a26_rom_dpc_device::install_memory_handlers(address_space *space)
 {
-	if (offset < 0x40)
-		return m_dpc->read(space, offset);
-	else
-		return a26_rom_f8_device::read_rom(space, offset);
-}
-
-WRITE8_MEMBER(a26_rom_dpc_device::write_bank)
-{
-	if (offset >= 0x40 && offset < 0x80)
-		m_dpc->write(space, offset, data);
-	else
-		a26_rom_f8_device::write_bank(space, offset, data);
+	a26_rom_f8_device::install_memory_handlers(space);
+	space->install_read_handler(0x1000, 0x103f, read8sm_delegate(m_dpc, FUNC(dpc_device::read)));
+	space->install_write_handler(0x1040, 0x107f, write8sm_delegate(m_dpc, FUNC(dpc_device::write)));
 }

@@ -14,7 +14,6 @@
 #include "cpu/z80/z80.h"
 #include "machine/upd765.h"
 #include "machine/am9517a.h"
-#include "formats/pc_dsk.h"
 #include "machine/hdc92x4.h"
 #include "imagedev/mfmhd.h"
 
@@ -77,7 +76,6 @@ private:
 	void m68k_dma_w(uint8_t data);
 
 	void fdc_irq(int state);
-	DECLARE_FLOPPY_FORMATS( floppy_formats );
 
 	uint8_t p0_7_r(offs_t offset);
 	void p0_7_w(offs_t offset, uint8_t data);

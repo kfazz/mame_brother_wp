@@ -7,8 +7,7 @@
 
 #pragma once
 
-#include "formats/flopimg.h"
-#include "softlist_dev.h"
+#include "formats/flopimg_legacy.h"
 
 #define FLOPPY_TYPE_REGULAR 0
 #define FLOPPY_TYPE_APPLE   1
@@ -103,20 +102,19 @@ public:
 	void set_floppy_config(const floppy_interface *config) { m_config = config; }
 	auto out_idx_cb() { return m_out_idx_func.bind(); }
 
-	virtual image_init_result call_load() override;
-	virtual image_init_result call_create(int format_type, util::option_resolution *format_options) override;
+	virtual std::pair<std::error_condition, std::string> call_load() override;
+	virtual std::pair<std::error_condition, std::string> call_create(int format_type, util::option_resolution *format_options) override;
 	virtual void call_unload() override;
-
-	virtual iodevice_t image_type() const noexcept override { return IO_FLOPPY; }
 
 	virtual bool is_readable()  const noexcept override { return true; }
 	virtual bool is_writeable() const noexcept override { return true; }
 	virtual bool is_creatable() const noexcept override;
-	virtual bool must_be_loaded() const noexcept override { return false; }
 	virtual bool is_reset_on_load() const noexcept override { return false; }
 	virtual const char *image_interface() const noexcept override;
 	virtual const char *file_extensions() const noexcept override { return m_extension_list; }
-	virtual const util::option_guide &create_option_guide() const override { return floppy_option_guide; }
+	virtual const char *image_type_name() const noexcept override { return "floppydisk"; }
+	virtual const char *image_brief_type_name() const noexcept override { return "flop"; }
+	virtual const util::option_guide &create_option_guide() const override { return floppy_option_guide(); }
 
 	floppy_image_legacy *flopimg_get_image();
 	void floppy_drive_set_geometry(floppy_type_t type);
@@ -139,18 +137,18 @@ public:
 	void floppy_drive_set_controller(device_t *controller);
 	int floppy_get_drive_type();
 	void floppy_set_type(int ftype);
-	WRITE_LINE_MEMBER( floppy_ds_w );
-	WRITE_LINE_MEMBER( floppy_mon_w );
-	WRITE_LINE_MEMBER( floppy_drtn_w );
-	WRITE_LINE_MEMBER( floppy_wtd_w );
-	WRITE_LINE_MEMBER( floppy_stp_w );
-	WRITE_LINE_MEMBER( floppy_wtg_w );
-	READ_LINE_MEMBER( floppy_wpt_r );
-	READ_LINE_MEMBER( floppy_tk00_r );
-	READ_LINE_MEMBER( floppy_dskchg_r );
-	READ_LINE_MEMBER( floppy_twosid_r );
-	READ_LINE_MEMBER( floppy_index_r );
-	READ_LINE_MEMBER( floppy_ready_r );
+	void floppy_ds_w(int state);
+	void floppy_mon_w(int state);
+	void floppy_drtn_w(int state);
+	void floppy_wtd_w(int state);
+	void floppy_stp_w(int state);
+	void floppy_wtg_w(int state);
+	int floppy_wpt_r();
+	int floppy_tk00_r();
+	int floppy_dskchg_r();
+	int floppy_twosid_r();
+	int floppy_index_r();
+	int floppy_ready_r();
 
 
 private:
@@ -161,18 +159,18 @@ private:
 	TIMER_CALLBACK_MEMBER(floppy_drive_index_callback);
 	void floppy_drive_init();
 	void floppy_drive_index_func();
-	image_init_result internal_floppy_device_load(bool is_create, int create_format, util::option_resolution *create_args);
+	std::error_condition internal_floppy_device_load(bool is_create, int create_format, util::option_resolution *create_args);
 	TIMER_CALLBACK_MEMBER( set_wpt );
 
 protected:
 	legacy_floppy_image_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
 
-	// device overrides
+	// device_t implementation
 	virtual void device_config_complete() override;
 	virtual void device_start() override;
 
 	// device_image_interface implementation
-	virtual const software_list_loader &get_software_list_loader() const override { return image_software_list_loader::instance(); }
+	virtual const software_list_loader &get_software_list_loader() const override;
 
 	/* callbacks */
 	devcb_write_line m_out_idx_func;
@@ -212,6 +210,7 @@ protected:
 	/* rotation per minute => gives index pulse frequency */
 	float m_rpm;
 
+	emu_timer *m_wpt_timer;
 	int m_id_index;
 
 	device_t *m_controller;

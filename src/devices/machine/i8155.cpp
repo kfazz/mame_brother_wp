@@ -38,8 +38,8 @@ DEFINE_DEVICE_TYPE(I8156, i8156_device, "i8156", "Intel 8156 RAM, I/O & Timer")
 //  MACROS / CONSTANTS
 //**************************************************************************
 
-#define LOG_PORT (1U << 0)
-#define LOG_TIMER (1U << 1)
+#define LOG_PORT  (1U << 1)
+#define LOG_TIMER (1U << 2)
 #define VERBOSE (0)
 #include "logmacro.h"
 
@@ -245,10 +245,10 @@ inline uint8_t i8155_device::read_port(int port)
 
 inline void i8155_device::write_port(int port, uint8_t data)
 {
+	m_output[port] = data;
 	switch (get_port_mode(port))
 	{
 	case PORT_MODE_OUTPUT:
-		m_output[port] = data;
 		if (port == PORT_A)
 			m_out_pa_cb((offs_t)0, m_output[port]);
 		else if (port == PORT_B)
@@ -268,26 +268,26 @@ inline void i8155_device::write_port(int port, uint8_t data)
 //  i8155_device - constructor
 //-------------------------------------------------
 
-i8155_device::i8155_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: i8155_device(mconfig, I8155, tag, owner, clock)
+i8155_device::i8155_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	i8155_device(mconfig, I8155, tag, owner, clock)
 {
 }
 
-i8155_device::i8155_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, type, tag, owner, clock),
-		m_in_pa_cb(*this),
-		m_in_pb_cb(*this),
-		m_in_pc_cb(*this),
-		m_out_pa_cb(*this),
-		m_out_pb_cb(*this),
-		m_out_pc_cb(*this),
-		m_out_to_cb(*this),
-		m_command(0),
-		m_status(0),
-		m_count_length(0),
-		m_count_loaded(0),
-		m_to(0),
-		m_count_even_phase(false)
+i8155_device::i8155_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock) :
+	device_t(mconfig, type, tag, owner, clock),
+	m_in_pa_cb(*this, 0),
+	m_in_pb_cb(*this, 0),
+	m_in_pc_cb(*this, 0),
+	m_out_pa_cb(*this),
+	m_out_pb_cb(*this),
+	m_out_pc_cb(*this),
+	m_out_to_cb(*this),
+	m_command(0),
+	m_status(0),
+	m_count_length(0),
+	m_count_loaded(0),
+	m_to(0),
+	m_count_even_phase(false)
 {
 }
 
@@ -296,8 +296,8 @@ i8155_device::i8155_device(const machine_config &mconfig, device_type type, cons
 //  i8156_device - constructor
 //-------------------------------------------------
 
-i8156_device::i8156_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: i8155_device(mconfig, I8156, tag, owner, clock)
+i8156_device::i8156_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	i8155_device(mconfig, I8156, tag, owner, clock)
 {
 }
 
@@ -308,21 +308,12 @@ i8156_device::i8156_device(const machine_config &mconfig, const char *tag, devic
 
 void i8155_device::device_start()
 {
-	// resolve callbacks
-	m_in_pa_cb.resolve_safe(0);
-	m_in_pb_cb.resolve_safe(0);
-	m_in_pc_cb.resolve_safe(0);
-	m_out_pa_cb.resolve_safe();
-	m_out_pb_cb.resolve_safe();
-	m_out_pc_cb.resolve_safe();
-	m_out_to_cb.resolve_safe();
-
 	// allocate RAM
 	m_ram = make_unique_clear<uint8_t[]>(256);
 
 	// allocate timers
-	m_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(i8155_device::timer_half_counted), this));
-	m_timer_tc = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(i8155_device::timer_tc), this));
+	m_timer = timer_alloc(FUNC(i8155_device::timer_half_counted), this);
+	m_timer_tc = timer_alloc(FUNC(i8155_device::timer_tc), this);
 
 	// register for state saving
 	save_item(NAME(m_io_m));

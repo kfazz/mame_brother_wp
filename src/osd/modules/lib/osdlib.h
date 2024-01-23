@@ -12,14 +12,20 @@
 //    - osd_ticks
 //    - osd_sleep
 //============================================================
+#ifndef MAME_OSD_LIB_OSDLIB_H
+#define MAME_OSD_LIB_OSDLIB_H
 
-#ifndef __OSDLIB__
-#define __OSDLIB__
+#pragma once
 
+#include <cstdint>
+#include <initializer_list>
 #include <string>
+#include <string_view>
+#include <system_error>
 #include <type_traits>
 #include <vector>
 #include <memory>
+
 
 /*-----------------------------------------------------------------------------
     osd_process_kill: kill the current process
@@ -33,7 +39,7 @@
         None.
 -----------------------------------------------------------------------------*/
 
-void osd_process_kill(void);
+void osd_process_kill();
 
 
 /*-----------------------------------------------------------------------------
@@ -53,10 +59,108 @@ void osd_process_kill(void);
 int osd_setenv(const char *name, const char *value, int overwrite);
 
 
-/*-----------------------------------------------------------------------------
-    osd_get_clipboard_text: retrieves text from the clipboard
------------------------------------------------------------------------------*/
-std::string osd_get_clipboard_text(void);
+/// \brief Get clipboard text
+///
+/// Gets current clipboard content as UTF-8 text.  Returns an empty
+/// string if the clipboard contents cannot be converted to plain text.
+/// \return Clipboard contents or an empty string.
+std::string osd_get_clipboard_text() noexcept;
+
+
+/// \brief Set clipboard text
+///
+/// Sets the desktop environment's clipboard contents to the supplied
+/// UTF-8 text.  The contents of the clipboard may be changed on error.
+/// \param [in] text The text to copy to the clipboard.
+/// \return An error condition if the operation failed or is
+///   unsupported.
+std::error_condition osd_set_clipboard_text(std::string_view text) noexcept;
+
+
+namespace osd {
+
+bool invalidate_instruction_cache(void const *start, std::size_t size) noexcept;
+
+
+class virtual_memory_allocation
+{
+public:
+	enum : unsigned
+	{
+		NONE = 0x00,
+		READ = 0x01,
+		WRITE = 0x02,
+		EXECUTE = 0x04,
+		READ_WRITE = READ | WRITE,
+		READ_EXECUTE = READ | EXECUTE,
+		READ_WRITE_EXECUTE = READ | WRITE | EXECUTE
+	};
+
+	virtual_memory_allocation(virtual_memory_allocation const &) = delete;
+	virtual_memory_allocation &operator=(virtual_memory_allocation const &) = delete;
+
+	virtual_memory_allocation() noexcept { }
+	virtual_memory_allocation(std::initializer_list<std::size_t> blocks, unsigned intent) noexcept
+	{
+		m_memory = do_alloc(blocks, intent, m_size, m_page_size);
+	}
+	virtual_memory_allocation(virtual_memory_allocation &&that) noexcept : m_memory(that.m_memory), m_size(that.m_size), m_page_size(that.m_page_size)
+	{
+		that.m_memory = nullptr;
+		that.m_size = that.m_page_size = 0U;
+	}
+	~virtual_memory_allocation()
+	{
+		if (m_memory)
+			do_free(m_memory, m_size);
+	}
+
+	explicit operator bool() const noexcept { return bool(m_memory); }
+	void *get() noexcept { return m_memory; }
+	std::size_t size() const noexcept { return m_size; }
+	std::size_t page_size() const noexcept { return m_page_size; }
+
+	bool set_access(std::size_t start, std::size_t size, unsigned access) noexcept
+	{
+		if ((start % m_page_size) || (size % m_page_size) || (start > m_size) || ((m_size - start) < size))
+			return false;
+		else
+			return do_set_access(reinterpret_cast<std::uint8_t *>(m_memory) + start, size, access);
+	}
+
+	virtual_memory_allocation &operator=(std::nullptr_t) noexcept
+	{
+		if (m_memory)
+			do_free(m_memory, m_size);
+		m_memory = nullptr;
+		m_size = m_page_size = 0U;
+		return *this;
+	}
+
+	virtual_memory_allocation &operator=(virtual_memory_allocation &&that) noexcept
+	{
+		if (&that != this)
+		{
+			if (m_memory)
+				do_free(m_memory, m_size);
+			m_memory = that.m_memory;
+			m_size = that.m_size;
+			m_page_size = that.m_page_size;
+			that.m_memory = nullptr;
+			that.m_size = that.m_page_size = 0U;
+		}
+		return *this;
+	}
+
+private:
+	static void *do_alloc(std::initializer_list<std::size_t> blocks, unsigned intent, std::size_t &size, std::size_t &page_size) noexcept;
+	static void do_free(void *start, std::size_t size) noexcept;
+	static bool do_set_access(void *start, std::size_t size, unsigned access) noexcept;
+
+	void *m_memory = nullptr;
+	std::size_t m_size = 0U, m_page_size = 0U;
+};
+
 
 /*-----------------------------------------------------------------------------
     dynamic_module: load functions from optional shared libraries
@@ -69,7 +173,6 @@ std::string osd_get_clipboard_text(void);
           revisions of a same library)
 -----------------------------------------------------------------------------*/
 
-namespace osd {
 class dynamic_module
 {
 public:
@@ -77,10 +180,10 @@ public:
 
 	static ptr open(std::vector<std::string> &&libraries);
 
-	virtual ~dynamic_module() { };
+	virtual ~dynamic_module() { }
 
 	template <typename T>
-	typename std::enable_if<std::is_pointer<T>::value, T>::type bind(char const *symbol)
+	typename std::enable_if_t<std::is_pointer_v<T>, T> bind(char const *symbol)
 	{
 		return reinterpret_cast<T>(get_symbol_address(symbol));
 	}
@@ -102,20 +205,9 @@ protected:
 // Calling then looks like: DYNAMIC_CALL(CreateDXGIFactory1, p1, p2, etc)
 //=========================================================================================================
 
-#if !defined(OSD_UWP)
-
 #define OSD_DYNAMIC_API(apiname, ...) osd::dynamic_module::ptr m_##apiname##module = osd::dynamic_module::open( { __VA_ARGS__ } )
 #define OSD_DYNAMIC_API_FN(apiname, ret, conv, fname, ...) ret(conv *m_##fname##_pfn)( __VA_ARGS__ ) = m_##apiname##module->bind<ret(conv *)( __VA_ARGS__ )>(#fname)
 #define OSD_DYNAMIC_CALL(fname, ...) (*m_##fname##_pfn) ( __VA_ARGS__ )
 #define OSD_DYNAMIC_API_TEST(fname) (m_##fname##_pfn != nullptr)
 
-#else
-
-#define OSD_DYNAMIC_API(apiname, ...)
-#define OSD_DYNAMIC_API_FN(apiname, ret, conv, fname, ...)
-#define OSD_DYNAMIC_CALL(fname, ...) fname( __VA_ARGS__ )
-#define OSD_DYNAMIC_API_TEST(fname) (true)
-
-#endif
-
-#endif  /* __OSDLIB__ */
+#endif // MAME_OSD_LIB_OSDLIB_H

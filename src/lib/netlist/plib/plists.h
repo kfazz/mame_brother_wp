@@ -1,4 +1,4 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
 
 #ifndef PLISTS_H_
@@ -8,28 +8,22 @@
 /// \file plists.h
 ///
 
-#include "palloc.h"
-#include "pchrono.h"
-#include "pstring.h"
+#include "ptypes.h"
 
 #include <algorithm>
 #include <array>
-#include <atomic>
-#include <mutex>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 namespace plib {
 
-	/// \brief fixed size array allowing to override constructor and initialize members by placement new.
+	/// \brief Array holding uninitialized elements
 	///
 	/// Use with care. This template is provided to improve locality of storage
 	/// in high frequency applications. It should not be used for anything else.
 	///
-	///
 	template <class C, std::size_t N>
-	class uninitialised_array_t
+	class uninitialised_array
 	{
 	public:
 
@@ -45,125 +39,218 @@ namespace plib {
 		using reverse_iterator = std::reverse_iterator<iterator>;
 		using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-		//uninitialised_array_t() noexcept = default;
-		uninitialised_array_t() noexcept
-		: m_initialized(0)
+		constexpr uninitialised_array() noexcept = default;
+
+		constexpr uninitialised_array(const uninitialised_array &) = default;
+		constexpr uninitialised_array &operator=(const uninitialised_array &) = default;
+		constexpr uninitialised_array(uninitialised_array &&) noexcept = default;
+		constexpr uninitialised_array &operator=(uninitialised_array &&) noexcept = default;
+
+		~uninitialised_array() noexcept = default;
+
+		constexpr size_t size() const noexcept { return N; }
+
+		constexpr bool empty() const noexcept { return size() == 0; }
+
+		constexpr reference operator[](size_type index) noexcept
+		{
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+			return reinterpret_cast<reference>(m_buf[index]);
+		}
+
+		constexpr const_reference operator[](size_type index) const noexcept
+		{
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+			return reinterpret_cast<const_reference>(m_buf[index]);
+		}
+
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		constexpr iterator begin() const noexcept { return reinterpret_cast<iterator>(&m_buf[0]); }
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		constexpr iterator end() const noexcept { return reinterpret_cast<iterator>(&m_buf[0] + N); }
+
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		constexpr iterator begin() noexcept { return reinterpret_cast<iterator>(&m_buf[0]); }
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		constexpr iterator end() noexcept { return reinterpret_cast<iterator>(&m_buf[0] + N); }
+
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		constexpr const_iterator cbegin() const noexcept { return reinterpret_cast<const_iterator>(&m_buf[0]); }
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		constexpr const_iterator cend() const noexcept { return reinterpret_cast<const_iterator>(&m_buf[0] + N); }
+
+	private:
+		std::array<typename std::aligned_storage<sizeof(C), alignof(C)>::type, N> m_buf;
+	};
+
+	/// \brief fixed allocation vector
+	///
+	/// Currently only emplace_back and clear are supported.
+	///
+	/// Use with care. This template is provided to improve locality of storage
+	/// in high frequency applications. It should not be used for anything else.
+	///
+	template <class C, std::size_t N>
+	class static_vector
+	{
+	public:
+
+		using value_type = C;
+		using pointer = value_type *;
+		using const_pointer = const value_type *;
+		using reference = value_type &;
+		using const_reference = const value_type &;
+		using iterator = value_type *;
+		using const_iterator = const value_type *;
+		using size_type = std::size_t;
+		using difference_type = std::ptrdiff_t;
+		using reverse_iterator = std::reverse_iterator<iterator>;
+		using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+		constexpr static_vector() noexcept
+		: m_pos(0)
 		{
 		}
 
-		PCOPYASSIGNMOVE(uninitialised_array_t, delete)
-		~uninitialised_array_t() noexcept
+		constexpr static_vector(const static_vector &) = default;
+		constexpr static_vector &operator=(const static_vector &) = default;
+		constexpr static_vector(static_vector &&) noexcept = default;
+		constexpr static_vector &operator=(static_vector &&) noexcept = default;
+
+		~static_vector() noexcept
 		{
-			if (m_initialized>=N)
-				for (size_type i=0; i<N; ++i)
-					(*this)[i].~C();
+			clear();
 		}
 
-		size_t size() const noexcept { return N; }
+		constexpr size_t size() const noexcept { return m_pos; }
 
-		reference operator[](size_type index) noexcept
-		{
-			return *reinterpret_cast<pointer>(&m_buf[index]);
-		}
+		constexpr bool empty() const noexcept { return size() == 0; }
 
-		const_reference operator[](size_type index) const noexcept
+		constexpr void clear()
 		{
-			return *reinterpret_cast<const_pointer>(&m_buf[index]);
+			for (size_type i=0; i<m_pos; ++i)
+				(*this)[i].~C();
+			m_pos = 0;
 		}
 
 		template<typename... Args>
-		void emplace(size_type index, Args&&... args)
+		constexpr void emplace_back(Args&&... args)
 		{
-			m_initialized++;
-			// allocate on buffer
-			new (&m_buf[index]) C(std::forward<Args>(args)...);
+			// placement new on buffer
+			new (&m_buf[m_pos]) C(std::forward<Args>(args)...);
+			m_pos++;
 		}
 
-		iterator begin() const noexcept { return reinterpret_cast<iterator>(&m_buf[0]); }
-		iterator end() const noexcept { return reinterpret_cast<iterator>(&m_buf[N]); }
+		constexpr reference operator[](size_type index) noexcept
+		{
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+			return reinterpret_cast<reference>(m_buf[index]);
+		}
 
-		iterator begin() noexcept { return reinterpret_cast<iterator>(&m_buf[0]); }
-		iterator end() noexcept { return reinterpret_cast<iterator>(&m_buf[N]); }
+		constexpr const_reference operator[](size_type index) const noexcept
+		{
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+			return reinterpret_cast<const_reference>(m_buf[index]);
+		}
 
-		const_iterator cbegin() const noexcept { return reinterpret_cast<const_iterator>(&m_buf[0]); }
-		const_iterator cend() const noexcept { return reinterpret_cast<const_iterator>(&m_buf[N]); }
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		constexpr iterator begin() const noexcept { return reinterpret_cast<iterator>(&m_buf[0]); }
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		constexpr iterator end() const noexcept { return reinterpret_cast<iterator>(&m_buf[0] + m_pos); }
 
-	protected:
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		constexpr iterator begin() noexcept { return reinterpret_cast<iterator>(&m_buf[0]); }
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		constexpr iterator end() noexcept { return reinterpret_cast<iterator>(&m_buf[0] + m_pos); }
+
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		constexpr const_iterator cbegin() const noexcept { return reinterpret_cast<const_iterator>(&m_buf[0]); }
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		constexpr const_iterator cend() const noexcept { return reinterpret_cast<const_iterator>(&m_buf[0] + m_pos); }
 
 	private:
-
-		// ensure proper alignment
-		PALIGNAS_VECTOROPT()
 		std::array<typename std::aligned_storage<sizeof(C), alignof(C)>::type, N> m_buf;
-		unsigned m_initialized;
+		size_type m_pos;
 	};
 
 	/// \brief a simple linked list.
 	///
-	/// The list allows insertions deletions whilst being processed.
+	/// The list allows insertions and deletions whilst being processed.
 	///
-	template <class LC>
-	class linkedlist_t
+	template <class LC, int TAG>
+	class linked_list_t
 	{
 	public:
+		using ttag = std::integral_constant<int, TAG>;
 
 		struct element_t
 		{
 		public:
-			friend class linkedlist_t<LC>;
+			using tag = std::integral_constant<int, TAG>;
 
-			constexpr element_t() : m_next(nullptr), m_prev(nullptr) {}
+			friend class linked_list_t<LC, TAG>;
+
+			constexpr element_t() noexcept : m_next(nullptr), m_prev(nullptr) {}
 			~element_t() noexcept = default;
 
-			PCOPYASSIGNMOVE(element_t, delete)
+			constexpr element_t(const element_t &) noexcept = default;
+			constexpr element_t &operator=(const element_t &) noexcept = default;
+			constexpr element_t(element_t &&) noexcept = default;
+			constexpr element_t &operator=(element_t &&) noexcept = default;
 
-			constexpr LC *next() const noexcept { return m_next; }
-			constexpr LC *prev() const noexcept { return m_prev; }
 		private:
-			LC * m_next;
-			LC * m_prev;
+			element_t * m_next;
+			element_t * m_prev;
 		};
 
-		struct iter_t final : public std::iterator<std::forward_iterator_tag, LC>
+		struct iter_t final
 		{
 		private:
-			LC* p;
+			element_t * p;
 		public:
-			explicit constexpr iter_t(LC* x) noexcept : p(x) { }
-			constexpr iter_t(iter_t &rhs) noexcept : p(rhs.p) { }
-			iter_t(iter_t &&rhs) noexcept { std::swap(*this, rhs);  }
+			using tag = std::integral_constant<int, TAG>;
+			using iterator_category = std::forward_iterator_tag;
+			using value_type = LC;
+			using pointer = value_type *;
+			using reference = value_type &;
+			using difference_type = std::ptrdiff_t;
 
-			iter_t& operator=(const iter_t &rhs) noexcept // NOLINT(bugprone-unhandled-self-assignment, cert-oop54-cpp)
-			{
-				if (this == &rhs)
-					return *this;
+			explicit constexpr iter_t(element_t * x) noexcept : p(x) { }
 
-				p = rhs.p;
-				return *this;
-			}
+			constexpr iter_t(const iter_t &rhs) noexcept = default;
+			constexpr iter_t(iter_t &&rhs) noexcept = default;
+			constexpr iter_t& operator=(const iter_t &rhs) noexcept = default;
+			constexpr iter_t& operator=(iter_t &&rhs) noexcept  = default;
 
-			iter_t& operator=(iter_t &&rhs) noexcept { std::swap(*this, rhs); return *this; }
-			~iter_t() = default;
+			~iter_t() noexcept = default;
 
-			iter_t& operator++() noexcept { p = p->next();return *this; }
+			iter_t& operator++() noexcept { p = p->m_next; return *this; }
 			// NOLINTNEXTLINE(cert-dcl21-cpp)
 			iter_t operator++(int) & noexcept { const iter_t tmp(*this); operator++(); return tmp; }
 
 			constexpr bool operator==(const iter_t& rhs) const noexcept { return p == rhs.p; }
 			constexpr bool operator!=(const iter_t& rhs) const noexcept { return p != rhs.p; }
-			C14CONSTEXPR LC& operator*() noexcept { return *p; }
-			C14CONSTEXPR LC* operator->() noexcept { return p; }
+#if 0
+			constexpr LC& operator*() noexcept { return *static_cast<LC *>(p); }
+			constexpr LC* operator->() noexcept { return static_cast<LC *>(p); }
 
-			C14CONSTEXPR LC& operator*() const noexcept { return *p; }
-			C14CONSTEXPR LC* operator->() const noexcept { return p; }
+			constexpr LC& operator*() const noexcept { return *static_cast<LC *>(p); }
+			constexpr LC* operator->() const noexcept { return static_cast<LC *>(p); }
+#else
+			constexpr LC* operator*() noexcept { return static_cast<LC *>(p); }
+			constexpr LC* operator->() noexcept { return static_cast<LC *>(p); }
+
+			constexpr LC* operator*() const noexcept { return static_cast<LC *>(p); }
+			constexpr LC* operator->() const noexcept { return static_cast<LC *>(p); }
+#endif
 		};
 
-		constexpr linkedlist_t() noexcept : m_head(nullptr) {}
+		constexpr linked_list_t() noexcept : m_head(nullptr) {}
 
 		constexpr iter_t begin() const noexcept { return iter_t(m_head); }
 		constexpr iter_t end() const noexcept { return iter_t(nullptr); }
 
-		void push_front(LC *elem) noexcept
+		constexpr void push_front(element_t *elem) noexcept
 		{
 			elem->m_next = m_head;
 			elem->m_prev = nullptr;
@@ -172,10 +259,10 @@ namespace plib {
 			m_head = elem;
 		}
 
-		void push_back(LC *elem) noexcept
+		constexpr void push_back(element_t *elem) noexcept
 		{
-			LC ** p(&m_head);
-			LC *  prev(nullptr);
+			element_t ** p(&m_head);
+			element_t *  prev(nullptr);
 			while (*p != nullptr)
 			{
 				prev = *p;
@@ -186,7 +273,7 @@ namespace plib {
 			elem->m_next = nullptr;
 		}
 
-		void remove(const LC *elem) noexcept
+		constexpr void remove(const element_t *elem) noexcept
 		{
 			if (elem->m_prev)
 				elem->m_prev->m_next = elem->m_next;
@@ -200,14 +287,26 @@ namespace plib {
 			}
 		}
 
-		LC *front() const noexcept { return m_head; }
+		constexpr LC *front() const noexcept { return m_head; }
 		constexpr bool empty() const noexcept { return (m_head == nullptr); }
-		void clear() noexcept
+		constexpr std::size_t size() const noexcept
 		{
-			LC *p(m_head);
+			std::size_t ret = 0;
+			element_t *p = m_head;
 			while (p != nullptr)
 			{
-				LC *n(p->m_next);
+				ret++;
+				p = p->m_next;
+			}
+			return ret;
+		}
+
+		constexpr void clear() noexcept
+		{
+			element_t *p(m_head);
+			while (p != nullptr)
+			{
+				element_t *n(p->m_next);
 				p->m_next = nullptr;
 				p->m_prev = nullptr;
 				p = n;
@@ -216,311 +315,7 @@ namespace plib {
 		}
 
 	private:
-		LC *m_head;
-	};
-
-	// ----------------------------------------------------------------------------------------
-	// FIXME: Move elsewhere
-	// ----------------------------------------------------------------------------------------
-
-	template<bool enabled_ = true>
-	class pspin_mutex
-	{
-	public:
-		pspin_mutex() noexcept = default;
-		void lock() noexcept{ while (m_lock.test_and_set(std::memory_order_acquire)) { } }
-		void unlock() noexcept { m_lock.clear(std::memory_order_release); }
-	private:
-		PALIGNAS_CACHELINE()
-		std::atomic_flag m_lock = ATOMIC_FLAG_INIT;
-	};
-
-	template<>
-	class pspin_mutex<false>
-	{
-	public:
-		void lock() const noexcept { }
-		void unlock() const noexcept { }
-	};
-
-	// ----------------------------------------------------------------------------------------
-	// timed queue
-	// ----------------------------------------------------------------------------------------
-
-	template <class Element, class Time>
-	struct pqentry_t final
-	{
-		constexpr pqentry_t() noexcept : m_exec_time(), m_object(nullptr) { }
-		constexpr pqentry_t(const Time t, const Element o) noexcept : m_exec_time(t), m_object(o) { }
-
-		inline bool operator ==(const pqentry_t &rhs) const noexcept
-		{
-			return m_object == rhs.m_object;
-		}
-
-		inline bool operator ==(const Element &rhs) const noexcept
-		{
-			return m_object == rhs;
-		}
-
-		inline bool operator <=(const pqentry_t &rhs) const noexcept
-		{
-			return (m_exec_time <= rhs.m_exec_time);
-		}
-
-		inline bool operator <(const pqentry_t &rhs) const noexcept
-		{
-			return (m_exec_time < rhs.m_exec_time);
-		}
-
-		inline static constexpr pqentry_t never() noexcept { return pqentry_t(Time::never(), nullptr); }
-
-		Time exec_time() const noexcept { return m_exec_time; }
-		Element object() const noexcept { return m_object; }
-	private:
-		Time m_exec_time;
-		Element m_object;
-	};
-
-	// Use TS = true for a threadsafe queue
-	template <class T, bool TS>
-	class timed_queue_linear
-	{
-	public:
-
-		explicit timed_queue_linear(const std::size_t list_size)
-		: m_list(list_size)
-		{
-			clear();
-		}
-		~timed_queue_linear() = default;
-
-		PCOPYASSIGNMOVE(timed_queue_linear, delete)
-
-		std::size_t capacity() const noexcept { return m_list.capacity() - 1; }
-		bool empty() const noexcept { return (m_end == &m_list[1]); }
-
-		template<bool KEEPSTAT>
-		void push(T && e) noexcept
-		{
-#if 0
-			// Lock
-			lock_guard_type lck(m_lock);
-			T * i(m_end-1);
-			for (; *i < e; --i)
-			{
-				*(i+1) = *(i);
-				if (KEEPSTAT)
-					m_prof_sortmove.inc();
-			}
-			*(i+1) = std::move(e);
-			++m_end;
-#else
-			// Lock
-			lock_guard_type lck(m_lock);
-			T * i(m_end++);
-			*i = std::move(e);
-			for (; *(i-1) < *i; --i)
-			{
-				std::swap(*(i-1), *(i));
-				if (KEEPSTAT)
-					m_prof_sortmove.inc();
-			}
-#endif
-			if (KEEPSTAT)
-				m_prof_call.inc();
-		}
-
-		void pop() noexcept       { --m_end; }
-		const T &top() const noexcept { return *(m_end-1); }
-
-		template <bool KEEPSTAT, class R>
-		void remove(const R &elem) noexcept
-		{
-			// Lock
-			lock_guard_type lck(m_lock);
-			if (KEEPSTAT)
-				m_prof_remove.inc();
-			for (T * i = m_end - 1; i > &m_list[0]; --i)
-			{
-				// == operator ignores time!
-				if (*i == elem)
-				{
-					std::copy(i+1, m_end--, i);
-					return;
-				}
-			}
-		}
-
-		template <bool KEEPSTAT, class R>
-		void retime(R && elem) noexcept
-		{
-			// Lock
-			lock_guard_type lck(m_lock);
-			if (KEEPSTAT)
-				m_prof_retime.inc();
-
-			for (R * i = m_end - 1; i > &m_list[0]; --i)
-			{
-				if (*i == elem) // partial equal!
-				{
-					*i = std::forward<R>(elem);
-					while (*(i-1) < *i)
-					{
-						std::swap(*(i-1), *i);
-						--i;
-					}
-					while (i < m_end && *i < *(i+1))
-					{
-						std::swap(*(i+1), *i);
-						++i;
-					}
-					return;
-				}
-			}
-		}
-
-		void clear() noexcept
-		{
-			lock_guard_type lck(m_lock);
-			m_end = &m_list[0];
-			// put an empty element with maximum time into the queue.
-			// the insert algo above will run into this element and doesn't
-			// need a comparison with queue start.
-			//
-			m_list[0] = T::never();
-			m_end++;
-		}
-
-		// save state support & mame disasm
-
-		const T *listptr() const noexcept { return &m_list[1]; }
-		std::size_t size() const noexcept { return static_cast<std::size_t>(m_end - &m_list[1]); }
-		const T & operator[](std::size_t index) const noexcept { return m_list[ 1 + index]; }
-	private:
-		using mutex_type = pspin_mutex<TS>;
-		using lock_guard_type = std::lock_guard<mutex_type>;
-
-		mutex_type              m_lock;
-		PALIGNAS_CACHELINE()
-		T *                     m_end;
-		aligned_vector<T> m_list;
-
-	public:
-		// profiling
-		// FIXME: Make those private
-		pperfcount_t<true> m_prof_sortmove; // NOLINT
-		pperfcount_t<true> m_prof_call; // NOLINT
-		pperfcount_t<true> m_prof_remove; // NOLINT
-		pperfcount_t<true> m_prof_retime; // NOLINT
-	};
-
-	template <class T, bool TS>
-	class timed_queue_heap
-	{
-	public:
-
-		struct compare
-		{
-			constexpr bool operator()(const T &a, const T &b) const { return b <= a; }
-		};
-
-		explicit timed_queue_heap(const std::size_t list_size)
-		: m_list(list_size)
-		{
-			clear();
-		}
-		~timed_queue_heap() = default;
-
-		PCOPYASSIGNMOVE(timed_queue_heap, delete)
-
-		std::size_t capacity() const noexcept { return m_list.capacity(); }
-		bool empty() const noexcept { return &m_list[0] == m_end; }
-
-		template <bool KEEPSTAT>
-		void push(T &&e) noexcept
-		{
-			// Lock
-			lock_guard_type lck(m_lock);
-			*m_end++ = e;
-			std::push_heap(&m_list[0], m_end, compare());
-			if (KEEPSTAT)
-				m_prof_call.inc();
-		}
-
-		T pop() noexcept
-		{
-			T ret(m_list[0]);
-			std::pop_heap(&m_list[0], m_end, compare());
-			m_end--;
-			return ret;
-		}
-
-		const T &top() const noexcept { return m_list[0]; }
-
-		template <bool KEEPSTAT, class R>
-		void remove(const R &elem) noexcept
-		{
-			// Lock
-			lock_guard_type lck(m_lock);
-			if (KEEPSTAT)
-				m_prof_remove.inc();
-			for (T * i = m_end - 1; i >= &m_list[0]; i--)
-			{
-				if (*i == elem)
-				{
-					m_end--;
-					*i = *m_end;
-					std::make_heap(&m_list[0], m_end, compare());
-					return;
-				}
-			}
-		}
-
-		template <bool KEEPSTAT>
-		void retime(const T &elem) noexcept
-		{
-			// Lock
-			lock_guard_type lck(m_lock);
-			if (KEEPSTAT)
-				m_prof_retime.inc();
-			for (T * i = m_end - 1; i >= &m_list[0]; i--)
-			{
-				if (*i == elem) // partial equal!
-				{
-					*i = elem;
-					std::make_heap(&m_list[0], m_end, compare());
-					return;
-				}
-			}
-		}
-
-		void clear()
-		{
-			lock_guard_type lck(m_lock);
-			m_list.clear();
-			m_end = &m_list[0];
-		}
-
-		// save state support & mame disasm
-
-		constexpr const T *listptr() const { return &m_list[0]; }
-		constexpr std::size_t size() const noexcept { return m_list.size(); }
-		constexpr const T & operator[](const std::size_t index) const { return m_list[ 0 + index]; }
-	private:
-		using mutex_type = pspin_mutex<TS>;
-		using lock_guard_type = std::lock_guard<mutex_type>;
-
-		mutex_type m_lock;
-		std::vector<T> m_list;
-		T *m_end;
-
-	public:
-		// profiling
-		pperfcount_t<true> m_prof_sortmove; // NOLINT
-		pperfcount_t<true> m_prof_call; // NOLINT
-		pperfcount_t<true> m_prof_remove; // NOLINT
-		pperfcount_t<true> m_prof_retime; // NOLINT
+		element_t *m_head;
 	};
 
 } // namespace plib

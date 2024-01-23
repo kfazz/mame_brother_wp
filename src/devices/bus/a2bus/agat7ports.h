@@ -50,9 +50,9 @@ protected:
 	required_device<i8251_device> m_d10;
 	required_device<centronics_device> m_centronics;
 
-	DECLARE_WRITE8_MEMBER(write_portb);
-	DECLARE_READ8_MEMBER(read_portc);
-	DECLARE_WRITE_LINE_MEMBER(write_centronics_busy);
+	void write_portb(uint8_t data);
+	uint8_t read_portc();
+	void write_centronics_busy(int state);
 
 private:
 	bool m_centronics_busy;

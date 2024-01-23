@@ -111,20 +111,14 @@ protected:
 		TYPE_ATTACK_UFO     // NTSC-M, less features
 	};
 
-	enum
-	{
-		TIMER_LINE
-	};
-
 	mos6560_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, uint32_t variant);
 
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// sound stream update overrides
-	virtual void sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples) override;
+	virtual void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
 
 	inline uint8_t read_videoram(offs_t offset);
 	inline uint8_t read_colorram(offs_t offset);
@@ -134,7 +128,7 @@ protected:
 	void drawlines( int first, int last );
 	void soundport_w( int offset, int data );
 	void sound_start();
-	void raster_interrupt_gen();
+	TIMER_CALLBACK_MEMBER(raster_interrupt_gen);
 
 	const int  m_variant;
 
@@ -176,8 +170,8 @@ protected:
 	m_noisesamples;   /* count of samples to give out per tone */
 
 	sound_stream *m_channel;
-	std::unique_ptr<int16_t[]> m_tone;
-	std::unique_ptr<int8_t[]> m_noise;
+	std::unique_ptr<int16_t []> m_tone;
+	std::unique_ptr<int8_t []> m_noise;
 
 	emu_timer *m_line_timer;
 };

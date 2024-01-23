@@ -107,8 +107,8 @@ void isa8_myb3k_com_device::device_reset()
 					write8sm_delegate(*m_usart, FUNC(i8251_device::write)));
 
 		m_isa->install_device(base + 2, base + 2,
-					read8_delegate(*this, FUNC(isa8_myb3k_com_device::dce_status)),
-					write8_delegate(*this, FUNC(isa8_myb3k_com_device::dce_control)));
+					read8smo_delegate(*this, FUNC(isa8_myb3k_com_device::dce_status)),
+					write8smo_delegate(*this, FUNC(isa8_myb3k_com_device::dce_control)));
 
 		m_isa->install_device(base + 4, base + 7,
 					read8sm_delegate(*subdevice<pit8253_device>("pit"), FUNC(pit8253_device::read)),
@@ -123,7 +123,7 @@ void isa8_myb3k_com_device::device_reset()
 // pit_rxc - write receive clock if pit is selected source
 //-----------------------------------------------------------
 #define CLK_SEL 0x80
-WRITE_LINE_MEMBER(isa8_myb3k_com_device::pit_rxc)
+void isa8_myb3k_com_device::pit_rxc(int state)
 {
 	if ((m_control & CLK_SEL) != 0)
 	{
@@ -134,7 +134,7 @@ WRITE_LINE_MEMBER(isa8_myb3k_com_device::pit_rxc)
 //------------------------------------------------------------
 // pit_txc - write transmit clock if pit is selected source
 //------------------------------------------------------------
-WRITE_LINE_MEMBER(isa8_myb3k_com_device::pit_txc)
+void isa8_myb3k_com_device::pit_txc(int state)
 {
 	if ((m_control & CLK_SEL) != 0)
 	{
@@ -146,7 +146,7 @@ WRITE_LINE_MEMBER(isa8_myb3k_com_device::pit_txc)
 // rem_rxc - write receive clock if remote clock is selected
 //             source, eg for synchronous modes
 //-----------------------------------------------------------
-WRITE_LINE_MEMBER(isa8_myb3k_com_device::rem_rxc)
+void isa8_myb3k_com_device::rem_rxc(int state)
 {
 	if ((m_control & CLK_SEL) == 0)
 	{
@@ -158,7 +158,7 @@ WRITE_LINE_MEMBER(isa8_myb3k_com_device::rem_rxc)
 // rem_txc - write transmit clock if remote cloc is selected
 //             source, eg for synchronous modes
 //------------------------------------------------------------
-WRITE_LINE_MEMBER(isa8_myb3k_com_device::rem_txc)
+void isa8_myb3k_com_device::rem_txc(int state)
 {
 	if ((m_control & CLK_SEL) == 0)
 	{
@@ -169,7 +169,7 @@ WRITE_LINE_MEMBER(isa8_myb3k_com_device::rem_txc)
 //------------------------------------------------
 // com_int_rx -  signal selected interrup on ISA bus
 //------------------------------------------------
-WRITE_LINE_MEMBER(isa8_myb3k_com_device::com_int_rx)
+void isa8_myb3k_com_device::com_int_rx(int state)
 {
 	m_irq_rx = state;
 	com_int();
@@ -178,7 +178,7 @@ WRITE_LINE_MEMBER(isa8_myb3k_com_device::com_int_rx)
 //------------------------------------------------
 // com_int_tx -  signal selected interrup on ISA bus
 //------------------------------------------------
-WRITE_LINE_MEMBER(isa8_myb3k_com_device::com_int_tx)
+void isa8_myb3k_com_device::com_int_tx(int state)
 {
 	m_irq_tx = state;
 	com_int();
@@ -202,7 +202,7 @@ void isa8_myb3k_com_device::com_int()
 // dcd_w - DCD line value gated by a LS368
 //------------------------------------------------
 #define DCD_BIT 0x02
-WRITE_LINE_MEMBER(isa8_myb3k_com_device::dcd_w)
+void isa8_myb3k_com_device::dcd_w(int state)
 {
 	if (state == ASSERT_LINE)
 	{
@@ -218,7 +218,7 @@ WRITE_LINE_MEMBER(isa8_myb3k_com_device::dcd_w)
 // ri_w - RI line value gated by a LS368
 //------------------------------------------------
 #define RI_BIT 0x01
-WRITE_LINE_MEMBER(isa8_myb3k_com_device::ri_w)
+void isa8_myb3k_com_device::ri_w(int state)
 {
 	if (state == ASSERT_LINE)
 	{
@@ -234,7 +234,7 @@ WRITE_LINE_MEMBER(isa8_myb3k_com_device::ri_w)
 // dce_control -
 //------------------------------------------------
 #define TX_IRQ_RESET_BIT 0x40
-WRITE8_MEMBER(isa8_myb3k_com_device::dce_control)
+void isa8_myb3k_com_device::dce_control(uint8_t data)
 {
 	m_control = data;
 	if (m_control & TX_IRQ_RESET_BIT)
@@ -247,7 +247,7 @@ WRITE8_MEMBER(isa8_myb3k_com_device::dce_control)
 //------------------------------------------------
 // dce_status - open LS368 gate and read status
 //------------------------------------------------
-READ8_MEMBER(isa8_myb3k_com_device::dce_status)
+uint8_t isa8_myb3k_com_device::dce_status()
 {
 	return m_status;
 }

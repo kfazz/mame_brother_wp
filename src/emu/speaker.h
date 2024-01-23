@@ -53,8 +53,8 @@ public:
 	speaker_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock = 0);
 	virtual ~speaker_device();
 
-	// inline configuration helpers
-	speaker_device &set_position(double x, double y, double z) { m_x = x; m_y = y; m_z = z; return *this; }
+	// configuration helpers
+	speaker_device &set_position(double x, double y, double z);
 	speaker_device &front_center()      { set_position( 0.0,  0.0,  1.0); return *this; }
 	speaker_device &front_left()        { set_position(-0.2,  0.0,  1.0); return *this; }
 	speaker_device &front_floor()       { set_position( 0.0, -0.5,  1.0); return *this; }
@@ -69,28 +69,35 @@ public:
 	speaker_device &backrest()          { set_position( 0.0, -0.2,  0.1); return *this; }
 
 	// internally for use by the sound system
-	void mix(s32 *leftmix, s32 *rightmix, int &samples_this_update, bool suppress);
+	void mix(stream_buffer::sample_t *leftmix, stream_buffer::sample_t *rightmix, attotime start, attotime end, int expected_samples, bool suppress);
+
+	// user panning configuration
+	void set_pan(float pan) { m_pan = std::clamp(pan, -1.0f, 1.0f); }
+	float pan() { return m_pan; }
+	float defpan() { return m_defpan; }
 
 protected:
 	// device-level overrides
 	virtual void device_start() override ATTR_COLD;
+	virtual void device_stop() override ATTR_COLD;
 
-	// inline configuration state
-	double              m_x;
-	double              m_y;
-	double              m_z;
+	// configuration state
+	double m_x;
+	double m_y;
+	double m_z;
+	float m_pan;
+	float m_defpan;
 
 	// internal state
-#ifdef MAME_DEBUG
-	s32                 m_max_sample;           // largest sample value we've seen
-	s32                 m_clipped_samples;      // total number of clipped samples
-	s32                 m_total_samples;        // total number of samples
-#endif
+	static constexpr int BUCKETS_PER_SECOND = 10;
+	std::vector<stream_buffer::sample_t> m_max_sample;
+	stream_buffer::sample_t m_current_max;
+	u32 m_samples_this_bucket;
 };
 
 
 // speaker device iterator
-typedef device_type_iterator<speaker_device> speaker_device_iterator;
+using speaker_device_enumerator = device_type_enumerator<speaker_device>;
 
 
 #endif // MAME_EMU_SPEAKER_H

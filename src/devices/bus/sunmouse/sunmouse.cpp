@@ -72,13 +72,6 @@
 DEFINE_DEVICE_TYPE(SUNMOUSE_PORT, sun_mouse_port_device, "sunmouse", "Sun Mouse Port")
 
 
-int const device_sun_mouse_port_interface::START_BIT_COUNT;
-int const device_sun_mouse_port_interface::DATA_BIT_COUNT;
-device_serial_interface::parity_t const device_sun_mouse_port_interface::PARITY;
-device_serial_interface::stop_bits_t const device_sun_mouse_port_interface::STOP_BITS;
-int const device_sun_mouse_port_interface::BAUD;
-
-
 
 sun_mouse_port_device::sun_mouse_port_device(
 		machine_config const &mconfig,
@@ -119,8 +112,6 @@ void sun_mouse_port_device::device_config_complete()
 void sun_mouse_port_device::device_resolve_objects()
 {
 	m_rxd = 1;
-
-	m_rxd_handler.resolve_safe();
 }
 
 
@@ -133,7 +124,7 @@ void sun_mouse_port_device::device_start()
 }
 
 
-WRITE_LINE_MEMBER( sun_mouse_port_device::write_txd )
+void sun_mouse_port_device::write_txd(int state)
 {
 	if (m_dev)
 		m_dev->input_txd(state ? 0 : 1);

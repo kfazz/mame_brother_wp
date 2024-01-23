@@ -9,7 +9,6 @@
 */
 
 #include "emu.h"
-#include "debugger.h"
 #include "mn10200.h"
 #include "mn102dis.h"
 
@@ -49,7 +48,7 @@ void mn10200_device::mn1020012a_internal_map(address_map &map)
 mn10200_device::mn10200_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, address_map_constructor program)
 	: cpu_device(mconfig, type, tag, owner, clock)
 	, m_program_config("program", ENDIANNESS_LITTLE, 16, 24, 0, program), m_program(nullptr)
-	, m_read_port(*this)
+	, m_read_port(*this, 0xff)
 	, m_write_port(*this)
 	, m_cycles(0), m_pc(0), m_psw(0), m_mdr(0), m_nmicr(0), m_iagr(0)
 	, m_extmdl(0), m_extmdh(0), m_possible_irq(false), m_pplul(0), m_ppluh(0), m_p3md(0), m_p4(0)
@@ -123,10 +122,6 @@ void mn10200_device::device_start()
 {
 	m_program = &space(AS_PROGRAM);
 
-	// resolve callbacks
-	m_read_port.resolve_all_safe(0xff);
-	m_write_port.resolve_all_safe();
-
 	// init and register for savestates
 	save_item(NAME(m_pc));
 	save_item(NAME(m_d));
@@ -151,7 +146,7 @@ void mn10200_device::device_start()
 
 	for (int tmr = 0; tmr < MN10200_NUM_TIMERS_8BIT; tmr++)
 	{
-		m_timer_timers[tmr] = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(mn10200_device::simple_timer_cb), this));
+		m_timer_timers[tmr] = timer_alloc(FUNC(mn10200_device::simple_timer_cb), this);
 		m_timer_timers[tmr]->adjust(attotime::never, tmr);
 	}
 
@@ -224,6 +219,17 @@ void mn10200_device::device_start()
 
 		save_item(NAME(m_port[i].out), i);
 		save_item(NAME(m_port[i].dir), i);
+	}
+
+	// registering reads the value, so clear it before
+	m_pc = 0;
+	m_mdr = 0;
+	m_nmicr = 0;
+	m_iagr = 0;
+	for (int i=0; i != 4; i++)
+	{
+		m_d[i] = 0;
+		m_a[i] = 0;
 	}
 
 	// register for debugger

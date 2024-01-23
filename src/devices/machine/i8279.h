@@ -59,21 +59,16 @@ public:
 	void timer_mainloop();
 
 protected:
-	// device-level overrides
+	// device_t implementation
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_post_load() override { }
-	virtual void device_clock_changed() override { }
 
 	TIMER_CALLBACK_MEMBER( timerproc_callback );
 
 private:
-
 	void timer_adjust();
 	void clear_display();
-	void new_key(u8 data, bool skey, bool ckey);
 	void new_fifo(u8 data);
-	void set_irq(bool state);
 
 	devcb_write_line    m_out_irq_cb;       // IRQ
 	devcb_write8        m_out_sl_cb;        // Scanlines SL0-3
@@ -98,7 +93,9 @@ private:
 	bool m_autoinc;     // auto-increment flag
 	bool m_read_flag;   // read from where
 	bool m_ctrl_key;    // previous state of strobe input
-	u16 m_key_down;
+	bool m_se_mode;     // special error mode flag
+	u8 m_key_down;      // current key being debounced
+	u8 m_debounce;      // debounce counter
 };
 
 

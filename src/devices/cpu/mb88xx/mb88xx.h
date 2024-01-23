@@ -96,7 +96,7 @@ public:
 
 	void set_pla(uint8_t *pla) { m_PLA = pla; }
 
-	DECLARE_WRITE_LINE_MEMBER( clock_w );
+	void clock_w(int state);
 
 	void data_4bit(address_map &map);
 	void data_5bit(address_map &map);
@@ -148,7 +148,7 @@ private:
 	uint8_t   m_cf;     /* Carry flag: 1 bit */
 	uint8_t   m_vf;     /* Timer overflow flag: 1 bit */
 	uint8_t   m_sf;     /* Serial Full/Empty flag: 1 bit */
-	uint8_t   m_nf;     /* Interrupt flag: 1 bit */
+	uint8_t   m_if;     /* Interrupt flag: 1 bit */
 
 	/* Peripheral Control */
 	uint8_t   m_pio; /* Peripheral enable bits: 8 bits */
@@ -176,10 +176,12 @@ private:
 
 	/* IRQ handling */
 	uint8_t m_pending_interrupt;
+	bool    m_in_irq;
 
-	address_space *m_program;
-	memory_access_cache<0, 0, ENDIANNESS_BIG> *m_cache;
-	address_space *m_data;
+	memory_access<11, 0, 0, ENDIANNESS_BIG>::cache m_cache;
+	memory_access<11, 0, 0, ENDIANNESS_BIG>::specific m_program;
+	memory_access< 7, 0, 0, ENDIANNESS_BIG>::specific m_data;
+
 	int m_icount;
 
 	// For the debugger
@@ -191,7 +193,6 @@ private:
 	void update_pio_enable( uint8_t newpio );
 	void increment_timer();
 	void update_pio( int cycles );
-
 };
 
 

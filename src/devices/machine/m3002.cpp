@@ -65,25 +65,13 @@ m3000_device::m3000_device(const machine_config &mconfig, const char *tag, devic
 
 
 //-------------------------------------------------
-//  device_resolve_objects - resolve objects that
-//  may be needed for other devices to set
-//  initial conditions at start time
-//-------------------------------------------------
-
-void m3002_device::device_resolve_objects()
-{
-	m_irq_callback.resolve_safe();
-}
-
-
-//-------------------------------------------------
 //  device_start - device-specific startup
 //-------------------------------------------------
 
 void m3002_device::device_start()
 {
 	// Setup timer
-	m_second_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(m3002_device::second_timer), this));
+	m_second_timer = timer_alloc(FUNC(m3002_device::second_timer), this);
 
 	// Save internal state
 	save_item(NAME(m_ram));
@@ -110,9 +98,10 @@ void m3002_device::device_clock_changed()
 //  nvram_read - read NVRAM from the file
 //-------------------------------------------------
 
-void m3002_device::nvram_read(emu_file &file)
+bool m3002_device::nvram_read(util::read_stream &file)
 {
-	file.read(&m_ram[0], 0x10);
+	size_t actual;
+	return !file.read(&m_ram[0], 0x10, actual) && actual == 0x10;
 }
 
 
@@ -120,9 +109,10 @@ void m3002_device::nvram_read(emu_file &file)
 //  nvram_write - write NVRAM to the file
 //-------------------------------------------------
 
-void m3002_device::nvram_write(emu_file &file)
+bool m3002_device::nvram_write(util::write_stream &file)
 {
-	file.write(&m_ram[0], 0x10);
+	size_t actual;
+	return !file.write(&m_ram[0], 0x10, actual) && actual == 0x10;
 }
 
 
@@ -220,7 +210,7 @@ void m3002_device::bcd_increment(u8 location)
 u8 m3002_device::max_date() const
 {
 	if (m_ram[4] == 0x02)
-		return (m_ram[5] & 0x03) == 0x00 ? 0x29 : 0x28;
+		return (m_ram[5] & 0x03) == ((m_ram[5] & 0x10) >> 3) ? 0x29 : 0x28;
 	else
 		return BIT(0x20250, m_ram[4]) ? 0x30 : 0x31;
 }
@@ -351,13 +341,13 @@ void m3002_device::irq_update()
 	{
 		LOG("IRQ occurred\n");
 		m_irq_active = true;
-		m_irq_callback(ASSERT_LINE);
+		m_irq_callback(0);
 	}
 	else if (m_irq_active && (m_ram[0xf] & 0x0c) == 0)
 	{
 		LOG("IRQ cleared\n");
 		m_irq_active = false;
-		m_irq_callback(CLEAR_LINE);
+		m_irq_callback(1);
 	}
 }
 

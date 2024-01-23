@@ -26,8 +26,8 @@ public:
 	// construction/destruction
 	cpc_hd20_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(hdc_r);
-	DECLARE_WRITE8_MEMBER(hdc_w);
+	uint8_t hdc_r(offs_t offset);
+	void hdc_w(offs_t offset, uint8_t data);
 
 protected:
 	// device-level overrides
@@ -39,7 +39,7 @@ protected:
 	virtual const tiny_rom_entry *device_rom_region() const override;
 
 private:
-	DECLARE_WRITE_LINE_MEMBER(irq_w);
+	void irq_w(int state);
 
 	cpc_expansion_slot_device *m_slot;
 

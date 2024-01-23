@@ -9,6 +9,8 @@
 
 DECLARE_DEVICE_TYPE(I80186, i80186_cpu_device)
 DECLARE_DEVICE_TYPE(I80188, i80188_cpu_device)
+DECLARE_DEVICE_TYPE(AM186EM, am186em_device)
+DECLARE_DEVICE_TYPE(AM188EM, am188em_device)
 
 class i80186_cpu_device : public i8086_common_cpu_device
 {
@@ -21,18 +23,19 @@ public:
 	auto tmrout0_handler() { return m_out_tmrout0_func.bind(); }
 	auto tmrout1_handler() { return m_out_tmrout1_func.bind(); }
 	auto irmx_irq_cb() { return m_irmx_irq_cb.bind(); }
+	auto irqa_cb() { return m_irqa_cb.bind(); }
 	template <typename... T> void set_irmx_irq_ack(T &&... args) { m_irmx_irq_ack.set(std::forward<T>(args)...); }
 
 	IRQ_CALLBACK_MEMBER(int_callback);
 	IRQ_CALLBACK_MEMBER(inta_callback);
-	DECLARE_WRITE_LINE_MEMBER(drq0_w) { m_dma[0].drq_state = state; }
-	DECLARE_WRITE_LINE_MEMBER(drq1_w) { m_dma[1].drq_state = state; }
-	DECLARE_WRITE_LINE_MEMBER(tmrin0_w) { if(state && (m_timer[0].control & 0x8004) == 0x8004) { inc_timer(0); } }
-	DECLARE_WRITE_LINE_MEMBER(tmrin1_w) { if(state && (m_timer[1].control & 0x8004) == 0x8004) { inc_timer(1); } }
-	DECLARE_WRITE_LINE_MEMBER(int0_w) { external_int(0, state); }
-	DECLARE_WRITE_LINE_MEMBER(int1_w) { external_int(1, state); }
-	DECLARE_WRITE_LINE_MEMBER(int2_w) { external_int(2, state); }
-	DECLARE_WRITE_LINE_MEMBER(int3_w) { external_int(3, state); }
+	void drq0_w(int state) { m_dma[0].drq_state = state; }
+	void drq1_w(int state) { m_dma[1].drq_state = state; }
+	void tmrin0_w(int state) { external_tmrin(0, state); }
+	void tmrin1_w(int state) { external_tmrin(1, state); }
+	void int0_w(int state) { external_int(0, state); }
+	void int1_w(int state) { external_int(1, state); }
+	void int2_w(int state) { external_int(2, state); }
+	void int3_w(int state) { external_int(3, state); }
 
 	// device_memory_interface overrides
 	virtual space_config_vector memory_space_config() const override;
@@ -65,7 +68,6 @@ protected:
 	virtual void execute_run() override;
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 	virtual uint32_t execute_input_lines() const noexcept override { return 1; }
 	virtual uint8_t fetch() override;
 	uint32_t update_pc() { return m_pc = (m_sregs[CS] << 4) + m_ip; }
@@ -86,13 +88,17 @@ private:
 	void update_interrupt_state();
 	void handle_eoi(int data);
 	void external_int(uint16_t intno, int state);
+	void restart_timer(int which);
 	void internal_timer_sync(int which);
 	void internal_timer_update(int which, int new_count, int new_maxA, int new_maxB, int new_control);
+	void external_tmrin(int which, int state);
 	void update_dma_control(int which, int new_control);
 	void drq_callback(int which);
 	void inc_timer(int which);
-	DECLARE_READ16_MEMBER(internal_port_r);
-	DECLARE_WRITE16_MEMBER(internal_port_w);
+	uint16_t internal_port_r(offs_t offset, uint16_t mem_mask = ~0);
+	void internal_port_w(offs_t offset, uint16_t data);
+
+	TIMER_CALLBACK_MEMBER(timer_elapsed);
 
 	struct mem_state
 	{
@@ -108,7 +114,6 @@ private:
 		uint16_t      control;
 		uint16_t      maxA;
 		uint16_t      maxB;
-		bool        active_count;
 		uint16_t      count;
 		emu_timer   *int_timer;
 	};
@@ -144,10 +149,6 @@ private:
 	mem_state       m_mem;
 	bool            m_last_dma;
 
-	static const device_timer_id TIMER_INT0 = 0;
-	static const device_timer_id TIMER_INT1 = 1;
-	static const device_timer_id TIMER_INT2 = 2;
-
 	uint16_t m_reloc;
 
 	address_space_config m_program_config;
@@ -159,6 +160,7 @@ private:
 	devcb_write_line m_out_tmrout0_func;
 	devcb_write_line m_out_tmrout1_func;
 	devcb_write_line m_irmx_irq_cb;
+	devcb_write_line m_irqa_cb;
 	device_irq_acknowledge_delegate m_irmx_irq_ack;
 };
 
@@ -167,6 +169,30 @@ class i80188_cpu_device : public i80186_cpu_device
 public:
 	// construction/destruction
 	i80188_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+};
+
+class am186em_device : public i80186_cpu_device
+{
+public:
+	// construction/destruction
+	am186em_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	// device_execute_interface overrides
+	virtual uint64_t execute_clocks_to_cycles(uint64_t clocks) const noexcept override { return clocks; }
+	virtual uint64_t execute_cycles_to_clocks(uint64_t cycles) const noexcept override { return cycles; }
+};
+
+class am188em_device : public i80186_cpu_device
+{
+public:
+	// construction/destruction
+	am188em_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	// device_execute_interface overrides
+	virtual uint64_t execute_clocks_to_cycles(uint64_t clocks) const noexcept override { return clocks; }
+	virtual uint64_t execute_cycles_to_clocks(uint64_t cycles) const noexcept override { return cycles; }
 };
 
 #endif // MAME_CPU_I86_I186_H

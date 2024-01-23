@@ -17,7 +17,7 @@
 #include "machine/autoconfig.h"
 
 
-namespace bus { namespace amiga { namespace zorro {
+namespace bus::amiga::zorro {
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -36,7 +36,7 @@ protected:
 	virtual void device_start() override ATTR_COLD;
 
 	// device_zorro2_card_interface overrides
-	virtual DECLARE_WRITE_LINE_MEMBER( cfgin_w ) override;
+	virtual void cfgin_w(int state) override;
 
 	// amiga_autoconfig overrides
 	virtual void autoconfig_base_address(offs_t address) override;
@@ -46,7 +46,7 @@ private:
 	std::vector<uint16_t> m_ram;
 };
 
-} } } // namespace bus::amiga::zorro
+} // namespace bus::amiga::zorro
 
 // device type definition
 DECLARE_DEVICE_TYPE_NS(ZORRO_A2052, bus::amiga::zorro, a2052_device)

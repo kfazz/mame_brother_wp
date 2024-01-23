@@ -31,7 +31,7 @@ the outputs with output_cb() to avoid collisions.
 
 Usage notes:
 
-At reset, the board is in its default starting position. RESET button works the
+At startup, the board is in its default starting position. RESET button works the
 same way, and holding CTRL while pressing it will rotate the board, eg. for placing
 black at the bottom with chess.
 
@@ -49,9 +49,10 @@ To prevent the possibility of a piece/sensor having opposite states (iow: piece
 selected but sensor deactivated, the button is not clicked when dropping a piece
 at the same position it was before.
 
-Hold CTRL while clicking to activate the piece but ignore the sensor beneath it.
-Hold SHIFT while clicking to activate the sensor but ignore the piece (sidenote:
-it will invert the sensor state for magnet boards).
+Hold CTRL while clicking to activate the piece but ignore the sensor beneath it,
+on magnet boards this only applies during piece capture. Hold SHIFT while clicking
+to activate the sensor but ignore the piece, on magnet boards it will invert the
+sensor state instead.
 
 */
 
@@ -67,22 +68,27 @@ DEFINE_DEVICE_TYPE(SENSORBOARD, sensorboard_device, "sensorboard", "Sensorboard"
 
 sensorboard_device::sensorboard_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, SENSORBOARD, tag, owner, clock),
-	m_out_piece(*this, "piece_%c%u", 0U + 'a', 1U),
+	device_nvram_interface(mconfig, *this),
+	m_out_piece(*this, "piece_%c%u", unsigned('a'), 1U),
 	m_out_pui(*this, "piece_ui%u", 0U),
 	m_out_count(*this, "count_ui%u", 0U),
 	m_inp_rank(*this, "RANK.%u", 1),
 	m_inp_spawn(*this, "SPAWN"),
 	m_inp_ui(*this, "UI"),
-	m_custom_init_cb(*this),
-	m_custom_sensor_cb(*this),
-	m_custom_spawn_cb(*this),
-	m_custom_output_cb(*this)
+	m_inp_conf(*this, "CONF"),
+	m_clear_cb(*this),
+	m_init_cb(*this),
+	m_sensor_cb(*this, 0),
+	m_spawn_cb(*this, 0),
+	m_output_cb(*this)
 {
+	m_nvram_auto = false;
 	m_nosensors = false;
 	m_magnets = false;
 	m_inductive = false;
-	m_ui_enabled = 3;
+	m_ui_enabled = 7;
 	set_delay(attotime::never);
+	clear_cb().set(*this, FUNC(sensorboard_device::clear_board));
 
 	// set defaults for most common use case (aka chess)
 	set_size(8, 8);
@@ -97,25 +103,15 @@ sensorboard_device::sensorboard_device(const machine_config &mconfig, const char
 
 void sensorboard_device::device_start()
 {
-	// resolve handlers
-	m_custom_init_cb.resolve_safe();
-	m_custom_sensor_cb.resolve_safe(0);
-	m_custom_spawn_cb.resolve();
-	m_custom_output_cb.resolve();
-
-	if (m_custom_output_cb.isnull())
+	if (m_output_cb.isunset())
 	{
 		m_out_piece.resolve();
 		m_out_pui.resolve();
 		m_out_count.resolve();
 	}
 
-	clear_board();
-	m_custom_init_cb(1);
-	memcpy(m_history[0], m_curstate, m_height * m_width);
-
-	m_undotimer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(sensorboard_device::undo_tick),this));
-	m_sensortimer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(sensorboard_device::sensor_off),this));
+	m_undotimer = timer_alloc(FUNC(sensorboard_device::undo_tick), this);
+	m_sensortimer = timer_alloc(FUNC(sensorboard_device::sensor_off), this);
 	cancel_sensor();
 
 	u16 wmask = ~((1 << m_width) - 1);
@@ -127,9 +123,10 @@ void sensorboard_device::device_start()
 	m_upointer = 0;
 	m_ufirst = 0;
 	m_ulast = 0;
-	m_usize = ARRAY_LENGTH(m_history);
+	m_usize = std::size(m_history);
 
 	// register for savestates
+	save_item(NAME(m_nosensors));
 	save_item(NAME(m_magnets));
 	save_item(NAME(m_inductive));
 	save_item(NAME(m_width));
@@ -152,6 +149,7 @@ void sensorboard_device::device_start()
 	save_item(NAME(m_ufirst));
 	save_item(NAME(m_ulast));
 	save_item(NAME(m_usize));
+	save_item(NAME(m_nvram_auto));
 	save_item(NAME(m_sensordelay));
 }
 
@@ -192,9 +190,48 @@ void sensorboard_device::device_reset()
 	cancel_sensor();
 	cancel_hand();
 
-	clear_board();
-	m_custom_init_cb(0);
+	if (!nvram_on())
+	{
+		m_clear_cb(0);
+		m_init_cb(0);
+	}
+	undo_reset();
 	refresh();
+}
+
+
+
+//-------------------------------------------------
+//  device_nvram_interface overrides
+//-------------------------------------------------
+
+void sensorboard_device::nvram_default()
+{
+	m_clear_cb(0);
+	m_init_cb(0);
+}
+
+bool sensorboard_device::nvram_read(util::read_stream &file)
+{
+	size_t actual;
+	return !file.read(m_curstate, sizeof(m_curstate), actual) && actual == sizeof(m_curstate);
+}
+
+bool sensorboard_device::nvram_write(util::write_stream &file)
+{
+	// save last board position
+	size_t actual;
+	return !file.write(m_curstate, sizeof(m_curstate), actual) && actual == sizeof(m_curstate);
+}
+
+bool sensorboard_device::nvram_can_write() const
+{
+	return nvram_on();
+}
+
+bool sensorboard_device::nvram_on() const
+{
+	return (m_inp_conf->read() & 3) ? bool(m_inp_conf->read() & 2) : m_nvram_auto;
 }
 
 
@@ -223,7 +260,7 @@ u8 sensorboard_device::read_sensor(u8 x, u8 y)
 	if (m_magnets)
 	{
 		u8 piece = read_piece(x, y);
-		u8 state = (piece != 0 && pos != m_handpos && pos != m_droppos) ? 1 : 0;
+		u8 state = (piece != 0 && pos != m_handpos && (m_inp_ui->read() & 2 || pos != m_droppos)) ? 1 : 0;
 
 		// piece recognition: return piece id
 		if (m_inductive)
@@ -278,20 +315,23 @@ u16 sensorboard_device::read_rank(u8 y, bool reverse)
 
 void sensorboard_device::refresh()
 {
-	bool custom_out = !m_custom_output_cb.isnull();
+	if (machine().phase() < machine_phase::RESET)
+		return;
+
+	bool custom_out = !m_output_cb.isunset();
 
 	// output spawn icons
 	for (int i = 0; i < m_maxspawn; i++)
 	{
 		if (custom_out)
-			m_custom_output_cb(i + 0x101, i + 1);
+			m_output_cb(i + 0x101, i + 1);
 		else
 			m_out_pui[i + 1] = i + 1;
 	}
 
 	// output hand piece
 	if (custom_out)
-		m_custom_output_cb(0x100, m_hand);
+		m_output_cb(0x100, m_hand);
 	else
 		m_out_pui[0] = m_hand;
 
@@ -299,7 +339,7 @@ void sensorboard_device::refresh()
 	for (int x = 0; x < m_width; x++)
 		for (int y = 0; y < m_height; y++)
 		{
-			u8 piece = read_piece(x, y);
+			u8 piece = (m_inp_conf->read() & 4) ? 0 : read_piece(x, y);
 			int pos = (y << 4 & 0xf0) | (x & 0x0f);
 
 			// selected piece: m_maxid + piece id
@@ -307,7 +347,7 @@ void sensorboard_device::refresh()
 				piece += m_maxid;
 
 			if (custom_out)
-				m_custom_output_cb(pos, piece);
+				m_output_cb(pos, piece);
 			else
 				m_out_piece[x][y] = piece;
 		}
@@ -338,8 +378,8 @@ void sensorboard_device::refresh()
 
 	if (custom_out)
 	{
-		m_custom_output_cb(0x200, c0);
-		m_custom_output_cb(0x201, c1);
+		m_output_cb(0x200, c0);
+		m_output_cb(0x201, c1);
 	}
 	else
 	{
@@ -440,7 +480,7 @@ INPUT_CHANGED_MEMBER(sensorboard_device::sensor)
 	// optional custom handling:
 	// return d0 = block drop piece
 	// return d1 = block pick up piece
-	u8 custom = m_custom_sensor_cb(pos);
+	u8 custom = m_sensor_cb(pos);
 
 	// drop piece
 	if (m_hand != 0)
@@ -458,7 +498,7 @@ INPUT_CHANGED_MEMBER(sensorboard_device::sensor)
 
 INPUT_CHANGED_MEMBER(sensorboard_device::ui_spawn)
 {
-	u8 pos = (newval) ? (u8)param : 32 - count_leading_zeros(m_inp_spawn->read());
+	u8 pos = (newval) ? (u8)param : 32 - count_leading_zeros_32(m_inp_spawn->read());
 	if (pos == 0 || pos > m_maxspawn)
 		return;
 
@@ -467,8 +507,8 @@ INPUT_CHANGED_MEMBER(sensorboard_device::ui_spawn)
 	m_handpos = -1;
 
 	// optional callback to change piece id
-	if (!m_custom_spawn_cb.isnull())
-		m_hand = m_custom_spawn_cb(pos);
+	if (!m_spawn_cb.isunset())
+		m_hand = m_spawn_cb(pos);
 
 	refresh();
 }
@@ -531,6 +571,15 @@ TIMER_CALLBACK_MEMBER(sensorboard_device::undo_tick)
 		m_undotimer->adjust(attotime::from_msec(500), param);
 }
 
+void sensorboard_device::undo_reset()
+{
+	memcpy(m_history[0], m_curstate, m_height * m_width);
+
+	m_upointer = 0;
+	m_ufirst = 0;
+	m_ulast = 0;
+}
+
 INPUT_CHANGED_MEMBER(sensorboard_device::ui_undo)
 {
 	u8 select = (u8)param;
@@ -553,10 +602,10 @@ INPUT_CHANGED_MEMBER(sensorboard_device::ui_init)
 	cancel_sensor();
 	cancel_hand();
 
-	clear_board();
+	m_clear_cb(init ? 0 : 1);
 
 	if (init)
-		m_custom_init_cb(0);
+		m_init_cb(1);
 
 	// rotate pieces
 	if (m_inp_ui->read() & 2)
@@ -571,13 +620,7 @@ INPUT_CHANGED_MEMBER(sensorboard_device::ui_init)
 
 	// reset undo
 	if (m_inp_ui->read() & 1)
-	{
-		memcpy(m_history[0], m_curstate, m_height * m_width);
-
-		m_upointer = 0;
-		m_ufirst = 0;
-		m_ulast = 0;
-	}
+		undo_reset();
 
 	refresh();
 }
@@ -602,6 +645,7 @@ static INPUT_PORTS_START( sensorboard )
 	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<16 | 1<<9, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x09) PORT_NAME("Sensor J1")
 	PORT_BIT(0x0400, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<16 | 1<<10, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x0a) PORT_NAME("Sensor K1")
 	PORT_BIT(0x0800, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<16 | 1<<11, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x0b) PORT_NAME("Sensor L1")
+	PORT_BIT(0x1000, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<16 | 1<<12, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x0c) PORT_NAME("Sensor M1")
 
 	PORT_START("RANK.2")
 	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<17 | 1<<0, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x10) PORT_NAME("Sensor A2")
@@ -616,6 +660,7 @@ static INPUT_PORTS_START( sensorboard )
 	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<17 | 1<<9, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x19) PORT_NAME("Sensor J2")
 	PORT_BIT(0x0400, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<17 | 1<<10, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x1a) PORT_NAME("Sensor K2")
 	PORT_BIT(0x0800, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<17 | 1<<11, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x1b) PORT_NAME("Sensor L2")
+	PORT_BIT(0x1000, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<17 | 1<<12, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x1c) PORT_NAME("Sensor M2")
 
 	PORT_START("RANK.3")
 	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<18 | 1<<0, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x20) PORT_NAME("Sensor A3")
@@ -630,6 +675,7 @@ static INPUT_PORTS_START( sensorboard )
 	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<18 | 1<<9, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x29) PORT_NAME("Sensor J3")
 	PORT_BIT(0x0400, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<18 | 1<<10, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x2a) PORT_NAME("Sensor K3")
 	PORT_BIT(0x0800, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<18 | 1<<11, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x2b) PORT_NAME("Sensor L3")
+	PORT_BIT(0x1000, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<18 | 1<<12, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x2c) PORT_NAME("Sensor M3")
 
 	PORT_START("RANK.4")
 	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<19 | 1<<0, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x30) PORT_NAME("Sensor A4")
@@ -644,6 +690,7 @@ static INPUT_PORTS_START( sensorboard )
 	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<19 | 1<<9, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x39) PORT_NAME("Sensor J4")
 	PORT_BIT(0x0400, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<19 | 1<<10, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x3a) PORT_NAME("Sensor K4")
 	PORT_BIT(0x0800, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<19 | 1<<11, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x3b) PORT_NAME("Sensor L4")
+	PORT_BIT(0x1000, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<19 | 1<<12, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x3c) PORT_NAME("Sensor M4")
 
 	PORT_START("RANK.5")
 	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<20 | 1<<0, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x40) PORT_NAME("Sensor A5")
@@ -658,6 +705,7 @@ static INPUT_PORTS_START( sensorboard )
 	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<20 | 1<<9, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x49) PORT_NAME("Sensor J5")
 	PORT_BIT(0x0400, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<20 | 1<<10, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x4a) PORT_NAME("Sensor K5")
 	PORT_BIT(0x0800, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<20 | 1<<11, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x4b) PORT_NAME("Sensor L5")
+	PORT_BIT(0x1000, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<20 | 1<<12, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x4c) PORT_NAME("Sensor M5")
 
 	PORT_START("RANK.6")
 	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<21 | 1<<0, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x50) PORT_NAME("Sensor A6")
@@ -672,6 +720,7 @@ static INPUT_PORTS_START( sensorboard )
 	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<21 | 1<<9, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x59) PORT_NAME("Sensor J6")
 	PORT_BIT(0x0400, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<21 | 1<<10, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x5a) PORT_NAME("Sensor K6")
 	PORT_BIT(0x0800, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<21 | 1<<11, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x5b) PORT_NAME("Sensor L6")
+	PORT_BIT(0x1000, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<21 | 1<<12, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x5c) PORT_NAME("Sensor M6")
 
 	PORT_START("RANK.7")
 	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<22 | 1<<0, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x60) PORT_NAME("Sensor A7")
@@ -686,6 +735,7 @@ static INPUT_PORTS_START( sensorboard )
 	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<22 | 1<<9, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x69) PORT_NAME("Sensor J7")
 	PORT_BIT(0x0400, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<22 | 1<<10, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x6a) PORT_NAME("Sensor K7")
 	PORT_BIT(0x0800, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<22 | 1<<11, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x6b) PORT_NAME("Sensor L7")
+	PORT_BIT(0x1000, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<22 | 1<<12, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x6c) PORT_NAME("Sensor M7")
 
 	PORT_START("RANK.8")
 	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<23 | 1<<0, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x70) PORT_NAME("Sensor A8")
@@ -700,6 +750,7 @@ static INPUT_PORTS_START( sensorboard )
 	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<23 | 1<<9, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x79) PORT_NAME("Sensor J8")
 	PORT_BIT(0x0400, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<23 | 1<<10, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x7a) PORT_NAME("Sensor K8")
 	PORT_BIT(0x0800, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<23 | 1<<11, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x7b) PORT_NAME("Sensor L8")
+	PORT_BIT(0x1000, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<23 | 1<<12, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x7c) PORT_NAME("Sensor M8")
 
 	PORT_START("RANK.9")
 	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<24 | 1<<0, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x80) PORT_NAME("Sensor A9")
@@ -714,6 +765,7 @@ static INPUT_PORTS_START( sensorboard )
 	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<24 | 1<<9, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x89) PORT_NAME("Sensor J9")
 	PORT_BIT(0x0400, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<24 | 1<<10, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x8a) PORT_NAME("Sensor K9")
 	PORT_BIT(0x0800, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<24 | 1<<11, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x8b) PORT_NAME("Sensor L9")
+	PORT_BIT(0x1000, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<24 | 1<<12, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x8c) PORT_NAME("Sensor M9")
 
 	PORT_START("RANK.10")
 	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<25 | 1<<0, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x90) PORT_NAME("Sensor A10")
@@ -728,6 +780,7 @@ static INPUT_PORTS_START( sensorboard )
 	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<25 | 1<<9, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x99) PORT_NAME("Sensor J10")
 	PORT_BIT(0x0400, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<25 | 1<<10, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x9a) PORT_NAME("Sensor K10")
 	PORT_BIT(0x0800, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<25 | 1<<11, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x9b) PORT_NAME("Sensor L10")
+	PORT_BIT(0x1000, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("BS_CHECK", 1<<25 | 1<<12, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, sensor, 0x9c) PORT_NAME("Sensor M10")
 
 	PORT_START("SPAWN")
 	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("SS_CHECK", 1<<0, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_spawn, 1) PORT_NAME("Spawn Piece 1")
@@ -748,16 +801,25 @@ static INPUT_PORTS_START( sensorboard )
 	PORT_BIT(0x8000, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("SS_CHECK", 1<<15, EQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_spawn, 16) PORT_NAME("Spawn Piece 16")
 
 	PORT_START("UI")
-	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 1, NOTEQUALS, 0) PORT_CODE(KEYCODE_LSHIFT) PORT_CODE(KEYCODE_RSHIFT) PORT_NAME("Modifier 2 / Force Sensor") // hold while clicking to force sensor (ignore piece)
-	PORT_BIT(0x0002, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 1, NOTEQUALS, 0) PORT_CODE(KEYCODE_LCONTROL) PORT_CODE(KEYCODE_RCONTROL) PORT_NAME("Modifier 1 / Force Piece") // hold while clicking to force piece (ignore sensor)
-	PORT_BIT(0x0004, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_CUSTOM_MEMBER(sensorboard_device, check_sensor_busy) // check if any sensor is busy / pressed (read-only)
-	PORT_BIT(0x0008, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 2, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_hand, 0) PORT_NAME("Remove Piece")
-	PORT_BIT(0x0010, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 2, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_undo, 0) PORT_NAME("Undo Buffer First")
-	PORT_BIT(0x0020, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 2, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_undo, 1) PORT_NAME("Undo Buffer Previous")
-	PORT_BIT(0x0040, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 2, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_undo, 2) PORT_NAME("Undo Buffer Next")
-	PORT_BIT(0x0080, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 2, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_undo, 3) PORT_NAME("Undo Buffer Last")
-	PORT_BIT(0x0100, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 2, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_init, 0) PORT_NAME("Board Clear")
-	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 2, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_init, 1) PORT_NAME("Board Reset")
+	PORT_BIT(0x0001, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 1<<0, NOTEQUALS, 0) PORT_CODE(KEYCODE_LSHIFT) PORT_CODE(KEYCODE_RSHIFT) PORT_NAME("Modifier 2 / Force Sensor") // hold while clicking to force sensor (ignore piece)
+	PORT_BIT(0x0002, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 1<<0, NOTEQUALS, 0) PORT_CODE(KEYCODE_LCONTROL) PORT_CODE(KEYCODE_RCONTROL) PORT_NAME("Modifier 1 / Force Piece") // hold while clicking to force piece (ignore sensor)
+	PORT_BIT(0x0004, IP_ACTIVE_HIGH, IPT_CUSTOM) PORT_CUSTOM_MEMBER(sensorboard_device, check_sensor_busy) // check if any sensor is busy / pressed (read-only)
+	PORT_BIT(0x0008, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 1<<1, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_hand, 0) PORT_NAME("Remove Piece")
+	PORT_BIT(0x0010, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 1<<1, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_undo, 0) PORT_NAME("Undo Buffer First")
+	PORT_BIT(0x0020, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 1<<1, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_undo, 1) PORT_NAME("Undo Buffer Previous")
+	PORT_BIT(0x0040, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 1<<1, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_undo, 2) PORT_NAME("Undo Buffer Next")
+	PORT_BIT(0x0080, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 1<<1, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_undo, 3) PORT_NAME("Undo Buffer Last")
+	PORT_BIT(0x0100, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 1<<1, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_init, 0) PORT_NAME("Board Clear")
+	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_OTHER) PORT_CONDITION("UI_CHECK", 1<<1, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_init, 1) PORT_NAME("Board Reset")
+
+	PORT_START("CONF")
+	PORT_CONFNAME( 0x03, 0x00, "Remember Position" ) PORT_CONDITION("UI_CHECK", 1<<2, NOTEQUALS, 0)
+	PORT_CONFSETTING(    0x01, DEF_STR( No ) )
+	PORT_CONFSETTING(    0x02, DEF_STR( Yes ) )
+	PORT_CONFSETTING(    0x00, "Auto" )
+	PORT_CONFNAME( 0x04, 0x00, "Show Pieces" ) PORT_CONDITION("UI_CHECK", 1<<2, NOTEQUALS, 0) PORT_CHANGED_MEMBER(DEVICE_SELF, sensorboard_device, ui_refresh, 0)
+	PORT_CONFSETTING(    0x04, DEF_STR( No ) )
+	PORT_CONFSETTING(    0x00, DEF_STR( Yes ) )
 
 	PORT_START("BS_CHECK") // board size (internal use)
 	PORT_BIT( 0xffffffff, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_CUSTOM_MEMBER(sensorboard_device, check_bs_mask)
@@ -766,7 +828,7 @@ static INPUT_PORTS_START( sensorboard )
 	PORT_BIT( 0xffffffff, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_CUSTOM_MEMBER(sensorboard_device, check_ss_mask)
 
 	PORT_START("UI_CHECK") // UI enabled (internal use)
-	PORT_BIT( 0x03, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_CUSTOM_MEMBER(sensorboard_device, check_ui_enabled)
+	PORT_BIT( 0xffffffff, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_CUSTOM_MEMBER(sensorboard_device, check_ui_enabled)
 INPUT_PORTS_END
 
 ioport_constructor sensorboard_device::device_input_ports() const

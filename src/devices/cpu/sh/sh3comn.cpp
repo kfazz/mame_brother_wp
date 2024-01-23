@@ -3,7 +3,6 @@
 /* Handlers for SH3 internals */
 
 #include "emu.h"
-#include "debugger.h"
 #include "sh4.h"
 #include "sh4comn.h"
 #include "sh3comn.h"
@@ -12,7 +11,7 @@
 
 /* High internal area (ffffxxxx) */
 
-WRITE32_MEMBER( sh3_base_device::sh3_internal_high_w )
+void sh3_base_device::sh3_internal_high_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	COMBINE_DATA(&m_sh3internal_upper[offset]);
 
@@ -21,23 +20,23 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_high_w )
 		case SH3_ICR0_IPRA_ADDR:
 			if (mem_mask & 0xffff0000)
 			{
-				logerror("'%s' (%08x): INTC internal write to %08x = %08x & %08x (SH3_ICR0_IPRA_ADDR - ICR0)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+SH3_UPPER_REGBASE,data,mem_mask);
+				logerror("'%s' (%08x): INTC internal write to %08x = %08x & %08x (SH3_ICR0_IPRA_ADDR - ICR0)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + SH3_UPPER_REGBASE, data, mem_mask);
 			}
 
 			if (mem_mask & 0x0000ffff)
 			{
-				logerror("'%s' (%08x): INTC internal write to %08x = %08x & %08x (SH3_ICR0_IPRA_ADDR - IPRA)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+SH3_UPPER_REGBASE,data,mem_mask);
-				sh4_handler_ipra_w(data&0xffff,mem_mask&0xffff);
+				logerror("'%s' (%08x): INTC internal write to %08x = %08x & %08x (SH3_ICR0_IPRA_ADDR - IPRA)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + SH3_UPPER_REGBASE, data, mem_mask);
+				sh4_handler_ipra_w(data & 0xffff, mem_mask & 0xffff);
 			}
 
 			break;
 
 		case SH3_IPRB_ADDR:
-			logerror("'%s' (%08x): INTC internal write to %08x = %08x & %08x (SH3_IPRB_ADDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+SH3_UPPER_REGBASE,data,mem_mask);
+			logerror("'%s' (%08x): INTC internal write to %08x = %08x & %08x (SH3_IPRB_ADDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + SH3_UPPER_REGBASE, data, mem_mask);
 		break;
 
 		case SH3_TOCR_TSTR_ADDR:
-			logerror("'%s' (%08x): TMU internal write to %08x = %08x & %08x (SH3_TOCR_TSTR_ADDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+SH3_UPPER_REGBASE,data,mem_mask);
+			logerror("'%s' (%08x): TMU internal write to %08x = %08x & %08x (SH3_TOCR_TSTR_ADDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + SH3_UPPER_REGBASE, data, mem_mask);
 			if (mem_mask&0xff000000)
 			{
 				sh4_handle_tocr_addr_w((data>>24)&0xffff, (mem_mask>>24)&0xff);
@@ -63,7 +62,7 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_high_w )
 		case SH3_TCPR2_ADDR:  sh4_handle_tcpr2_addr_w(data,  mem_mask);break;
 
 		default:
-			logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (unk)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+SH3_UPPER_REGBASE,data,mem_mask);
+			logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (unk)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + SH3_UPPER_REGBASE, data, mem_mask);
 			break;
 
 	}
@@ -73,18 +72,18 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_high_w )
 
 }
 
-READ32_MEMBER( sh3_base_device::sh3_internal_high_r )
+uint32_t sh3_base_device::sh3_internal_high_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t ret = 0;
 
 	switch (offset)
 	{
 		case SH3_ICR0_IPRA_ADDR:
-			logerror("'%s' (%08x): INTC internal read from %08x mask %08x (SH3_ICR0_IPRA_ADDR - %08x)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+SH3_UPPER_REGBASE,mem_mask, m_sh3internal_upper[offset]);
+			logerror("'%s' (%08x): INTC internal read from %08x mask %08x (SH3_ICR0_IPRA_ADDR - %08x)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + SH3_UPPER_REGBASE, mem_mask, m_sh3internal_upper[offset]);
 			return (m_sh3internal_upper[offset] & 0xffff0000) | (m_SH4_IPRA & 0xffff);
 
 		case SH3_IPRB_ADDR:
-			logerror("'%s' (%08x): INTC internal read from %08x mask %08x (SH3_IPRB_ADDR - %08x)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+SH3_UPPER_REGBASE,mem_mask, m_sh3internal_upper[offset]);
+			logerror("'%s' (%08x): INTC internal read from %08x mask %08x (SH3_IPRB_ADDR - %08x)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + SH3_UPPER_REGBASE, mem_mask, m_sh3internal_upper[offset]);
 			return m_sh3internal_upper[offset];
 
 		case SH3_TOCR_TSTR_ADDR:
@@ -115,15 +114,15 @@ READ32_MEMBER( sh3_base_device::sh3_internal_high_r )
 
 
 		case SH3_TRA_ADDR:
-			logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (SH3 TRA - %08x)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+SH3_UPPER_REGBASE,mem_mask, m_sh3internal_upper[offset]);
+			logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (SH3 TRA - %08x)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + SH3_UPPER_REGBASE, mem_mask, m_sh3internal_upper[offset]);
 			return m_sh3internal_upper[offset];
 
 		case SH3_EXPEVT_ADDR:
-			logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (SH3 EXPEVT - %08x)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+SH3_UPPER_REGBASE,mem_mask, m_sh3internal_upper[offset]);
+			logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (SH3 EXPEVT - %08x)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + SH3_UPPER_REGBASE, mem_mask, m_sh3internal_upper[offset]);
 			return m_sh3internal_upper[offset];
 
 		case SH3_INTEVT_ADDR:
-			//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (SH3 INTEVT - %08x)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+SH3_UPPER_REGBASE,mem_mask, m_sh3internal_upper[offset]);
+			//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (SH3 INTEVT - %08x)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + SH3_UPPER_REGBASE, mem_mask, m_sh3internal_upper[offset]);
 			return m_sh3internal_upper[offset];
 
 		case SH3_SCSSR_ADDR:
@@ -132,13 +131,13 @@ READ32_MEMBER( sh3_base_device::sh3_internal_high_r )
 
 
 		default:
-			logerror("'%s' (%08x): unmapped internal read from %08x mask %08x\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+SH3_UPPER_REGBASE,mem_mask);
+			logerror("'%s' (%08x): unmapped internal read from %08x mask %08x\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + SH3_UPPER_REGBASE, mem_mask);
 			return m_sh3internal_upper[offset];
 	}
 }
 
 
-READ32_MEMBER( sh3_base_device::sh3_internal_r )
+uint32_t sh3_base_device::sh3_internal_r(offs_t offset, uint32_t mem_mask)
 {
 	if (offset<0x1000)
 	{
@@ -165,7 +164,7 @@ READ32_MEMBER( sh3_base_device::sh3_internal_r )
 
 			case INTEVT2:
 				{
-				//  logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (INTEVT2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
+				//  logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (INTEVT2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
 					return m_sh3internal_lower[offset];
 				}
 
@@ -175,17 +174,17 @@ READ32_MEMBER( sh3_base_device::sh3_internal_r )
 					{
 						if (mem_mask & 0xff000000)
 						{
-							logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (IRR0)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
+							logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (IRR0)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
 							return m_sh3internal_lower[offset];
 						}
 
 						if (mem_mask & 0x0000ff00)
 						{
-							logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (IRR1)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
+							logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (IRR1)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
 							return m_sh3internal_lower[offset];
 						}
 
-						fatalerror("'%s' (%08x): unmapped internal read from %08x mask %08x (IRR0/1 unused bits)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
+						fatalerror("'%s' (%08x): unmapped internal read from %08x mask %08x (IRR0/1 unused bits)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
 					}
 				}
 
@@ -193,14 +192,14 @@ READ32_MEMBER( sh3_base_device::sh3_internal_r )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PADR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
-						return m_io->read_qword(SH3_PORT_A)<<24;
+						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PADR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
+						return m_io->read_qword(SH3_PORT_A) << 24;
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PBDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
-						return m_io->read_qword(SH3_PORT_B)<<8;
+						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PBDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
+						return m_io->read_qword(SH3_PORT_B) << 8;
 					}
 				}
 				break;
@@ -209,14 +208,14 @@ READ32_MEMBER( sh3_base_device::sh3_internal_r )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PCDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
-						return m_io->read_qword(SH3_PORT_C)<<24;
+						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PCDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
+						return m_io->read_qword(SH3_PORT_C) << 24;
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PDDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
-						return m_io->read_qword(SH3_PORT_D)<<8;
+						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PDDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
+						return m_io->read_qword(SH3_PORT_D) << 8;
 					}
 				}
 				break;
@@ -225,14 +224,14 @@ READ32_MEMBER( sh3_base_device::sh3_internal_r )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PEDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
-						return m_io->read_qword(SH3_PORT_E)<<24;
+						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PEDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
+						return m_io->read_qword(SH3_PORT_E) << 24;
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PFDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
-						return m_io->read_qword(SH3_PORT_F)<<8;
+						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PFDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
+						return m_io->read_qword(SH3_PORT_F) << 8;
 					}
 				}
 				break;
@@ -241,14 +240,14 @@ READ32_MEMBER( sh3_base_device::sh3_internal_r )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PGDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
-						return m_io->read_qword(SH3_PORT_G)<<24;
+						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PGDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
+						return m_io->read_qword(SH3_PORT_G) << 24;
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PHDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
-						return m_io->read_qword(SH3_PORT_H)<<8;
+						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PHDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
+						return m_io->read_qword(SH3_PORT_H) << 8;
 					}
 				}
 				break;
@@ -257,14 +256,14 @@ READ32_MEMBER( sh3_base_device::sh3_internal_r )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PJDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
-						return m_io->read_qword(SH3_PORT_J)<<24;
+						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PJDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
+						return m_io->read_qword(SH3_PORT_J) << 24;
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PKDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
-						return m_io->read_qword(SH3_PORT_K)<<8;
+						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PKDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
+						return m_io->read_qword(SH3_PORT_K) << 8;
 					}
 				}
 				break;
@@ -273,14 +272,14 @@ READ32_MEMBER( sh3_base_device::sh3_internal_r )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PLDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
-						return m_io->read_qword(SH3_PORT_L)<<24;
+						//logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (PLDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
+						return m_io->read_qword(SH3_PORT_L) << 24;
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (SCPDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
-						//return m_io->read_qword(SH3_PORT_K)<<8;
+						logerror("'%s' (%08x): unmapped internal read from %08x mask %08x (SCPDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
+						//return m_io->read_qword(SH3_PORT_K) << 8;
 					}
 				}
 				break;
@@ -290,13 +289,13 @@ READ32_MEMBER( sh3_base_device::sh3_internal_r )
 				{
 					if (mem_mask & 0xff000000)
 					{
-						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCSMR2 - Serial Mode Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
+						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCSMR2 - Serial Mode Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
 						return m_sh3internal_lower[offset];
 					}
 
 					if (mem_mask & 0x0000ff00)
 					{
-						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCBRR2 - Bit Rate Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
+						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCBRR2 - Bit Rate Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
 						return m_sh3internal_lower[offset];
 					}
 				}
@@ -306,13 +305,13 @@ READ32_MEMBER( sh3_base_device::sh3_internal_r )
 				{
 					if (mem_mask & 0xff000000)
 					{
-						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCSCR2 - Serial Control Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
+						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCSCR2 - Serial Control Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
 						return m_sh3internal_lower[offset];
 					}
 
 					if (mem_mask & 0x0000ff00)
 					{
-						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCFTDR2 - Transmit FIFO Data Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
+						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCFTDR2 - Transmit FIFO Data Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
 						return m_sh3internal_lower[offset];
 					}
 				}
@@ -322,13 +321,13 @@ READ32_MEMBER( sh3_base_device::sh3_internal_r )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCSSR2 - Serial Status Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
+						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCSSR2 - Serial Status Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
 						return m_sh3internal_lower[offset];
 					}
 
 					if (mem_mask & 0x0000ff00)
 					{
-						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCFRDR2 - Receive FIFO Data Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
+						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCFRDR2 - Receive FIFO Data Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
 						return m_sh3internal_lower[offset];
 					}
 				}
@@ -338,13 +337,13 @@ READ32_MEMBER( sh3_base_device::sh3_internal_r )
 				{
 					if (mem_mask & 0xff000000)
 					{
-						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCFCR2 - Fifo Control Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
+						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCFCR2 - Fifo Control Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
 						return m_sh3internal_lower[offset];
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCFDR2 - Fifo Data Count Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,mem_mask);
+						logerror("'%s' (%08x): SCIF internal read from %08x mask %08x (SCFDR2 - Fifo Data Count Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, mem_mask);
 						return m_sh3internal_lower[offset];
 					}
 				}
@@ -376,7 +375,7 @@ READ32_MEMBER( sh3_base_device::sh3_internal_r )
 
 /* Lower internal area */
 
-WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
+void sh3_base_device::sh3_internal_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	if (offset<0x1000)
 	{
@@ -385,23 +384,23 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 
 		switch (offset)
 		{
-			case SH3_SAR0_ADDR: sh4_handle_sar0_addr_w(data,mem_mask);   break;
-			case SH3_SAR1_ADDR: sh4_handle_sar1_addr_w(data,mem_mask);   break;
-			case SH3_SAR2_ADDR: sh4_handle_sar2_addr_w(data,mem_mask);   break;
-			case SH3_SAR3_ADDR: sh4_handle_sar3_addr_w(data,mem_mask);   break;
-			case SH3_DAR0_ADDR: sh4_handle_dar0_addr_w(data,mem_mask);   break;
-			case SH3_DAR1_ADDR: sh4_handle_dar1_addr_w(data,mem_mask);   break;
-			case SH3_DAR2_ADDR: sh4_handle_dar2_addr_w(data,mem_mask);   break;
-			case SH3_DAR3_ADDR: sh4_handle_dar3_addr_w(data,mem_mask);   break;
-			case SH3_DMATCR0_ADDR: sh4_handle_dmatcr0_addr_w(data,mem_mask);   break;
-			case SH3_DMATCR1_ADDR: sh4_handle_dmatcr1_addr_w(data,mem_mask);   break;
-			case SH3_DMATCR2_ADDR: sh4_handle_dmatcr2_addr_w(data,mem_mask);   break;
-			case SH3_DMATCR3_ADDR: sh4_handle_dmatcr3_addr_w(data,mem_mask);   break;
-			case SH3_CHCR0_ADDR: sh4_handle_chcr0_addr_w(data,mem_mask);   break;
-			case SH3_CHCR1_ADDR: sh4_handle_chcr1_addr_w(data,mem_mask);   break;
-			case SH3_CHCR2_ADDR: sh4_handle_chcr2_addr_w(data,mem_mask);   break;
-			case SH3_CHCR3_ADDR: sh4_handle_chcr3_addr_w(data,mem_mask);   break;
-			case SH3_DMAOR_ADDR: sh4_handle_dmaor_addr_w(data>>16,mem_mask>>16);   break;
+			case SH3_SAR0_ADDR: sh4_handle_sar0_addr_w(data, mem_mask);         break;
+			case SH3_SAR1_ADDR: sh4_handle_sar1_addr_w(data, mem_mask);         break;
+			case SH3_SAR2_ADDR: sh4_handle_sar2_addr_w(data, mem_mask);         break;
+			case SH3_SAR3_ADDR: sh4_handle_sar3_addr_w(data, mem_mask);         break;
+			case SH3_DAR0_ADDR: sh4_handle_dar0_addr_w(data, mem_mask);         break;
+			case SH3_DAR1_ADDR: sh4_handle_dar1_addr_w(data, mem_mask);         break;
+			case SH3_DAR2_ADDR: sh4_handle_dar2_addr_w(data, mem_mask);         break;
+			case SH3_DAR3_ADDR: sh4_handle_dar3_addr_w(data, mem_mask);         break;
+			case SH3_DMATCR0_ADDR: sh4_handle_dmatcr0_addr_w(data, mem_mask);   break;
+			case SH3_DMATCR1_ADDR: sh4_handle_dmatcr1_addr_w(data, mem_mask);   break;
+			case SH3_DMATCR2_ADDR: sh4_handle_dmatcr2_addr_w(data, mem_mask);   break;
+			case SH3_DMATCR3_ADDR: sh4_handle_dmatcr3_addr_w(data, mem_mask);   break;
+			case SH3_CHCR0_ADDR: sh4_handle_chcr0_addr_w(data, mem_mask);       break;
+			case SH3_CHCR1_ADDR: sh4_handle_chcr1_addr_w(data, mem_mask);       break;
+			case SH3_CHCR2_ADDR: sh4_handle_chcr2_addr_w(data, mem_mask);       break;
+			case SH3_CHCR3_ADDR: sh4_handle_chcr3_addr_w(data, mem_mask);       break;
+			case SH3_DMAOR_ADDR: sh4_handle_dmaor_addr_w(data >> 16, mem_mask >> 16);   break;
 
 
 			case IRR0_IRR1:
@@ -409,7 +408,7 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 					{
 						if (mem_mask & 0xff000000)
 						{
-							logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (IRR0)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+							logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (IRR0)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 							// not sure if this is how we should clear lines in this core...
 							if (!(data & 0x01000000)) execute_set_input(0, CLEAR_LINE);
 							if (!(data & 0x02000000)) execute_set_input(1, CLEAR_LINE);
@@ -419,11 +418,11 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 						}
 						if (mem_mask & 0x0000ff00)
 						{
-							logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (IRR1)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+							logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (IRR1)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 						}
 						if (mem_mask & 0x00ff00ff)
 						{
-							fatalerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (IRR0/1 unused bits)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+							fatalerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (IRR0/1 unused bits)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 						}
 					}
 				}
@@ -433,18 +432,18 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PINTER)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PINTER)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
 						data &= 0xffff; mem_mask &= 0xffff;
 						COMBINE_DATA(&m_SH4_IPRC);
-						logerror("'%s' (%08x): INTC internal write to %08x = %08x & %08x (IPRC)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
-						m_exception_priority[SH4_INTC_IRL0]     = INTPRI((m_SH4_IPRC & 0x000f)>>0, SH4_INTC_IRL0);
-						m_exception_priority[SH4_INTC_IRL1]     = INTPRI((m_SH4_IPRC & 0x00f0)>>4, SH4_INTC_IRL1);
-						m_exception_priority[SH4_INTC_IRL2]     = INTPRI((m_SH4_IPRC & 0x0f00)>>8, SH4_INTC_IRL2);
-						m_exception_priority[SH4_INTC_IRL3]     = INTPRI((m_SH4_IPRC & 0xf000)>>12,SH4_INTC_IRL3);
+						logerror("'%s' (%08x): INTC internal write to %08x = %08x & %08x (IPRC)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
+						m_exception_priority[SH4_INTC_IRL0] = INTPRI((m_SH4_IPRC & 0x000f) >> 0,  SH4_INTC_IRL0);
+						m_exception_priority[SH4_INTC_IRL1] = INTPRI((m_SH4_IPRC & 0x00f0) >> 4,  SH4_INTC_IRL1);
+						m_exception_priority[SH4_INTC_IRL2] = INTPRI((m_SH4_IPRC & 0x0f00) >> 8,  SH4_INTC_IRL2);
+						m_exception_priority[SH4_INTC_IRL3] = INTPRI((m_SH4_IPRC & 0xf000) >> 12, SH4_INTC_IRL3);
 						sh4_exception_recompute();
 					}
 				}
@@ -454,12 +453,12 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PCCR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PCCR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PDCR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PDCR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 				}
 				break;
@@ -468,12 +467,12 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PECR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PECR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PFCR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PFCR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 				}
 				break;
@@ -483,12 +482,12 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PGCR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PGCR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PHCR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PHCR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 				}
 				break;
@@ -498,12 +497,12 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PJCR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PJCR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PKCR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PKCR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 				}
 				break;
@@ -513,12 +512,12 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PLCR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PLCR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (SCPCR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (SCPCR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 				}
 				break;
@@ -527,14 +526,14 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						m_io->write_qword(SH3_PORT_A, (data>>24)&0xff);
-					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PADR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						m_io->write_qword(SH3_PORT_A, (data >> 24) & 0xff);
+					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PADR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						m_io->write_qword(SH3_PORT_B, (data>>8)&0xff);
-					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PBDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						m_io->write_qword(SH3_PORT_B, (data >> 8) & 0xff);
+					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PBDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 				}
 				break;
@@ -543,14 +542,14 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						m_io->write_qword(SH3_PORT_C, (data>>24)&0xff);
-					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PADR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						m_io->write_qword(SH3_PORT_C, (data >> 24) & 0xff);
+					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PADR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						m_io->write_qword(SH3_PORT_D, (data>>8)&0xff);
-					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PBDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						m_io->write_qword(SH3_PORT_D, (data >> 8) & 0xff);
+					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PBDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 				}
 				break;
@@ -558,14 +557,14 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						m_io->write_qword(SH3_PORT_E, (data>>24)&0xff);
-					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PEDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						m_io->write_qword(SH3_PORT_E, (data >> 24) & 0xff);
+					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PEDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						m_io->write_qword(SH3_PORT_F, (data>>8)&0xff);
-					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PFDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						m_io->write_qword(SH3_PORT_F, (data >> 8) & 0xff);
+					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PFDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 				}
 				break;
@@ -574,14 +573,14 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						m_io->write_qword(SH3_PORT_G, (data>>24)&0xff);
-					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PGDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						m_io->write_qword(SH3_PORT_G, (data >> 24) & 0xff);
+					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PGDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						m_io->write_qword(SH3_PORT_H, (data>>8)&0xff);
-					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PHDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						m_io->write_qword(SH3_PORT_H, (data >> 8) & 0xff);
+					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PHDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 				}
 				break;
@@ -591,14 +590,14 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						m_io->write_qword(SH3_PORT_J, (data>>24)&0xff);
-					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PJDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						m_io->write_qword(SH3_PORT_J, (data >> 24) & 0xff);
+					//  logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PJDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						m_io->write_qword(SH3_PORT_K, (data>>8)&0xff);
-						//logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PKDR)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						m_io->write_qword(SH3_PORT_K, (data >> 8) & 0xff);
+						//logerror("'%s' (%08x): unmapped internal write to %08x = %08x & %08x (PKDR)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 				}
 				break;
@@ -607,12 +606,12 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xff000000)
 					{
-						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCSMR2 - Serial Mode Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCSMR2 - Serial Mode Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ff00)
 					{
-						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCBRR2 - Bit Rate Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCBRR2 - Bit Rate Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 				}
 				break;
@@ -621,12 +620,12 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xff000000)
 					{
-						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCSCR2 - Serial Control Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCSCR2 - Serial Control Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ff00)
 					{
-						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCFTDR2 - Transmit FIFO Data Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCFTDR2 - Transmit FIFO Data Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 				}
 				break;
@@ -635,12 +634,12 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xffff0000)
 					{
-						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCSSR2 - Serial Status Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCSSR2 - Serial Status Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ff00)
 					{
-						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCFRDR2 - Receive FIFO Data Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCFRDR2 - Receive FIFO Data Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 				}
 				break;
@@ -649,12 +648,12 @@ WRITE32_MEMBER( sh3_base_device::sh3_internal_w )
 				{
 					if (mem_mask & 0xff000000)
 					{
-						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCFCR2 - Fifo Control Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCFCR2 - Fifo Control Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 
 					if (mem_mask & 0x0000ffff)
 					{
-						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCFDR2 - Fifo Data Count Register 2)\n",tag(), m_sh2_state->pc & SH34_AM,(offset *4)+0x4000000,data,mem_mask);
+						logerror("'%s' (%08x): SCIF internal write to %08x = %08x & %08x (SCFDR2 - Fifo Data Count Register 2)\n", tag(), m_sh2_state->pc & SH34_AM, (offset * 4) + 0x4000000, data, mem_mask);
 					}
 				}
 				break;

@@ -1,7 +1,6 @@
 // license:GPL-2.0+
 // copyright-holders:byuu
 #include "emu.h"
-#include "debugger.h"
 #include "superfx.h"
 
 
@@ -627,8 +626,6 @@ void superfx_device::device_start()
 	superfx_update_speed();
 
 	m_program = &space(AS_PROGRAM);
-
-	m_out_irq_func.resolve();
 
 	save_item(NAME(m_pipeline));
 	save_item(NAME(m_ramaddr));

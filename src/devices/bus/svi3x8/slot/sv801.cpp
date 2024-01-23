@@ -8,7 +8,7 @@
 
 #include "emu.h"
 #include "sv801.h"
-#include "softlist.h"
+#include "softlist_dev.h"
 #include "formats/svi_dsk.h"
 
 
@@ -18,9 +18,11 @@
 
 DEFINE_DEVICE_TYPE(SV801, sv801_device, "sv801", "SV-801 Disk Controller")
 
-FLOPPY_FORMATS_MEMBER( sv801_device::floppy_formats )
-	FLOPPY_SVI_FORMAT
-FLOPPY_FORMATS_END
+void sv801_device::floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_SVI_FORMAT);
+}
 
 static void svi_floppies(device_slot_interface &device)
 {
@@ -87,12 +89,12 @@ void sv801_device::device_reset()
 //  IMPLEMENTATION
 //**************************************************************************
 
-WRITE_LINE_MEMBER( sv801_device::intrq_w )
+void sv801_device::intrq_w(int state)
 {
 	m_irq = state;
 }
 
-WRITE_LINE_MEMBER( sv801_device::drq_w )
+void sv801_device::drq_w(int state)
 {
 	m_drq = state;
 }

@@ -11,8 +11,7 @@
 #include "bus/scsi/scsi.h"
 #include "bus/scsi/scsicd.h"
 
-namespace bus {
-	namespace hp_dio {
+namespace bus::hp_dio {
 
 class dio16_98265a_device :
 		public device_t,
@@ -35,15 +34,15 @@ protected:
 	virtual ioport_constructor device_input_ports() const override;
 	virtual void device_add_mconfig(machine_config &config) override;
 
-	DECLARE_READ16_MEMBER(io_r);
-	DECLARE_WRITE16_MEMBER(io_w);
+	uint16_t io_r(offs_t offset);
+	void io_w(offs_t offset, uint16_t data);
 
 	void dmack_w_in(int channel, uint8_t data) override;
 	uint8_t dmack_r_in(int channel) override;
 
-	DECLARE_WRITE_LINE_MEMBER(dmar0_w);
+	void dmar0_w(int state);
 
-	DECLARE_WRITE_LINE_MEMBER(irq_w);
+	void irq_w(int state);
 
 	required_device<nscsi_bus_device> m_scsibus;
 	required_device<mb87030_device> m_spc;
@@ -65,7 +64,7 @@ private:
 	bool m_dmar0;
 };
 
-} } // namespace bus::hp_dio
+} // namespace bus::hp_dio
 
 DECLARE_DEVICE_TYPE_NS(HPDIO_98265A, bus::hp_dio, dio16_98265a_device)
 

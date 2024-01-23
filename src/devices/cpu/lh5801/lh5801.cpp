@@ -18,8 +18,6 @@
 #include "lh5801.h"
 #include "5801dasm.h"
 
-#include "debugger.h"
-
 #define VERBOSE 0
 
 #include "logmacro.h"
@@ -71,7 +69,7 @@ lh5801_cpu_device::lh5801_cpu_device(const machine_config &mconfig, const char *
 	: cpu_device(mconfig, LH5801, tag, owner, clock)
 	, m_program_config("program", ENDIANNESS_LITTLE, 8, 16, 0)
 	, m_io_config("io", ENDIANNESS_LITTLE, 8, 16, 0)
-	, m_in_func(*this)
+	, m_in_func(*this, 0)
 {
 }
 
@@ -90,11 +88,9 @@ device_memory_interface::space_config_vector lh5801_cpu_device::memory_space_con
 
 void lh5801_cpu_device::device_start()
 {
-	m_program = &space(AS_PROGRAM);
-	m_io = &space(AS_IO);
-	m_cache = m_program->cache<0, 0, ENDIANNESS_LITTLE>();
-
-	m_in_func.resolve_safe(0);
+	space(AS_PROGRAM).cache(m_cache);
+	space(AS_PROGRAM).specific(m_program);
+	space(AS_IO).specific(m_io);
 
 	m_s.w.l = 0;
 	m_p.w.l = 0;
@@ -172,7 +168,7 @@ void lh5801_cpu_device::state_string_export(const device_state_entry &entry, std
 
 void lh5801_cpu_device::device_reset()
 {
-	P = (m_program->read_byte(0xfffe) << 8) | m_program->read_byte(0xffff);
+	P = (m_program.read_byte(0xfffe) << 8) | m_program.read_byte(0xffff);
 
 	m_idle = 0;
 
@@ -190,7 +186,7 @@ void lh5801_cpu_device::check_irq()
 		lh5801_push(m_t);
 		m_t &= ~IE;
 		lh5801_push_word(P);
-		P = (m_program->read_byte(0xfffc) << 8) | m_program->read_byte(0xfffd);
+		P = (m_program.read_byte(0xfffc) << 8) | m_program.read_byte(0xfffd);
 	}
 	else if (m_ir_flipflop[1] && (m_t & IE))
 	{
@@ -199,7 +195,7 @@ void lh5801_cpu_device::check_irq()
 		lh5801_push(m_t);
 		m_t &= ~IE;
 		lh5801_push_word(P);
-		P = (m_program->read_byte(0xfffa) << 8) | m_program->read_byte(0xfffb);
+		P = (m_program.read_byte(0xfffa) << 8) | m_program.read_byte(0xfffb);
 	}
 	else if (m_ir_flipflop[2] && (m_t & IE))
 	{
@@ -208,7 +204,7 @@ void lh5801_cpu_device::check_irq()
 		lh5801_push(m_t);
 		m_t &= ~IE;
 		lh5801_push_word(P);
-		P = (m_program->read_byte(0xfff8) << 8) | m_program->read_byte(0xfff9);
+		P = (m_program.read_byte(0xfff8) << 8) | m_program.read_byte(0xfff9);
 	}
 }
 

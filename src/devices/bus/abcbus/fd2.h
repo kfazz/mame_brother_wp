@@ -14,7 +14,6 @@
 #include "abcbus.h"
 #include "cpu/z80/z80.h"
 #include "machine/z80daisy.h"
-#include "formats/abcfd2_dsk.h"
 #include "imagedev/floppy.h"
 #include "machine/wd_fdc.h"
 #include "machine/z80pio.h"
@@ -53,14 +52,14 @@ protected:
 	virtual uint8_t abcbus_xmemfl(offs_t offset) override;
 
 private:
-	DECLARE_READ8_MEMBER( pio_pa_r );
-	DECLARE_WRITE8_MEMBER( pio_pa_w );
-	DECLARE_READ8_MEMBER( pio_pb_r );
-	DECLARE_WRITE8_MEMBER( pio_pb_w );
+	uint8_t pio_pa_r();
+	void pio_pa_w(uint8_t data);
+	uint8_t pio_pb_r();
+	void pio_pb_w(uint8_t data);
 
-	DECLARE_WRITE8_MEMBER( status_w );
+	void status_w(uint8_t data);
 
-	DECLARE_FLOPPY_FORMATS( floppy_formats );
+	static void floppy_formats(format_registration &fr);
 
 	void abc_fd2_io(address_map &map);
 	void abc_fd2_mem(address_map &map);
@@ -68,8 +67,7 @@ private:
 	required_device<z80_device> m_maincpu;
 	required_device<z80pio_device> m_pio;
 	required_device<fd1771_device> m_fdc;
-	required_device<floppy_connector> m_floppy0;
-	required_device<floppy_connector> m_floppy1;
+	required_device_array<floppy_connector, 2> m_floppy;
 	required_memory_region m_dos_rom;
 
 	bool m_cs;

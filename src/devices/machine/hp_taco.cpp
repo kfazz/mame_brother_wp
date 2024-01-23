@@ -28,8 +28,8 @@
 //   according to flow charts in [1]
 // - Handling of error conditions, R/W bits, tachometer ticks and gaps according to [1]
 // What's not in:
-// - Commands that are not used at all by the software I analyzed, especially those that
-//   R/W tapes in HP9825 format. They could be added easily, though.
+// - Commands that are not used at all by the software I analyzed. They could be added easily,
+//   though.
 // - Accurate execution times of commands
 // - Handling of FLG signal: the emulated chip always reports itself as ready for writing.
 // - Read threshold is ignored. Real tapes could be read with either a low or high threshold.
@@ -141,16 +141,18 @@
 #include "hp_taco.h"
 
 // Debugging
-#include "logmacro.h"
+
 #define LOG_DBG_MASK (LOG_GENERAL << 1)
-#define LOG_DBG(...) LOGMASKED(LOG_DBG_MASK, __VA_ARGS__)
 #define LOG_RW_MASK (LOG_DBG_MASK << 1)
-#define LOG_RW(...) LOGMASKED(LOG_RW_MASK, __VA_ARGS__)
 #define LOG_REG_MASK (LOG_RW_MASK << 1)
+
+#define LOG_DBG(...) LOGMASKED(LOG_DBG_MASK, __VA_ARGS__)
+#define LOG_RW(...) LOGMASKED(LOG_RW_MASK, __VA_ARGS__)
 #define LOG_REG(...) LOGMASKED(LOG_REG_MASK, __VA_ARGS__)
-#undef VERBOSE
+
 //#define VERBOSE (LOG_GENERAL | LOG_DBG_MASK | LOG_RW_MASK | LOG_REG_MASK)
 #define VERBOSE (LOG_GENERAL)
+#include "logmacro.h"
 
 // Bit manipulation
 namespace {
@@ -159,23 +161,16 @@ namespace {
 		return (T)1U << n;
 	}
 
-	template<typename T> void BIT_CLR(T& w , unsigned n)
+	template<typename T> void BIT_CLR(T& w, unsigned n)
 	{
 		w &= ~BIT_MASK<T>(n);
 	}
 
-	template<typename T> void BIT_SET(T& w , unsigned n)
+	template<typename T> void BIT_SET(T& w, unsigned n)
 	{
 		w |= BIT_MASK<T>(n);
 	}
 }
-
-// Timers
-enum {
-	GAP_TMR_ID,
-	EVD_TMR_ID,
-	ERROR_TMR_ID
-};
 
 // **** Constants ****
 constexpr unsigned TACH_FREQ_FAST = 87196;      // Tachometer pulse frequency for fast speed (90.08 ips)
@@ -243,7 +238,7 @@ enum cmd_t : uint8_t {
 	CMD_ERASE           = 0b000100, // Erase tape
 	CMD_WR_REVERSAL     = 0b000101, // Write flux reversal (*)
 	CMD_WR              = 0b000110, // Write
-	CMD_WR_9825         = 0b000111, // Write 9825 (*)
+	CMD_WR_9825         = 0b000111, // Write 9825
 	CMD_STOP            = 0b001000, // Stop
 	CMD_STOP_INT        = 0b001001, // Stop & interrupt
 	CMD_SET_TRACK       = 0b001100, // Set track
@@ -262,17 +257,17 @@ enum cmd_t : uint8_t {
 	CMD_WR_GAP_N_TACH   = 0b101100, // Write gap of N tach
 	CMD_INT_N_GAP       = 0b110000, // Interrupt on N gap
 	CMD_WR_SYNC         = 0b110010, // Write synchronous
-	CMD_WR_SYNC_9825    = 0b110011, // Write synchronous 9825 (*)
+	CMD_WR_SYNC_9825    = 0b110011, // Write synchronous 9825
 	CMD_INT_N_TACH_22   = 0b110100, // Interrupt on N tach after 22 ips
 	CMD_WR_CSUM         = 0b110110, // Write checksum
-	CMD_WR_CSUM_9825    = 0b110111, // Write checksum 9825 (*)
+	CMD_WR_CSUM_9825    = 0b110111, // Write checksum 9825
 	CMD_INT_STOP_N_TACH = 0b111000, // Interrupt and stop on N tach
 	CMD_INT_STOP_N_TACH1= 0b111001, // Interrupt and stop on N tach (int when stopped)
 	CMD_RD_6UPD         = 0b111010, // Read 6% update
-	CMD_RD_9825_6UPD    = 0b111011, // Read 9825 6% update (*)
+	CMD_RD_9825_6UPD    = 0b111011, // Read 9825 6% update
 	CMD_INT_N_TACH      = 0b111100, // Interrupt on N tach
 	CMD_RD_CSUM_6UPD    = 0b111110, // Read checksum 6% update
-	CMD_RD_9825_CSUM6   = 0b111111  // Read checksum 9825 6% update (*)
+	CMD_RD_9825_CSUM6   = 0b111111  // Read checksum 9825 6% update
 };
 
 // Device type definition
@@ -281,7 +276,7 @@ DEFINE_DEVICE_TYPE(HP_TACO, hp_taco_device, "hp_taco", "HP TACO")
 // Constructors
 hp_taco_device::hp_taco_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
 	: device_t(mconfig, type, tag, owner, clock)
-	, m_tape(*this , "drive")
+	, m_tape(*this, "drive")
 	, m_irq_handler(*this)
 	, m_flg_handler(*this)
 	, m_sts_handler(*this)
@@ -293,9 +288,14 @@ hp_taco_device::hp_taco_device(const machine_config &mconfig, const char *tag, d
 {
 }
 
-WRITE16_MEMBER(hp_taco_device::reg_w)
+void hp_taco_device::set_name(const std::string& name)
 {
-	LOG_REG("wr R%u = %04x\n", 4 + offset , data);
+	m_tape->set_name(name);
+}
+
+void hp_taco_device::reg_w(offs_t offset, uint16_t data)
+{
+	LOG_REG("wr R%u = %04x\n", 4 + offset, data);
 
 	// Any I/O activity clears IRQ
 	irq_w(false);
@@ -323,7 +323,7 @@ WRITE16_MEMBER(hp_taco_device::reg_w)
 	}
 }
 
-READ16_MEMBER(hp_taco_device::reg_r)
+uint16_t hp_taco_device::reg_r(offs_t offset)
 {
 	uint16_t res = 0;
 
@@ -339,9 +339,9 @@ READ16_MEMBER(hp_taco_device::reg_r)
 	case 1:
 		// Command & status register
 		if (m_tape->gap_reached(SHORT_GAP_LENGTH)) {
-			BIT_SET(m_status_reg , CMD_ST_GAP);
+			BIT_SET(m_status_reg, CMD_ST_GAP);
 		} else {
-			BIT_CLR(m_status_reg , CMD_ST_GAP);
+			BIT_CLR(m_status_reg, CMD_ST_GAP);
 		}
 		res = (m_cmd_reg & CMD_REG_MASK) | (m_status_reg & STATUS_REG_MASK);
 		break;
@@ -358,44 +358,44 @@ READ16_MEMBER(hp_taco_device::reg_r)
 		break;
 	}
 
-	LOG_REG("rd R%u = %04x\n", 4 + offset , res);
+	LOG_REG("rd R%u = %04x\n", 4 + offset, res);
 
 	return res;
 }
 
-READ_LINE_MEMBER(hp_taco_device::flg_r)
+int hp_taco_device::flg_r()
 {
 	return m_flg;
 }
 
-READ_LINE_MEMBER(hp_taco_device::sts_r)
+int hp_taco_device::sts_r()
 {
 	return m_sts;
 }
 
-WRITE_LINE_MEMBER(hp_taco_device::cart_out_w)
+void hp_taco_device::cart_out_w(int state)
 {
-	LOG_DBG("cart_out_w %d\n" , state);
+	LOG_DBG("cart_out_w %d\n", state);
 	set_tape_present(!state);
 	if (state && m_cmd_state != CMD_IDLE) {
-		set_error(true , false);
+		set_error(true, false);
 		m_cmd_state = CMD_IDLE;
 	}
 }
 
-WRITE_LINE_MEMBER(hp_taco_device::hole_w)
+void hp_taco_device::hole_w(int state)
 {
 	if (state) {
 		LOG_DBG("hole_w\n");
 		if (m_cmd_state != CMD_IDLE && m_cmd_state != CMD_STOPPING &&
-			(!is_double_hole_cmd(m_cmd_reg) || BIT(m_status_reg , CMD_ST_HOLE))) {
-			set_error(true , false);
+			(!is_double_hole_cmd(m_cmd_reg) || BIT(m_status_reg, CMD_ST_HOLE))) {
+			set_error(true, false);
 		}
-		BIT_SET(m_status_reg , CMD_ST_HOLE);
+		BIT_SET(m_status_reg, CMD_ST_HOLE);
 	}
 }
 
-WRITE_LINE_MEMBER(hp_taco_device::tacho_tick_w)
+void hp_taco_device::tacho_tick_w(int state)
 {
 	if (state) {
 		LOG_DBG("tacho_tick_w\n");
@@ -422,7 +422,7 @@ WRITE_LINE_MEMBER(hp_taco_device::tacho_tick_w)
 				if (m_cmd_state == CMD_PH2) {
 					m_tach_reg++;
 					if (m_tach_reg == 0) {
-						if (!BIT(m_cmd_reg , CMD_ST_G0)) {
+						if (!BIT(m_cmd_reg, CMD_ST_G0)) {
 							irq_w(true);
 						}
 						send_stop();
@@ -434,7 +434,7 @@ WRITE_LINE_MEMBER(hp_taco_device::tacho_tick_w)
 				if (m_cmd_state != CMD_PH1) {
 					break;
 				}
-				// Falls through!
+				[[fallthrough]];
 
 			case CMD_WR_GAP_N_TACH:
 			case CMD_INT_N_TACH:
@@ -451,20 +451,22 @@ WRITE_LINE_MEMBER(hp_taco_device::tacho_tick_w)
 	}
 }
 
-WRITE_LINE_MEMBER(hp_taco_device::motion_w)
+void hp_taco_device::motion_w(int state)
 {
 	if (state) {
 		cmd_fsm();
 	}
 }
 
-WRITE_LINE_MEMBER(hp_taco_device::rd_bit_w)
+void hp_taco_device::rd_bit_w(int state)
 {
-	LOG_RW("RD bit %d (st=%d,w=%04x,i=%u)\n" , state , m_cmd_state , m_working_reg , m_bit_idx);
+	LOG_RW("RD bit %d (st=%d,w=%04x,i=%u)\n", state, m_cmd_state, m_working_reg, m_bit_idx);
 	if (m_cmd_state != CMD_IDLE) {
 		switch (get_cmd(m_cmd_reg)) {
 		case CMD_RD_6UPD:
+		case CMD_RD_9825_6UPD:
 		case CMD_RD_CSUM_6UPD:
+		case CMD_RD_9825_CSUM6:
 			if (m_cmd_state == CMD_PH1) {
 				if (m_bit_idx < 8) {
 					m_bit_idx++;
@@ -472,30 +474,34 @@ WRITE_LINE_MEMBER(hp_taco_device::rd_bit_w)
 					// Synchronized
 					LOG_RW("RD synced!\n");
 					m_cmd_state = CMD_PH2;
-					m_bit_idx = 15;
+					m_bit_idx = BIT(m_cmd_reg, CMD_ST_G0) ? 17 : 15;
 					m_working_reg = 0;
 				}
 			} else if (m_cmd_state == CMD_PH2) {
-				if (state) {
-					BIT_SET(m_working_reg , m_bit_idx);
-				}
-				if (m_bit_idx) {
-					m_bit_idx--;
-				} else {
-					m_data_reg = m_working_reg;
+				if (m_bit_idx == 17) {
+					// 9825 format: skip first 17th bit after preamble
 					m_bit_idx = 15;
+					break;
+				} else if (m_bit_idx != 16 && state) {
+					// Skip 17th bit when reading in 9825 format
+					BIT_SET(m_working_reg, m_bit_idx);
+				}
+				if (adv_bit_idx()) {
+					m_data_reg = m_working_reg;
 					m_working_reg = 0;
-					if (!BIT(m_cmd_reg , CMD_ST_G2)) {
+					if (!BIT(m_cmd_reg, CMD_ST_G2)) {
 						update_checksum(m_data_reg);
 					}
-					LOG_RW("RD word %04x csum=%04x\n" , m_data_reg , m_checksum_reg);
+					LOG_RW("RD word %04x csum=%04x\n", m_data_reg, m_checksum_reg);
 					irq_w(true);
 				}
 			}
 			break;
 
 		case CMD_WR_SYNC:
+		case CMD_WR_SYNC_9825:
 		case CMD_WR_CSUM:
+		case CMD_WR_CSUM_9825:
 			if (m_cmd_state == CMD_PH1) {
 				LOG_RW("WR synced\n");
 				m_cmd_state = CMD_PH2;
@@ -510,35 +516,38 @@ WRITE_LINE_MEMBER(hp_taco_device::rd_bit_w)
 	}
 }
 
-READ_LINE_MEMBER(hp_taco_device::wr_bit_r)
+int hp_taco_device::wr_bit_r()
 {
 	bool bit = false;
 	if (is_cmd_wr(m_cmd_reg) && m_cmd_state == CMD_PH2) {
-		bit = BIT(m_working_reg , m_bit_idx);
-		if (m_bit_idx) {
-			m_bit_idx--;
+		if (m_bit_idx == 16) {
+			// HP9825 format: 17th bit
+			bit = true;
 		} else {
-			m_bit_idx = 15;
+			bit = BIT(m_working_reg, m_bit_idx);
+		}
+		if (adv_bit_idx()) {
 			m_working_reg = m_data_reg;
-			if (get_cmd(m_cmd_reg) != CMD_WR_CSUM) {
+			// Bit 0 selects HP9825 mode: it is to be ignored here
+			if ((get_cmd(m_cmd_reg) & ~BIT_MASK<uint8_t>(0)) != CMD_WR_CSUM) {
 				update_checksum(m_data_reg);
 			}
-			LOG_RW("WR word %04x csum=%04x\n" , m_working_reg , m_checksum_reg);
+			LOG_RW("WR word %04x csum=%04x\n", m_working_reg, m_checksum_reg);
 			m_data_reg = m_checksum_reg;
 			irq_w(true);
 		}
 	}
-	LOG_RW("WR bit %d (w=%04x,i=%u)\n" , bit , m_working_reg , m_bit_idx);
+	LOG_RW("WR bit %d (w=%04x,i=%u)\n", bit, m_working_reg, m_bit_idx);
 	return bit;
 }
 
 void hp_taco_device::device_add_mconfig(machine_config &config)
 {
-	HP_DC100_TAPE(config , m_tape , 0);
+	HP_DC100_TAPE(config, m_tape, 0);
 	m_tape->set_acceleration(ACCELERATION);
-	m_tape->set_set_points(SLOW_SPEED , FAST_SPEED);
+	m_tape->set_set_points(SLOW_SPEED, FAST_SPEED);
 	m_tape->set_tick_size(TACH_TICK_LEN);
-	m_tape->set_bits_per_word(16);
+	m_tape->set_image_format(hti_format_t::HTI_DELTA_MOD_16_BITS);
 	m_tape->set_go_threshold(MOVING_THRESHOLD);
 	m_tape->cart_out().set(FUNC(hp_taco_device::cart_out_w));
 	m_tape->hole().set(FUNC(hp_taco_device::hole_w));
@@ -551,10 +560,6 @@ void hp_taco_device::device_add_mconfig(machine_config &config)
 void hp_taco_device::device_start()
 {
 	LOG("device_start\n");
-	m_irq_handler.resolve_safe();
-	m_flg_handler.resolve_safe();
-	m_sts_handler.resolve_safe();
-
 	save_item(NAME(m_data_reg));
 	save_item(NAME(m_cmd_reg));
 	save_item(NAME(m_status_reg));
@@ -569,9 +574,9 @@ void hp_taco_device::device_start()
 	save_item(NAME(m_working_reg));
 	save_item(NAME(m_bit_idx));
 
-	m_gap_timer = timer_alloc(GAP_TMR_ID);
-	m_evd_timer = timer_alloc(EVD_TMR_ID);
-	m_error_timer = timer_alloc(ERROR_TMR_ID);
+	m_gap_timer = timer_alloc(FUNC(hp_taco_device::gap_timer_tick), this);
+	m_evd_timer = timer_alloc(FUNC(hp_taco_device::evd_timer_tick), this);
+	m_error_timer = timer_alloc(FUNC(hp_taco_device::error_timer_tick), this);
 }
 
 void hp_taco_device::device_reset()
@@ -586,72 +591,69 @@ void hp_taco_device::device_reset()
 	m_irq_handler(false);
 	m_flg_handler(true);
 	m_sts_handler(true);
-	set_error(false , false);
+	set_error(false, false);
 
 	m_gap_timer->reset();
 	m_evd_timer->reset();
 	m_error_timer->reset();
 }
 
-void hp_taco_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(hp_taco_device::gap_timer_tick)
 {
-	switch (id) {
-	case GAP_TMR_ID:
-		m_tape->update_speed_pos();
-		LOG_DBG("Gap tmr @%g pos=%d cmd %02x st %d\n" , machine().time().as_double() , m_tape->get_pos() , get_cmd(m_cmd_reg) , m_cmd_state);
+	m_tape->update_speed_pos();
+	LOG_DBG("Gap tmr @%g pos=%d cmd %02x st %d\n", machine().time().as_double(), m_tape->get_pos(), get_cmd(m_cmd_reg), m_cmd_state);
 
-		switch (get_cmd(m_cmd_reg)) {
-		case CMD_INT_ON_GAP:
-			if (m_cmd_state == CMD_PH1) {
-				irq_and_end();
-			}
-			break;
-
-		case CMD_STOP_IN_GAP:
-		case CMD_STOP_IN_GAP1:
-			if (m_cmd_state == CMD_PH1) {
-				// Count 256 ticks
-				m_tach_reg = 0xff00;
-				m_cmd_state = CMD_PH2;
-			}
-			break;
-
-		case CMD_INT_N_GAP:
-			if (m_cmd_state == CMD_PH1) {
-				m_tach_reg++;
-				if (m_tach_reg == 0) {
-					irq_and_end();
-				} else {
-					set_gap_timer();
-				}
-			}
-			break;
-
-		case CMD_RD_6UPD:
-		case CMD_RD_CSUM_6UPD:
-			// Gap in read error
-			set_error(false , true);
-			break;
-
-		default:
-			break;
+	switch (get_cmd(m_cmd_reg)) {
+	case CMD_INT_ON_GAP:
+		if (m_cmd_state == CMD_PH1) {
+			irq_and_end();
 		}
 		break;
 
-	case EVD_TMR_ID:
-		m_tape->update_speed_pos();
-		LOG_DBG("EVD tmr @%g pos=%d cmd %02x st %d\n" , machine().time().as_double() , m_tape->get_pos() , get_cmd(m_cmd_reg) , m_cmd_state);
-		set_error(true , false);
+	case CMD_STOP_IN_GAP:
+	case CMD_STOP_IN_GAP1:
+		if (m_cmd_state == CMD_PH1) {
+			// Count 256 ticks
+			m_tach_reg = 0xff00;
+			m_cmd_state = CMD_PH2;
+		}
 		break;
 
-	case ERROR_TMR_ID:
-		LOG_DBG("Error tmr\n");
-		irq_w(true);
+	case CMD_INT_N_GAP:
+		if (m_cmd_state == CMD_PH1) {
+			m_tach_reg++;
+			if (m_tach_reg == 0) {
+				irq_and_end();
+			} else {
+				set_gap_timer();
+			}
+		}
+		break;
+
+	case CMD_RD_6UPD:
+	case CMD_RD_9825_6UPD:
+	case CMD_RD_CSUM_6UPD:
+	case CMD_RD_9825_CSUM6:
+		// Gap in read error
+		set_error(false, true);
 		break;
 
 	default:
 		break;
 	}
+}
+
+TIMER_CALLBACK_MEMBER(hp_taco_device::evd_timer_tick)
+{
+	m_tape->update_speed_pos();
+	LOG_DBG("EVD tmr @%g pos=%d cmd %02x st %d\n", machine().time().as_double(), m_tape->get_pos(), get_cmd(m_cmd_reg), m_cmd_state);
+	set_error(true, false);
+}
+
+TIMER_CALLBACK_MEMBER(hp_taco_device::error_timer_tick)
+{
+	LOG_DBG("Error tmr\n");
+	irq_w(true);
 }
 
 void hp_taco_device::clear_state()
@@ -675,7 +677,7 @@ void hp_taco_device::irq_w(bool state)
 	if (state != m_irq) {
 		m_irq = state;
 		m_irq_handler(state);
-		LOG_DBG("IRQ = %d\n" , state);
+		LOG_DBG("IRQ = %d\n", state);
 	}
 }
 
@@ -684,13 +686,13 @@ void hp_taco_device::sts_w(bool state)
 	if (state != m_sts) {
 		m_sts = state;
 		m_sts_handler(state);
-		LOG_DBG("STS = %d\n" , state);
+		LOG_DBG("STS = %d\n", state);
 	}
 }
 
-void hp_taco_device::set_error(bool error , bool gap_in_read)
+void hp_taco_device::set_error(bool error, bool gap_in_read)
 {
-	LOG_DBG("Error %d %d\n" , error , gap_in_read);
+	LOG_DBG("Error %d %d\n", error, gap_in_read);
 
 	m_error = error;
 	m_gap_in_read = gap_in_read;
@@ -702,7 +704,7 @@ void hp_taco_device::set_error(bool error , bool gap_in_read)
 			m_cmd_state = CMD_IDLE;
 		}
 		sts_w(false);
-		m_error_timer->adjust(attotime::zero , 0 , clocks_to_attotime(ERROR_IRQ_PERIOD));
+		m_error_timer->adjust(attotime::zero, 0, clocks_to_attotime(ERROR_IRQ_PERIOD));
 		if (m_error) {
 			send_stop();
 		}
@@ -713,17 +715,17 @@ void hp_taco_device::set_error(bool error , bool gap_in_read)
 
 hti_format_t::tape_pos_t hp_taco_device::min_gap_size() const
 {
-	return BIT(m_cmd_reg , CMD_ST_FGAP) ? LONG_GAP_LENGTH : SHORT_GAP_LENGTH;
+	return BIT(m_cmd_reg, CMD_ST_FGAP) ? LONG_GAP_LENGTH : SHORT_GAP_LENGTH;
 }
 
 void hp_taco_device::set_gap_timer()
 {
-	m_tape->time_to_next_gap(min_gap_size() , true , m_gap_timer);
+	m_tape->time_to_next_gap(min_gap_size(), true, m_gap_timer);
 }
 
 void hp_taco_device::set_evd_timer()
 {
-	m_tape->time_to_next_gap(EVD_GAP_LENGTH , false , m_evd_timer);
+	m_tape->time_to_next_gap(EVD_GAP_LENGTH, false, m_evd_timer);
 }
 
 void hp_taco_device::set_tape_present(bool present)
@@ -745,18 +747,18 @@ void hp_taco_device::send_go()
 {
 	hp_dc100_tape_device::tape_speed_t speed;
 
-	if (BIT(m_cmd_reg , CMD_ST_FST)) {
+	if (BIT(m_cmd_reg, CMD_ST_FST)) {
 		speed = hp_dc100_tape_device::SP_FAST;
 	} else {
 		speed = hp_dc100_tape_device::SP_SLOW;
 	}
-	m_tape->set_speed_setpoint(speed , BIT(m_cmd_reg , CMD_ST_FWD));
+	m_tape->set_speed_setpoint(speed, BIT(m_cmd_reg, CMD_ST_FWD));
 }
 
 void hp_taco_device::send_stop()
 {
 	m_tape->set_op(hp_dc100_tape_device::OP_IDLE);
-	if (m_tape->set_speed_setpoint(hp_dc100_tape_device::SP_STOP , false)) {
+	if (m_tape->set_speed_setpoint(hp_dc100_tape_device::SP_STOP, false)) {
 		m_cmd_state = CMD_STOPPING;
 	}
 }
@@ -784,7 +786,7 @@ void hp_taco_device::start_rd()
 	if (m_tape->get_op() != hp_dc100_tape_device::OP_READ) {
 		m_tape->set_op(hp_dc100_tape_device::OP_READ);
 		// TODO: check
-		m_tape->time_to_next_gap(GIR_GAP_LENGTH , true , m_gap_timer);
+		m_tape->time_to_next_gap(GIR_GAP_LENGTH, true, m_gap_timer);
 		set_evd_timer();
 	}
 }
@@ -794,6 +796,16 @@ void hp_taco_device::start_wr()
 	m_tape->set_op(hp_dc100_tape_device::OP_WRITE);
 	m_gap_timer->reset();
 	m_evd_timer->reset();
+}
+
+bool hp_taco_device::adv_bit_idx()
+{
+	if (m_bit_idx) {
+		m_bit_idx--;
+	} else {
+		m_bit_idx = BIT(m_cmd_reg, CMD_ST_G0) ? 16 : 15;
+	}
+	return m_bit_idx == 15;
 }
 
 void hp_taco_device::update_checksum(uint16_t data)
@@ -832,6 +844,7 @@ void hp_taco_device::cmd_fsm()
 			break;
 
 		case CMD_WR:
+		case CMD_WR_9825:
 			if (m_cmd_state == CMD_PH0 && is_at_slow_speed()) {
 				m_cmd_state = CMD_PH2;
 				m_bit_idx = 15;
@@ -873,7 +886,9 @@ void hp_taco_device::cmd_fsm()
 			break;
 
 		case CMD_WR_SYNC:
+		case CMD_WR_SYNC_9825:
 		case CMD_WR_CSUM:
+		case CMD_WR_CSUM_9825:
 			if (m_cmd_state == CMD_PH0 && is_at_slow_speed()) {
 				m_cmd_state = CMD_PH1;
 				start_rd();
@@ -895,7 +910,9 @@ void hp_taco_device::cmd_fsm()
 			break;
 
 		case CMD_RD_6UPD:
+		case CMD_RD_9825_6UPD:
 		case CMD_RD_CSUM_6UPD:
+		case CMD_RD_9825_CSUM6:
 			if (m_cmd_state == CMD_PH0 && is_at_slow_speed()) {
 				m_cmd_state = CMD_PH1;
 				start_rd();
@@ -911,7 +928,7 @@ void hp_taco_device::cmd_fsm()
 		}
 	}
 	if (prev_state != m_cmd_state) {
-		LOG_DBG("FSM st %d->%d\n" , prev_state , m_cmd_state);
+		LOG_DBG("FSM st %d->%d\n", prev_state, m_cmd_state);
 	}
 }
 
@@ -924,17 +941,17 @@ uint8_t hp_taco_device::get_cmd(uint16_t cmd_reg)
 
 bool hp_taco_device::is_cmd_rd_wr(uint16_t cmd_reg)
 {
-	return BIT(cmd_reg , CMD_ST_G1);
+	return BIT(cmd_reg, CMD_ST_G1);
 }
 
 bool hp_taco_device::is_cmd_rd(uint16_t cmd_reg)
 {
-	return is_cmd_rd_wr(cmd_reg) && BIT(cmd_reg , CMD_ST_G3);
+	return is_cmd_rd_wr(cmd_reg) && BIT(cmd_reg, CMD_ST_G3);
 }
 
 bool hp_taco_device::is_cmd_wr(uint16_t cmd_reg)
 {
-	return is_cmd_rd_wr(cmd_reg) && !BIT(cmd_reg , CMD_ST_G3);
+	return is_cmd_rd_wr(cmd_reg) && !BIT(cmd_reg, CMD_ST_G3);
 }
 
 bool hp_taco_device::is_double_hole_cmd(uint16_t cmd_reg)
@@ -944,7 +961,7 @@ bool hp_taco_device::is_double_hole_cmd(uint16_t cmd_reg)
 
 void hp_taco_device::start_cmd_exec(uint16_t new_cmd_reg)
 {
-	LOG_DBG("New cmd %02x D=%d S=%d @ %g cmd %02x st %d\n" , get_cmd(new_cmd_reg) , BIT(new_cmd_reg , CMD_ST_FWD) , BIT(new_cmd_reg , CMD_ST_FST) , machine().time().as_double() , get_cmd(m_cmd_reg) , m_cmd_state);
+	LOG_DBG("New cmd %02x D=%d S=%d @ %g cmd %02x st %d\n", get_cmd(new_cmd_reg), BIT(new_cmd_reg, CMD_ST_FWD), BIT(new_cmd_reg, CMD_ST_FST), machine().time().as_double(), get_cmd(m_cmd_reg), m_cmd_state);
 
 	m_tape->update_speed_pos();
 
@@ -952,7 +969,7 @@ void hp_taco_device::start_cmd_exec(uint16_t new_cmd_reg)
 
 	if (new_cmd_code == CMD_CLEAR_ST) {
 		// Clear status
-		set_error(false , false);
+		set_error(false, false);
 		sts_w(true);
 		if (!m_tape->cart_out_r()) {
 			BIT_CLR(m_status_reg, CMD_ST_CART_OUT);
@@ -967,7 +984,7 @@ void hp_taco_device::start_cmd_exec(uint16_t new_cmd_reg)
 		hp_dc100_tape_device::tape_op_t op = hp_dc100_tape_device::OP_IDLE;
 
 		if (m_gap_in_read) {
-			set_error(false , false);
+			set_error(false, false);
 		}
 
 		m_cmd_state = CMD_PH0;
@@ -987,8 +1004,11 @@ void hp_taco_device::start_cmd_exec(uint16_t new_cmd_reg)
 			break;
 
 		case CMD_WR:
+		case CMD_WR_9825:
 		case CMD_WR_SYNC:
+		case CMD_WR_SYNC_9825:
 		case CMD_WR_CSUM:
+		case CMD_WR_CSUM_9825:
 			// 1. Wait for tape to reach 22 ips
 			// 2. Wait for data to begin (not for CMD_WR)
 			// 3. Write words on tape
@@ -1014,11 +1034,11 @@ void hp_taco_device::start_cmd_exec(uint16_t new_cmd_reg)
 
 		case CMD_SET_TRACK:
 			// 1. Set A/B track
-			if (BIT(new_cmd_reg , CMD_ST_MOD)) {
-				BIT_SET(m_status_reg , CMD_ST_TRB);
+			if (BIT(new_cmd_reg, CMD_ST_MOD)) {
+				BIT_SET(m_status_reg, CMD_ST_TRB);
 				m_tape->set_track_no(1);
 			} else {
-				BIT_CLR(m_status_reg , CMD_ST_TRB);
+				BIT_CLR(m_status_reg, CMD_ST_TRB);
 				m_tape->set_track_no(0);
 			}
 			start_tape = false;
@@ -1073,7 +1093,9 @@ void hp_taco_device::start_cmd_exec(uint16_t new_cmd_reg)
 			break;
 
 		case CMD_RD_6UPD:
+		case CMD_RD_9825_6UPD:
 		case CMD_RD_CSUM_6UPD:
+		case CMD_RD_9825_CSUM6:
 			// 1. Wait for tape to reach 22 ips
 			// 2. Wait for preamble
 			// 3. Read words
@@ -1092,16 +1114,16 @@ void hp_taco_device::start_cmd_exec(uint16_t new_cmd_reg)
 			break;
 
 		default:
-			LOG("Unrecognized command %x\n" , new_cmd_code);
+			LOG("Unrecognized command %x\n", new_cmd_code);
 			start_tape = false;
 			break;
 		}
 
 		if (start_tape) {
 			if (m_error ||
-				(BIT(m_status_reg , CMD_ST_HOLE) && !is_double_hole_cmd(new_cmd_reg)) ||
-				BIT(m_status_reg , CMD_ST_CART_OUT)) {
-				set_error(true , false);
+				(BIT(m_status_reg, CMD_ST_HOLE) && !is_double_hole_cmd(new_cmd_reg)) ||
+				BIT(m_status_reg, CMD_ST_CART_OUT)) {
+				set_error(true, false);
 				return;
 			} else {
 				send_go();

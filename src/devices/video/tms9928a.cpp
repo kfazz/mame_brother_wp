@@ -213,8 +213,7 @@ void tms9928a_device::check_interrupt()
 	if (b != m_INT)
 	{
 		m_INT = b;
-		if ( !m_out_int_line_cb.isnull() )
-			m_out_int_line_cb( m_INT );
+		m_out_int_line_cb(m_INT);
 	}
 }
 
@@ -351,21 +350,18 @@ void tms9928a_device::register_write(u8 data)
 	}
 }
 
-void tms9928a_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(tms9928a_device::clock_grom)
 {
-	// Handle GROM clock if present
-	if (id==GROMCLK)
-	{
-		// Pulse it
-		m_out_gromclk_cb(ASSERT_LINE);
-		m_out_gromclk_cb(CLEAR_LINE);
-		return;
-	}
+	m_out_gromclk_cb(ASSERT_LINE);
+	m_out_gromclk_cb(CLEAR_LINE);
+}
 
+TIMER_CALLBACK_MEMBER(tms9928a_device::update_line)
+{
 	int raw_vpos = screen().vpos();
 	int vpos = raw_vpos * m_vertical_size / screen().height();
 	uint16_t BackColour = m_Regs[7] & 15;
-	uint32_t *p = &m_tmpbmp.pix32(vpos);
+	uint32_t *p = &m_tmpbmp.pix(vpos);
 
 	int y = vpos - m_top_border;
 
@@ -728,17 +724,16 @@ void tms9928a_device::device_start()
 	m_top_border = m_50hz ? VERT_DISPLAY_START_PAL : VERT_DISPLAY_START_NTSC;
 	m_vertical_size = m_50hz ? TOTAL_VERT_PAL : TOTAL_VERT_NTSC;
 
-	m_out_int_line_cb.resolve();
-	m_out_gromclk_cb.resolve();
-
 	// Video RAM is allocated as an own address space
 	m_vram_space = &space(AS_DATA);
 
 	/* back bitmap */
 	m_tmpbmp.allocate(m_total_horz, TOTAL_VERT_PAL);
 
-	m_line_timer = timer_alloc(TIMER_LINE);
-	m_gromclk_timer = timer_alloc(GROMCLK);
+	m_line_timer = timer_alloc(FUNC(tms9928a_device::update_line), this);
+	m_gromclk_timer = timer_alloc(FUNC(tms9928a_device::clock_grom), this);
+
+	m_INT = 1; // force initial update
 
 	set_palette();
 
@@ -784,13 +779,13 @@ void tms9928a_device::device_reset()
 	m_patternmask = 0x3fff;
 	m_Addr = 0;
 	m_ReadAhead = 0;
-	m_INT = 0;
 	m_latch = 0;
 	m_mode = 0;
+	check_interrupt();
 
 	m_line_timer->adjust( screen().time_until_pos( 0, HORZ_DISPLAY_START ) );
 
 	// TODO: Check clock freq settings in all drivers
-	if (!m_out_gromclk_cb.isnull() && m_99)
+	if (!m_out_gromclk_cb.isunset() && m_99)
 		m_gromclk_timer->adjust(attotime::zero, 0, clocks_to_attotime(24));
 }

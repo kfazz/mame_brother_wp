@@ -14,9 +14,10 @@
 #pragma once
 
 #include "a2bus.h"
-#include "imagedev/floppy.h"
-#include "formats/flopimg.h"
+
 #include "machine/wozfdc.h"
+#include "imagedev/floppy.h"
+
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -27,11 +28,10 @@ class diskiing_device:
 	public device_t,
 	public device_a2bus_card_interface
 {
-public:
+protected:
 	// construction/destruction
 	diskiing_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
 
-protected:
 	virtual void device_start() override;
 	virtual void device_reset() override;
 	virtual void device_add_mconfig(machine_config &config) override;
@@ -48,7 +48,7 @@ protected:
 	const uint8_t *m_rom;
 
 private:
-	DECLARE_FLOPPY_FORMATS( floppy_formats );
+	static void floppy_formats(format_registration &fr);
 };
 
 class a2bus_diskiing_device: public diskiing_device
@@ -67,7 +67,7 @@ protected:
 	virtual const tiny_rom_entry *device_rom_region() const override;
 
 private:
-	DECLARE_FLOPPY_FORMATS( floppy_formats );
+	static void floppy_formats(format_registration &fr);
 };
 
 class a2bus_applesurance_device: public diskiing_device
@@ -97,9 +97,29 @@ private:
 	int m_c800_bank;
 };
 
+class a2bus_agat7flop_device : public diskiing_device
+{
+public:
+	a2bus_agat7flop_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual const tiny_rom_entry *device_rom_region() const override;
+};
+
+class a2bus_agat9flop_device : public diskiing_device
+{
+public:
+	a2bus_agat9flop_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual const tiny_rom_entry *device_rom_region() const override;
+};
+
 // device type definition
 DECLARE_DEVICE_TYPE(A2BUS_DISKIING, a2bus_diskiing_device)
 DECLARE_DEVICE_TYPE(A2BUS_DISKIING13, a2bus_diskiing13_device)
 DECLARE_DEVICE_TYPE(A2BUS_APPLESURANCE, a2bus_applesurance_device)
+DECLARE_DEVICE_TYPE(A2BUS_AGAT7_FDC, a2bus_agat7flop_device)
+DECLARE_DEVICE_TYPE(A2BUS_AGAT9_FDC, a2bus_agat9flop_device)
 
 #endif  // MAME_BUS_A2BUS_A2DISKIING_H

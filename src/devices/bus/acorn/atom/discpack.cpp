@@ -6,9 +6,10 @@
 
 **********************************************************************/
 
-
 #include "emu.h"
 #include "discpack.h"
+
+#include "formats/acorn_dsk.h"
 
 
 //**************************************************************************
@@ -21,9 +22,11 @@ DEFINE_DEVICE_TYPE(ATOM_DISCPACK, atom_discpack_device, "atom_discpack", "Acorn 
 //  MACHINE_DRIVER( discpack )
 //-------------------------------------------------
 
-FLOPPY_FORMATS_MEMBER(atom_discpack_device::floppy_formats )
-	FLOPPY_ACORN_SSD_FORMAT
-FLOPPY_FORMATS_END
+void atom_discpack_device::floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_ACORN_SSD_FORMAT);
+}
 
 static void atom_floppies(device_slot_interface &device)
 {
@@ -85,10 +88,11 @@ void atom_discpack_device::device_start()
 
 	space.install_device(0x0a00, 0x0a03, *m_fdc, &i8271_device::map);
 	space.install_readwrite_handler(0x0a04, 0x0a04, 0, 0x1f8, 0, read8smo_delegate(*m_fdc, FUNC(i8271_device::data_r)), write8smo_delegate(*m_fdc, FUNC(i8271_device::data_w)));
-	space.install_ram(0x2000, 0x23ff);
-	space.install_ram(0x2400, 0x27ff);
-	space.install_ram(0x3c00, 0x3fff);
+	space.install_ram(0x2000, 0x27ff, m_ram);
+	space.install_ram(0x3c00, 0x3fff, m_ram+0x800);
 	space.install_rom(0xe000, 0xefff, m_dos_rom->base());
+
+	save_item(NAME(m_ram));
 }
 
 
@@ -96,20 +100,20 @@ void atom_discpack_device::device_start()
 //  IMPLEMENTATION
 //**************************************************************************
 
-WRITE_LINE_MEMBER(atom_discpack_device::motor_w)
+void atom_discpack_device::motor_w(int state)
 {
 	if (m_floppy[0]->get_device()) m_floppy[0]->get_device()->mon_w(!state);
 	if (m_floppy[1]->get_device()) m_floppy[1]->get_device()->mon_w(!state);
 	m_fdc->ready_w(!state);
 }
 
-WRITE_LINE_MEMBER(atom_discpack_device::side_w)
+void atom_discpack_device::side_w(int state)
 {
 	if (m_floppy[0]->get_device()) m_floppy[0]->get_device()->ss_w(state);
 	if (m_floppy[1]->get_device()) m_floppy[1]->get_device()->ss_w(state);
 }
 
-WRITE_LINE_MEMBER(atom_discpack_device::fdc_intrq_w)
+void atom_discpack_device::fdc_intrq_w(int state)
 {
 	m_bus->nmi_w(state);
 }

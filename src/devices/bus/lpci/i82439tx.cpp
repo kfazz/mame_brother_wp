@@ -28,6 +28,8 @@ i82439tx_device::i82439tx_device(const machine_config &mconfig, const char *tag,
 	m_smram.smiact_n = 1;
 	m_smram.tseg_size = 0;
 	m_smram.mapping = 0;
+	m_smram.tseg_en = 0;
+	m_smram.h_smrame = 0;
 }
 
 void i82439tx_device::i82439tx_configure_memory(uint8_t val, offs_t begin, offs_t end)
@@ -143,7 +145,7 @@ uint32_t i82439tx_device::pci_read(pci_bus_device *pcibus, int function, int off
 		case 0xF4:
 		case 0xF8:
 		case 0xFC:
-			assert(((offset - 0x50) / 4) >= 0 && ((offset - 0x50) / 4) < ARRAY_LENGTH(m_regs));
+			assert(((offset - 0x50) / 4) >= 0 && ((offset - 0x50) / 4) < std::size(m_regs));
 			result = m_regs[(offset - 0x50) / 4];
 			break;
 
@@ -292,7 +294,7 @@ void i82439tx_device::pci_write(pci_bus_device *pcibus, int function, int offset
 		case 0xF4:
 		case 0xF8:
 		case 0xFC:
-			assert(((offset - 0x50) / 4) >= 0 && ((offset - 0x50) / 4) < ARRAY_LENGTH(m_regs));
+			assert(((offset - 0x50) / 4) >= 0 && ((offset - 0x50) / 4) < std::size(m_regs));
 			COMBINE_DATA(&m_regs[(offset - 0x50) / 4]);
 			break;
 
@@ -424,7 +426,7 @@ void i82439tx_device::update_smram_mappings()
 	}
 }
 
-WRITE_LINE_MEMBER(i82439tx_device::smi_act_w)
+void i82439tx_device::smi_act_w(int state)
 {
 	// state is 0 when smm is not active
 	// but smiact_n reflects the state of the SMIACT# pin

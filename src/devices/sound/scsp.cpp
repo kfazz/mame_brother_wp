@@ -36,9 +36,6 @@
 
 #include <algorithm>
 
-static constexpr s32 clip16(int x) { return std::min(32767, std::max(-32768, x)); }
-static constexpr s32 clip18(int x) { return std::min(131071, std::max(-131072, x)); }
-
 #define SHIFT   12
 #define LFO_SHIFT   8
 #define FIX(v)  ((u32) ((float) (1 << SHIFT) * (v)))
@@ -148,7 +145,7 @@ DEFINE_DEVICE_TYPE(SCSP, scsp_device, "scsp", "Yamaha YMF292-F SCSP")
 scsp_device::scsp_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
 	: device_t(mconfig, SCSP, tag, owner, clock),
 		device_sound_interface(mconfig, *this),
-		device_rom_interface(mconfig, *this, 20, ENDIANNESS_BIG, 16),
+		device_rom_interface(mconfig, *this),
 		m_irq_cb(*this),
 		m_main_irq_cb(*this),
 		m_BUFPTR(0),
@@ -165,11 +162,6 @@ scsp_device::scsp_device(const machine_config &mconfig, const char *tag, device_
 		m_timerC(nullptr),
 		m_mcieb(0),
 		m_mcipd(0),
-		m_bufferl(nullptr),
-		m_bufferr(nullptr),
-		m_exts0(nullptr),
-		m_exts1(nullptr),
-		m_length(0),
 		m_RBUFDST(nullptr)
 {
 	std::fill(std::begin(m_RINGBUF), std::end(m_RINGBUF), 0);
@@ -207,12 +199,8 @@ void scsp_device::device_start()
 	// init the emulation
 	init();
 
-	// set up the IRQ callbacks
-	m_irq_cb.resolve_safe();
-	m_main_irq_cb.resolve_safe();
-
 	// Stereo output with EXTS0,1 Input (External digital audio output)
-	m_stream = machine().sound().stream_alloc(*this, 2, 2, clock() / 512);
+	m_stream = stream_alloc(2, 2, clock() / 512);
 
 	for (int slot = 0; slot < 32; slot++)
 	{
@@ -297,8 +285,8 @@ void scsp_device::device_post_load()
 	for (int slot = 0; slot < 32; slot++)
 		Compute_LFO(&m_Slots[slot]);
 
-	m_stream->set_output_gain(0, MVOL() / 15.0);
-	m_stream->set_output_gain(1, MVOL() / 15.0);
+	set_output_gain(0, MVOL() / 15.0);
+	set_output_gain(1, MVOL() / 15.0);
 }
 
 //-------------------------------------------------
@@ -311,7 +299,7 @@ void scsp_device::device_clock_changed()
 	m_stream->set_sample_rate(clock() / 512);
 }
 
-void scsp_device::rom_bank_updated()
+void scsp_device::rom_bank_pre_change()
 {
 	m_stream->update();
 }
@@ -320,14 +308,9 @@ void scsp_device::rom_bank_updated()
 //  sound_stream_update - handle a stream update
 //-------------------------------------------------
 
-void scsp_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void scsp_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
-	m_exts0 = inputs[0];
-	m_exts1 = inputs[1];
-	m_bufferl = outputs[0];
-	m_bufferr = outputs[1];
-	m_length = samples;
-	DoMasterSamples(samples);
+	DoMasterSamples(inputs, outputs);
 }
 
 u8 scsp_device::DecodeSCI(u8 irq)
@@ -449,13 +432,13 @@ TIMER_CALLBACK_MEMBER(scsp_device::timerC_cb)
 int scsp_device::Get_AR(int base, int R)
 {
 	int Rate = base + (R << 1);
-	return m_ARTABLE[std::min(63, std::max(0, Rate))];
+	return m_ARTABLE[std::clamp(Rate, 0, 63)];
 }
 
 int scsp_device::Get_DR(int base, int R)
 {
 	int Rate = base + (R << 1);
-	return m_DRTABLE[std::min(63, std::max(0, Rate))];
+	return m_DRTABLE[std::clamp(Rate, 0, 63)];
 }
 
 void scsp_device::Compute_EG(SCSP_SLOT *slot)
@@ -592,9 +575,9 @@ void scsp_device::init()
 	m_MidiOutR = m_MidiOutW = 0;
 
 	m_DSP.space = &this->space();
-	m_timerA = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(scsp_device::timerA_cb), this));
-	m_timerB = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(scsp_device::timerB_cb), this));
-	m_timerC = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(scsp_device::timerC_cb), this));
+	m_timerA = timer_alloc(FUNC(scsp_device::timerA_cb), this);
+	m_timerB = timer_alloc(FUNC(scsp_device::timerB_cb), this);
+	m_timerC = timer_alloc(FUNC(scsp_device::timerC_cb), this);
 
 	for (i = 0; i < 0x400; ++i)
 	{
@@ -738,8 +721,8 @@ void scsp_device::UpdateReg(int reg)
 	switch (reg & 0x3f)
 	{
 		case 0x0:
-			m_stream->set_output_gain(0, MVOL() / 15.0);
-			m_stream->set_output_gain(1, MVOL() / 15.0);
+			set_output_gain(0, MVOL() / 15.0);
+			set_output_gain(1, MVOL() / 15.0);
 			break;
 		case 0x2:
 		case 0x3:
@@ -776,7 +759,7 @@ void scsp_device::UpdateReg(int reg)
 			break;
 		case 0x18:
 		case 0x19:
-			if (!m_irq_cb.isnull())
+			if (!m_irq_cb.isunset())
 			{
 				m_TimPris[0] = 1 << ((m_udata.data[0x18/2] >> 8) & 0x7);
 				m_TimCnt[0] = (m_udata.data[0x18/2] & 0xff) << 8;
@@ -793,7 +776,7 @@ void scsp_device::UpdateReg(int reg)
 			break;
 		case 0x1a:
 		case 0x1b:
-			if (!m_irq_cb.isnull())
+			if (!m_irq_cb.isunset())
 			{
 				m_TimPris[1] = 1 << ((m_udata.data[0x1A/2] >> 8) & 0x7);
 				m_TimCnt[1] = (m_udata.data[0x1A/2] & 0xff) << 8;
@@ -810,7 +793,7 @@ void scsp_device::UpdateReg(int reg)
 			break;
 		case 0x1C:
 		case 0x1D:
-			if (!m_irq_cb.isnull())
+			if (!m_irq_cb.isunset())
 			{
 				m_TimPris[2] = 1 << ((m_udata.data[0x1C/2] >> 8) & 0x7);
 				m_TimCnt[2] = (m_udata.data[0x1C/2] & 0xff) << 8;
@@ -827,7 +810,7 @@ void scsp_device::UpdateReg(int reg)
 			break;
 		case 0x1e: // SCIEB
 		case 0x1f:
-			if (!m_irq_cb.isnull())
+			if (!m_irq_cb.isunset())
 			{
 				CheckPendingIRQ();
 
@@ -837,7 +820,7 @@ void scsp_device::UpdateReg(int reg)
 			break;
 		case 0x20: // SCIPD
 		case 0x21:
-			if (!m_irq_cb.isnull())
+			if (!m_irq_cb.isunset())
 			{
 				if (m_udata.data[0x1e/2] & m_udata.data[0x20/2] & 0x20)
 					popmessage("SCSP SCIPD write %04x, contact MAMEdev",m_udata.data[0x20/2]);
@@ -846,7 +829,7 @@ void scsp_device::UpdateReg(int reg)
 		case 0x22:  //SCIRE
 		case 0x23:
 
-			if (!m_irq_cb.isnull())
+			if (!m_irq_cb.isunset())
 			{
 				m_udata.data[0x20/2] &= ~m_udata.data[0x22/2];
 				ResetInterrupts();
@@ -873,7 +856,7 @@ void scsp_device::UpdateReg(int reg)
 		case 0x27:
 		case 0x28:
 		case 0x29:
-			if (!m_irq_cb.isnull())
+			if (!m_irq_cb.isunset())
 			{
 				m_IrqTimA = DecodeSCI(SCITMA);
 				m_IrqTimBC = DecodeSCI(SCITMB);
@@ -1276,17 +1259,12 @@ inline s32 scsp_device::UpdateSlot(SCSP_SLOT *slot)
 	return sample;
 }
 
-void scsp_device::DoMasterSamples(int nsamples)
+void scsp_device::DoMasterSamples(std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
-	stream_sample_t *bufr,*bufl;
-	stream_sample_t *exts[2];
+	auto &bufr = outputs[1];
+	auto &bufl = outputs[0];
 
-	bufr = m_bufferr;
-	bufl = m_bufferl;
-	exts[0] = m_exts0;
-	exts[1] = m_exts1;
-
-	for (int s = 0; s < nsamples; ++s)
+	for (int s = 0; s < bufl.samples(); ++s)
 	{
 		s32 smpl = 0, smpr = 0;
 
@@ -1342,7 +1320,7 @@ void scsp_device::DoMasterSamples(int nsamples)
 			SCSP_SLOT *slot = m_Slots + i + 16; // 100217, 100237 EFSDL, EFPAN for EXTS0/1
 			if (EFSDL(slot))
 			{
-				m_DSP.EXTS[i] = exts[i][s];
+				m_DSP.EXTS[i] = s32(inputs[i].get(s) * 32768.0);
 				u16 Enc = ((EFPAN(slot)) << 0x8) | ((EFSDL(slot)) << 0xd);
 				smpl += (m_DSP.EXTS[i] * m_LPANTABLE[Enc]) >> SHIFT;
 				smpr += (m_DSP.EXTS[i] * m_RPANTABLE[Enc]) >> SHIFT;
@@ -1351,17 +1329,14 @@ void scsp_device::DoMasterSamples(int nsamples)
 
 		if (DAC18B())
 		{
-			smpl = clip18(smpl);
-			smpr = clip18(smpr);
+			bufl.put_int_clamp(s, smpl, 131072);
+			bufr.put_int_clamp(s, smpr, 131072);
 		}
 		else
 		{
-			smpl = clip16(smpl >> 2);
-			smpr = clip16(smpr >> 2);
+			bufl.put_int_clamp(s, smpl >> 2, 32768);
+			bufr.put_int_clamp(s, smpr >> 2, 32768);
 		}
-
-		*bufl++ = smpl;
-		*bufr++ = smpr;
 	}
 }
 
@@ -1448,22 +1423,14 @@ void scsp_device::exec_dma()
 	}
 }
 
-#ifdef UNUSED_FUNCTION
-int IRQCB(void *param)
-{
-	CheckPendingIRQ(param);
-	return -1;
-}
-#endif
 
-
-READ16_MEMBER(scsp_device::read)
+u16 scsp_device::read(offs_t offset)
 {
 	m_stream->update();
 	return r16(offset * 2);
 }
 
-WRITE16_MEMBER(scsp_device::write)
+void scsp_device::write(offs_t offset, u16 data, u16 mem_mask)
 {
 	m_stream->update();
 
@@ -1482,11 +1449,9 @@ void scsp_device::midi_in(u8 data)
 	CheckPendingIRQ();
 }
 
-READ16_MEMBER(scsp_device::midi_out_r)
+u16 scsp_device::midi_out_r()
 {
-	u8 val;
-
-	val = m_MidiStack[m_MidiR++];
+	u8 val = m_MidiStack[m_MidiR++];
 	m_MidiR &= 31;
 	return val;
 }

@@ -27,7 +27,11 @@ public:
 	wd1010_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
 	auto out_intrq_callback() { return m_out_intrq_cb.bind(); }
+	auto out_bdrq_callback() { return m_out_bdrq_cb.bind(); }
+	auto out_bcs_callback() { return m_out_bcs_cb.bind(); }
 	auto out_bcr_callback() { return m_out_bcr_cb.bind(); }
+	auto out_dirin_callback() { return m_out_dirin_cb.bind(); }
+	auto out_wg_callback() { return m_out_wg_cb.bind(); }
 	auto in_data_callback() { return m_in_data_cb.bind(); }
 	auto out_data_callback() { return m_out_data_cb.bind(); }
 
@@ -36,12 +40,24 @@ public:
 
 	void drdy_w(int state);
 	void brdy_w(int state);
+	void sc_w(int state);
+
+	// actually inputs to the controller from the drive
+	int sc_r();
+	int tk000_r();
+
+	// HACK: head selection is not actually controlled by the wd1010, but this emulation currently
+	// works as if it does; this function allows heads beyond the 3-bit range of the sdh register.
+	void head_w(uint8_t head) { m_head = head; }
 
 protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+
+	TIMER_CALLBACK_MEMBER(update_seek);
+	TIMER_CALLBACK_MEMBER(delayed_read);
+	TIMER_CALLBACK_MEMBER(delayed_write);
 
 private:
 	enum
@@ -78,21 +94,16 @@ private:
 		CMD_SEEK = 7
 	};
 
-	enum
-	{
-		TIMER_SEEK,
-		TIMER_DATA
-	};
-
 	void set_error(int error);
 	void set_intrq(int state);
+	void set_bdrq(int state);
 	attotime get_stepping_rate();
 	void start_command();
 	void end_command();
 	int get_lbasector();
 
 	// extract values from sdh
-	int head() { return (m_sdh >> 0) & 0x07; }
+	int head() { return m_head; }
 	int drive() { return (m_sdh >> 3) & 0x03; }
 	int sector_size()
 	{
@@ -107,7 +118,11 @@ private:
 	void cmd_seek();
 
 	devcb_write_line m_out_intrq_cb;
+	devcb_write_line m_out_bdrq_cb;
+	devcb_write_line m_out_bcs_cb;
 	devcb_write_line m_out_bcr_cb;
+	devcb_write_line m_out_dirin_cb;
+	devcb_write_line m_out_wg_cb;
 	devcb_read8 m_in_data_cb;
 	devcb_write8 m_out_data_cb;
 
@@ -120,9 +135,11 @@ private:
 	} m_drives[4];
 
 	emu_timer *m_seek_timer;
-	emu_timer *m_data_timer;
+	emu_timer *m_read_timer;
+	emu_timer *m_write_timer;
 
 	int m_intrq;
+	//int m_bdrq;
 	int m_brdy;
 	uint8_t m_stepping_rate;
 	uint8_t  m_command;
@@ -135,6 +152,7 @@ private:
 	uint16_t m_cylinder;
 	uint8_t m_sdh;
 	uint8_t m_status;
+	uint8_t m_head;
 };
 
 // device type definition

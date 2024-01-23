@@ -50,7 +50,7 @@ public:
 
 	// control lines -- all lines are specified as active-high (even CS2)
 	void set_control(uint8_t cs1, uint8_t cs2, uint8_t c1, uint8_t c2);
-	DECLARE_WRITE_LINE_MEMBER(set_clk);
+	void set_clk(int state);
 
 protected:
 	// device-level overrides
@@ -58,8 +58,8 @@ protected:
 
 	// device_nvram_interface overrides
 	virtual void nvram_default() override;
-	virtual void nvram_read(emu_file &file) override;
-	virtual void nvram_write(emu_file &file) override;
+	virtual bool nvram_read(util::read_stream &file) override;
+	virtual bool nvram_write(util::write_stream &file) override;
 
 private:
 	void update_state();

@@ -8,7 +8,7 @@
 
 #include "emu.h"
 #include "sv603.h"
-#include "softlist.h"
+#include "softlist_dev.h"
 #include "speaker.h"
 
 
@@ -94,7 +94,7 @@ void sv603_device::device_reset()
 //**************************************************************************
 
 template<int N>
-WRITE_LINE_MEMBER( sv603_device::joy_irq_w )
+void sv603_device::joy_irq_w(int state)
 {
 	m_expander->int_w(state);
 }

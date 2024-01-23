@@ -3,6 +3,8 @@
 #ifndef MAME_BUS_RS232_NULL_MODEM_H
 #define MAME_BUS_RS232_NULL_MODEM_H
 
+#pragma once
+
 #include "rs232.h"
 #include "imagedev/bitbngr.h"
 #include "diserial.h"
@@ -14,17 +16,16 @@ class null_modem_device : public device_t,
 public:
 	null_modem_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	virtual WRITE_LINE_MEMBER( input_txd ) override { device_serial_interface::rx_w(state); }
-	virtual WRITE_LINE_MEMBER( input_rts ) override { m_rts = state; }
-	virtual WRITE_LINE_MEMBER( input_dtr ) override { m_dtr = state; }
+	virtual void input_txd(int state) override { device_serial_interface::rx_w(state); }
+	virtual void input_rts(int state) override { m_rts = state; }
+	virtual void input_dtr(int state) override { m_dtr = state; }
 
-	DECLARE_WRITE_LINE_MEMBER(update_serial);
+	void update_serial(int state);
 
 protected:
 	virtual ioport_constructor device_input_ports() const override;
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 	virtual void device_add_mconfig(machine_config &config) override;
 
 	virtual void tra_callback() override;
@@ -32,15 +33,12 @@ protected:
 	virtual void rcv_complete() override;
 
 private:
-	static constexpr int TIMER_POLL = 1;
-
-	void queue();
+	TIMER_CALLBACK_MEMBER(update_queue);
 
 	required_device<bitbanger_device> m_stream;
 
 	required_ioport m_rs232_txbaud;
 	required_ioport m_rs232_rxbaud;
-	required_ioport m_rs232_startbits;
 	required_ioport m_rs232_databits;
 	required_ioport m_rs232_parity;
 	required_ioport m_rs232_stopbits;
@@ -52,6 +50,7 @@ private:
 	emu_timer *m_timer_poll;
 	int m_rts;
 	int m_dtr;
+	int m_xoff;
 };
 
 DECLARE_DEVICE_TYPE(NULL_MODEM, null_modem_device)

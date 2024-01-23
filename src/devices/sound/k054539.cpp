@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Aaron Giles
+// copyright-holders:Olivier Galibert
 /*********************************************************
 
     Konami 054539 (TOP) PCM Sound Chip
@@ -21,9 +21,8 @@ DEFINE_DEVICE_TYPE(K054539, k054539_device, "k054539", "K054539 ADPCM")
 k054539_device::k054539_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: device_t(mconfig, K054539, tag, owner, clock)
 	, device_sound_interface(mconfig, *this)
-	, device_rom_interface(mconfig, *this, 24)
+	, device_rom_interface(mconfig, *this)
 	, flags(0)
-	, ram(nullptr)
 	, reverb_pos(0)
 	, cur_ptr(0)
 	, cur_limit(0)
@@ -105,22 +104,25 @@ void k054539_device::keyoff(int channel)
 		regs[0x22c] &= ~(1 << channel);
 }
 
-void k054539_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void k054539_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
-#define VOL_CAP 1.80
+	static constexpr double VOL_CAP = 1.80;
 
 	static const int16_t dpcm[16] = {
-		0 * 0x100,     1 * 0x100,   4 * 0x100,   9 * 0x100,  16 * 0x100, 25 * 0x100, 36 * 0x100, 49 * 0x100,
-		-64 * 0x100, -49 * 0x100, -36 * 0x100, -25 * 0x100, -16 * 0x100, -9 * 0x100, -4 * 0x100, -1 * 0x100
+		0 * 0x100,   1 * 0x100,   2 * 0x100,   4 * 0x100,  8 * 0x100, 16 * 0x100, 32 * 0x100, 64 * 0x100,
+		0 * 0x100, -64 * 0x100, -32 * 0x100, -16 * 0x100, -8 * 0x100, -4 * 0x100, -2 * 0x100, -1 * 0x100
 	};
 
-
-	int16_t *rbase = (int16_t *)ram.get();
+	int16_t *rbase = (int16_t *)&ram[0];
 
 	if(!(regs[0x22f] & 1))
+	{
+		outputs[0].fill(0);
+		outputs[1].fill(0);
 		return;
+	}
 
-	for(int sample = 0; sample != samples; sample++) {
+	for(int sample = 0; sample != outputs[0].samples(); sample++) {
 		double lval, rval;
 		if(!(flags & DISABLE_REVERB))
 			lval = rval = rbase[reverb_pos];
@@ -298,13 +300,13 @@ void k054539_device::sound_stream_update(sound_stream &stream, stream_sample_t *
 				}
 			}
 		reverb_pos = (reverb_pos + 1) & 0x1fff;
-		outputs[0][sample] = int16_t(lval);
-		outputs[1][sample] = int16_t(rval);
+		outputs[0].put_int(sample, lval, 32768);
+		outputs[1].put_int(sample, rval, 32768);
 	}
 }
 
 
-void k054539_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(k054539_device::call_timer_handler)
 {
 	if (regs[0x22f] & 0x20)
 		m_timer_handler(m_timer_state ^= 1);
@@ -316,10 +318,11 @@ void k054539_device::init_chip()
 	memset(posreg_latch, 0, sizeof(posreg_latch)); //*
 	flags |= UPDATE_AT_KEYON; //* make it default until proven otherwise
 
-	ram = std::make_unique<uint8_t[]>(0x4000);
+	ram = std::make_unique<uint8_t []>(0x4000);
+
 	reverb_pos = 0;
 	cur_ptr = 0;
-	memset(ram.get(), 0, 0x4000);
+	memset(&ram[0], 0, 0x4000);
 
 	stream = stream_alloc(0, 2, clock() / 384);
 
@@ -483,9 +486,12 @@ u8 k054539_device::read(offs_t offset)
 	case 0x22d:
 		if(regs[0x22f] & 0x10) {
 			uint8_t res = (rom_addr == 0x80) ? ram[cur_ptr] : read_byte((0x20000*rom_addr)+cur_ptr);
-			cur_ptr++;
-			if(cur_ptr == cur_limit)
-				cur_ptr = 0;
+			if (!machine().side_effects_disabled())
+			{
+				cur_ptr++;
+				if(cur_ptr == cur_limit)
+					cur_ptr = 0;
+			}
 			return res;
 		} else
 			return 0;
@@ -500,10 +506,9 @@ u8 k054539_device::read(offs_t offset)
 
 void k054539_device::device_start()
 {
-	m_timer = timer_alloc(0);
+	m_timer = timer_alloc(FUNC(k054539_device::call_timer_handler), this);
 
-	// resolve / bind callbacks
-	m_timer_handler.resolve_safe();
+	// resolve delegates
 	m_apan_cb.resolve();
 
 	for (auto & elem : gain)
@@ -545,17 +550,17 @@ void k054539_device::device_reset()
 {
 	regs[0x22c] = 0;
 	regs[0x22f] = 0;
-	memset(ram.get(), 0, 0x4000);
+	memset(&ram[0], 0, 0x4000);
 	m_timer->enable(false);
 }
 
 
 //-------------------------------------------------
-//  rom_bank_updated - the rom bank has changed
+//  rom_bank_pre_change - refresh the stream if the
+//  ROM banking changes
 //-------------------------------------------------
 
-void k054539_device::rom_bank_updated()
+void k054539_device::rom_bank_pre_change()
 {
 	stream->update();
 }
-

@@ -14,9 +14,9 @@
 #include "emu.h"
 #include "am2910.h"
 
-#define LOG_INSN    (1 << 0)
-#define LOG_STACK   (1 << 1)
-#define LOG_ERROR   (1 << 2)
+#define LOG_INSN    (1U << 1)
+#define LOG_STACK   (1U << 2)
+#define LOG_ERROR   (1U << 3)
 #define LOG_ALL     (LOG_INSN | LOG_STACK | LOG_ERROR)
 
 #define VERBOSE     (0)
@@ -63,14 +63,8 @@ void am2910_device::device_start()
 	save_item(NAME(m_d));
 	save_item(NAME(m_i));
 
-	m_y.resolve_safe();
-	m_full.resolve_safe();
-	m_pl.resolve_safe();
-	m_map.resolve_safe();
-	m_vect.resolve_safe();
-
 	if (clock())
-		m_execute_timer = timer_alloc(TIMER_CLOCK);
+		m_execute_timer = timer_alloc(FUNC(am2910_device::clock_tick), this);
 	else
 		m_execute_timer = nullptr;
 }
@@ -86,35 +80,32 @@ void am2910_device::device_reset()
 		m_execute_timer->adjust(attotime::from_hz(clock()), 0, attotime::from_hz(clock()));
 }
 
-void am2910_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(am2910_device::clock_tick)
 {
-	if (id == TIMER_CLOCK)
-	{
-		cp_w(m_cp ? 0 : 1);
-	}
+	cp_w(m_cp ? 0 : 1);
 }
 
-WRITE_LINE_MEMBER(am2910_device::cc_w)
+void am2910_device::cc_w(int state)
 {
 	m_cc = state;
 }
 
-WRITE_LINE_MEMBER(am2910_device::ccen_w)
+void am2910_device::ccen_w(int state)
 {
 	m_ccen = state;
 }
 
-WRITE_LINE_MEMBER(am2910_device::ci_w)
+void am2910_device::ci_w(int state)
 {
 	m_ci = state;
 }
 
-WRITE_LINE_MEMBER(am2910_device::rld_w)
+void am2910_device::rld_w(int state)
 {
 	m_rld = state;
 }
 
-WRITE_LINE_MEMBER(am2910_device::cp_w)
+void am2910_device::cp_w(int state)
 {
 	int old_state = m_cp;
 	m_cp = state;

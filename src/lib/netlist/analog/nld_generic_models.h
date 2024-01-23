@@ -1,4 +1,4 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
 
 #ifndef NLD_GENERIC_MODELS_H_
@@ -8,8 +8,8 @@
 /// \file nld_generic_models.h
 ///
 
-#include "netlist/nl_base.h"
-#include "netlist/nl_setup.h"
+#include "core/state_var.h"
+#include "nl_base.h"
 
 //
 // Set to 0 to use a linearized diode model in the range exceeding
@@ -21,9 +21,7 @@
 
 #define USE_TEXTBOOK_DIODE  (1)
 
-namespace netlist
-{
-namespace analog
+namespace netlist::analog
 {
 
 	// -----------------------------------------------------------------------------
@@ -45,7 +43,7 @@ namespace analog
 	class generic_capacitor<capacitor_e::VARIABLE_CAPACITY>
 	{
 	public:
-		generic_capacitor(device_t &dev, const pstring &name)
+		generic_capacitor(core_device_t &dev, const pstring &name)
 		: m_h(dev, name + ".m_h", nlconst::zero())
 		, m_c(dev, name + ".m_c", nlconst::zero())
 		, m_v(dev, name + ".m_v", nlconst::zero())
@@ -69,22 +67,26 @@ namespace analog
 			//return m_h * cap +  m_gmin;
 		}
 
-		nl_fptype Ieq(nl_fptype cap, nl_fptype v) const noexcept
+		nl_fptype Ieq(nl_fptype cap, [[maybe_unused]] nl_fptype v) const noexcept
 		{
-			plib::unused_var(v);
 			//return -m_h * 0.5 * ((cap + m_c) * m_v + (cap - m_c) * v) ;
 			return -m_h * nlconst::half() * (cap + m_c) * m_v;
 			//return -m_h * cap * m_v;
 		}
 
-		void timestep(nl_fptype cap, nl_fptype v, nl_fptype step) noexcept
+		void time_step(nl_fptype cap, nl_fptype v, nl_fptype step) noexcept
 		{
 			m_h = plib::reciprocal(step);
 			m_c = cap;
 			m_v = v;
 		}
 
-		void setparams(nl_fptype gmin) noexcept { m_gmin = gmin; }
+		void restore_state() noexcept
+		{
+			// no state used
+		}
+
+		void set_params(nl_fptype gmin) noexcept { m_gmin = gmin; }
 
 	private:
 		state_var<nl_fptype> m_h;
@@ -107,15 +109,13 @@ namespace analog
 
 		static capacitor_e type() noexcept { return capacitor_e::CONSTANT_CAPACITY; }
 		nl_fptype G(nl_fptype cap) const noexcept { return cap * m_h +  m_gmin; }
-		nl_fptype Ieq(nl_fptype cap, nl_fptype v) const noexcept
+		nl_fptype Ieq(nl_fptype cap, [[maybe_unused]] nl_fptype v) const noexcept
 		{
-			plib::unused_var(v);
 			return - G(cap) * m_v;
 		}
 
-		void timestep(nl_fptype cap, nl_fptype v, nl_fptype step) noexcept
+		void time_step([[maybe_unused]] nl_fptype cap, nl_fptype v, nl_fptype step) noexcept
 		{
-			plib::unused_var(cap);
 			m_h = plib::reciprocal(step);
 			m_v = v;
 		}
@@ -126,27 +126,32 @@ namespace analog
 		nl_fptype m_gmin;
 	};
 
-#if 1
+#if (NL_USE_BACKWARD_EULER)
 	// Constant model for constant capacitor model
 	// Backward Euler
 	// "Circuit simulation", page 274
 	struct generic_capacitor_const
 	{
 	public:
-		generic_capacitor_const(device_t &dev, const pstring &name)
+		generic_capacitor_const( /*[[maybe_unused]]*/ core_device_t &dev, /*[[maybe_unused]]*/ const pstring &name)
 		: m_gmin(nlconst::zero())
 		{
+			// gcc 7.2 (mingw) and 7.5 (ubuntu) don't accept maybe_unused here
 			plib::unused_var(dev, name);
 		}
 
 		// Returns { G, Ieq }
-		std::pair<nl_fptype, nl_fptype> timestep(nl_fptype cap, nl_fptype v, nl_fptype step) const noexcept
+		std::pair<nl_fptype, nl_fptype> time_step(nl_fptype cap, nl_fptype v, nl_fptype step) const noexcept
 		{
 			const nl_fptype h(plib::reciprocal(step));
 			const nl_fptype G(cap * h + m_gmin);
 			return { G, - G * v };
 		}
-		void setparams(nl_fptype gmin) noexcept { m_gmin = gmin; }
+		void restore_state() noexcept
+		{
+			// this one has no state
+		}
+		void set_parameters(nl_fptype gmin) noexcept { m_gmin = gmin; }
 	private:
 		nl_fptype m_gmin;
 	};
@@ -157,17 +162,16 @@ namespace analog
 	struct generic_capacitor_const
 	{
 	public:
-		generic_capacitor_const(device_t &dev, const pstring &name)
+		generic_capacitor_const([[maybe_unused]] core_device_t &dev, [[maybe_unused]] const pstring &name)
 		: m_gmin(nlconst::zero())
 		, m_vn(0)
 		, m_in(0)
 		, m_trn(0.0)
 		{
-			plib::unused_var(dev, name);
 		}
 
 		// Returns { G, Ieq }
-		std::pair<nl_fptype, nl_fptype> timestep(nl_fptype cap, nl_fptype v, nl_fptype step) noexcept
+		std::pair<nl_fptype, nl_fptype> time_step(nl_fptype cap, nl_fptype v, nl_fptype step) noexcept
 		{
 			const nl_fptype h(plib::reciprocal(step));
 			if (m_trn == 0.0)
@@ -177,8 +181,6 @@ namespace analog
 				m_trn = h;
 				return { G, - G * v };
 			}
-			if (step < 1e-9)
-				printf("Help %e\n", step);
 			const nl_fptype Gn = nlconst::two() * cap * m_trn;
 			const nl_fptype inp1 = Gn * v - (m_in + Gn * m_vn);
 			const nl_fptype G(nlconst::two() * cap * h);
@@ -188,7 +190,11 @@ namespace analog
 			m_trn = h;
 			return { G + m_gmin, -Ieq };
 		}
-		void setparams(nl_fptype gmin) noexcept { m_gmin = gmin; }
+		void restore_state() noexcept
+		{
+			// this one has no state
+		}
+		void set_parameters(nl_fptype gmin) noexcept { m_gmin = gmin; }
 	private:
 		nl_fptype m_gmin;
 		nl_fptype m_vn;
@@ -210,26 +216,32 @@ namespace analog
 	class generic_diode
 	{
 	public:
-		generic_diode(device_t &dev, const pstring &name)
-		: m_Vd(dev, name + ".m_Vd", nlconst::magic(0.7))
-		, m_Id(dev, name + ".m_Id", nlconst::zero())
-		, m_G(dev,  name + ".m_G", nlconst::magic(1e-15))
+		generic_diode()
+		: m_Vd(nlconst::diode_start_voltage())
+		, m_Id(nlconst::zero())
+		, m_G(nlconst::cgminalt())
 		, m_Vt(nlconst::zero())
 		, m_Vmin(nlconst::zero()) // not used in MOS model
 		, m_Is(nlconst::zero())
 		, m_logIs(nlconst::zero())
-		, m_gmin(nlconst::magic(1e-15))
+		, m_gmin(nlconst::cgminalt())
 		, m_VtInv(nlconst::zero())
 		, m_Vcrit(nlconst::zero())
 		{
 			set_param(
-				nlconst::magic(1e-15)
-			  , nlconst::magic(1)
-			  , nlconst::magic(1e-15)
-			  , nlconst::magic(300.0));
-			//m_name = name;
+				nlconst::np_Is()
+			  , nlconst::one()
+			  , nlconst::cgminalt()
+			  , nlconst::T0());
 		}
-		//pstring m_name;
+
+		generic_diode(core_device_t &dev, const pstring &name)
+		: generic_diode()
+		{
+			dev.state().save(dev, m_Vd, dev.name(), name + ".m_Vd");
+			dev.state().save(dev, m_Id, dev.name(), name + ".m_Id");
+			dev.state().save(dev, m_G, dev.name(), name + ".m_G");
+		}
 		// Basic math
 		//
 		// I(V) = f(V)
@@ -249,10 +261,10 @@ namespace analog
 					// if the old voltage is less than zero and new is above
 					// make sure we move enough so that matrix and current
 					// changes.
-					const nl_fptype old = std::max(nlconst::zero(), m_Vd());
+					const nl_fptype old = std::max(nlconst::zero(), m_Vd);
 					const nl_fptype d = std::min(+fp_constants<nl_fptype>::DIODE_MAXDIFF(), nVd - old);
 					const nl_fptype a = plib::abs(d) * m_VtInv;
-					m_Vd = old + nlconst::magic(d < 0 ? -1.0 : 1.0) * plib::log1p(a) * m_Vt;
+					m_Vd = old + plib::signum(d) * plib::log1p(a) * m_Vt;
 				}
 				else
 					m_Vd = std::max(-fp_constants<nl_fptype>::DIODE_MAXDIFF(), nVd);
@@ -314,11 +326,11 @@ namespace analog
 			m_logIs = plib::log(Is);
 			m_gmin = gmin;
 
-			m_Vt = n * temp * nlconst::k_b() / nlconst::Q_e();
+			m_Vt = nlconst::np_VT(n, temp);
 			m_VtInv = plib::reciprocal(m_Vt);
 
 #if USE_TEXTBOOK_DIODE
-			m_Vmin = nlconst::magic(-5.0) * m_Vt;
+			m_Vmin = nlconst::diode_min_cutoff_mult() * m_Vt;
 			// Vcrit : f(V) has smallest radius of curvature rho(V) == min(rho(v))
 			m_Vcrit = m_Vt * plib::log(m_Vt / m_Is / nlconst::sqrt2());
 #else
@@ -331,7 +343,7 @@ namespace analog
 			// ln(P/Is) = ln(V)+V/Vt ~= V - 1 + V/vt
 			// V = (1+ln(P/Is))/(1 + 1/Vt)
 
-			m_Vcrit = (1.0 + plib::log(0.5 / m_Is)) / (1.0 + m_VtInv);
+			m_Vcrit = (nlconst::one() + plib::log(nlconst::half() / m_Is)) / (nlconst::one() + m_VtInv);
 			//printf("Vcrit: %f\n", m_Vcrit);
 			m_Icrit_p_Is = plib::exp(m_logIs + m_Vcrit * m_VtInv);
 			//m_Icrit = plib::exp(m_logIs + m_Vcrit * m_VtInv) - m_Is;
@@ -347,9 +359,9 @@ namespace analog
 		// owning object must save those ...
 
 	private:
-		state_var<nl_fptype> m_Vd;
-		state_var<nl_fptype> m_Id;
-		state_var<nl_fptype> m_G;
+		nl_fptype m_Vd;
+		nl_fptype m_Id;
+		nl_fptype m_G;
 
 		nl_fptype m_Vt;
 		nl_fptype m_Vmin;
@@ -366,7 +378,6 @@ namespace analog
 	};
 
 
-} // namespace analog
-} // namespace netlist
+} // namespace netlist::analog
 
 #endif // NLD_GENERIC_MODELS_H_

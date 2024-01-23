@@ -49,18 +49,18 @@ public:
 	void interleave_w(u8 data);
 
 	// data line writes
-	DECLARE_WRITE_LINE_MEMBER(a0_w);
-	DECLARE_WRITE_LINE_MEMBER(a1_w);
-	DECLARE_WRITE_LINE_MEMBER(a2_w);
-	DECLARE_WRITE_LINE_MEMBER(a3_w);
-	DECLARE_WRITE_LINE_MEMBER(b0_w);
-	DECLARE_WRITE_LINE_MEMBER(b1_w);
-	DECLARE_WRITE_LINE_MEMBER(b2_w);
-	DECLARE_WRITE_LINE_MEMBER(b3_w);
+	void a0_w(int state);
+	void a1_w(int state);
+	void a2_w(int state);
+	void a3_w(int state);
+	void b0_w(int state);
+	void b1_w(int state);
+	void b2_w(int state);
+	void b3_w(int state);
 
 	// control line writes
-	DECLARE_WRITE_LINE_MEMBER(select_w);
-	DECLARE_WRITE_LINE_MEMBER(strobe_w);
+	void select_w(int state);
+	void strobe_w(int state);
 
 	// output read
 	u8 output_r();
@@ -96,7 +96,7 @@ class ls157_x2_device : public ls157_device
 {
 public:
 	// construction/destruction
-	ls157_x2_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
+	ls157_x2_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock = 0);
 };
 
 // ======================> hc157_device
@@ -105,7 +105,7 @@ class hc157_device : public ls157_device
 {
 public:
 	// construction/destruction
-	hc157_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
+	hc157_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock = 0);
 };
 
 // ======================> hct157_device
@@ -114,7 +114,7 @@ class hct157_device : public ls157_device
 {
 public:
 	// construction/destruction
-	hct157_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
+	hct157_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock = 0);
 };
 
 

@@ -37,7 +37,7 @@
 
 #include "opcode.h"
 
-#include "debugger.h"
+#include "debug/debugcpu.h"
 
 #include "dsp56def.h"
 
@@ -60,7 +60,7 @@
 #include "dsp56mem.h"
 
 
-DEFINE_DEVICE_TYPE_NS(DSP56156, DSP_56156, dsp56156_device, "dsp56156", "Motorola DSP56156")
+DEFINE_DEVICE_TYPE(DSP56156, DSP_56156::dsp56156_device, "dsp56156", "Motorola DSP56156")
 
 
 namespace DSP_56156 {
@@ -127,6 +127,7 @@ dsp56156_device::dsp56156_device(const machine_config &mconfig, const char *tag,
 	, m_program_config("program", ENDIANNESS_LITTLE, 16, 16, -1, address_map_constructor(FUNC(dsp56156_device::dsp56156_program_map), this))
 	, m_data_config("data", ENDIANNESS_LITTLE, 16, 16, -1, address_map_constructor(FUNC(dsp56156_device::dsp56156_x_data_map), this))
 	, m_program_ram(*this, "dsk56156_program_ram")
+	, portC_cb(*this)
 {
 }
 
@@ -141,7 +142,7 @@ device_memory_interface::space_config_vector dsp56156_device::memory_space_confi
 /***************************************************************************
     MEMORY ACCESSORS
 ***************************************************************************/
-#define ROPCODE(pc)   cpustate->cache->read_word(pc)
+#define ROPCODE(pc)   cpustate->cache.read_word(pc)
 
 
 /***************************************************************************
@@ -291,9 +292,9 @@ void dsp56156_device::device_start()
 
 	save_item(NAME(m_core.peripheral_ram));
 
-	m_core.program = &space(AS_PROGRAM);
-	m_core.cache = m_core.program->cache<1, -1, ENDIANNESS_LITTLE>();
-	m_core.data = &space(AS_DATA);
+	space(AS_PROGRAM).cache(m_core.cache);
+	space(AS_PROGRAM).specific(m_core.program);
+	space(AS_DATA).specific(m_core.data);
 
 	state_add(DSP56156_PC,     "PC", m_core.PCU.pc).formatstr("%04X");
 	state_add(DSP56156_SR,     "SR", m_core.PCU.sr).formatstr("%04X");
@@ -345,7 +346,6 @@ void dsp56156_device::device_start()
 
 	state_add(STATE_GENPC, "GENPC", m_core.PCU.pc).noshow();
 	state_add(STATE_GENPCBASE, "CURPC", m_core.ppc).noshow();
-	state_add(STATE_GENSP, "GENSP", m_core.PCU.sp).noshow();
 	state_add(STATE_GENFLAGS, "GENFLAGS", m_core.PCU.sr).formatstr("%14s").noshow();
 
 	set_icountptr(m_core.icount);
@@ -445,7 +445,7 @@ void dsp56156_device::device_reset()
 	m_core.ppc = m_core.PCU.pc;
 
 	/* HACK - Put a jump to 0x0000 at 0x0000 - this keeps the CPU locked to the instruction at address 0x0000 */
-	m_core.program->write_word(0x0000, 0x0124);
+	m_core.program.write_word(0x0000, 0x0124);
 }
 
 
@@ -459,25 +459,6 @@ void dsp56156_device::device_reset()
 /***************************************************************************
     CORE EXECUTION LOOP
 ***************************************************************************/
-// Execute a single opcode and return how many cycles it took.
-static size_t execute_one_new(dsp56156_core* cpustate)
-{
-	// For MAME
-	cpustate->ppc = PC;
-	if (cpustate->device->machine().debug_flags & DEBUG_FLAG_CALL_HOOK) // FIXME: if this was a member, the helper would work
-		cpustate->device->debug()->instruction_hook(PC);
-
-	cpustate->op = ROPCODE(PC);
-	uint16_t w0 = ROPCODE(PC);
-	uint16_t w1 = ROPCODE(PC + 1);
-
-	Opcode op(w0, w1);
-	op.evaluate(cpustate);
-	PC += op.evalSize();    // Special size function needed to handle jmps, etc.
-
-	// TODO: Currently all operations take up 4 cycles (inst->cycles()).
-	return 4;
-}
 
 void dsp56156_device::execute_run()
 {
@@ -501,7 +482,6 @@ void dsp56156_device::execute_run()
 	while(m_core.icount > 0)
 	{
 		execute_one(&m_core);
-		if (0) m_core.icount -= execute_one_new(&m_core);
 		pcu_service_interrupts(&m_core);   // TODO: Is it incorrect to service after each instruction?
 	}
 }

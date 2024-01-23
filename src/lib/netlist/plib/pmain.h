@@ -1,4 +1,4 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
 
 #ifndef PMAIN_H_
@@ -15,14 +15,15 @@
 #include "putil.h"
 
 #include <memory>
+#include <vector>
 
 #ifdef _WIN32
 #include <cwchar>
-#define PMAIN(appclass) \
-extern "C" int wmain(int argc, wchar_t *argv[]) { return plib::app::mainrun<appclass, wchar_t>(argc, argv); }
+#define PMAIN(app_class) \
+extern "C" int wmain(int argc, wchar_t *argv[]) { return plib::app::run_main<app_class, wchar_t>(argc, argv); }
 #else
-#define PMAIN(appclass) \
-int main(int argc, char **argv) { return plib::app::mainrun<appclass, char>(argc, argv); }
+#define PMAIN(app_class) \
+int main(int argc, char **argv) { return plib::app::run_main<app_class, char>(argc, argv); }
 #endif
 
 
@@ -41,26 +42,25 @@ namespace plib {
 
 		virtual pstring usage() = 0;
 
-		/* short version of usage, defaults to usage */
+		// short version of usage, defaults to usage
 		virtual pstring usage_short() { return usage(); }
 
 		virtual int execute() = 0;
 
-		plib::putf8_fmt_writer pout;
-		plib::putf8_fmt_writer perr;
+		plib::putf8_fmt_writer std_out;
+		plib::putf8_fmt_writer std_err;
 
 		template <class C, typename T>
-		static int mainrun(int argc, T **argv)
+		static int run_main(int argc, T **argv)
 		{
-			auto a = plib::make_unique<C>();
-			return a->main_utfX(argc, argv);
+			C application;
+			return application.main_utfX(argc, argv);
 		}
 
 	private:
-		int main_utfX(int argc, char **argv);
-#ifdef _WIN32
+		int main_utfX(const std::vector<putf8string> &argv);
+		int main_utfX(int argc, char *argv[]);
 		int main_utfX(int argc, wchar_t *argv[]);
-#endif
 
 	};
 

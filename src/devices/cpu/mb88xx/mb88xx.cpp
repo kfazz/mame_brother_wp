@@ -2,7 +2,7 @@
 // copyright-holders:Ernesto Corvi
 /***************************************************************************
 
-    mb88xx.c
+    mb88xx.cpp
     Core implementation for the portable Fujitsu MB88xx series MCU emulator.
 
     Written by Ernesto Corvi
@@ -18,7 +18,6 @@
 #include "emu.h"
 #include "mb88xx.h"
 #include "mb88dasm.h"
-#include "debugger.h"
 
 
 DEFINE_DEVICE_TYPE(MB88201, mb88201_cpu_device, "mb88201", "Fujitsu MB88201")
@@ -47,17 +46,17 @@ DEFINE_DEVICE_TYPE(MB8844,  mb8844_cpu_device,  "mb8844",  "Fujitsu MB8844")
     MACROS
 ***************************************************************************/
 
-#define READOP(a)           (m_cache->read_byte(a))
+#define READOP(a)           (m_cache.read_byte(a))
 
-#define RDMEM(a)            (m_data->read_byte(a))
-#define WRMEM(a,v)          (m_data->write_byte((a), (v)))
+#define RDMEM(a)            (m_data.read_byte(a) & 0x0f)
+#define WRMEM(a,v)          (m_data.write_byte((a), (v) & 0x0f))
 
 #define TEST_ST()           (m_st & 1)
 #define TEST_ZF()           (m_zf & 1)
 #define TEST_CF()           (m_cf & 1)
 #define TEST_VF()           (m_vf & 1)
 #define TEST_SF()           (m_sf & 1)
-#define TEST_NF()           (m_nf & 1)
+#define TEST_IF()           (m_if & 1)
 
 #define UPDATE_ST_C(v)      m_st=(v&0x10) ? 0 : 1
 #define UPDATE_ST_Z(v)      m_st=(v==0) ? 0 : 1
@@ -118,12 +117,12 @@ mb88_cpu_device::mb88_cpu_device(const machine_config &mconfig, device_type type
 	, m_program_config("program", ENDIANNESS_BIG, 8, program_width, 0, (program_width == 9) ? address_map_constructor(FUNC(mb88_cpu_device::program_9bit), this) : (program_width == 10) ? address_map_constructor(FUNC(mb88_cpu_device::program_10bit), this) : address_map_constructor(FUNC(mb88_cpu_device::program_11bit), this))
 	, m_data_config("data", ENDIANNESS_BIG, 8, data_width, 0, (data_width == 4) ? address_map_constructor(FUNC(mb88_cpu_device::data_4bit), this) : (data_width == 5) ? address_map_constructor(FUNC(mb88_cpu_device::data_5bit), this) : (data_width == 6) ? address_map_constructor(FUNC(mb88_cpu_device::data_6bit), this) : address_map_constructor(FUNC(mb88_cpu_device::data_7bit), this))
 	, m_PLA(nullptr)
-	, m_read_k(*this)
+	, m_read_k(*this, 0)
 	, m_write_o(*this)
 	, m_write_p(*this)
-	, m_read_r(*this)
+	, m_read_r(*this, 0)
 	, m_write_r(*this)
-	, m_read_si(*this)
+	, m_read_si(*this, 0)
 	, m_write_so(*this)
 {
 }
@@ -182,28 +181,17 @@ std::unique_ptr<util::disasm_interface> mb88_cpu_device::create_disassembler()
 
 void mb88_cpu_device::device_start()
 {
-	m_program = &space(AS_PROGRAM);
-	m_cache = m_program->cache<0, 0, ENDIANNESS_BIG>();
-	m_data = &space(AS_DATA);
+	space(AS_PROGRAM).cache(m_cache);
+	space(AS_PROGRAM).specific(m_program);
+	space(AS_DATA).specific(m_data);
 
-	m_read_k.resolve_safe(0);
-	m_write_o.resolve_safe();
-	m_write_p.resolve_safe();
-	m_read_r.resolve_all_safe(0);
-	m_write_r.resolve_all_safe();
-	m_read_si.resolve_safe(0);
-	m_write_so.resolve_safe();
-
-	m_serial = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(mb88_cpu_device::serial_timer), this));
+	m_serial = timer_alloc(FUNC(mb88_cpu_device::serial_timer), this);
 
 	m_ctr = 0;
 
 	save_item(NAME(m_PC));
 	save_item(NAME(m_PA));
-	save_item(NAME(m_SP[0]));
-	save_item(NAME(m_SP[1]));
-	save_item(NAME(m_SP[2]));
-	save_item(NAME(m_SP[3]));
+	save_item(NAME(m_SP));
 	save_item(NAME(m_SI));
 	save_item(NAME(m_A));
 	save_item(NAME(m_X));
@@ -213,7 +201,7 @@ void mb88_cpu_device::device_start()
 	save_item(NAME(m_cf));
 	save_item(NAME(m_vf));
 	save_item(NAME(m_sf));
-	save_item(NAME(m_nf));
+	save_item(NAME(m_if));
 	save_item(NAME(m_pio));
 	save_item(NAME(m_TH));
 	save_item(NAME(m_TL));
@@ -222,6 +210,7 @@ void mb88_cpu_device::device_start()
 	save_item(NAME(m_SB));
 	save_item(NAME(m_SBcount));
 	save_item(NAME(m_pending_interrupt));
+	save_item(NAME(m_in_irq));
 
 	state_add( MB88_PC,  "PC",  m_PC).formatstr("%02X");
 	state_add( MB88_PA,  "PA",  m_PA).formatstr("%02X");
@@ -251,7 +240,7 @@ void mb88_cpu_device::state_import(const device_state_entry &entry)
 			m_cf = (m_debugger_flags & 0x04) ? 1 : 0;
 			m_vf = (m_debugger_flags & 0x08) ? 1 : 0;
 			m_sf = (m_debugger_flags & 0x10) ? 1 : 0;
-			m_nf = (m_debugger_flags & 0x20) ? 1 : 0;
+			m_if = (m_debugger_flags & 0x20) ? 1 : 0;
 			break;
 
 		case STATE_GENPC:
@@ -274,7 +263,7 @@ void mb88_cpu_device::state_export(const device_state_entry &entry)
 			if (TEST_CF()) m_debugger_flags |= 0x04;
 			if (TEST_VF()) m_debugger_flags |= 0x08;
 			if (TEST_SF()) m_debugger_flags |= 0x10;
-			if (TEST_NF()) m_debugger_flags |= 0x20;
+			if (TEST_IF()) m_debugger_flags |= 0x20;
 			break;
 
 		case STATE_GENPC:
@@ -296,7 +285,7 @@ void mb88_cpu_device::state_string_export(const device_state_entry &entry, std::
 					TEST_CF() ? 'C' : 'c',
 					TEST_VF() ? 'V' : 'v',
 					TEST_SF() ? 'S' : 's',
-					TEST_NF() ? 'I' : 'i');
+					TEST_IF() ? 'I' : 'i');
 
 			break;
 	}
@@ -318,7 +307,7 @@ void mb88_cpu_device::device_reset()
 	m_cf = 0;
 	m_vf = 0;
 	m_sf = 0;
-	m_nf = 0;
+	m_if = 0;
 	m_pio = 0;
 	m_TH = 0;
 	m_TL = 0;
@@ -326,6 +315,7 @@ void mb88_cpu_device::device_reset()
 	m_SB = 0;
 	m_SBcount = 0;
 	m_pending_interrupt = 0;
+	m_in_irq = 0;
 }
 
 /***************************************************************************
@@ -368,13 +358,15 @@ int mb88_cpu_device::pla( int inA, int inB )
 
 void mb88_cpu_device::execute_set_input(int inputnum, int state)
 {
-	/* on rising edge trigger interrupt */
-	if ( (m_pio & 0x04) && !m_nf && state == ASSERT_LINE )
+	/* On rising edge trigger interrupt.
+	 * Note this is a logical level, the actual pin is high-to-low voltage
+	 * triggered. */
+	if ( (m_pio & INT_CAUSE_EXTERNAL) && !m_if && state != CLEAR_LINE )
 	{
 		m_pending_interrupt |= INT_CAUSE_EXTERNAL;
 	}
 
-	m_nf = state == ASSERT_LINE;
+	m_if = state != CLEAR_LINE;
 }
 
 void mb88_cpu_device::update_pio_enable( uint8_t newpio )
@@ -423,9 +415,12 @@ void mb88_cpu_device::update_pio( int cycles )
 	}
 
 	/* process pending interrupts */
-	if (m_pending_interrupt & m_pio)
+	if (!m_in_irq && m_pending_interrupt & m_pio)
 	{
-		m_SP[m_SI] = GETPC();
+		m_in_irq = true;
+		uint16_t intpc = GETPC();
+
+		m_SP[m_SI] = intpc;
 		m_SP[m_SI] |= TEST_CF() << 15;
 		m_SP[m_SI] |= TEST_ZF() << 14;
 		m_SP[m_SI] |= TEST_ST() << 13;
@@ -436,15 +431,17 @@ void mb88_cpu_device::update_pio( int cycles )
 		if (m_pending_interrupt & m_pio & INT_CAUSE_EXTERNAL)
 		{
 			/* if we have a live external source, call the irqcallback */
-			standard_irq_callback( 0 );
+			standard_irq_callback( 0, intpc );
 			m_PC = 0x02;
 		}
 		else if (m_pending_interrupt & m_pio & INT_CAUSE_TIMER)
 		{
+			standard_irq_callback( 1, intpc );
 			m_PC = 0x04;
 		}
 		else if (m_pending_interrupt & m_pio & INT_CAUSE_SERIAL)
 		{
+			standard_irq_callback( 2, intpc );
 			m_PC = 0x06;
 		}
 
@@ -456,7 +453,7 @@ void mb88_cpu_device::update_pio( int cycles )
 	}
 }
 
-WRITE_LINE_MEMBER( mb88_cpu_device::clock_w )
+void mb88_cpu_device::clock_w(int state)
 {
 	if (state != m_ctr)
 	{
@@ -703,7 +700,7 @@ void mb88_cpu_device::execute_run()
 				break;
 
 			case 0x20: /* setR ZCS:... */
-				arg = m_read_r[m_Y/4]();
+				arg = m_read_r[m_Y/4]() & 0x0f;
 				m_write_r[m_Y/4](arg | (1 << (m_Y%4)));
 				m_st = 1;
 				break;
@@ -714,7 +711,7 @@ void mb88_cpu_device::execute_run()
 				break;
 
 			case 0x22: /* rstR ZCS:... */
-				arg = m_read_r[m_Y/4]();
+				arg = m_read_r[m_Y/4]() & 0x0f;
 				m_write_r[m_Y/4](arg & ~(1 << (m_Y%4)));
 				m_st = 1;
 				break;
@@ -725,12 +722,12 @@ void mb88_cpu_device::execute_run()
 				break;
 
 			case 0x24: /* tstr ZCS:..x */
-				arg = m_read_r[m_Y/4]();
+				arg = m_read_r[m_Y/4]() & 0x0f;
 				m_st = ( arg & ( 1 << (m_Y%4) ) ) ? 0 : 1;
 				break;
 
 			case 0x25: /* tsti ZCS:..x */
-				m_st = m_nf ^ 1;
+				m_st = m_if ^ 1;
 				break;
 
 			case 0x26: /* tstv ZCS:..x */
@@ -817,6 +814,7 @@ void mb88_cpu_device::execute_run()
 
 			case 0x3c: /* rti ZCS:... */
 				/* restore address and saved state flags on the top bits of the stack */
+				m_in_irq = false;
 				m_SI = ( m_SI - 1 ) & 3;
 				m_PC = m_SP[m_SI] & 0x3f;
 				m_PA = (m_SP[m_SI] >> 6) & 0x1f;
@@ -847,21 +845,21 @@ void mb88_cpu_device::execute_run()
 				break;
 
 			case 0x40:  case 0x41:  case 0x42:  case 0x43: /* setD ZCS:... */
-				arg = m_read_r[0]();
+				arg = m_read_r[0]() & 0x0f;
 				arg |= (1 << (opcode&3));
 				m_write_r[0](arg);
 				m_st = 1;
 				break;
 
 			case 0x44:  case 0x45:  case 0x46:  case 0x47: /* rstD ZCS:... */
-				arg = m_read_r[0]();
+				arg = m_read_r[0]() & 0x0f;
 				arg &= ~(1 << (opcode&3));
 				m_write_r[0](arg);
 				m_st = 1;
 				break;
 
 			case 0x48:  case 0x49:  case 0x4a:  case 0x4b: /* tstD ZCS:..x */
-				arg = m_read_r[2]();
+				arg = m_read_r[2]() & 0x0f;
 				m_st = (arg & (1 << (opcode&3))) ? 0 : 1;
 				break;
 

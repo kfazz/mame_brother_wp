@@ -10,7 +10,6 @@
 #include "emu.h"
 #include "mcs40.h"
 #include "mcs40dasm.h"
-#include "debugger.h"
 
 
 /*
@@ -102,7 +101,6 @@ mcs40_cpu_device_base::mcs40_cpu_device_base(
 			{ "ramport", ENDIANNESS_LITTLE, 8, u8(5),             0 },
 			{ "program", ENDIANNESS_LITTLE, 8, u8(rom_width - 3), 0 }, }
 	, m_spaces{ nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr }
-	, m_cache(nullptr)
 	, m_bus_cycle_cb(*this)
 	, m_sync_cb(*this)
 	, m_cm_rom_cb(*this)
@@ -142,16 +140,9 @@ void mcs40_cpu_device_base::device_start()
 	m_spaces[AS_RAM_STATUS]     = &space(AS_RAM_STATUS);
 	m_spaces[AS_RAM_PORTS]      = &space(AS_RAM_PORTS);
 	m_spaces[AS_PROGRAM_MEMORY] = &space(AS_PROGRAM_MEMORY);
-	m_cache = m_spaces[AS_ROM]->cache<0, 0, ENDIANNESS_LITTLE>();
+	m_spaces[AS_ROM]->cache(m_cache);
 
-	m_bus_cycle_cb.resolve();
-	m_sync_cb.resolve_safe();
-	m_cm_rom_cb.resolve_all_safe();
-	m_cm_ram_cb.resolve_all_safe();
-	m_cy_cb.resolve_safe();
-	m_stp_ack_cb.resolve_safe();
-	m_4289_pm_cb.resolve_safe();
-	m_4289_f_l_cb.resolve_safe();
+	m_bus_cycle_cb.resolve_safe();
 
 	m_stop_latch = m_decoded_halt = m_resume = false;
 
@@ -605,15 +596,13 @@ inline void mcs40_cpu_device_base::do_a1()
 	m_sync_cb(1);
 	update_4289_pm(1U);
 	update_4289_f_l(1U);
-	if (!m_bus_cycle_cb.isnull())
-		m_bus_cycle_cb(phase::A1, 1U, m_rom_addr & 0x000fU);
+	m_bus_cycle_cb(phase::A1, 1U, m_rom_addr & 0x000fU);
 }
 
 inline void mcs40_cpu_device_base::do_a2()
 {
 	m_4289_a = (m_4289_a & 0x0fU) | (m_rom_addr & 0xf0U);
-	if (!m_bus_cycle_cb.isnull())
-		m_bus_cycle_cb(phase::A2, 1U, (m_rom_addr >> 4) & 0x000fU);
+	m_bus_cycle_cb(phase::A2, 1U, (m_rom_addr >> 4) & 0x000fU);
 }
 
 inline void mcs40_cpu_device_base::do_a3()
@@ -621,8 +610,7 @@ inline void mcs40_cpu_device_base::do_a3()
 	m_4289_c = (m_rom_addr >> 8) & 0x0fU;
 	update_cm_rom(BIT(m_cr, 3) ? 0x01U : 0x02U);
 	update_cm_ram(f_cm_ram_table[m_cr & 0x07U]);
-	if (!m_bus_cycle_cb.isnull())
-		m_bus_cycle_cb(phase::A3, 1U, (m_rom_addr >> 8) & 0x000fU);
+	m_bus_cycle_cb(phase::A3, 1U, (m_rom_addr >> 8) & 0x000fU);
 }
 
 inline void mcs40_cpu_device_base::do_m1()
@@ -633,7 +621,7 @@ inline void mcs40_cpu_device_base::do_m1()
 		update_cm_rom(0x0fU);
 	}
 	// TODO: just read the high nybble here - MAME doesn't support this
-	u8 const read = m_cache->read_byte(rom_bank() | m_rom_addr);
+	u8 const read = m_cache.read_byte(rom_bank() | m_rom_addr);
 	if (cycle::OP == m_cycle)
 	{
 		m_opr = (m_stop_ff) ? 0x0U : (read >> 4);
@@ -644,14 +632,13 @@ inline void mcs40_cpu_device_base::do_m1()
 		m_arg = read;
 	}
 	m_decoded_halt = false;
-	if (!m_bus_cycle_cb.isnull())
-		m_bus_cycle_cb(phase::M1, 1U, (read >> 4) & 0x0fU);
+	m_bus_cycle_cb(phase::M1, 1U, (read >> 4) & 0x0fU);
 }
 
 inline void mcs40_cpu_device_base::do_m2()
 {
 	// TODO: just read the low nybble here - MAME doesn't support this
-	u8 const read = m_cache->read_byte(rom_bank() | m_rom_addr);
+	u8 const read = m_cache.read_byte(rom_bank() | m_rom_addr);
 	if (cycle::OP == m_cycle)
 		m_opa = (m_stop_ff) ? 0x0U : (read & 0x0fU);
 	else
@@ -666,8 +653,7 @@ inline void mcs40_cpu_device_base::do_m2()
 	if (!m_stop_ff && (cycle::IN != m_cycle))
 		pc() = (pc() + 1) & 0x0fff;
 	m_rom_addr = pc();
-	if (!m_bus_cycle_cb.isnull())
-		m_bus_cycle_cb(phase::M2, 1U, read & 0x0fU);
+	m_bus_cycle_cb(phase::M2, 1U, read & 0x0fU);
 }
 
 inline void mcs40_cpu_device_base::do_x1()
@@ -704,8 +690,7 @@ inline void mcs40_cpu_device_base::do_x1()
 		else
 			assert(pmem::WRITE == m_program_op);
 	}
-	if (!m_bus_cycle_cb.isnull())
-		m_bus_cycle_cb(phase::X1, 1U, output);
+	m_bus_cycle_cb(phase::X1, 1U, output);
 }
 
 void mcs40_cpu_device_base::do_x2()
@@ -734,8 +719,7 @@ void mcs40_cpu_device_base::do_x2()
 		set_a(output = m_arg & 0x0fU);
 	else if (pmem::WRITE == m_program_op)
 		output = get_a();
-	if (!m_bus_cycle_cb.isnull())
-		m_bus_cycle_cb(phase::X2, 1U, output);
+	m_bus_cycle_cb(phase::X2, 1U, output);
 }
 
 void mcs40_cpu_device_base::do_x3()
@@ -765,8 +749,7 @@ void mcs40_cpu_device_base::do_x3()
 		m_stp_ack_cb(1U);
 	}
 	m_resume = false;
-	if (!m_bus_cycle_cb.isnull())
-		m_bus_cycle_cb(phase::X3, 0U, m_new_rc & 0x0fU); // FIXME: what appears on the bus if it isn't SRC?
+	m_bus_cycle_cb(phase::X3, 0U, m_new_rc & 0x0fU); // FIXME: what appears on the bus if it isn't SRC?
 }
 
 

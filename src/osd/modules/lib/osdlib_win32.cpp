@@ -8,26 +8,26 @@
 //
 //============================================================
 
-#include <windows.h>
-#include <mmsystem.h>
-
-#include <cstdlib>
-#ifndef _MSC_VER
-#include <unistd.h>
-#endif
-
-#include <cstdio>
-#include <memory>
-
 // MAME headers
 #include "osdlib.h"
 #include "osdcomm.h"
 #include "osdcore.h"
 #include "strconv.h"
 
-#ifdef OSD_WINDOWS
 #include "winutf8.h"
+#include "winutil.h"
+
+#include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+
+#include <windows.h>
+#include <memoryapi.h>
+
+#ifndef _MSC_VER
+#include <unistd.h>
 #endif
+
 
 //============================================================
 //  GLOBAL VARIABLES
@@ -80,30 +80,6 @@ int osd_setenv(const char *name, const char *value, int overwrite)
 void osd_process_kill()
 {
 	TerminateProcess(GetCurrentProcess(), -1);
-}
-
-//============================================================
-//  osd_alloc_executable
-//
-//  allocates "size" bytes of executable memory.  this must take
-//  things like NX support into account.
-//============================================================
-
-void *osd_alloc_executable(size_t size)
-{
-	return VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-}
-
-
-//============================================================
-//  osd_free_executable
-//
-//  frees memory allocated with osd_alloc_executable
-//============================================================
-
-void osd_free_executable(void *ptr, size_t size)
-{
-	VirtualFree(ptr, 0, MEM_RELEASE);
 }
 
 
@@ -192,25 +168,92 @@ static std::string convert_ansi(LPCVOID data)
 //  osd_get_clipboard_text
 //============================================================
 
-std::string osd_get_clipboard_text()
+std::string osd_get_clipboard_text() noexcept
 {
 	std::string result;
 
-	// try to access unicode text
-	if (!get_clipboard_text_by_format(result, CF_UNICODETEXT, convert_wide))
+	// TODO: better error handling
+	try
 	{
-		// try to access ANSI text
-		get_clipboard_text_by_format(result, CF_TEXT, convert_ansi);
+		// try to access unicode text
+		if (!get_clipboard_text_by_format(result, CF_UNICODETEXT, convert_wide))
+		{
+			// try to access ANSI text
+			get_clipboard_text_by_format(result, CF_TEXT, convert_ansi);
+		}
+	}
+	catch (...)
+	{
 	}
 
 	return result;
 }
 
 //============================================================
+//  osd_set_clipboard_text
+//============================================================
+
+std::error_condition osd_set_clipboard_text(std::string_view text) noexcept
+{
+	try
+	{
+		// convert the text to a wide char string and create a moveable global block
+		std::wstring const wtext = osd::text::to_wstring(text);
+		HGLOBAL const clip = GlobalAlloc(GMEM_MOVEABLE, (text.length() + 1) * sizeof(wchar_t));
+		if (!clip)
+			return win_error_to_error_condition(GetLastError());
+		LPWSTR const lock = reinterpret_cast<LPWSTR>(GlobalLock(clip));
+		if (!lock)
+		{
+			DWORD const err(GetLastError());
+			GlobalFree(clip);
+			return win_error_to_error_condition(err);
+		}
+
+		// clear current clipboard contents
+		if (!OpenClipboard(nullptr))
+		{
+			DWORD const err(GetLastError());
+			GlobalUnlock(clip);
+			GlobalFree(clip);
+			return win_error_to_error_condition(err);
+		}
+		if (!EmptyClipboard())
+		{
+			DWORD const err(GetLastError());
+			CloseClipboard();
+			GlobalUnlock(clip);
+			GlobalFree(clip);
+			return win_error_to_error_condition(err);
+		}
+
+		// copy the text (plus NUL terminator) to the moveable block and put it on the clipboard
+		std::copy_n(wtext.c_str(), wtext.length() + 1, lock);
+		GlobalUnlock(clip);
+		if (!SetClipboardData(CF_UNICODETEXT, clip))
+		{
+			DWORD const err(GetLastError());
+			CloseClipboard();
+			GlobalFree(clip);
+			return win_error_to_error_condition(err);
+		}
+
+		// clean up
+		if (!CloseClipboard())
+			return win_error_to_error_condition(GetLastError());
+		return std::error_condition();
+	}
+	catch (std::bad_alloc const &)
+	{
+		return std::errc::not_enough_memory;
+	}
+}
+
+//============================================================
 //  osd_getpid
 //============================================================
 
-int osd_getpid()
+int osd_getpid() noexcept
 {
 	return GetCurrentProcessId();
 }
@@ -219,29 +262,25 @@ int osd_getpid()
 //  osd_dynamic_bind
 //============================================================
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 // for classic desktop applications
 #define load_library(filename) LoadLibrary(filename)
-#else
-// for Windows Store universal applications
-#define load_library(filename) LoadPackagedLibrary(filename, 0)
-#endif
 
 namespace osd {
+
+namespace {
+
 class dynamic_module_win32_impl : public dynamic_module
 {
 public:
-	dynamic_module_win32_impl(std::vector<std::string> &libraries)
-		: m_module(nullptr)
+	dynamic_module_win32_impl(std::vector<std::string> &&libraries) : m_libraries(std::move(libraries))
 	{
-		m_libraries = libraries;
 	}
 
 	virtual ~dynamic_module_win32_impl() override
 	{
-		if (m_module != nullptr)
+		if (m_module)
 			FreeLibrary(m_module);
-	};
+	}
 
 protected:
 	virtual generic_fptr_t get_symbol_address(char const *symbol) override
@@ -251,20 +290,18 @@ protected:
 		 * one of them, all additional symbols will be loaded from the same library
 		 */
 		if (m_module)
-		{
 			return reinterpret_cast<generic_fptr_t>(GetProcAddress(m_module, symbol));
-		}
 
 		for (auto const &library : m_libraries)
 		{
-			osd::text::tstring tempstr = osd::text::to_tstring(library);
-			HMODULE module = load_library(tempstr.c_str());
+			osd::text::tstring const tempstr = osd::text::to_tstring(library);
+			HMODULE const module = load_library(tempstr.c_str());
 
-			if (module != nullptr)
+			if (module)
 			{
-				auto function = reinterpret_cast<generic_fptr_t>(GetProcAddress(module, symbol));
+				auto const function = reinterpret_cast<generic_fptr_t>(GetProcAddress(module, symbol));
 
-				if (function != nullptr)
+				if (function)
 				{
 					m_module = module;
 					return function;
@@ -281,12 +318,56 @@ protected:
 
 private:
 	std::vector<std::string> m_libraries;
-	HMODULE                  m_module;
+	HMODULE                  m_module = nullptr;
 };
+
+} // anonymous namespace
+
+
+bool invalidate_instruction_cache(void const *start, std::size_t size) noexcept
+{
+	return FlushInstructionCache(GetCurrentProcess(), start, size) != 0;
+}
+
+
+void *virtual_memory_allocation::do_alloc(std::initializer_list<std::size_t> blocks, unsigned intent, std::size_t &size, std::size_t &page_size) noexcept
+{
+	SYSTEM_INFO info;
+	GetSystemInfo(&info);
+	SIZE_T s(0);
+	for (std::size_t b : blocks)
+		s += (b + info.dwPageSize - 1) / info.dwPageSize;
+	s *= info.dwPageSize;
+	if (!s)
+		return nullptr;
+	LPVOID const result(VirtualAlloc(nullptr, s, MEM_COMMIT, PAGE_NOACCESS));
+	if (result)
+	{
+		size = s;
+		page_size = info.dwPageSize;
+	}
+	return result;
+}
+
+void virtual_memory_allocation::do_free(void *start, std::size_t size) noexcept
+{
+	VirtualFree(start, 0, MEM_RELEASE);
+}
+
+bool virtual_memory_allocation::do_set_access(void *start, std::size_t size, unsigned access) noexcept
+{
+	DWORD p;
+	if (access & EXECUTE)
+		p = (access & WRITE) ? PAGE_EXECUTE_READWRITE : (access & READ) ? PAGE_EXECUTE_READ : PAGE_EXECUTE;
+	else
+		p = (access & WRITE) ? PAGE_READWRITE : (access & READ) ? PAGE_READONLY : PAGE_NOACCESS;
+	return VirtualAlloc(start, size, MEM_COMMIT, p) != nullptr;
+}
+
 
 dynamic_module::ptr dynamic_module::open(std::vector<std::string> &&names)
 {
-	return std::make_unique<dynamic_module_win32_impl>(names);
+	return std::make_unique<dynamic_module_win32_impl>(std::move(names));
 }
 
 } // namespace osd

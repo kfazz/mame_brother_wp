@@ -31,9 +31,10 @@
 
 #include "emu.h"
 #include "i82586.h"
-#include "hashing.h"
 
-#define LOG_GENERAL (1U << 0)
+#include "hashing.h"
+#include "multibyte.h"
+
 #define LOG_FRAMES  (1U << 1)
 #define LOG_FILTER  (1U << 2)
 #define LOG_CONFIG  (1U << 3)
@@ -96,7 +97,7 @@ CFG_PARAMS[] =
 	{ "number of retries",          "maximum number of retries",          15,  7, 0xf0, 4, true },
 	{ "no crc insertion",           "crc appended to frame",               0,  8, 0x10, 4, false },
 	{ "prefetch bit in rbd",        "disabled (valid only in new modes)",  0,  0, 0x80, 7, false },
-	{ "preamble length",            "bytes",                               7,  3, 0x30, 4, true },
+	{ "preamble length",            "2^(n+1) bytes",                       2,  3, 0x30, 4, true },
 	{ "preamble until crs",         "disabled",                            1, 11, 0x01, 0, false },
 	{ "promiscuous mode",           "address filter on",                   0,  8, 0x01, 0, false },
 	{ "padding",                    "no padding",                          0,  8, 0x80, 7, false },
@@ -111,7 +112,7 @@ CFG_PARAMS[] =
 i82586_base_device::i82586_base_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, endianness_t endian, u8 datawidth, u8 addrwidth)
 	: device_t(mconfig, type, tag, owner, clock)
 	, device_memory_interface(mconfig, *this)
-	, device_network_interface(mconfig, *this, 10.0f)
+	, device_network_interface(mconfig, *this, 10)
 	, m_space_config("shared", endian, datawidth, addrwidth)
 	, m_out_irq(*this)
 	, m_cx(false)
@@ -120,6 +121,7 @@ i82586_base_device::i82586_base_device(const machine_config &mconfig, device_typ
 	, m_rnr(false)
 	, m_initialised(false)
 	, m_reset(false)
+	, m_irq(false)
 	, m_irq_assert(1)
 	, m_cu_state(CU_IDLE)
 	, m_ru_state(RU_IDLE)
@@ -162,10 +164,7 @@ void i82586_base_device::device_start()
 {
 	m_space = &space(0);
 
-	m_out_irq.resolve();
-
-	m_cu_timer = timer_alloc(CU_TIMER);
-	m_cu_timer->enable(false);
+	m_cu_timer = timer_alloc(FUNC(i82586_base_device::cu_execute), this);
 
 	save_item(NAME(m_cx));
 	save_item(NAME(m_fr));
@@ -173,6 +172,7 @@ void i82586_base_device::device_start()
 	save_item(NAME(m_rnr));
 	save_item(NAME(m_initialised));
 	save_item(NAME(m_reset));
+	save_item(NAME(m_irq));
 
 	save_item(NAME(m_cu_state));
 	save_item(NAME(m_ru_state));
@@ -189,7 +189,7 @@ void i82586_base_device::device_start()
 
 void i82586_base_device::device_reset()
 {
-	m_cu_timer->enable(false);
+	m_cu_timer->reset();
 
 	m_cx = false;
 	m_fr = false;
@@ -201,16 +201,9 @@ void i82586_base_device::device_reset()
 	m_ru_state = RU_IDLE;
 
 	m_scp_address = SCP_ADDRESS;
-}
+	m_mac_multi = 0;
 
-void i82586_base_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
-{
-	switch (id)
-	{
-		case CU_TIMER:
-			cu_execute();
-			break;
-	}
+	set_irq(false);
 }
 
 device_memory_interface::space_config_vector i82586_base_device::memory_space_config() const
@@ -220,7 +213,7 @@ device_memory_interface::space_config_vector i82586_base_device::memory_space_co
 	};
 }
 
-WRITE_LINE_MEMBER(i82586_base_device::ca)
+void i82586_base_device::ca(int state)
 {
 	LOG("channel attention %s (%s)\n", state ? "asserted" : "cleared", machine().describe_context());
 
@@ -234,7 +227,7 @@ WRITE_LINE_MEMBER(i82586_base_device::ca)
 	}
 }
 
-WRITE_LINE_MEMBER(i82586_base_device::reset_w)
+void i82586_base_device::reset_w(int state)
 {
 	LOG("reset %s (%s)\n", state ? "asserted" : "cleared", machine().describe_context());
 
@@ -336,12 +329,12 @@ void i82586_base_device::process_scb()
 
 	case CUC_RESUME:
 		m_cu_state = CU_ACTIVE;
-		m_cu_timer->enable(true);
+		m_cu_timer->adjust(attotime::zero);
 		break;
 
 	case CUC_SUSPEND:
 		m_cu_state = CU_SUSPENDED;
-		m_cu_timer->enable(false);
+		m_cu_timer->reset();
 		m_cna = true;
 		break;
 
@@ -406,7 +399,7 @@ void i82586_base_device::update_scb()
 	set_irq(m_cx || m_fr || m_cna || m_rnr);
 }
 
-void i82586_base_device::cu_execute()
+TIMER_CALLBACK_MEMBER(i82586_base_device::cu_execute)
 {
 	// fetch the command block command/status
 	const u32 cb_cs = m_space->read_dword(m_cba);
@@ -500,7 +493,7 @@ void i82586_base_device::cu_complete(const u16 status)
 	if (cb_cs & CB_S)
 	{
 		m_cu_state = CU_SUSPENDED;
-		m_cu_timer->enable(false);
+		m_cu_timer->reset();
 		m_cna = true;
 	}
 
@@ -566,9 +559,16 @@ void i82586_base_device::set_irq(bool irq)
 	{
 		LOG("irq asserted\n");
 
+		// ensure an edge is generated if interrupt already asserted
+		if (m_irq)
+			m_out_irq(!m_irq_assert);
+
 		m_out_irq(m_irq_assert);
-		m_out_irq(!m_irq_assert);
 	}
+	else if (m_irq)
+		m_out_irq(!m_irq_assert);
+
+	m_irq = irq;
 }
 
 u32 i82586_base_device::compute_crc(u8 *buf, int length, bool crc16)
@@ -582,7 +582,7 @@ u64 i82586_base_device::address_hash(u8 *buf, int length)
 	// address hash is computed using bits 2-7 from crc of address
 	u32 crc = compute_crc(buf, length, false);
 
-	return 1U << ((crc >> 2) & 0x3f);
+	return u64(1) << ((crc >> 2) & 0x3f);
 }
 
 int i82586_base_device::fetch_bytes(u8 *buf, u32 src, int length)
@@ -821,7 +821,7 @@ void i82586_device::initialise()
 bool i82586_device::cu_iasetup()
 {
 	int len = cfg_address_length();
-	char mac[6];
+	u8 mac[6];
 	u32 data;
 
 	if (len != 6)
@@ -832,14 +832,10 @@ bool i82586_device::cu_iasetup()
 	}
 
 	data = m_space->read_dword(m_cba + 4);
-	mac[0] = (data >> 16) & 0xff;
-	mac[1] = (data >> 24) & 0xff;
+	put_u16le(&mac[0], data >> 16);
 
 	data = m_space->read_dword(m_cba + 8);
-	mac[2] = (data >> 0) & 0xff;
-	mac[3] = (data >> 8) & 0xff;
-	mac[4] = (data >> 16) & 0xff;
-	mac[5] = (data >> 24) & 0xff;
+	put_u32le(&mac[2], data);
 
 	LOG("cu_iasetup individual address %02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	set_mac(mac);
@@ -893,35 +889,49 @@ bool i82586_device::cu_configure()
 
 bool i82586_device::cu_mcsetup()
 {
-	int addr_len = cfg_address_length();
-	u16 mc_count;
-	u8 data[6];
-
-	if (addr_len != 6)
-	{
-		LOG("cu_mcsetup unexpected address length %d != 6\n", addr_len);
-		return false;
-	}
-
-	// read the address count
-	mc_count = m_space->read_word(m_cba + 6, TB_COUNT);
+	// read the address list length
+	int mc_count = m_space->read_word(m_cba + 6, TB_COUNT);
 
 	// reset current list
-	LOG("mc_setup configuring %d addresses\n", mc_count);
 	m_mac_multi = 0;
 
-	// read and process the addresses
-	for (int i = 0; i < mc_count; i++)
+	if (mc_count < cfg_address_length())
 	{
-		*(u16 *)&data[0] = m_space->read_word(m_cba + 8 + i * 6 + 0);
-		*(u16 *)&data[1] = m_space->read_word(m_cba + 8 + i * 6 + 2);
-		*(u16 *)&data[2] = m_space->read_word(m_cba + 8 + i * 6 + 4);
+		LOG("cu_mcsetup multicast filter disabled\n");
+
+		return true;
+	}
+	else
+		LOG("cu_mcsetup configuring %d addresses\n", mc_count / cfg_address_length());
+
+	std::vector<u8> buf;
+	offs_t offset = m_cba + 8;
+
+	// read and process the addresses
+	while (mc_count >= cfg_address_length())
+	{
+		// read an address
+		while (buf.size() < cfg_address_length())
+		{
+			u16 const data = m_space->read_word(offset);
+
+			buf.push_back(data >> 0);
+			buf.push_back(data >> 8);
+
+			offset += 2;
+		}
 
 		// add a hash of this address to the table
-		m_mac_multi |= address_hash(data, cfg_address_length());
+		m_mac_multi |= address_hash(buf.data(), cfg_address_length());
 
-		LOG("mc_setup inserting address %02x:%02x:%02x:%02x:%02x:%02x\n",
-			data[0], data[1], data[2], data[3], data[4], data[5]);
+		if (cfg_address_length() == 6)
+			LOG("cu_mcsetup inserting address %02x:%02x:%02x:%02x:%02x:%02x\n",
+				buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
+
+		// remove used address bytes from the buffer
+		buf.erase(buf.begin(), buf.begin() + cfg_address_length());
+
+		mc_count -= cfg_address_length();
 	}
 
 	return true;
@@ -945,14 +955,12 @@ bool i82586_device::cu_transmit(u32 command)
 
 		// insert destination address (6 bytes)
 		data = m_space->read_dword(m_cba + 8);
-		buf[length++] = (data >> 0) & 0xff;
-		buf[length++] = (data >> 8) & 0xff;
-		buf[length++] = (data >> 16) & 0xff;
-		buf[length++] = (data >> 24) & 0xff;
+		put_u32le(&buf[length], data);
+		length += 4;
 
 		data = m_space->read_dword(m_cba + 12);
-		buf[length++] = (data >> 0) & 0xff;
-		buf[length++] = (data >> 8) & 0xff;
+		put_u16le(&buf[length], data & 0xffff);
+		length += 2;
 
 		// insert source address (6 bytes)
 		LOG("cu_transmit inserting source address %02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
@@ -961,8 +969,8 @@ bool i82586_device::cu_transmit(u32 command)
 
 		// insert length (2 bytes)
 		LOG("cu_transmit frame length 0x%04x\n", ((data >> 24) & 0xff) | ((data >> 16) & 0xff00));
-		buf[length++] = (data >> 16) & 0xff;
-		buf[length++] = (data >> 24) & 0xff;
+		put_u16le(&buf[length], data >> 16);
+		length += 2;
 	}
 
 	// check if there is no tbd
@@ -986,17 +994,15 @@ bool i82586_device::cu_transmit(u32 command)
 	}
 
 	// optionally compute/insert ethernet frame check sequence (4 bytes)
-	if (!cfg_no_crc_insertion() && !cfg_loopback_mode())
+	if (!cfg_no_crc_insertion())
 	{
 		LOG("cu_transmit inserting frame check sequence\n");
 
 		u32 crc = compute_crc(buf, length, cfg_crc16());
 
 		// insert the fcs
-		buf[length++] = (crc >> 0) & 0xff;
-		buf[length++] = (crc >> 8) & 0xff;
-		buf[length++] = (crc >> 16) & 0xff;
-		buf[length++] = (crc >> 24) & 0xff;
+		put_u32le(&buf[length], crc);
+		length += 4;
 	}
 
 	if (cfg_loopback_mode())
@@ -1016,7 +1022,7 @@ bool i82586_device::cu_transmit(u32 command)
 		LOG("cu_transmit sending frame length %d\n", length);
 		dump_bytes(buf, length);
 
-		return send(buf, length) == length;
+		return send(buf, length, 4) == length;
 	}
 }
 
@@ -1078,8 +1084,8 @@ u16 i82586_device::ru_execute(u8 *buf, int length)
 	u32 rfd_cs = m_space->read_dword(m_rfd);
 	u16 status = 0;
 
-	// current buffer position and bytes remaining
-	int position = 0, remaining = length;
+	// current buffer position and bytes remaining (excluding fcs)
+	int position = 0, remaining = length - 4;
 
 	// set busy status
 	m_space->write_dword(m_rfd, rfd_cs | RFD_B);
@@ -1091,7 +1097,7 @@ u16 i82586_device::ru_execute(u8 *buf, int length)
 		status |= RFD_S_SHORT;
 
 	// set crc status
-	if (!cfg_loopback_mode() && ~compute_crc(buf, length, cfg_crc16()) != FCS_RESIDUE)
+	if (~compute_crc(buf, length, cfg_crc16()) != FCS_RESIDUE)
 	{
 		LOGMASKED(LOG_FRAMES, "ru_execute crc error computed 0x%08x stored 0x%08x\n",
 			compute_crc(buf, length - 4, cfg_crc16()), *(u32 *)&buf[length - 4]);
@@ -1173,18 +1179,18 @@ u16 i82586_device::ru_execute(u8 *buf, int length)
 
 void i82586_device::ru_complete(const u16 status)
 {
-	if (status & RFD_OK)
-		LOG("ru_complete frame received without error\n");
-	else
-		LOG("ru_complete frame received with errors status 0x%04x\n", status);
-
-	// update receive frame descriptor status
-	u32 rfd_cs = m_space->read_dword(m_rfd);
-	m_space->write_dword(m_rfd, (rfd_cs & ~0xffffU) | status);
-
 	// if we received without error, or we're saving bad frames, advance to the next rfd
 	if ((status & RFD_OK) || cfg_save_bad_frames())
 	{
+		if (status & RFD_OK)
+			LOG("ru_complete frame received without error\n");
+		else
+			LOG("ru_complete frame received with errors status 0x%04x\n", status);
+
+		// update receive frame descriptor status
+		u32 rfd_cs = m_space->read_dword(m_rfd);
+		m_space->write_dword(m_rfd, (rfd_cs & ~0xffffU) | status);
+
 		if (!(rfd_cs & RFD_EL))
 		{
 			// advance to next rfd
@@ -1202,17 +1208,19 @@ void i82586_device::ru_complete(const u16 status)
 
 		// set frame received status
 		m_fr = true;
-	}
 
-	// suspend on completion
-	if (rfd_cs & RFD_S)
-	{
-		m_ru_state = RU_SUSPENDED;
-		m_rnr = true;
-	}
+		// suspend on completion
+		if (rfd_cs & RFD_S)
+		{
+			m_ru_state = RU_SUSPENDED;
+			m_rnr = true;
+		}
 
-	static const char *const RU_STATE_NAME[] = { "IDLE", "SUSPENDED", "NO RESOURCES", nullptr, "READY" };
-	LOG("ru_complete complete state %s\n", RU_STATE_NAME[m_ru_state]);
+		static const char *const RU_STATE_NAME[] = { "IDLE", "SUSPENDED", "NO RESOURCES", nullptr, "READY" };
+		LOG("ru_complete complete state %s\n", RU_STATE_NAME[m_ru_state]);
+	}
+	else
+		LOG("ru_complete discarded frame with errors status 0x%04x\n", status);
 }
 
 u32 i82586_device::address(u32 base, int offset, int address, u16 empty)
@@ -1329,7 +1337,7 @@ bool i82596_device::cu_iasetup()
 {
 	int len = cfg_address_length();
 	u32 data;
-	char mac[6];
+	u8 mac[6];
 
 	if (len != 6)
 	{
@@ -1343,26 +1351,18 @@ bool i82596_device::cu_iasetup()
 	case MODE_82586:
 	case MODE_32SEGMENTED:
 		data = m_space->read_dword(m_cba + 4);
-		mac[0] = (data >> 16) & 0xff;
-		mac[1] = (data >> 24) & 0xff;
+		put_u16le(&mac[0], data >> 16);
 
 		data = m_space->read_dword(m_cba + 8);
-		mac[2] = (data >> 0) & 0xff;
-		mac[3] = (data >> 8) & 0xff;
-		mac[4] = (data >> 16) & 0xff;
-		mac[5] = (data >> 24) & 0xff;
+		put_u32le(&mac[2], data);
 		break;
 
 	case MODE_LINEAR:
 		data = m_space->read_dword(m_cba + 8);
-		mac[0] = (data >> 0) & 0xff;
-		mac[1] = (data >> 8) & 0xff;
-		mac[2] = (data >> 16) & 0xff;
-		mac[3] = (data >> 24) & 0xff;
+		put_u32le(&mac[0], data);
 
 		data = m_space->read_dword(m_cba + 12);
-		mac[4] = (data >> 0) & 0xff;
-		mac[5] = (data >> 8) & 0xff;
+		put_u16le(&mac[4], data & 0xffff);
 		break;
 	}
 
@@ -1483,68 +1483,65 @@ bool i82596_device::cu_configure()
 
 bool i82596_device::cu_mcsetup()
 {
-	int addr_len = cfg_address_length();
-	u16 mc_count = 0;
+	u32 data = (mode() == MODE_LINEAR) ? m_space->read_dword(m_cba + 8) : m_space->read_word(m_cba + 6);
+	int mc_count = data & TB_COUNT;
 
-	int offset = 0;
-	u8 data[20];
-	bool multi_ia;
-
-	if (addr_len != 6)
+	// if length less than one address, clear multicast filter and finish
+	if (mc_count < cfg_address_length())
 	{
-		LOG("cu_mcsetup unexpected address length %d != 6\n", addr_len);
-		return false;
-	}
-
-	switch (mode())
-	{
-	case MODE_82586:
-	case MODE_32SEGMENTED:
-		mc_count = m_space->read_word(m_cba + 6, TB_COUNT);
-		break;
-
-	case MODE_LINEAR:
-		mc_count = m_space->read_word(m_cba + 8, TB_COUNT);
-		offset = 2;
-		break;
-	}
-
-	// if count is zero, release multicast list and finish
-	if (mc_count == 0)
-	{
-		LOG("mc_setup multicast filter disabled\n");
+		LOG("cu_mcsetup multicast filter disabled\n");
 		m_mac_multi = 0;
 
 		return true;
 	}
 
-	// fetch the first word
-	*(u32 *)&data[0] = m_space->read_dword(m_cba + 8);
+	std::vector<u8> buf;
+	offs_t offset = m_cba + 8;
+
+	// already have the first two address bytes in linear mode
+	if (mode() != MODE_LINEAR)
+	{
+		data = m_space->read_dword(offset);
+
+		buf.push_back(data >> 0);
+		buf.push_back(data >> 8);
+	}
+	buf.push_back(data >> 16);
+	buf.push_back(data >> 24);
+	offset += 4;
 
 	// multi ia when configured and lsb of first address is clear
-	multi_ia = cfg_multi_ia() && !BIT(data[offset], 0);
+	bool const multi_ia = cfg_multi_ia() && !BIT(buf[0], 0);
 
-	// clear existing list
-	LOG("mc_setup configuring %d %s addresses\n", mc_count, multi_ia ? "multi-ia" : "multicast");
+	LOG("cu_mcsetup configuring %d %s addresses\n", mc_count / cfg_address_length(), multi_ia ? "multi-ia" : "multicast");
 	(multi_ia ? m_mac_multi_ia : m_mac_multi) = 0;
 
-	for (int i = 0; i < mc_count; i++)
+	while (mc_count >= cfg_address_length())
 	{
-		// compute offset of address in 18 byte buffer
-		int n = (i % 3) * 6;
+		// read an address
+		while (buf.size() < cfg_address_length())
+		{
+			data = m_space->read_dword(offset);
 
-		// read the next dword
-		*(u32 *)&data[n + 6] = m_space->read_dword(m_cba + 8 + i * 4 + 4);
+			buf.push_back(data >> 0);
+			buf.push_back(data >> 8);
+			buf.push_back(data >> 16);
+			buf.push_back(data >> 24);
 
-		// unaligned case needs special handling
-		if (n == 12 && offset == 2)
-			*(u16 *)&data[18] = *(u16 *)&data[0];
+			offset += 4;
+		}
 
 		// add a hash of this address to the table
-		(multi_ia ? m_mac_multi_ia : m_mac_multi) |= address_hash(&data[n + offset], cfg_address_length());
+		(multi_ia ? m_mac_multi_ia : m_mac_multi) |= address_hash(buf.data(), cfg_address_length());
 
-		LOG("mc_setup inserting address %02x:%02x:%02x:%02x:%02x:%02x\n",
-			data[n + offset + 0], data[n + offset + 1], data[n + offset + 2], data[n + offset + 3], data[n + offset + 4], data[n + offset + 5]);
+		if (cfg_address_length() == 6)
+			LOG("cu_mcsetup inserting address %02x:%02x:%02x:%02x:%02x:%02x\n",
+				buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
+
+		// remove used address bytes from the buffer
+		buf.erase(buf.begin(), buf.begin() + cfg_address_length());
+
+		mc_count -= cfg_address_length();
 	}
 
 	return true;
@@ -1592,14 +1589,12 @@ bool i82596_device::cu_transmit(u32 command)
 
 			// insert destination address (6 bytes)
 			data = m_space->read_dword(m_cba + 12 + offset);
-			buf[length++] = (data >> 0) & 0xff;
-			buf[length++] = (data >> 8) & 0xff;
-			buf[length++] = (data >> 16) & 0xff;
-			buf[length++] = (data >> 24) & 0xff;
+			put_u32le(&buf[length], data);
+			length += 4;
 
 			data = m_space->read_dword(m_cba + 16 + offset);
-			buf[length++] = (data >> 0) & 0xff;
-			buf[length++] = (data >> 8) & 0xff;
+			put_u16le(&buf[length], data & 0xffff);
+			length += 2;
 
 			// insert source address (6 bytes)
 			LOG("cu_transmit inserting source address %02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
@@ -1608,8 +1603,8 @@ bool i82596_device::cu_transmit(u32 command)
 
 			// insert length from tcb (2 bytes)
 			LOG("cu_transmit frame length 0x%04x\n", ((data >> 24) & 0xff) | ((data >> 16) & 0xff00));
-			buf[length++] = (data >> 16) & 0xff;
-			buf[length++] = (data >> 24) & 0xff;
+			put_u16le(&buf[length], data >> 16);
+			length += 2;
 
 			// insert payload from tcb
 			LOG("cu_transmit inserting %d bytes from transmit command block\n", (tcb_count & TB_COUNT) - 8);
@@ -1666,10 +1661,8 @@ bool i82596_device::cu_transmit(u32 command)
 		u32 crc = compute_crc(buf, length, cfg_crc16());
 
 		// append the fcs
-		buf[length++] = (crc >> 0) & 0xff;
-		buf[length++] = (crc >> 8) & 0xff;
-		buf[length++] = (crc >> 16) & 0xff;
-		buf[length++] = (crc >> 24) & 0xff;
+		put_u32le(&buf[length], crc);
+		length += 4;
 	}
 
 	if (cfg_loopback_mode())
@@ -1816,7 +1809,7 @@ u16 i82596_device::ru_execute(u8 *buf, int length)
 	}
 
 	// set crc status
-	if (!cfg_loopback_mode() && ~compute_crc(buf, length, cfg_crc16()) != FCS_RESIDUE)
+	if (~compute_crc(buf, length, cfg_crc16()) != FCS_RESIDUE)
 	{
 		LOGMASKED(LOG_FRAMES, "ru_execute crc error computed 0x%08x stored 0x%08x\n",
 			compute_crc(buf, length - 4, cfg_crc16()), *(u32 *)&buf[length - 4]);
@@ -1959,18 +1952,18 @@ u16 i82596_device::ru_execute(u8 *buf, int length)
 
 void i82596_device::ru_complete(const u16 status)
 {
-	if (status & RFD_OK)
-		LOG("ru_complete frame received without error\n");
-	else
-		LOG("ru_complete frame received with errors status 0x%04x\n", status);
-
-	// store status
-	const u32 rfd_cs = m_space->read_dword(m_rfd);
-	m_space->write_dword(m_rfd, (rfd_cs & ~0xffffU) | status);
-
 	// if we received without error, or we're saving bad frames, advance to the next rfd
-	if ((rfd_cs & RFD_OK) || cfg_save_bad_frames())
+	if ((status & RFD_OK) || cfg_save_bad_frames())
 	{
+		if (status & RFD_OK)
+			LOG("ru_complete frame received without error\n");
+		else
+			LOG("ru_complete frame received with errors status 0x%04x\n", status);
+
+		// update receive frame descriptor status
+		const u32 rfd_cs = m_space->read_dword(m_rfd);
+		m_space->write_dword(m_rfd, (rfd_cs & ~0xffffU) | status);
+
 		if (!(rfd_cs & RFD_EL))
 		{
 			// advance to next rfd
@@ -1993,17 +1986,19 @@ void i82596_device::ru_complete(const u16 status)
 
 		// set frame received status
 		m_fr = true;
-	}
 
-	// suspend on completion
-	if (rfd_cs & RFD_S)
-	{
-		m_ru_state = RU_SUSPENDED;
-		m_rnr = true;
-	}
+		// suspend on completion
+		if (rfd_cs & RFD_S)
+		{
+			m_ru_state = RU_SUSPENDED;
+			m_rnr = true;
+		}
 
-	static const char *const RU_STATE_NAME[] = { "IDLE", "SUSPENDED", "NO RESOURCES", nullptr, "READY", nullptr, nullptr, nullptr, nullptr, nullptr, "NO RESOURCES (RFD)", nullptr, "NO RESOURCES (RBD)" };
-	LOG("ru_complete complete state %s\n", RU_STATE_NAME[m_ru_state]);
+		static const char *const RU_STATE_NAME[] = { "IDLE", "SUSPENDED", "NO RESOURCES", nullptr, "READY", nullptr, nullptr, nullptr, nullptr, nullptr, "NO RESOURCES (RFD)", nullptr, "NO RESOURCES (RBD)" };
+		LOG("ru_complete complete state %s\n", RU_STATE_NAME[m_ru_state]);
+	}
+	else
+		LOG("ru_complete discarded frame with errors status 0x%04x\n", status);
 }
 
 u32 i82596_device::address(u32 base, int offset, int address, u16 empty)

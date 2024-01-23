@@ -1,25 +1,28 @@
 // license:BSD-3-Clause
 // copyright-holders:Andrew Gardner
 #include "emu.h"
+#include "deviceinformationwindow.h"
+
+#include "util/xmlfile.h"
+
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QVBoxLayout>
 
-#include "deviceinformationwindow.h"
 
+namespace osd::debugger::qt {
 
-DeviceInformationWindow::DeviceInformationWindow(running_machine* machine, device_t* device, QWidget* parent) :
-	WindowQt(machine, nullptr)
+DeviceInformationWindow::DeviceInformationWindow(DebuggerQt &debugger, device_t *device, QWidget *parent) :
+	WindowQt(debugger, nullptr),
+	m_device(device)
 {
-	m_device = device;
-
-	if (parent != nullptr)
+	if (parent)
 	{
 		QPoint parentPos = parent->pos();
 		setGeometry(parentPos.x()+100, parentPos.y()+100, 600, 400);
 	}
 
-	if(m_device)
+	if (m_device)
 		fill_device_information();
 }
 
@@ -28,12 +31,29 @@ DeviceInformationWindow::~DeviceInformationWindow()
 {
 }
 
+
+void DeviceInformationWindow::restoreConfiguration(util::xml::data_node const &node)
+{
+	WindowQt::restoreConfiguration(node);
+
+	auto const tag = node.get_attribute_string(ATTR_WINDOW_DEVICE_TAG, ":");
+	set_device(tag);
+}
+
+
+void DeviceInformationWindow::saveConfigurationToNode(util::xml::data_node &node)
+{
+	WindowQt::saveConfigurationToNode(node);
+
+	node.set_attribute_int(ATTR_WINDOW_TYPE, WINDOW_TYPE_DEVICE_INFO_VIEWER);
+
+	node.set_attribute(ATTR_WINDOW_DEVICE_TAG, m_device->tag());
+}
+
+
 void DeviceInformationWindow::fill_device_information()
 {
-	char title[4069];
-	sprintf(title, "Debug: Device %s", m_device->tag());
-	setWindowTitle(title);
-
+	setWindowTitle(util::string_format("Debug: Device %s", m_device->tag()).c_str());
 
 	QFrame *mainWindowFrame = new QFrame(this);
 	QVBoxLayout *vLayout = new QVBoxLayout(mainWindowFrame);
@@ -53,9 +73,11 @@ void DeviceInformationWindow::fill_device_information()
 
 	int cpos = 3;
 	device_interface *intf = m_device->interfaces().first();
-	if(intf) {
+	if (intf)
+	{
 		gl1->addWidget(new QLabel(QString("Interfaces"), primaryFrame), cpos, 0);
-		while(intf) {
+		while(intf)
+		{
 			gl1->addWidget(new QLabel(QString(intf->interface_type()), primaryFrame), cpos, 1);
 			cpos++;
 			intf = intf->interface_next();
@@ -65,16 +87,19 @@ void DeviceInformationWindow::fill_device_information()
 	vLayout->addWidget(primaryFrame);
 
 	device_memory_interface *d_memory;
-	if(m_device->interface(d_memory)) {
+	if (m_device->interface(d_memory))
+	{
 		QFrame *f = new QFrame(mainWindowFrame);
 		f->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
 		QVBoxLayout *vb = new QVBoxLayout(f);
 		bool first = true;
-		for(int i=0; i<d_memory->max_space_count(); i++)
-			if(d_memory->has_space(i)) {
+		for (int i=0; i<d_memory->max_space_count(); i++)
+			if (d_memory->has_space(i))
+			{
 				QFrame *ff = new QFrame(f);
 				QHBoxLayout *hb = new QHBoxLayout(ff);
-				if(first) {
+				if (first)
+				{
 					hb->addWidget(new QLabel("Memory maps"));
 					first = false;
 				}
@@ -92,46 +117,10 @@ void DeviceInformationWindow::fill_device_information()
 
 void DeviceInformationWindow::set_device(const char *tag)
 {
-	m_device = m_machine->root_device().subdevice(tag);
-	if(!m_device)
-		m_device = &m_machine->root_device();
+	m_device = m_machine.root_device().subdevice(tag);
+	if (!m_device)
+		m_device = &m_machine.root_device();
 	fill_device_information();
 }
 
-const char *DeviceInformationWindow::device_tag() const
-{
-	return m_device->tag();
-}
-
-
-//=========================================================================
-//  DeviceInformationWindowQtConfig
-//=========================================================================
-void DeviceInformationWindowQtConfig::buildFromQWidget(QWidget* widget)
-{
-	WindowQtConfig::buildFromQWidget(widget);
-	DeviceInformationWindow* window = dynamic_cast<DeviceInformationWindow*>(widget);
-	m_device_tag = window->device_tag();
-}
-
-
-void DeviceInformationWindowQtConfig::applyToQWidget(QWidget* widget)
-{
-	WindowQtConfig::applyToQWidget(widget);
-	DeviceInformationWindow* window = dynamic_cast<DeviceInformationWindow*>(widget);
-	window->set_device(m_device_tag.c_str());
-}
-
-
-void DeviceInformationWindowQtConfig::addToXmlDataNode(util::xml::data_node &node) const
-{
-	WindowQtConfig::addToXmlDataNode(node);
-	node.set_attribute("device-tag", m_device_tag.c_str());
-}
-
-
-void DeviceInformationWindowQtConfig::recoverFromXmlNode(util::xml::data_node const &node)
-{
-	WindowQtConfig::recoverFromXmlNode(node);
-	m_device_tag = node.get_attribute_string("device-tag", ":");
-}
+} // namespace osd::debugger::qt

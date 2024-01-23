@@ -12,9 +12,9 @@
 
 #pragma once
 
-#include "bus/ti99/ti99defs.h"
+#define TI99_GROMPORT_TAG    "gromport"
 
-namespace bus { namespace ti99 { namespace gromport {
+namespace bus::ti99::gromport {
 
 struct pcb_type
 {
@@ -40,14 +40,14 @@ public:
 
 	gromport_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8Z_MEMBER(readz);
+	void readz(offs_t offset, uint8_t *value);
 	void write(offs_t offset, uint8_t data);
-	DECLARE_READ8Z_MEMBER(crureadz);
+	void crureadz(offs_t offset, uint8_t *value);
 	void cruwrite(offs_t offset, uint8_t data);
-	DECLARE_WRITE_LINE_MEMBER(ready_line);
-	DECLARE_WRITE_LINE_MEMBER(romgq_line);
+	void ready_line(int state);
+	void romgq_line(int state);
 	void set_gromlines(line_state mline, line_state moline, line_state gsq);
-	DECLARE_WRITE_LINE_MEMBER(gclock_in);
+	void gclock_in(int state);
 
 	void    cartridge_inserted();
 	bool    is_grom_idle();
@@ -76,19 +76,19 @@ private:
 class cartridge_connector_device : public device_t
 {
 public:
-	virtual DECLARE_READ8Z_MEMBER(readz) = 0;
+	virtual void readz(offs_t offset, uint8_t *value) = 0;
 	virtual void write(offs_t offset, uint8_t data) = 0;
-	virtual DECLARE_SETADDRESS_DBIN_MEMBER( setaddress_dbin ) { }
+	virtual void setaddress_dbin(offs_t offset, int state) { }
 
-	virtual DECLARE_READ8Z_MEMBER(crureadz) = 0;
+	virtual void crureadz(offs_t offset, uint8_t *value) = 0;
 	virtual void cruwrite(offs_t offset, uint8_t data) = 0;
 
-	virtual DECLARE_WRITE_LINE_MEMBER(romgq_line) = 0;
+	virtual void romgq_line(int state) = 0;
 	virtual void set_gromlines(line_state mline, line_state moline, line_state gsq) =0;
 
-	virtual DECLARE_WRITE_LINE_MEMBER(gclock_in) = 0;
+	virtual void gclock_in(int state) = 0;
 
-	DECLARE_WRITE_LINE_MEMBER(ready_line);
+	void ready_line(int state);
 
 	virtual void insert(int index, bus::ti99::gromport::ti99_cartridge_device* cart) { m_gromport->cartridge_inserted(); }
 	virtual void remove(int index) { }
@@ -102,7 +102,7 @@ protected:
 	bool     m_grom_selected;
 };
 
-} } } // end namespace bus::ti99::gromport
+} // end namespace bus::ti99::gromport
 
 DECLARE_DEVICE_TYPE_NS(TI99_GROMPORT, bus::ti99::gromport, gromport_device)
 

@@ -18,6 +18,7 @@
 #include <deque>
 #include <functional>
 #include <list>
+#include <string_view>
 #include <unordered_map>
 
 
@@ -33,13 +34,13 @@ enum expression_space
 	EXPSPACE_PROGRAM_LOGICAL,
 	EXPSPACE_DATA_LOGICAL,
 	EXPSPACE_IO_LOGICAL,
-	EXPSPACE_SPACE3_LOGICAL,
+	EXPSPACE_OPCODE_LOGICAL,
 	EXPSPACE_PROGRAM_PHYSICAL,
 	EXPSPACE_DATA_PHYSICAL,
 	EXPSPACE_IO_PHYSICAL,
-	EXPSPACE_SPACE3_PHYSICAL,
-	EXPSPACE_OPCODE,
-	EXPSPACE_RAMWRITE,
+	EXPSPACE_OPCODE_PHYSICAL,
+	EXPSPACE_PRGDIRECT,
+	EXPSPACE_OPDIRECT,
 	EXPSPACE_REGION
 };
 
@@ -48,6 +49,8 @@ enum expression_space
 //**************************************************************************
 //  TYPE DEFINITIONS
 //**************************************************************************
+
+using offs_t = u32;
 
 // ======================> expression_error
 
@@ -71,6 +74,8 @@ public:
 		DIVIDE_BY_ZERO,
 		OUT_OF_MEMORY,
 		INVALID_PARAM_COUNT,
+		TOO_FEW_PARAMS,
+		TOO_MANY_PARAMS,
 		UNBALANCED_QUOTES,
 		TOO_MANY_STRINGS,
 		INVALID_MEMORY_SIZE,
@@ -81,22 +86,26 @@ public:
 	};
 
 	// construction/destruction
-	expression_error(error_code code, int offset = 0)
-		: m_code(code),
-			m_offset(offset) { }
+	constexpr expression_error(error_code code, int offset = 0, int num = 0)
+		: m_code(code)
+		, m_offset(offset)
+		, m_num(num)
+	{
+	}
 
 	// operators
-	operator error_code() const { return m_code; }
+	constexpr operator error_code() const { return m_code; }
 
 	// getters
-	error_code code() const { return m_code; }
-	int offset() const { return m_offset; }
-	const char *code_string() const;
+	constexpr error_code code() const { return m_code; }
+	constexpr int offset() const { return m_offset; }
+	std::string code_string() const;
 
 private:
 	// internal state
 	error_code          m_code;
 	int                 m_offset;
+	int                 m_num;
 };
 
 
@@ -154,9 +163,7 @@ public:
 	typedef std::function<u64(int numparams, const u64 *paramlist)> execute_func;
 
 	// callback functions for memory reads/writes
-	typedef std::function<expression_error::error_code(const char *name, expression_space space)> valid_func;
-	typedef std::function<u64(const char *name, expression_space space, u32 offset, int size, bool disable_se)> read_func;
-	typedef std::function<void(const char *name, expression_space space, u32 offset, int size, u64 value, bool disable_se)> write_func;
+	typedef std::function<void()> memory_modified_func;
 
 	enum read_write
 	{
@@ -165,20 +172,21 @@ public:
 	};
 
 	// construction/destruction
-	symbol_table(symbol_table *parent = nullptr);
+	symbol_table(running_machine &machine, symbol_table *parent = nullptr, device_t *device = nullptr);
 
 	// getters
 	const std::unordered_map<std::string, std::unique_ptr<symbol_entry>> &entries() const { return m_symlist; }
 	symbol_table *parent() const { return m_parent; }
+	running_machine &machine() { return m_machine; }
 
 	// setters
-	void configure_memory(valid_func valid, read_func read, write_func write);
+	void set_memory_modified_func(memory_modified_func modified);
 
 	// symbol access
-	void add(const char *name, read_write rw, u64 *ptr = nullptr);
-	void add(const char *name, u64 constvalue);
-	void add(const char *name, getter_func getter, setter_func setter = nullptr, const std::string &format_string = "");
-	void add(const char *name, int minparams, int maxparams, execute_func execute);
+	symbol_entry &add(const char *name, read_write rw, u64 *ptr = nullptr);
+	symbol_entry &add(const char *name, u64 constvalue);
+	symbol_entry &add(const char *name, getter_func getter, setter_func setter = nullptr, const std::string &format_string = "");
+	symbol_entry &add(const char *name, int minparams, int maxparams, execute_func execute);
 	symbol_entry *find(const char *name) const { if (name) { auto search = m_symlist.find(name); if (search != m_symlist.end()) return search->second.get(); else return nullptr; } else return nullptr; }
 	symbol_entry *find_deep(const char *name);
 
@@ -190,14 +198,24 @@ public:
 	expression_error::error_code memory_valid(const char *name, expression_space space);
 	u64 memory_value(const char *name, expression_space space, u32 offset, int size, bool disable_se);
 	void set_memory_value(const char *name, expression_space space, u32 offset, int size, u64 value, bool disable_se);
+	u64 read_memory(address_space &space, offs_t address, int size, bool apply_translation);
+	void write_memory(address_space &space, offs_t address, u64 data, int size, bool apply_translation);
 
 private:
+	// memory helpers
+	u64 read_program_direct(address_space &space, int opcode, offs_t address, int size);
+	u64 read_memory_region(const char *rgntag, offs_t address, int size);
+	void write_program_direct(address_space &space, int opcode, offs_t address, int size, u64 data);
+	void write_memory_region(const char *rgntag, offs_t address, int size, u64 data);
+	expression_error expression_get_space(const char *tag, int &spacenum, device_memory_interface *&memory);
+	void notify_memory_modified();
+
 	// internal state
+	running_machine &       m_machine;          // reference to the machine
 	symbol_table *          m_parent;           // pointer to the parent symbol table
 	std::unordered_map<std::string,std::unique_ptr<symbol_entry>> m_symlist;        // list of symbols
-	valid_func              m_memory_valid;     // validation callback
-	read_func               m_memory_read;      // read callback
-	write_func              m_memory_write;     // write callback
+	device_memory_interface *const m_memintf;   // pointer to the local memory interface (if any)
+	memory_modified_func    m_memory_modified;  // memory modified callback
 };
 
 
@@ -209,7 +227,8 @@ class parsed_expression
 {
 public:
 	// construction/destruction
-	parsed_expression(symbol_table &symtable, const char *expression = nullptr, int default_base = 16);
+	parsed_expression(symbol_table &symtable);
+	parsed_expression(symbol_table &symtable, std::string_view expression, int default_base = 16);
 	parsed_expression(const parsed_expression &src);
 	parsed_expression(parsed_expression &&src) = default;
 
@@ -218,7 +237,7 @@ public:
 	parsed_expression &operator=(parsed_expression &&src) = default;
 
 	// getters
-	bool is_empty() const { return (m_tokenlist.count() == 0); }
+	bool is_empty() const { return m_tokenlist.empty(); }
 	const char *original_string() const { return m_original_string.c_str(); }
 	symbol_table &symbols() const { return m_symtable.get(); }
 
@@ -227,15 +246,13 @@ public:
 	void set_default_base(int base) { assert(base == 8 || base == 10 || base == 16); m_default_base = base; }
 
 	// execution
-	void parse(const char *string);
+	void parse(std::string_view string);
 	u64 execute() { return execute_tokens(); }
 
 private:
 	// a single token
 	class parse_token
 	{
-		friend class simple_list<parse_token>;
-
 		// operator flags
 		enum
 		{
@@ -271,7 +288,6 @@ private:
 		parse_token(int offset = 0);
 
 		// getters
-		parse_token *next() const { return m_next; }
 		int offset() const { return m_offset; }
 		bool is_number() const { return (m_type == NUMBER); }
 		bool is_string() const { return (m_type == STRING); }
@@ -282,8 +298,9 @@ private:
 		bool is_lval() const { return ((m_type == SYMBOL && m_symbol->is_lval()) || m_type == MEMORY); }
 
 		u64 value() const { assert(m_type == NUMBER); return m_value; }
+		const char *string() const { assert(m_type == STRING); return m_string; }
 		u32 address() const { assert(m_type == MEMORY); return m_value; }
-		symbol_entry *symbol() const { assert(m_type == SYMBOL); return m_symbol; }
+		symbol_entry &symbol() const { assert(m_type == SYMBOL); return *m_symbol; }
 
 		u8 optype() const { assert(m_type == OPERATOR); return (m_flags & TIN_OPTYPE_MASK) >> TIN_OPTYPE_SHIFT; }
 		u8 precedence() const { assert(m_type == OPERATOR); return (m_flags & TIN_PRECEDENCE_MASK) >> TIN_PRECEDENCE_SHIFT; }
@@ -317,7 +334,6 @@ private:
 
 	private:
 		// internal state
-		parse_token *           m_next;             // next token in list
 		token_type              m_type;             // type of token
 		int                     m_offset;           // offset within the string
 		u64                     m_value;            // integral value
@@ -328,7 +344,7 @@ private:
 
 	// internal helpers
 	void copy(const parsed_expression &src);
-	void print_tokens(FILE *out);
+	void print_tokens();
 
 	// parsing helpers
 	void parse_string_into_tokens();
@@ -337,7 +353,7 @@ private:
 	void parse_quoted_char(parse_token &token, const char *&string);
 	void parse_quoted_string(parse_token &token, const char *&string);
 	void parse_memory_operator(parse_token &token, const char *string, bool disable_se);
-	void normalize_operator(parse_token *prevtoken, parse_token &thistoken);
+	void normalize_operator(parse_token &thistoken, parse_token *prevtoken, parse_token *nexttoken, const std::list<parse_token> &stack, bool was_rparen);
 	void infix_to_postfix();
 
 	// execution helpers
@@ -355,7 +371,7 @@ private:
 	std::reference_wrapper<symbol_table> m_symtable;    // symbol table
 	int                 m_default_base;                 // default base
 	std::string         m_original_string;              // original string (prior to parsing)
-	simple_list<parse_token> m_tokenlist;               // token list
+	std::list<parse_token> m_tokenlist;                 // token list
 	std::list<std::string> m_stringlist;                // string list
 	std::deque<parse_token> m_token_stack;              // token stack (used during execution)
 };

@@ -13,8 +13,14 @@
 
 #pragma once
 
-#include "bitmap.h"
 #include "aviio.h"
+#include "bitmap.h"
+
+#include <memory>
+#include <string>
+#include <system_error>
+#include <utility>
+
 
 /***************************************************************************
     TYPE DEFINITIONS
@@ -29,30 +35,29 @@ public:
 	avivideo_image_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock = 0);
 	virtual ~avivideo_image_device();
 
-	// image-level overrides
-	virtual image_init_result call_load() override;
+	// device_image_interface implementation
+	virtual std::pair<std::error_condition, std::string> call_load() override;
 	virtual void call_unload() override;
-	virtual iodevice_t image_type() const noexcept override { return IO_VIDEO; }
 
 	virtual bool is_readable()  const noexcept override { return true; }
 	virtual bool is_writeable() const noexcept override { return false; }
 	virtual bool is_creatable() const noexcept override { return false; }
-	virtual bool must_be_loaded() const noexcept override { return false; }
 	virtual bool is_reset_on_load() const noexcept override { return false; }
 	virtual const char *file_extensions() const noexcept override { return "avi"; }
+	virtual const char *image_type_name() const noexcept override { return "vidfile"; }
+	virtual const char *image_brief_type_name() const noexcept override { return "vid"; }
 
 	bitmap_argb32 &get_frame() { return *m_frame; }
 
 protected:
-	// device-level overrides
+	// device_t implementation
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+
+	TIMER_CALLBACK_MEMBER(frame_timer);
 
 private:
-	static constexpr device_timer_id TIMER_FRAME = 0;
-
-	bitmap_argb32 *m_frame;
+	std::unique_ptr<bitmap_argb32> m_frame;
 	avi_file::ptr m_avi;
 
 	emu_timer *m_frame_timer;

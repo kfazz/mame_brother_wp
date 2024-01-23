@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include "bus/ti99/ti99defs.h"
+#define TI99_IOPORT_TAG      "ioport"
 
-namespace bus { namespace ti99 { namespace internal {
+namespace bus::ti99::internal {
 
 extern const device_type IOPORT;
 
@@ -29,22 +29,22 @@ public:
 	{ }
 
 	// Methods called from the console / ioport
-	virtual DECLARE_READ8Z_MEMBER( readz ) { }
+	virtual void readz(offs_t offset, uint8_t *value) { }
 	virtual void write(offs_t offset, uint8_t data) { }
-	virtual DECLARE_SETADDRESS_DBIN_MEMBER( setaddress_dbin ) { }
-	virtual DECLARE_READ8Z_MEMBER( crureadz ) { }
+	virtual void setaddress_dbin(offs_t offset, int state) { }
+	virtual void crureadz(offs_t offset, uint8_t *value) { }
 	virtual void cruwrite(offs_t offset, uint8_t data) { }
-	virtual DECLARE_WRITE_LINE_MEMBER( memen_in ) { }
-	virtual DECLARE_WRITE_LINE_MEMBER( msast_in ) { }
-	virtual DECLARE_WRITE_LINE_MEMBER( clock_in ) { }
-	virtual DECLARE_WRITE_LINE_MEMBER( reset_in ) { }
+	virtual void memen_in(int state) { }
+	virtual void msast_in(int state) { }
+	virtual void clock_in(int state) { }
+	virtual void reset_in(int state) { }
 
 	void set_ioport(ioport_device* ioport) { m_ioport = ioport; }
 
 protected:
 	// Methods called from the external device
-	DECLARE_WRITE_LINE_MEMBER( set_extint );
-	DECLARE_WRITE_LINE_MEMBER( set_ready );
+	void set_extint(int state);
+	void set_ready(int state);
 private:
 	ioport_device* m_ioport;
 };
@@ -71,15 +71,15 @@ public:
 	ioport_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
 	// Methods called from the console
-	DECLARE_READ8Z_MEMBER( readz );
+	void readz(offs_t offset, uint8_t *value);
 	void write(offs_t offset, uint8_t data);
-	DECLARE_SETADDRESS_DBIN_MEMBER( setaddress_dbin );
-	DECLARE_READ8Z_MEMBER( crureadz );
+	void setaddress_dbin(offs_t offset, int state);
+	void crureadz(offs_t offset, uint8_t *value);
 	void cruwrite(offs_t offset, uint8_t data);
-	DECLARE_WRITE_LINE_MEMBER( memen_in );
-	DECLARE_WRITE_LINE_MEMBER( msast_in );
-	DECLARE_WRITE_LINE_MEMBER( clock_in );
-	DECLARE_WRITE_LINE_MEMBER( reset_in );
+	void memen_in(int state);
+	void msast_in(int state);
+	void clock_in(int state);
+	void reset_in(int state);
 
 	// Callbacks
 	auto extint_cb() { return m_console_extint.bind(); }
@@ -96,7 +96,8 @@ protected:
 private:
 	ioport_attached_device*    m_connected;
 };
-}   }  } // end namespace bus::ti99::internal
+
+} // end namespace bus::ti99::internal
 
 DECLARE_DEVICE_TYPE_NS(TI99_IOPORT, bus::ti99::internal, ioport_device)
 

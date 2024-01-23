@@ -12,7 +12,7 @@
 #pragma once
 
 #include "exp.h"
-#include "sound/3526intf.h"
+#include "sound/ymopl.h"
 
 
 
@@ -45,7 +45,7 @@ protected:
 	virtual int c64_exrom_r(offs_t offset, int sphi2, int ba, int rw) override;
 
 private:
-	DECLARE_WRITE_LINE_MEMBER( opl_irq_w );
+	void opl_irq_w(int state);
 
 	required_device<ym3526_device> m_opl;
 	required_device<c64_expansion_slot_device> m_exp;

@@ -51,9 +51,6 @@ einstein_userport_device::~einstein_userport_device()
 
 void einstein_userport_device::device_start()
 {
-	// resolve callbacks
-	m_bstb_handler.resolve_safe();
-
 	m_card = get_card_device();
 }
 
@@ -62,7 +59,7 @@ void einstein_userport_device::device_start()
 //  I/O PORTS
 //**************************************************************************
 
-READ8_MEMBER( einstein_userport_device::read )
+uint8_t einstein_userport_device::read()
 {
 	if (m_card)
 		return m_card->read();
@@ -70,13 +67,13 @@ READ8_MEMBER( einstein_userport_device::read )
 		return 0xff;
 }
 
-WRITE8_MEMBER( einstein_userport_device::write )
+void einstein_userport_device::write(uint8_t data)
 {
 	if (m_card)
 		m_card->write(data);
 }
 
-WRITE_LINE_MEMBER( einstein_userport_device::brdy_w )
+void einstein_userport_device::brdy_w(int state)
 {
 	if (m_card)
 		m_card->brdy_w(state);

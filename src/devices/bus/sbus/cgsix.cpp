@@ -171,12 +171,12 @@ void sbus_cgsix_device::device_reset()
 
 uint32_t sbus_cgsix_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
 {
-	const pen_t *pens = m_ramdac->pens();
-	uint8_t *vram = (uint8_t *)&m_vram[0];
+	pen_t const *const pens = m_ramdac->pens();
+	auto const vram = util::big_endian_cast<uint8_t const>(&m_vram[0]);
 
 	for (int16_t y = 0; y < 900; y++)
 	{
-		uint32_t *scanline = &bitmap.pix32(y);
+		uint32_t *scanline = &bitmap.pix(y);
 		const bool cursor_row_hit = (y >= m_cursor_y && y < (m_cursor_y + 32));
 		for (int16_t x = 0; x < 1152; x++)
 		{
@@ -196,7 +196,7 @@ uint32_t sbus_cgsix_device::screen_update(screen_device &screen, bitmap_rgb32 &b
 				}
 			}
 
-			const uint8_t pixel = vram[y * 1152 + BYTE4_XOR_BE(x)];
+			const uint8_t pixel = vram[y * 1152 + x];
 			*scanline++ = pens[pixel];
 		}
 	}
@@ -204,28 +204,28 @@ uint32_t sbus_cgsix_device::screen_update(screen_device &screen, bitmap_rgb32 &b
 	return 0;
 }
 
-READ32_MEMBER(sbus_cgsix_device::rom_r)
+uint32_t sbus_cgsix_device::rom_r(offs_t offset)
 {
 	return ((uint32_t*)m_rom->base())[offset];
 }
 
-READ32_MEMBER(sbus_cgsix_device::unknown_r)
+uint32_t sbus_cgsix_device::unknown_r(offs_t offset, uint32_t mem_mask)
 {
 	logerror("%s: unknown_r: %08x & %08x\n", machine().describe_context(), offset << 2, mem_mask);
 	return 0;
 }
 
-WRITE32_MEMBER(sbus_cgsix_device::unknown_w)
+void sbus_cgsix_device::unknown_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	logerror("%s: unknown_w: %08x = %08x & %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
 }
 
-READ32_MEMBER(sbus_cgsix_device::vram_r)
+uint32_t sbus_cgsix_device::vram_r(offs_t offset)
 {
 	return m_vram[offset];
 }
 
-WRITE32_MEMBER(sbus_cgsix_device::vram_w)
+void sbus_cgsix_device::vram_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	COMBINE_DATA(&m_vram[offset]);
 }
@@ -295,8 +295,7 @@ void sbus_cgsix_device::handle_font_poke()
 	uint8_t plane_mask = fbc_get_plane_mask();
 
 	const uint32_t daddr = m_fbc.m_y0 * 1152;
-	uint8_t *vram = (uint8_t*)&m_vram[0];
-	vram += daddr;
+	auto const vram = util::big_endian_cast<uint8_t>(&m_vram[0]) + daddr;
 	const int width = (int)m_fbc.m_x1 - (int)m_fbc.m_x0;
 	const uint32_t font = m_fbc.m_font;
 	uint32_t x = m_fbc.m_x0;
@@ -314,8 +313,8 @@ void sbus_cgsix_device::handle_font_poke()
 			src = (font >> bit) & 0xff;
 		else
 			src = BIT(font, bit) ? 0xff : 0x00;
-		const uint8_t dst = vram[BYTE4_XOR_BE(x)];
-		vram[BYTE4_XOR_BE(x)]= perform_rasterop(src, dst, plane_mask);
+		const uint8_t dst = vram[x];
+		vram[x] = perform_rasterop(src, dst, plane_mask);
 	}
 	m_fbc.m_x0 += m_fbc.m_autoincx;
 	m_fbc.m_x1 += m_fbc.m_autoincx;
@@ -376,7 +375,7 @@ void sbus_cgsix_device::handle_draw_command()
 		return;
 	}
 
-	uint8_t *vram = (uint8_t*)&m_vram[0];
+	auto const vram = util::big_endian_cast<uint8_t>(&m_vram[0]);
 
 	uint32_t pixel_mask = fbc_get_pixel_mask();
 	uint8_t plane_mask = fbc_get_plane_mask();
@@ -389,15 +388,14 @@ void sbus_cgsix_device::handle_draw_command()
 
 		for (uint32_t y = v0.m_absy; y <= v1.m_absy; y++)
 		{
-			uint8_t *line = &vram[y * 1152];
+			auto const line = vram + (y * 1152);
 			const uint16_t patt_y_index = (y - m_fbc.m_patt_align_y) % 16;
 			for (uint32_t x = v0.m_absx; x <= v1.m_absx; x++)
 			{
 				if (!BIT(pixel_mask, 31 - (x % 32)))
 					continue;
 
-				const uint32_t native_x = BYTE4_XOR_BE(x);
-				uint8_t src = line[native_x];
+				uint8_t src = line[x];
 
 				switch (fbc_rasterop_pattern())
 				{
@@ -417,8 +415,8 @@ void sbus_cgsix_device::handle_draw_command()
 				}
 				}
 
-				const uint8_t dst = line[native_x];
-				line[native_x] = perform_rasterop(src, dst, plane_mask);
+				const uint8_t dst = line[x];
+				line[x] = perform_rasterop(src, dst, plane_mask);
 			}
 		}
 	}
@@ -428,7 +426,7 @@ void sbus_cgsix_device::handle_draw_command()
 // NOTE: This is basically untested, and probably full of bugs!
 void sbus_cgsix_device::handle_blit_command()
 {
-	uint8_t *vram = (uint8_t*)&m_vram[0];
+	auto const vram = util::big_endian_cast<uint8_t>(&m_vram[0]);
 	const uint32_t fbw = 1152;//(m_fbc.m_clip_maxx + 1);
 	logerror("Copying from %d,%d-%d,%d to %d,%d-%d,%d, width %d, height %d\n"
 		, m_fbc.m_x0, m_fbc.m_y0
@@ -440,23 +438,22 @@ void sbus_cgsix_device::handle_blit_command()
 	uint32_t dsty = m_fbc.m_y2;
 	for (; srcy < m_fbc.m_y1; srcy++, dsty++)
 	{
-		uint8_t *srcline = &vram[srcy * fbw];
-		uint8_t *dstline = &vram[dsty * fbw];
+		auto srcline = vram + (srcy * fbw);
+		auto dstline = vram + (dsty * fbw);
 		uint32_t srcx = m_fbc.m_x0;
 		uint32_t dstx = m_fbc.m_x2;
 		for (; srcx < m_fbc.m_x1; srcx++, dstx++)
 		{
-			const uint32_t native_dstx = BYTE4_XOR_BE(dstx);
-			const uint8_t src = srcline[BYTE4_XOR_BE(srcx)];
-			const uint8_t dst = dstline[native_dstx];
+			const uint8_t src = srcline[srcx];
+			const uint8_t dst = dstline[dstx];
 			const uint8_t result = perform_rasterop(src, dst);
 			//logerror("vram[%d] = %02x\n", result);
-			dstline[native_dstx] = result;
+			dstline[dstx] = result;
 		}
 	}
 }
 
-READ32_MEMBER(sbus_cgsix_device::fbc_r)
+uint32_t sbus_cgsix_device::fbc_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t ret = 0;
 	switch (offset)
@@ -769,7 +766,7 @@ READ32_MEMBER(sbus_cgsix_device::fbc_r)
 	return ret;
 }
 
-WRITE32_MEMBER(sbus_cgsix_device::fbc_w)
+void sbus_cgsix_device::fbc_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	static char const *const misc_bdisp_name[4] = { "IGNORE", "0", "1", "ILLEGAL" };
 	static char const *const misc_bread_name[4] = { "IGNORE", "0", "1", "ILLEGAL" };
@@ -1233,34 +1230,34 @@ WRITE32_MEMBER(sbus_cgsix_device::fbc_w)
 	}
 }
 
-READ32_MEMBER(sbus_cgsix_device::cursor_address_r)
+uint32_t sbus_cgsix_device::cursor_address_r()
 {
 	return (m_cursor_x << 16) | (uint16_t)m_cursor_y;
 }
 
-WRITE32_MEMBER(sbus_cgsix_device::cursor_address_w)
+void sbus_cgsix_device::cursor_address_w(uint32_t data)
 {
 	m_cursor_x = (int16_t)(data >> 16);
 	m_cursor_y = (int16_t)data;
 }
 
-READ32_MEMBER(sbus_cgsix_device::cursor_ram_r)
+uint32_t sbus_cgsix_device::cursor_ram_r(offs_t offset)
 {
 	return m_cursor_ram[offset];
 }
 
-WRITE32_MEMBER(sbus_cgsix_device::cursor_ram_w)
+void sbus_cgsix_device::cursor_ram_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	COMBINE_DATA(&m_cursor_ram[offset]);
 }
 
-READ32_MEMBER(sbus_cgsix_device::thc_misc_r)
+uint32_t sbus_cgsix_device::thc_misc_r(offs_t offset, uint32_t mem_mask)
 {
 	logerror("thc_misc_r: %08x & %08x\n", m_thc_misc | THC_MISC_REV, mem_mask);
 	return m_thc_misc | THC_MISC_REV;
 }
 
-WRITE32_MEMBER(sbus_cgsix_device::thc_misc_w)
+void sbus_cgsix_device::thc_misc_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	logerror("thc_misc_w: %08x & %08x\n", data, mem_mask);
 	if (BIT(data, THC_MISC_IRQ_BIT) && BIT(m_thc_misc, THC_MISC_IRQ_BIT))
@@ -1277,7 +1274,7 @@ WRITE32_MEMBER(sbus_cgsix_device::thc_misc_w)
 	m_thc_misc &= THC_MISC_WRITE_MASK;
 }
 
-WRITE_LINE_MEMBER(sbus_cgsix_device::vblank_w)
+void sbus_cgsix_device::vblank_w(int state)
 {
 	int old_state = BIT(m_thc_misc, THC_MISC_VSYNC_BIT);
 	if (old_state != state)

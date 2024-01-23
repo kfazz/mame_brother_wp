@@ -55,17 +55,17 @@ protected:
 	virtual void dack_line_w(int line, int state) override;
 
 private:
-	DECLARE_WRITE_LINE_MEMBER( irq5_w );
-	DECLARE_WRITE_LINE_MEMBER( drq3_w );
-	DECLARE_WRITE_LINE_MEMBER( mr_w );
-	DECLARE_READ8_MEMBER( rd322_r );
-	DECLARE_READ8_MEMBER( ram_r );
-	DECLARE_WRITE8_MEMBER( ram_w );
-	DECLARE_READ_LINE_MEMBER( wd1015_t1_r );
-	DECLARE_READ8_MEMBER( wd1015_p1_r );
-	DECLARE_WRITE8_MEMBER( wd1015_p1_w );
-	DECLARE_READ8_MEMBER( wd1015_p2_r );
-	DECLARE_WRITE8_MEMBER( wd1015_p2_w );
+	void irq5_w(int state);
+	void drq3_w(int state);
+	void mr_w(int state);
+	uint8_t rd322_r();
+	uint8_t ram_r(offs_t offset);
+	void ram_w(offs_t offset, uint8_t data);
+	int wd1015_t1_r();
+	uint8_t wd1015_p1_r();
+	void wd1015_p1_w(uint8_t data);
+	uint8_t wd1015_p2_r();
+	void wd1015_p2_w(uint8_t data);
 
 	void wd1015_io(address_map &map);
 

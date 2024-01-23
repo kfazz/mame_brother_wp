@@ -27,25 +27,55 @@
 #include "sound/tms5220.h"
 #include "speaker.h"
 
-#define LOG_READYQ (1 << 0)
-#define LOG_READ (1 << 1)
-#define LOG_WRITE (1 << 2)
+#define LOG_READYQ (1U << 1)
+#define LOG_READ   (1U << 2)
+#define LOG_WRITE  (1U << 3)
 
 //#define VERBOSE (LOG_READYQ | LOG_READ | LOG_WRITE)
 #include "logmacro.h"
 
 
+namespace {
+
 /***************************************************************************
     PARAMETERS
 ***************************************************************************/
 
-//**************************************************************************
-//  GLOBAL VARIABLES
-//**************************************************************************
-
-DEFINE_DEVICE_TYPE(A2BUS_ECHOII, a2bus_echoii_device, "a2echoii", "Street Electronics Echo II")
-
 #define TMS_TAG         "tms5220"
+
+//**************************************************************************
+//  TYPE DEFINITIONS
+//**************************************************************************
+
+class a2bus_echoii_device:
+	public device_t,
+	public device_a2bus_card_interface
+{
+public:
+	// construction/destruction
+	a2bus_echoii_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+	required_device<tms5220_device> m_tms;
+
+protected:
+	a2bus_echoii_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
+
+	virtual void device_start() override;
+	virtual void device_reset() override;
+	virtual void device_add_mconfig(machine_config &config) override;
+
+	// overrides of standard a2bus slot functions
+	virtual uint8_t read_c0nx(uint8_t offset) override;
+	virtual void write_c0nx(uint8_t offset, uint8_t data) override;
+	virtual bool take_c800() override;
+
+private:
+	//void tms_irq_callback(int state);
+	void tms_readyq_callback(int state);
+	uint8_t m_writelatch_data; // 74ls373 latch
+	bool m_readlatch_flag; // 74c74 1st half
+	bool m_writelatch_flag; // 74c74 2nd half
+};
 
 /***************************************************************************
     FUNCTION PROTOTYPES
@@ -110,13 +140,13 @@ void a2bus_echoii_device::device_reset()
 }
 
 /*
-WRITE_LINE_MEMBER(a2bus_echoii_device::tms_irq_callback)
+void a2bus_echoii_device::tms_irq_callback(int state)
 {
     update_irq_to_maincpu();
 }
 */
 
-WRITE_LINE_MEMBER(a2bus_echoii_device::tms_readyq_callback)
+void a2bus_echoii_device::tms_readyq_callback(int state)
 {
 	if (state == ASSERT_LINE)
 	{
@@ -170,3 +200,12 @@ bool a2bus_echoii_device::take_c800()
 {
 	return false;
 }
+
+} // anonymous namespace
+
+
+//**************************************************************************
+//  GLOBAL VARIABLES
+//**************************************************************************
+
+DEFINE_DEVICE_TYPE_PRIVATE(A2BUS_ECHOII, device_a2bus_card_interface, a2bus_echoii_device, "a2echoii", "Street Electronics Echo II")

@@ -98,17 +98,17 @@ const uint8_t cdp1871_device::key_codes[4][11][8] =
 
 cdp1871_device::cdp1871_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, CDP1871, tag, owner, clock),
-	m_read_d1(*this),
-	m_read_d2(*this),
-	m_read_d3(*this),
-	m_read_d4(*this),
-	m_read_d5(*this),
-	m_read_d6(*this),
-	m_read_d7(*this),
-	m_read_d8(*this),
-	m_read_d9(*this),
-	m_read_d10(*this),
-	m_read_d11(*this),
+	m_read_d1(*this, 0xff),
+	m_read_d2(*this, 0xff),
+	m_read_d3(*this, 0xff),
+	m_read_d4(*this, 0xff),
+	m_read_d5(*this, 0xff),
+	m_read_d6(*this, 0xff),
+	m_read_d7(*this, 0xff),
+	m_read_d8(*this, 0xff),
+	m_read_d9(*this, 0xff),
+	m_read_d10(*this, 0xff),
+	m_read_d11(*this, 0xff),
 	m_write_da(*this),
 	m_write_rpt(*this),
 	m_inhibit(false),
@@ -133,26 +133,11 @@ cdp1871_device::cdp1871_device(const machine_config &mconfig, const char *tag, d
 
 void cdp1871_device::device_start()
 {
-	// resolve callbacks
-	m_read_d1.resolve_safe(0xff);
-	m_read_d2.resolve_safe(0xff);
-	m_read_d3.resolve_safe(0xff);
-	m_read_d4.resolve_safe(0xff);
-	m_read_d5.resolve_safe(0xff);
-	m_read_d6.resolve_safe(0xff);
-	m_read_d7.resolve_safe(0xff);
-	m_read_d8.resolve_safe(0xff);
-	m_read_d9.resolve_safe(0xff);
-	m_read_d10.resolve_safe(0xff);
-	m_read_d11.resolve_safe(0xff);
-	m_write_da.resolve_safe();
-	m_write_rpt.resolve_safe();
-
 	// set initial values
 	change_output_lines();
 
 	// allocate timers
-	m_scan_timer = timer_alloc();
+	m_scan_timer = timer_alloc(FUNC(cdp1871_device::perform_scan), this);
 	m_scan_timer->adjust(attotime::zero, 0, attotime::from_hz(clock()));
 
 	// register for state saving
@@ -172,10 +157,10 @@ void cdp1871_device::device_start()
 
 
 //-------------------------------------------------
-//  device_timer - handler timer events
+//  perform_scan - periodically scan for keys
 //-------------------------------------------------
 
-void cdp1871_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(cdp1871_device::perform_scan)
 {
 	change_output_lines();
 	clock_scan_counters();

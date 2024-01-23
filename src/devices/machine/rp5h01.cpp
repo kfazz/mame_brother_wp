@@ -35,7 +35,7 @@ DEFINE_DEVICE_TYPE(RP5H01, rp5h01_device, "rp5h01", "RP5H01 6/7-bit Counter")
 rp5h01_device::rp5h01_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: device_t(mconfig, RP5H01, tag, owner, clock)
 	, m_data(nullptr)
-	, m_rom(*this, DEVICE_SELF, 0x10)
+	, m_rom(*this, DEVICE_SELF)
 {
 }
 
@@ -80,7 +80,7 @@ void rp5h01_device::device_reset()
     enable_w
 -------------------------------------------------*/
 
-WRITE_LINE_MEMBER( rp5h01_device::enable_w )
+void rp5h01_device::enable_w(int state)
 {
 	/* process the /CE signal and enable/disable the IC */
 	m_enabled = state ? 0 : 1;
@@ -90,7 +90,7 @@ WRITE_LINE_MEMBER( rp5h01_device::enable_w )
     reset_w
 -------------------------------------------------*/
 
-WRITE_LINE_MEMBER( rp5h01_device::reset_w )
+void rp5h01_device::reset_w(int state)
 {
 	/* if it's not enabled, ignore */
 	if (!m_enabled)
@@ -111,7 +111,7 @@ WRITE_LINE_MEMBER( rp5h01_device::reset_w )
     cs_w
 -------------------------------------------------*/
 
-WRITE_LINE_MEMBER( rp5h01_device::cs_w )
+void rp5h01_device::cs_w(int state)
 {
 	/* if it's not enabled, ignore */
 	if (!m_enabled)
@@ -128,7 +128,7 @@ WRITE_LINE_MEMBER( rp5h01_device::cs_w )
     clock_w
 -------------------------------------------------*/
 
-WRITE_LINE_MEMBER( rp5h01_device::clock_w )
+void rp5h01_device::clock_w(int state)
 {
 	/* if it's not enabled, ignore */
 	if (!m_enabled)
@@ -149,7 +149,7 @@ WRITE_LINE_MEMBER( rp5h01_device::clock_w )
     test_w
 -------------------------------------------------*/
 
-WRITE_LINE_MEMBER( rp5h01_device::test_w )
+void rp5h01_device::test_w(int state)
 {
 	/* if it's not enabled, ignore */
 	if (!m_enabled)
@@ -163,7 +163,7 @@ WRITE_LINE_MEMBER( rp5h01_device::test_w )
     counter_r
 -------------------------------------------------*/
 
-READ_LINE_MEMBER( rp5h01_device::counter_r )
+int rp5h01_device::counter_r()
 {
 	/* if it's not enabled, ignore */
 	if (!m_enabled)
@@ -177,7 +177,7 @@ READ_LINE_MEMBER( rp5h01_device::counter_r )
     data_r
 -------------------------------------------------*/
 
-READ_LINE_MEMBER( rp5h01_device::data_r )
+int rp5h01_device::data_r()
 {
 	/* if it's not enabled, ignore */
 	if (!m_enabled)

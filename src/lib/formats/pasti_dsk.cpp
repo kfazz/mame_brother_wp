@@ -1,6 +1,12 @@
 // license:BSD-3-Clause
 // copyright-holders:Olivier Galibert
 #include "pasti_dsk.h"
+#include "imageutl.h"
+
+#include "ioprocs.h"
+#include "multibyte.h"
+
+#include <cstring>
 
 // Pasti format supported using the documentation at
 // http://www.sarnau.info/atari:pasti_file_format
@@ -16,34 +22,35 @@ pasti_format::pasti_format()
 {
 }
 
-const char *pasti_format::name() const
+const char *pasti_format::name() const noexcept
 {
 	return "pasti";
 }
 
-const char *pasti_format::description() const
+const char *pasti_format::description() const noexcept
 {
 	return "Atari PASTI floppy disk image";
 }
 
-const char *pasti_format::extensions() const
+const char *pasti_format::extensions() const noexcept
 {
 	return "stx";
 }
 
-bool pasti_format::supports_save() const
+bool pasti_format::supports_save() const noexcept
 {
 	return false;
 }
 
-int pasti_format::identify(io_generic *io, uint32_t form_factor)
+int pasti_format::identify(util::random_read &io, uint32_t form_factor, const std::vector<uint32_t> &variants) const
 {
 	uint8_t h[16];
-	io_generic_read(io, h, 0, 16);
+	size_t actual;
+	io.read_at(0, h, 16, actual);
 
 	if(!memcmp(h, "RSY\0\3\0", 6) &&
 		(1 || (h[10] >= 80 && h[10] <= 82) || (h[10] >= 160 && h[10] <= 164)))
-		return 100;
+		return FIFID_SIGN;
 
 	return 0;
 }
@@ -58,10 +65,11 @@ static void hexdump(const uint8_t *d, int s)
 	}
 }
 
-bool pasti_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
+bool pasti_format::load(util::random_read &io, uint32_t form_factor, const std::vector<uint32_t> &variants, floppy_image &image) const
 {
+	size_t actual;
 	uint8_t fh[16];
-	io_generic_read(io, fh, 0, 16);
+	io.read_at(0, fh, 16, actual);
 
 	std::vector<uint8_t> raw_track;
 
@@ -76,18 +84,18 @@ bool pasti_format::load(io_generic *io, uint32_t form_factor, floppy_image *imag
 	for(int track=0; track < tracks; track++) {
 		for(int head=0; head < heads; head++) {
 			uint8_t th[16];
-			io_generic_read(io, th, pos, 16);
-			int entry_len = th[0] | (th[1] << 8) | (th[2] << 16) | (th[3] << 24);
-			int fuzz_len  = th[4] | (th[5] << 8) | (th[6] << 16) | (th[7] << 24);
-			int sect      = th[8] | (th[9] << 8);
-			int flags     = th[10] | (th[11] << 8);
-			int track_len = th[12] | (th[13] << 8);
+			io.read_at(pos, th, 16, actual);
+			int entry_len = get_u32le(&th[0]);
+			int fuzz_len  = get_u32le(&th[4]);
+			int sect      = get_u16le(&th[8]);
+			int flags     = get_u16le(&th[10]);
+			int track_len = get_u16le(&th[12]);
 			int track_num = th[14];
 			int flags2    = th[15];
 
 			raw_track.resize(entry_len-16);
 
-			io_generic_read(io, &raw_track[0], pos+16, entry_len-16);
+			io.read_at(pos+16, &raw_track[0], entry_len-16, actual);
 
 			uint8_t *fuzz = fuzz_len ? &raw_track[16*sect] : nullptr;
 			uint8_t *bdata = fuzz ? fuzz+fuzz_len : &raw_track[16*sect];
@@ -95,13 +103,13 @@ bool pasti_format::load(io_generic *io, uint32_t form_factor, floppy_image *imag
 
 			int syncpos = -1;
 			if(flags & 0x0080) {
-				syncpos = tdata[0] | (tdata[1] << 8);
+				syncpos = get_u16le(tdata);
 				tdata += 2;
 			}
 
 			int tsize = 0;
 			if(flags & 0x0040) {
-				tsize = tdata[0] | (tdata[1] << 8);
+				tsize = get_u16le(tdata);
 				tdata += 2;
 			} else
 				tdata = nullptr;
@@ -126,10 +134,10 @@ bool pasti_format::load(io_generic *io, uint32_t form_factor, floppy_image *imag
 
 			for(int s=0; s<sect; s++) {
 				uint8_t *sh = &raw_track[16*s];
-				int s_off   = sh[0] | (sh[1] << 8) | (sh[2] << 16) | (sh[3] << 24);
-				int s_pos   = sh[4] | (sh[5] << 8);
-				int s_time  = sh[6] | (sh[7] << 8);
-				int s_flags = sh[14] | (sh[15] << 8);
+				int s_off   = get_u32le(&sh[0]);
+				int s_pos   = get_u16le(&sh[4]);
+				int s_time  = get_u16le(&sh[6]);
+				int s_flags = get_u16le(&sh[14]);
 
 				obs.sectors[s].data       = bdata + s_off;
 				obs.sectors[s].fuzzy_mask = nullptr;
@@ -154,14 +162,14 @@ bool pasti_format::load(io_generic *io, uint32_t form_factor, floppy_image *imag
 		}
 	}
 
-	image->set_variant(floppy_image::DSDD);
+	image.set_form_variant(floppy_image::FF_35, heads > 1 ? floppy_image::DSDD : floppy_image::SSDD);
 	return true;
 }
 
-const floppy_format_type FLOPPY_PASTI_FORMAT = &floppy_image_format_creator<pasti_format>;
+const pasti_format FLOPPY_PASTI_FORMAT;
 
 
-void pasti_format::wd_generate_track_from_observations(int track, int head, floppy_image *image, wd_obs &obs)
+void pasti_format::wd_generate_track_from_observations(int track, int head, floppy_image &image, const wd_obs &obs)
 {
 	if(!obs.track_data)
 		wd_generate_track_from_sectors_only(track, head, image, obs);
@@ -266,7 +274,7 @@ void pasti_format::wd_generate_sector_data(std::vector<uint32_t> &track, const w
 	mfm_w(track, 8, crc, cell_size);
 }
 
-void pasti_format::wd_generate_track_from_sectors_and_track(int track, int head, floppy_image *image, wd_obs &obs)
+void pasti_format::wd_generate_track_from_sectors_and_track(int track, int head, floppy_image &image, const wd_obs &obs)
 {
 	if(0)
 		printf("Track %d head %d sectors %d\n", track, head, obs.sector_count);
@@ -343,7 +351,7 @@ void pasti_format::wd_generate_track_from_sectors_and_track(int track, int head,
 	generate_track_from_levels(track, head, trackbuf, 0, image);
 }
 
-void pasti_format::wd_generate_track_from_sectors_only(int track, int head, floppy_image *image, wd_obs &obs)
+void pasti_format::wd_generate_track_from_sectors_only(int track, int head, floppy_image &image, const wd_obs &obs)
 {
 	if(0) {
 		printf("Track %d head %d sectors %d\n", track, head, obs.sector_count);
@@ -428,7 +436,7 @@ uint16_t pasti_format::byte_to_mfm(uint8_t data, bool context)
 	return (expand[(data >> 4) | (context ? 16 : 0)] << 8) | expand[data & 0x1f];
 }
 
-void pasti_format::match_mfm_data(wd_obs &obs, int tpos, const uint8_t *data, int size, uint8_t context, int &bcount, int &tend, bool &synced)
+void pasti_format::match_mfm_data(const wd_obs &obs, int tpos, const uint8_t *data, int size, uint8_t context, int &bcount, int &tend, bool &synced)
 {
 	uint16_t shift = byte_to_mfm(context, true);
 	int bc = 0;
@@ -473,7 +481,7 @@ void pasti_format::match_mfm_data(wd_obs &obs, int tpos, const uint8_t *data, in
 	}
 }
 
-void pasti_format::match_raw_data(wd_obs &obs, int tpos, const uint8_t *data, int size, uint8_t context, int &bcount, int &tend)
+void pasti_format::match_raw_data(const wd_obs &obs, int tpos, const uint8_t *data, int size, uint8_t context, int &bcount, int &tend)
 {
 	tend = tpos;
 	for(bcount=0; bcount != size; bcount++) {
@@ -502,7 +510,7 @@ uint16_t pasti_format::calc_crc(const uint8_t *data, int size, uint16_t crc1)
 	return crc;
 }
 
-void pasti_format::map_sectors_in_track(wd_obs &obs, wd_sect_info *sect_infos)
+void pasti_format::map_sectors_in_track(const wd_obs &obs, wd_sect_info *sect_infos)
 {
 	for(int i=0; i != obs.sector_count; i++) {
 		sect_infos[i].hstart = -1;

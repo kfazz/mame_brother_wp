@@ -12,11 +12,8 @@
  */
 
 #include "emu.h"
-#include "debugger.h"
 #include "dsp56000.h"
 #include "dsp56000d.h"
-
-#define LOG_GENERAL   (1U << 0)
 
 //#define VERBOSE (LOG_GENERAL)
 

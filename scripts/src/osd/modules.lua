@@ -54,73 +54,96 @@ function osdmodulesbuild()
 		MAME_DIR .. "src/osd/osdnet.h",
 		MAME_DIR .. "src/osd/watchdog.cpp",
 		MAME_DIR .. "src/osd/watchdog.h",
+		MAME_DIR .. "src/osd/interface/inputcode.h",
+		MAME_DIR .. "src/osd/interface/inputdev.h",
+		MAME_DIR .. "src/osd/interface/inputfwd.h",
+		MAME_DIR .. "src/osd/interface/inputman.h",
+		MAME_DIR .. "src/osd/interface/inputseq.cpp",
+		MAME_DIR .. "src/osd/interface/inputseq.h",
 		MAME_DIR .. "src/osd/modules/debugger/debug_module.h",
-		MAME_DIR .. "src/osd/modules/font/font_module.h",
-		MAME_DIR .. "src/osd/modules/midi/midi_module.h",
-		MAME_DIR .. "src/osd/modules/netdev/netdev_module.h",
-		MAME_DIR .. "src/osd/modules/sound/sound_module.h",
-		MAME_DIR .. "src/osd/modules/diagnostics/diagnostics_module.h",
-		MAME_DIR .. "src/osd/modules/monitor/monitor_module.h",
-		MAME_DIR .. "src/osd/modules/lib/osdobj_common.cpp",
-		MAME_DIR .. "src/osd/modules/lib/osdobj_common.h",
-		MAME_DIR .. "src/osd/modules/diagnostics/none.cpp",
-		MAME_DIR .. "src/osd/modules/diagnostics/diagnostics_win32.cpp",
-		MAME_DIR .. "src/osd/modules/debugger/none.cpp",
-		MAME_DIR .. "src/osd/modules/debugger/debugwin.cpp",
-		MAME_DIR .. "src/osd/modules/debugger/debugimgui.cpp",
 		MAME_DIR .. "src/osd/modules/debugger/debuggdbstub.cpp",
+		MAME_DIR .. "src/osd/modules/debugger/debugimgui.cpp",
+		MAME_DIR .. "src/osd/modules/debugger/debugwin.cpp",
+		MAME_DIR .. "src/osd/modules/debugger/none.cpp",
+		MAME_DIR .. "src/osd/modules/debugger/xmlconfig.cpp",
+		MAME_DIR .. "src/osd/modules/debugger/xmlconfig.h",
+		MAME_DIR .. "src/osd/modules/diagnostics/diagnostics_module.h",
+		MAME_DIR .. "src/osd/modules/diagnostics/diagnostics_win32.cpp",
+		MAME_DIR .. "src/osd/modules/diagnostics/none.cpp",
+		MAME_DIR .. "src/osd/modules/font/font_dwrite.cpp",
+		MAME_DIR .. "src/osd/modules/font/font_module.h",
+		MAME_DIR .. "src/osd/modules/font/font_none.cpp",
+		MAME_DIR .. "src/osd/modules/font/font_osx.cpp",
 		MAME_DIR .. "src/osd/modules/font/font_sdl.cpp",
 		MAME_DIR .. "src/osd/modules/font/font_windows.cpp",
-		MAME_DIR .. "src/osd/modules/font/font_dwrite.cpp",
-		MAME_DIR .. "src/osd/modules/font/font_osx.cpp",
-		MAME_DIR .. "src/osd/modules/font/font_none.cpp",
-		MAME_DIR .. "src/osd/modules/netdev/taptun.cpp",
-		MAME_DIR .. "src/osd/modules/netdev/pcap.cpp",
-		MAME_DIR .. "src/osd/modules/netdev/none.cpp",
-		MAME_DIR .. "src/osd/modules/midi/portmidi.cpp",
-		MAME_DIR .. "src/osd/modules/midi/none.cpp",
-		MAME_DIR .. "src/osd/modules/sound/js_sound.cpp",
-		MAME_DIR .. "src/osd/modules/sound/direct_sound.cpp",
-		MAME_DIR .. "src/osd/modules/sound/pa_sound.cpp",
-		MAME_DIR .. "src/osd/modules/sound/coreaudio_sound.cpp",
-		MAME_DIR .. "src/osd/modules/sound/sdl_sound.cpp",
-		MAME_DIR .. "src/osd/modules/sound/xaudio2_sound.cpp",
-		MAME_DIR .. "src/osd/modules/sound/none.cpp",
-		MAME_DIR .. "src/osd/modules/input/input_module.h",
+		MAME_DIR .. "src/osd/modules/input/assignmenthelper.cpp",
+		MAME_DIR .. "src/osd/modules/input/assignmenthelper.h",
 		MAME_DIR .. "src/osd/modules/input/input_common.cpp",
 		MAME_DIR .. "src/osd/modules/input/input_common.h",
 		MAME_DIR .. "src/osd/modules/input/input_dinput.cpp",
 		MAME_DIR .. "src/osd/modules/input/input_dinput.h",
+		MAME_DIR .. "src/osd/modules/input/input_mac.cpp",
+		MAME_DIR .. "src/osd/modules/input/input_module.h",
 		MAME_DIR .. "src/osd/modules/input/input_none.cpp",
 		MAME_DIR .. "src/osd/modules/input/input_rawinput.cpp",
-		MAME_DIR .. "src/osd/modules/input/input_win32.cpp",
 		MAME_DIR .. "src/osd/modules/input/input_sdl.cpp",
-		MAME_DIR .. "src/osd/modules/input/input_sdlcommon.cpp",
-		MAME_DIR .. "src/osd/modules/input/input_sdlcommon.h",
-		MAME_DIR .. "src/osd/modules/input/input_x11.cpp",
+		MAME_DIR .. "src/osd/modules/input/input_win32.cpp",
+		MAME_DIR .. "src/osd/modules/input/input_wincommon.h",
 		MAME_DIR .. "src/osd/modules/input/input_windows.cpp",
 		MAME_DIR .. "src/osd/modules/input/input_windows.h",
+		MAME_DIR .. "src/osd/modules/input/input_winhybrid.cpp",
+		MAME_DIR .. "src/osd/modules/input/input_x11.cpp",
 		MAME_DIR .. "src/osd/modules/input/input_xinput.cpp",
 		MAME_DIR .. "src/osd/modules/input/input_xinput.h",
-		MAME_DIR .. "src/osd/modules/input/input_winhybrid.cpp",
-		MAME_DIR .. "src/osd/modules/input/input_uwp.cpp",
-		MAME_DIR .. "src/osd/modules/input/input_mac.cpp",
-		MAME_DIR .. "src/osd/modules/output/output_module.h",
-		MAME_DIR .. "src/osd/modules/output/none.cpp",
+		MAME_DIR .. "src/osd/modules/lib/osdobj_common.cpp",
+		MAME_DIR .. "src/osd/modules/lib/osdobj_common.h",
+		MAME_DIR .. "src/osd/modules/midi/midi_module.h",
+		MAME_DIR .. "src/osd/modules/midi/none.cpp",
+		MAME_DIR .. "src/osd/modules/midi/portmidi.cpp",
+		MAME_DIR .. "src/osd/modules/monitor/monitor_common.cpp",
+		MAME_DIR .. "src/osd/modules/monitor/monitor_common.h",
+		MAME_DIR .. "src/osd/modules/monitor/monitor_dxgi.cpp",
+		MAME_DIR .. "src/osd/modules/monitor/monitor_mac.cpp",
+		MAME_DIR .. "src/osd/modules/monitor/monitor_module.h",
+		MAME_DIR .. "src/osd/modules/monitor/monitor_sdl.cpp",
+		MAME_DIR .. "src/osd/modules/monitor/monitor_win32.cpp",
+		MAME_DIR .. "src/osd/modules/netdev/netdev_module.h",
+		MAME_DIR .. "src/osd/modules/netdev/none.cpp",
+		MAME_DIR .. "src/osd/modules/netdev/pcap.cpp",
+		MAME_DIR .. "src/osd/modules/netdev/taptun.cpp",
 		MAME_DIR .. "src/osd/modules/output/console.cpp",
 		MAME_DIR .. "src/osd/modules/output/network.cpp",
+		MAME_DIR .. "src/osd/modules/output/none.cpp",
+		MAME_DIR .. "src/osd/modules/output/output_module.h",
 		MAME_DIR .. "src/osd/modules/output/win32_output.cpp",
 		MAME_DIR .. "src/osd/modules/output/win32_output.h",
-		MAME_DIR .. "src/osd/modules/monitor/monitor_common.h",
-		MAME_DIR .. "src/osd/modules/monitor/monitor_common.cpp",
-		MAME_DIR .. "src/osd/modules/monitor/monitor_win32.cpp",
-		MAME_DIR .. "src/osd/modules/monitor/monitor_dxgi.cpp",
-		MAME_DIR .. "src/osd/modules/monitor/monitor_sdl.cpp",
-		MAME_DIR .. "src/osd/modules/monitor/monitor_mac.cpp",
+		MAME_DIR .. "src/osd/modules/render/blit13.ipp",
+		MAME_DIR .. "src/osd/modules/render/draw13.cpp",
+		MAME_DIR .. "src/osd/modules/render/drawgdi.cpp",
+		MAME_DIR .. "src/osd/modules/render/drawnone.cpp",
+		MAME_DIR .. "src/osd/modules/render/drawogl.cpp",
+		MAME_DIR .. "src/osd/modules/render/drawsdl.cpp",
+		MAME_DIR .. "src/osd/modules/render/render_module.h",
+		MAME_DIR .. "src/osd/modules/sound/coreaudio_sound.cpp",
+		MAME_DIR .. "src/osd/modules/sound/direct_sound.cpp",
+		MAME_DIR .. "src/osd/modules/sound/js_sound.cpp",
+		MAME_DIR .. "src/osd/modules/sound/none.cpp",
+		MAME_DIR .. "src/osd/modules/sound/pa_sound.cpp",
+		MAME_DIR .. "src/osd/modules/sound/pulse_sound.cpp",
+		MAME_DIR .. "src/osd/modules/sound/sdl_sound.cpp",
+		MAME_DIR .. "src/osd/modules/sound/sound_module.h",
+		MAME_DIR .. "src/osd/modules/sound/xaudio2_sound.cpp",
 	}
 	includedirs {
+		MAME_DIR .. "src/osd",
 		ext_includedir("asio"),
 	}
+
+	if _OPTIONS["gcc"]~=nil and string.find(_OPTIONS["gcc"], "clang") then
+		buildoptions {
+			"-Wno-unused-private-field",
+		}
+	end
 
 	if _OPTIONS["targetos"]=="windows" then
 		includedirs {
@@ -140,7 +163,6 @@ function osdmodulesbuild()
 		}
 	else
 		files {
-			MAME_DIR .. "src/osd/modules/render/drawogl.cpp",
 			MAME_DIR .. "src/osd/modules/opengl/gl_shader_tool.cpp",
 			MAME_DIR .. "src/osd/modules/opengl/gl_shader_mgr.cpp",
 			MAME_DIR .. "src/osd/modules/opengl/gl_shader_mgr.h",
@@ -161,7 +183,7 @@ function osdmodulesbuild()
 		"__STDC_LIMIT_MACROS",
 		"__STDC_FORMAT_MACROS",
 		"__STDC_CONSTANT_MACROS",
-		"IMGUI_DISABLE_OBSOLETE_FUNCTIONS",
+		"BX_CONFIG_DEBUG=0",
 	}
 
 	files {
@@ -172,46 +194,84 @@ function osdmodulesbuild()
 		MAME_DIR .. "src/osd/modules/render/bgfxutil.h",
 		MAME_DIR .. "src/osd/modules/render/binpacker.cpp",
 		MAME_DIR .. "src/osd/modules/render/bgfx/blendreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/blendreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/chain.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/chain.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/chainentry.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/chainentry.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/chainentryreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/chainentryreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/chainmanager.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/chainmanager.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/chainreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/chainreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/clear.cpp",
 		MAME_DIR .. "src/osd/modules/render/bgfx/clear.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/clearreader.cpp",
 		MAME_DIR .. "src/osd/modules/render/bgfx/clearreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/cullreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/cullreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/depthreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/depthreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/effect.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/effect.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/effectmanager.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/effectmanager.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/effectreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/effectreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/entryuniformreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/entryuniformreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/inputpair.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/inputpair.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/frameparameter.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/frameparameter.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/timeparameter.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/timeparameter.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/paramreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/paramreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/paramuniform.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/paramuniform.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/paramuniformreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/paramuniformreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/shadermanager.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/shadermanager.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/slider.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/slider.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/sliderreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/sliderreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/slideruniform.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/slideruniform.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/slideruniformreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/slideruniformreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/statereader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/statereader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/suppressor.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/suppressor.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/suppressorreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/suppressorreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/target.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/target.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/targetreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/targetreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/targetmanager.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/targetmanager.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/texture.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/texture.h",
+		MAME_DIR .. "src/osd/modules/render/bgfx/texturehandleprovider.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/texturemanager.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/texturemanager.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/uniform.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/uniform.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/uniformreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/uniformreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/valueuniform.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/valueuniform.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/valueuniformreader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/valueuniformreader.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/view.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/view.h",
 		MAME_DIR .. "src/osd/modules/render/bgfx/writereader.cpp",
+		MAME_DIR .. "src/osd/modules/render/bgfx/writereader.h",
 	}
 	includedirs {
 		MAME_DIR .. "3rdparty/bgfx/examples/common",
@@ -229,6 +289,12 @@ function osdmodulesbuild()
 	else
 		includedirs {
 			ext_includedir("portaudio"),
+		}
+	end
+
+	if _OPTIONS["NO_USE_PULSEAUDIO"]=="1" then
+		defines {
+			"NO_USE_PULSEAUDIO",
 		}
 	end
 
@@ -263,11 +329,9 @@ function qtdebuggerbuild()
 	local version = str_to_version(_OPTIONS["gcc_version"])
 	if _OPTIONS["gcc"]~=nil and (string.find(_OPTIONS["gcc"], "clang") or string.find(_OPTIONS["gcc"], "asmjs")) then
 		configuration { "gmake or ninja" }
-			if (version >= 30600) then
-				buildoptions {
-					"-Wno-inconsistent-missing-override",
-				}
-			end
+			buildoptions {
+				"-Wno-error=inconsistent-missing-override",
+			}
 		configuration { }
 	end
 
@@ -314,12 +378,18 @@ function qtdebuggerbuild()
 			MOC = "moc"
 		else
 			if _OPTIONS["QT_HOME"]~=nil then
-				QMAKETST = backtick(_OPTIONS["QT_HOME"] .. "/bin/qmake --version 2>/dev/null")
-				if (QMAKETST=='') then
-					print("Qt's Meta Object Compiler (moc) wasn't found!")
-					os.exit(1)
+				MOCTST = backtick(_OPTIONS["QT_HOME"] .. "/bin/moc --version 2>/dev/null")
+				if (MOCTST=='') then
+					MOCTST = backtick(_OPTIONS["QT_HOME"] .. "/libexec/moc --version 2>/dev/null")
+					if (MOCTST=='') then
+						print("Qt's Meta Object Compiler (moc) wasn't found!")
+						os.exit(1)
+					else
+						MOC = _OPTIONS["QT_HOME"] .. "/libexec/moc"
+					end
+				else
+					MOC = _OPTIONS["QT_HOME"] .. "/bin/moc"
 				end
-				MOC = _OPTIONS["QT_HOME"] .. "/bin/moc"
 			else
 				MOCTST = backtick("which moc-qt5 2>/dev/null")
 				if (MOCTST=='') then
@@ -335,15 +405,15 @@ function qtdebuggerbuild()
 
 
 		custombuildtask {
-			{ MAME_DIR .. "src/osd/modules/debugger/qt/debuggerview.h",             GEN_DIR .. "osd/modules/debugger/qt/debuggerview.moc.cpp", { },         { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" }},
-			{ MAME_DIR .. "src/osd/modules/debugger/qt/windowqt.h",                 GEN_DIR .. "osd/modules/debugger/qt/windowqt.moc.cpp", { },                 { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" }},
-			{ MAME_DIR .. "src/osd/modules/debugger/qt/logwindow.h",                GEN_DIR .. "osd/modules/debugger/qt/logwindow.moc.cpp", { },                { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" }},
-			{ MAME_DIR .. "src/osd/modules/debugger/qt/dasmwindow.h",               GEN_DIR .. "osd/modules/debugger/qt/dasmwindow.moc.cpp", { },           { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" }},
-			{ MAME_DIR .. "src/osd/modules/debugger/qt/mainwindow.h",               GEN_DIR .. "osd/modules/debugger/qt/mainwindow.moc.cpp", { },           { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" }},
-			{ MAME_DIR .. "src/osd/modules/debugger/qt/memorywindow.h",             GEN_DIR .. "osd/modules/debugger/qt/memorywindow.moc.cpp", { },             { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" }},
-			{ MAME_DIR .. "src/osd/modules/debugger/qt/breakpointswindow.h",        GEN_DIR .. "osd/modules/debugger/qt/breakpointswindow.moc.cpp", { },        { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" }},
-			{ MAME_DIR .. "src/osd/modules/debugger/qt/deviceswindow.h",            GEN_DIR .. "osd/modules/debugger/qt/deviceswindow.moc.cpp", { },            { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" }},
-			{ MAME_DIR .. "src/osd/modules/debugger/qt/deviceinformationwindow.h",  GEN_DIR .. "osd/modules/debugger/qt/deviceinformationwindow.moc.cpp", { },{ MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" }},
+			{ MAME_DIR .. "src/osd/modules/debugger/qt/debuggerview.h",             GEN_DIR .. "osd/modules/debugger/qt/debuggerview.moc.cpp", { },             { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" } },
+			{ MAME_DIR .. "src/osd/modules/debugger/qt/windowqt.h",                 GEN_DIR .. "osd/modules/debugger/qt/windowqt.moc.cpp", { },                 { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" } },
+			{ MAME_DIR .. "src/osd/modules/debugger/qt/logwindow.h",                GEN_DIR .. "osd/modules/debugger/qt/logwindow.moc.cpp", { },                { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" } },
+			{ MAME_DIR .. "src/osd/modules/debugger/qt/dasmwindow.h",               GEN_DIR .. "osd/modules/debugger/qt/dasmwindow.moc.cpp", { },               { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" } },
+			{ MAME_DIR .. "src/osd/modules/debugger/qt/mainwindow.h",               GEN_DIR .. "osd/modules/debugger/qt/mainwindow.moc.cpp", { },               { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" } },
+			{ MAME_DIR .. "src/osd/modules/debugger/qt/memorywindow.h",             GEN_DIR .. "osd/modules/debugger/qt/memorywindow.moc.cpp", { },             { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" } },
+			{ MAME_DIR .. "src/osd/modules/debugger/qt/breakpointswindow.h",        GEN_DIR .. "osd/modules/debugger/qt/breakpointswindow.moc.cpp", { },        { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" } },
+			{ MAME_DIR .. "src/osd/modules/debugger/qt/deviceswindow.h",            GEN_DIR .. "osd/modules/debugger/qt/deviceswindow.moc.cpp", { },            { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" } },
+			{ MAME_DIR .. "src/osd/modules/debugger/qt/deviceinformationwindow.h",  GEN_DIR .. "osd/modules/debugger/qt/deviceinformationwindow.moc.cpp", { },  { MOC .. "$(MOCINCPATH) -b emu.h $(<) -o $(@)" } },
 
 		}
 
@@ -430,14 +500,23 @@ function osdmodulestargetconf()
 			}
 		else
 			if _OPTIONS["QT_HOME"]~=nil then
+				local qt_version = str_to_version(backtick(_OPTIONS["QT_HOME"] .. "/bin/qmake -query QT_VERSION"))
 				linkoptions {
 					"-L" .. backtick(_OPTIONS["QT_HOME"] .. "/bin/qmake -query QT_INSTALL_LIBS"),
 				}
-				links {
-					"Qt5Core",
-					"Qt5Gui",
-					"Qt5Widgets",
-				}
+				if qt_version < 60000 then
+					links {
+						"Qt5Core",
+						"Qt5Gui",
+						"Qt5Widgets",
+					}
+				else
+					links {
+						"Qt6Core",
+						"Qt6Gui",
+						"Qt6Widgets",
+					}
+				end
 			else
 				local str = backtick(pkgconfigcmd() .. " --libs Qt5Widgets")
 				addlibfromstring(str)
@@ -463,6 +542,11 @@ function osdmodulestargetconf()
 		}
 	end
 
+	if _OPTIONS["NO_USE_PULSEAUDIO"]=="0" then
+		links {
+			ext_lib("pulse"),
+		}
+	end
 end
 
 
@@ -493,6 +577,14 @@ newoption {
 	},
 }
 
+if not _OPTIONS["NO_OPENGL"] then
+	if _OPTIONS["targetos"] == "android" then
+		_OPTIONS["NO_OPENGL"] = "1"
+	else
+		_OPTIONS["NO_OPENGL"] = "0"
+	end
+end
+
 newoption {
 	trigger = "USE_DISPATCH_GL",
 	description = "Use GL-dispatching",
@@ -516,7 +608,7 @@ newoption {
 }
 
 if not _OPTIONS["NO_USE_MIDI"] then
-	if _OPTIONS["targetos"]=="freebsd" or _OPTIONS["targetos"]=="openbsd" or _OPTIONS["targetos"]=="netbsd" or _OPTIONS["targetos"]=="solaris" or _OPTIONS["targetos"]=="haiku" or _OPTIONS["targetos"] == "asmjs" then
+	if _OPTIONS["targetos"]=="freebsd" or _OPTIONS["targetos"]=="openbsd" or _OPTIONS["targetos"]=="netbsd" or _OPTIONS["targetos"]=="solaris" or _OPTIONS["targetos"]=="haiku" or _OPTIONS["targetos"] == "asmjs" or _OPTIONS["targetos"] == "android" then
 		_OPTIONS["NO_USE_MIDI"] = "1"
 	else
 		_OPTIONS["NO_USE_MIDI"] = "0"
@@ -537,6 +629,23 @@ if not _OPTIONS["NO_USE_PORTAUDIO"] then
 		_OPTIONS["NO_USE_PORTAUDIO"] = "0"
 	else
 		_OPTIONS["NO_USE_PORTAUDIO"] = "1"
+	end
+end
+
+newoption {
+	trigger = "NO_USE_PULSEAUDIO",
+	description = "Disable PulseAudio interface",
+	allowed = {
+		{ "0",  "Enable PulseAudio"  },
+		{ "1",  "Disable PulseAudio" },
+	},
+}
+
+if not _OPTIONS["NO_USE_PULSEAUDIO"] then
+	if _OPTIONS["targetos"]=="linux" then
+		_OPTIONS["NO_USE_PULSEAUDIO"] = "0"
+	else
+		_OPTIONS["NO_USE_PULSEAUDIO"] = "1"
 	end
 end
 
@@ -581,7 +690,7 @@ if not _OPTIONS["USE_PCAP"] then
 end
 
 if not _OPTIONS["USE_QTDEBUG"] then
-	if _OPTIONS["targetos"]=="windows" or _OPTIONS["targetos"]=="macosx" or _OPTIONS["targetos"]=="solaris" or _OPTIONS["targetos"]=="haiku" or _OPTIONS["targetos"]=="asmjs" then
+	if _OPTIONS["targetos"]=="windows" or _OPTIONS["targetos"]=="macosx" or _OPTIONS["targetos"]=="solaris" or _OPTIONS["targetos"]=="haiku" or _OPTIONS["targetos"]=="asmjs" or _OPTIONS["targetos"]=="android" then
 		_OPTIONS["USE_QTDEBUG"] = "0"
 	else
 		_OPTIONS["USE_QTDEBUG"] = "1"

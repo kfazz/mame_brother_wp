@@ -33,10 +33,10 @@ public:
 	// construction/destruction
 	newbrain_eim_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER( anout_r );
-	DECLARE_WRITE8_MEMBER( anout_w );
-	DECLARE_READ8_MEMBER( anin_r );
-	DECLARE_WRITE8_MEMBER( anio_w );
+	uint8_t anout_r();
+	void anout_w(uint8_t data);
+	uint8_t anin_r();
+	void anio_w(uint8_t data);
 
 protected:
 	// device-level overrides
@@ -54,9 +54,9 @@ protected:
 	virtual void iorq_w(offs_t offset, uint8_t data, bool &prtov) override;
 
 private:
-	DECLARE_WRITE_LINE_MEMBER( acia_interrupt );
-	DECLARE_WRITE_LINE_MEMBER( ctc_z2_w );
-	DECLARE_WRITE_LINE_MEMBER( adc_eoc_w );
+	void acia_interrupt(int state);
+	void ctc_z2_w(int state);
+	void adc_eoc_w(int state);
 
 	TIMER_DEVICE_CALLBACK_MEMBER(ctc_c2_tick);
 

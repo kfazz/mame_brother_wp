@@ -8,12 +8,21 @@
 //
 //============================================================
 
-#ifdef SDLMAME_WIN32
-#include <windows.h>
-#endif
+// MAME headers
+#include "emu.h"
+#include "emuopts.h"
+#include "render.h"
+#include "screen.h"
+#include "ui/uimain.h"
+
+// OSD headers
+#include "window.h"
+#include "osdsdl.h"
+#include "modules/monitor/monitor_common.h"
 
 // standard SDL headers
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_syswm.h>
 
 // standard C headers
 #include <cmath>
@@ -23,24 +32,10 @@
 #include <list>
 #include <memory>
 
-// MAME headers
-
-#include "emu.h"
-#include "emuopts.h"
-#include "render.h"
-#include "ui/uimain.h"
-
-// OSD headers
-
-#include "window.h"
-#include "osdsdl.h"
-#include "modules/render/drawbgfx.h"
-#include "modules/render/drawsdl.h"
-#include "modules/render/draw13.h"
-#include "modules/monitor/monitor_common.h"
-#if (USE_OPENGL)
-#include "modules/render/drawogl.h"
+#ifdef SDLMAME_WIN32
+#include <windows.h>
 #endif
+
 
 //============================================================
 //  PARAMETERS
@@ -72,14 +67,6 @@ public:
 	SDL_DisplayMode mode;
 };
 
-// debugger
-//static int in_background;
-
-
-//============================================================
-//  PROTOTYPES
-//============================================================
-
 
 //============================================================
 //  window_init
@@ -90,30 +77,10 @@ bool sdl_osd_interface::window_init()
 {
 	osd_printf_verbose("Enter sdlwindow_init\n");
 
-	// initialize the drawers
-
-	switch (video_config.mode)
-	{
-		case VIDEO_MODE_BGFX:
-			renderer_bgfx::init(machine());
-			break;
-#if (USE_OPENGL)
-		case VIDEO_MODE_OPENGL:
-			renderer_ogl::init(machine());
-			break;
-#endif
-		case VIDEO_MODE_SDL2ACCEL:
-			renderer_sdl2::init(machine());
-			break;
-		case VIDEO_MODE_SOFT:
-			renderer_sdl1::init(machine());
-			break;
-	}
-
-	/* We may want to set a number of the hints SDL2 provides.
-	 * The code below will document which hints were set.
-	 */
-	const char * hints[] = { SDL_HINT_FRAMEBUFFER_ACCELERATION,
+	// We may want to set a number of the hints SDL2 provides.
+	// The code below will document which hints were set.
+	char const *const hints[] = {
+			SDL_HINT_FRAMEBUFFER_ACCELERATION,
 			SDL_HINT_RENDER_DRIVER, SDL_HINT_RENDER_OPENGL_SHADERS,
 			SDL_HINT_RENDER_SCALE_QUALITY,
 			SDL_HINT_RENDER_VSYNC,
@@ -124,25 +91,20 @@ bool sdl_osd_interface::window_init()
 			SDL_HINT_XINPUT_ENABLED, SDL_HINT_GAMECONTROLLERCONFIG,
 			SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, SDL_HINT_ALLOW_TOPMOST,
 			SDL_HINT_TIMER_RESOLUTION,
-#if SDL_VERSION_ATLEAST(2, 0, 2)
 			SDL_HINT_RENDER_DIRECT3D_THREADSAFE, SDL_HINT_VIDEO_ALLOW_SCREENSAVER,
 			SDL_HINT_ACCELEROMETER_AS_JOYSTICK, SDL_HINT_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK,
 			SDL_HINT_VIDEO_WIN_D3DCOMPILER, SDL_HINT_VIDEO_WINDOW_SHARE_PIXEL_FORMAT,
 			SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, SDL_HINT_MOUSE_RELATIVE_MODE_WARP,
-#endif
-#if SDL_VERSION_ATLEAST(2, 0, 3)
 			SDL_HINT_RENDER_DIRECT3D11_DEBUG, SDL_HINT_VIDEO_HIGHDPI_DISABLED,
 			SDL_HINT_WINRT_PRIVACY_POLICY_URL, SDL_HINT_WINRT_PRIVACY_POLICY_LABEL,
 			SDL_HINT_WINRT_HANDLE_BACK_BUTTON,
-#endif
-			nullptr
-	};
+			};
 
 	osd_printf_verbose("\nHints:\n");
-	for (int i = 0; hints[i] != nullptr; i++)
+	for (auto const hintname : hints)
 	{
-		char const *const hint(SDL_GetHint(hints[i]));
-		osd_printf_verbose("\t%-40s %s\n", hints[i], hint ? hint : "(NULL)");
+		char const *const hintvalue(SDL_GetHint(hintname));
+		osd_printf_verbose("\t%-40s %s\n", hintname, hintvalue ? hintvalue : "(NULL)");
 	}
 
 	// set up the window list
@@ -153,7 +115,7 @@ bool sdl_osd_interface::window_init()
 
 void sdl_osd_interface::update_slider_list()
 {
-	for (auto window : osd_common_t::s_window_list)
+	for (auto const &window : osd_common_t::window_list())
 	{
 		// check if any window has dirty sliders
 		if (window->renderer().sliders_dirty())
@@ -168,7 +130,7 @@ void sdl_osd_interface::build_slider_list()
 {
 	m_sliders.clear();
 
-	for (auto window : osd_common_t::s_window_list)
+	for (auto const &window : osd_common_t::window_list())
 	{
 		std::vector<ui::menu_item> window_sliders = window->renderer().get_slider_list();
 		m_sliders.insert(m_sliders.end(), window_sliders.begin(), window_sliders.end());
@@ -185,33 +147,14 @@ void sdl_osd_interface::window_exit()
 	osd_printf_verbose("Enter sdlwindow_exit\n");
 
 	// free all the windows
+	m_focus_window = nullptr;
 	while (!osd_common_t::s_window_list.empty())
 	{
-		auto window = osd_common_t::s_window_list.front();
-
-		// Part of destroy removes the window from the list
+		auto window = std::move(osd_common_t::s_window_list.back());
+		s_window_list.pop_back();
 		window->destroy();
 	}
 
-	switch(video_config.mode)
-	{
-		case VIDEO_MODE_SDL2ACCEL:
-			renderer_sdl1::exit();
-			break;
-		case VIDEO_MODE_SOFT:
-			renderer_sdl1::exit();
-			break;
-		case VIDEO_MODE_BGFX:
-			renderer_bgfx::exit();
-			break;
-#if (USE_OPENGL)
-		case VIDEO_MODE_OPENGL:
-			renderer_ogl::exit();
-			break;
-#endif
-		default:
-			break;
-	}
 	osd_printf_verbose("Leave sdlwindow_exit\n");
 }
 
@@ -296,8 +239,6 @@ void sdl_window_info::toggle_full_screen()
 		m_windowed_dim = get_size();
 	}
 
-	// reset UI to main menu
-	machine().ui().menu_reset();
 	// kill off the drawers
 	renderer_reset();
 	bool is_osx = false;
@@ -313,10 +254,7 @@ void sdl_window_info::toggle_full_screen()
 	}
 	SDL_DestroyWindow(platform_window());
 	set_platform_window(nullptr);
-
 	downcast<sdl_osd_interface &>(machine().osd()).release_keys();
-
-	set_renderer(osd_renderer::make_for_type(video_config.mode, shared_from_this()));
 
 	// toggle the window mode
 	set_fullscreen(!fullscreen());
@@ -345,8 +283,8 @@ void sdl_window_info::modify_prescale(int dir)
 		}
 		else
 		{
-			notify_changed();
 			m_prescale = new_prescale;
+			notify_changed();
 		}
 		machine().ui().popup_time(1, "Prescale %d", prescale());
 	}
@@ -403,31 +341,13 @@ int sdl_window_info::xy_to_render_target(int x, int y, int *xt, int *yt)
 
 int sdl_window_info::window_init()
 {
-	int result;
-
 	// set the initial maximized state
 	// FIXME: Does not belong here
-	sdl_options &options = downcast<sdl_options &>(m_machine.options());
-	m_startmaximized = options.maximize();
+	m_startmaximized = downcast<sdl_options &>(machine().options()).maximize();
 
-	// add us to the list
-	osd_common_t::s_window_list.push_back(std::static_pointer_cast<sdl_window_info>(shared_from_this()));
+	create_target();
 
-	set_renderer(osd_renderer::make_for_type(video_config.mode, static_cast<osd_window*>(this)->shared_from_this()));
-
-	// load the layout
-	m_target = m_machine.render().target_alloc();
-
-	// set the specific view
-	set_starting_view(m_index, options.view(), options.view(m_index));
-
-	// make the window title
-	if (video_config.numscreens == 1)
-		sprintf(m_title, "%s: %s [%s]", emulator_info::get_appname(), m_machine.system().type.fullname(), m_machine.system().name);
-	else
-		sprintf(m_title, "%s: %s [%s] - Screen %d", emulator_info::get_appname(), m_machine.system().type.fullname(), m_machine.system().name, m_index);
-
-	result = complete_create();
+	int result = complete_create();
 
 	// handle error conditions
 	if (result == 1)
@@ -458,24 +378,10 @@ void sdl_window_info::complete_destroy()
 		SDL_SetWindowFullscreen(platform_window(), SDL_WINDOW_FULLSCREEN);    // Try to set mode
 	}
 
+	renderer_reset();
 	SDL_DestroyWindow(platform_window());
-	// release all keys ...
+	set_platform_window(nullptr);
 	downcast<sdl_osd_interface &>(machine().osd()).release_keys();
-}
-
-void sdl_window_info::destroy()
-{
-	//osd_event_wait(window->rendered_event, osd_ticks_per_second()*10);
-
-	// remove us from the list
-	osd_common_t::s_window_list.remove(std::static_pointer_cast<sdl_window_info>(shared_from_this()));
-
-	// free the textures etc
-	complete_destroy();
-
-	// free the render target, after the textures!
-	machine().render().target_free(m_target);
-
 }
 
 
@@ -492,7 +398,7 @@ osd_dim sdl_window_info::pick_best_mode()
 	osd_dim ret(0,0);
 
 	// determine the minimum width/height for the selected target
-	m_target->compute_minimum_size(minimum_width, minimum_height);
+	target()->compute_minimum_size(minimum_width, minimum_height);
 
 	// use those as the target for now
 	target_width = minimum_width * std::max(1, prescale());
@@ -505,7 +411,7 @@ osd_dim sdl_window_info::pick_best_mode()
 	}
 
 	// FIXME: this should be provided by monitor !
-	num = SDL_GetNumDisplayModes(m_monitor->oshandle());
+	num = SDL_GetNumDisplayModes(monitor()->oshandle());
 
 	if (num == 0)
 	{
@@ -517,7 +423,7 @@ osd_dim sdl_window_info::pick_best_mode()
 		for (i = 0; i < num; ++i)
 		{
 			SDL_DisplayMode mode;
-			SDL_GetDisplayMode(m_monitor->oshandle(), i, &mode);
+			SDL_GetDisplayMode(monitor()->oshandle(), i, &mode);
 
 			// compute initial score based on difference between target and current
 			size_score = 1.0f / (1.0f + abs((int32_t)mode.w - target_width) + abs((int32_t)mode.h - target_height));
@@ -559,20 +465,16 @@ osd_dim sdl_window_info::pick_best_mode()
 
 void sdl_window_info::update()
 {
-	osd_ticks_t     event_wait_ticks;
-
 	// adjust the cursor state
-	//sdlwindow_update_cursor_state(machine, window);
-
 	update_cursor_state();
 
 	// if we're visible and running and not in the middle of a resize, draw
-	if (m_target != nullptr)
+	if (target() != nullptr)
 	{
 		int tempwidth, tempheight;
 
 		// see if the games video mode has changed
-		m_target->compute_minimum_size(tempwidth, tempheight);
+		target()->compute_minimum_size(tempwidth, tempheight);
 		if (osd_dim(tempwidth, tempheight) != m_minimum_dim)
 		{
 			m_minimum_dim = osd_dim(tempwidth, tempheight);
@@ -589,6 +491,7 @@ void sdl_window_info::update()
 			}
 		}
 
+		osd_ticks_t event_wait_ticks;
 		if (video_config.waitvsync && video_config.syncrefresh)
 			event_wait_ticks = osd_ticks_per_second(); // block at most a second
 		else
@@ -607,7 +510,7 @@ void sdl_window_info::update()
 			// Check whether window has vector screens
 
 			{
-				const screen_device *screen = screen_device_iterator(machine().root_device()).byindex(m_index);
+				const screen_device *screen = screen_device_enumerator(machine().root_device()).byindex(index());
 				if ((screen != nullptr) && (screen->screen_type() == SCREEN_TYPE_VECTOR))
 					renderer().set_flags(osd_renderer::FLAG_HAS_VECTOR_SCREEN);
 				else
@@ -616,44 +519,23 @@ void sdl_window_info::update()
 
 			m_primlist = &primlist;
 
-			// if no bitmap, just fill
 			if (m_primlist == nullptr)
 			{
+				// if no bitmap, just fill
 			}
-			// otherwise, render with our drawing system
 			else
 			{
-				if( video_config.perftest )
+				// otherwise, render with our drawing system
+				if (video_config.perftest)
 					measure_fps(update);
 				else
 					renderer().draw(update);
 			}
 
-			/* all done, ready for next */
+			// all done, ready for next
 			m_rendered_event.set();
 		}
 	}
-}
-
-
-//============================================================
-//  set_starting_view
-//  (main thread)
-//============================================================
-
-void sdl_window_info::set_starting_view(int index, const char *defview, const char *view)
-{
-	int viewindex;
-
-	// choose non-auto over auto
-	if (strcmp(view, "auto") == 0 && strcmp(defview, "auto") != 0)
-		view = defview;
-
-	// query the video system to help us pick a view
-	viewindex = target()->configured_view(view, index, video_config.numscreens);
-
-	// set the view
-	target()->set_view(viewindex);
 }
 
 
@@ -681,9 +563,13 @@ int sdl_window_info::complete_create()
 		temp = m_windowed_dim;
 	}
 	else if (m_startmaximized)
-		temp = get_max_bounds(video_config.keepaspect );
+	{
+		temp = get_max_bounds(keepaspect());
+	}
 	else
-		temp = get_min_bounds(video_config.keepaspect );
+	{
+		temp = get_min_bounds(keepaspect());
+	}
 
 	// create the window .....
 
@@ -694,36 +580,20 @@ int sdl_window_info::complete_create()
 	 *
 	 */
 	osd_printf_verbose("Enter sdl_info::create\n");
-	if (renderer().has_flags(osd_renderer::FLAG_NEEDS_OPENGL) && !video_config.novideo)
+	if (renderer_sdl_needs_opengl())
 	{
 		SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 		m_extra_flags = SDL_WINDOW_OPENGL;
 	}
 	else
-		m_extra_flags = 0;
-
-	// We need to workaround an issue in SDL 2.0.4 for OS X where setting the
-	// relative mode on the mouse in fullscreen mode makes mouse events stop
-	// It is fixed in the latest revisions so we'll assume it'll be fixed
-	// in the next public SDL release as well
-#if defined(SDLMAME_MACOSX) && SDL_VERSION_ATLEAST(2, 0, 2) // SDL_HINT_MOUSE_RELATIVE_MODE_WARP is introduced in 2.0.2
-	SDL_version linked;
-	SDL_GetVersion(&linked);
-	int revision = SDL_GetRevisionNumber();
-
-	// If we're running the exact version of SDL 2.0.4 (revision 10001) from the
-	// SDL web site, we need to work around this issue and send the warp mode hint
-	if (SDL_VERSION_EQUALS(linked, SDL_VERSIONNUM(2, 0, 4)) && revision == 10001)
 	{
-		osd_printf_verbose("Using warp mode for relative mouse in OS X SDL 2.0.4\n");
-		SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "1");
+		m_extra_flags = 0;
 	}
-#endif
 
 	// create the SDL window
 	// soft driver also used | SDL_WINDOW_INPUT_GRABBED | SDL_WINDOW_MOUSE_FOCUS
 	m_extra_flags |= (fullscreen() ?
-			SDL_WINDOW_BORDERLESS | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_FULLSCREEN : SDL_WINDOW_RESIZABLE);
+			SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_FULLSCREEN : SDL_WINDOW_RESIZABLE);
 
 #if defined(SDLMAME_WIN32)
 	SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
@@ -732,17 +602,74 @@ int sdl_window_info::complete_create()
 	// get monitor work area for centering
 	osd_rect work = monitor()->usuable_position_size();
 
-	// create the SDL window
-	auto sdlwindow = SDL_CreateWindow(m_title,
+	// create or attach to an existing window
+	SDL_Window *sdlwindow;
+#ifdef SDLMAME_X11
+	const char *attach_window = downcast<sdl_options &>(machine().options()).attach_window();
+#else
+	const char *attach_window = nullptr;
+#endif
+	if (attach_window && *attach_window)
+	{
+		// we're attaching to an existing window; parse the argument
+		unsigned long long attach_window_value;
+		try
+		{
+			attach_window_value = std::stoull(attach_window, nullptr, 0);
+		}
+		catch (std::invalid_argument &)
+		{
+			osd_printf_error("Invalid -attach_window value: %s\n", attach_window);
+			return 1;
+		}
+
+		// and attach to it
+		sdlwindow = SDL_CreateWindowFrom((void *)attach_window_value);
+		if (!sdlwindow)
+		{
+			osd_printf_error("Failed to attach to window \"%s\": %s\n", attach_window, SDL_GetError());
+			return 1;
+		}
+
+		// perform SDL subsystem-specific tasks
+		SDL_SysWMinfo swmi;
+		SDL_VERSION(&swmi.version);
+		if (SDL_GetWindowWMInfo(sdlwindow, &swmi))
+		{
+			switch (swmi.subsystem)
+			{
+#ifdef SDLMAME_X11
+			case SDL_SYSWM_X11:
+				// by default, SDL_CreateWindowFrom() doesn't ensure that we're getting the events that we
+				// expect
+				XSelectInput(swmi.info.x11.display, swmi.info.x11.window,
+					FocusChangeMask | EnterWindowMask | LeaveWindowMask |
+					PointerMotionMask | KeyPressMask | KeyReleaseMask |
+					PropertyChangeMask | StructureNotifyMask |
+					ExposureMask | KeymapStateMask);
+				break;
+#endif // SDLMAME_X11
+
+			default:
+				break;
+			}
+		}
+	}
+	else
+	{
+		// create the SDL window
+		sdlwindow = SDL_CreateWindow(title().c_str(),
 			work.left() + (work.width() - temp.width()) / 2,
 			work.top() + (work.height() - temp.height()) / 2,
 			temp.width(), temp.height(), m_extra_flags);
+	}
+
 	//window().sdl_window() = SDL_CreateWindow(window().m_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 	//      width, height, m_extra_flags);
 
 	if  (sdlwindow == nullptr )
 	{
-		if (renderer().has_flags(osd_renderer::FLAG_NEEDS_OPENGL))
+		if (renderer_sdl_needs_opengl())
 			osd_printf_error("OpenGL not supported on this driver: %s\n", SDL_GetError());
 		else
 			osd_printf_error("Window creation failed: %s\n", SDL_GetError());
@@ -750,6 +677,7 @@ int sdl_window_info::complete_create()
 	}
 
 	set_platform_window(sdlwindow);
+	renderer_create();
 
 	if (fullscreen() && video_config.switchres)
 	{
@@ -788,24 +716,6 @@ int sdl_window_info::complete_create()
 		SDL_SetWindowGrab(platform_window(), SDL_TRUE);
 #endif
 
-	// set main window
-	if (m_index > 0)
-	{
-		for (auto w : osd_common_t::s_window_list)
-		{
-			if (w->m_index == 0)
-			{
-				set_main_window(std::dynamic_pointer_cast<osd_window>(w));
-				break;
-			}
-		}
-	}
-	else
-	{
-		// We must be the main window
-		set_main_window(shared_from_this());
-	}
-
 	// update monitor resolution after mode change to ensure proper pixel aspect
 	monitor()->refresh();
 	if (fullscreen() && video_config.switchres)
@@ -816,8 +726,8 @@ int sdl_window_info::complete_create()
 		return 1;
 
 	// Make sure we have a consistent state
-	SDL_ShowCursor(0);
-	SDL_ShowCursor(1);
+	SDL_ShowCursor(SDL_DISABLE);
+	SDL_ShowCursor(SDL_ENABLE);
 
 	return 0;
 }
@@ -896,14 +806,9 @@ osd_rect sdl_window_info::constrain_to_aspect_ratio(const osd_rect &rect, int ad
 	int32_t viswidth, visheight;
 	int32_t adjwidth, adjheight;
 	float pixel_aspect;
-	std::shared_ptr<osd_monitor_info> monitor = m_monitor;
-
-	// do not constrain aspect ratio for integer scaled views
-	if (m_target->scale_mode() != SCALE_FRACTIONAL)
-		return rect;
 
 	// get the pixel aspect ratio for the target monitor
-	pixel_aspect = monitor->pixel_aspect();
+	pixel_aspect = monitor()->pixel_aspect();
 
 	// determine the proposed width/height
 	propwidth = rect.width() - extrawidth;
@@ -915,21 +820,21 @@ osd_rect sdl_window_info::constrain_to_aspect_ratio(const osd_rect &rect, int ad
 	{
 		case WMSZ_BOTTOM:
 		case WMSZ_TOP:
-			m_target->compute_visible_area(10000, propheight, pixel_aspect, m_target->orientation(), propwidth, propheight);
+			target()->compute_visible_area(10000, propheight, pixel_aspect, target()->orientation(), propwidth, propheight);
 			break;
 
 		case WMSZ_LEFT:
 		case WMSZ_RIGHT:
-			m_target->compute_visible_area(propwidth, 10000, pixel_aspect, m_target->orientation(), propwidth, propheight);
+			target()->compute_visible_area(propwidth, 10000, pixel_aspect, target()->orientation(), propwidth, propheight);
 			break;
 
 		default:
-			m_target->compute_visible_area(propwidth, propheight, pixel_aspect, m_target->orientation(), propwidth, propheight);
+			target()->compute_visible_area(propwidth, propheight, pixel_aspect, target()->orientation(), propwidth, propheight);
 			break;
 	}
 
 	// get the minimum width/height for the current layout
-	m_target->compute_minimum_size(minwidth, minheight);
+	target()->compute_minimum_size(minwidth, minheight);
 
 	// clamp against the absolute minimum
 	propwidth = std::max(propwidth, MIN_WINDOW_DIM);
@@ -942,13 +847,13 @@ osd_rect sdl_window_info::constrain_to_aspect_ratio(const osd_rect &rect, int ad
 	// clamp against the maximum (fit on one screen for full screen mode)
 	if (m_fullscreen)
 	{
-		maxwidth = monitor->position_size().width() - extrawidth;
-		maxheight = monitor->position_size().height() - extraheight;
+		maxwidth = monitor()->position_size().width() - extrawidth;
+		maxheight = monitor()->position_size().height() - extraheight;
 	}
 	else
 	{
-		maxwidth = monitor->usuable_position_size().width() - extrawidth;
-		maxheight = monitor->usuable_position_size().height() - extraheight;
+		maxwidth = monitor()->usuable_position_size().width() - extrawidth;
+		maxheight = monitor()->usuable_position_size().height() - extraheight;
 
 		// further clamp to the maximum width/height in the window
 		if (m_win_config.width != 0)
@@ -962,7 +867,11 @@ osd_rect sdl_window_info::constrain_to_aspect_ratio(const osd_rect &rect, int ad
 	propheight = std::min(propheight, maxheight);
 
 	// compute the visible area based on the proposed rectangle
-	m_target->compute_visible_area(propwidth, propheight, pixel_aspect, m_target->orientation(), viswidth, visheight);
+	target()->compute_visible_area(propwidth, propheight, pixel_aspect, target()->orientation(), viswidth, visheight);
+
+	// clamp visable area to the proposed rectangle
+	viswidth = std::min(viswidth, propwidth);
+	visheight = std::min(visheight, propheight);
 
 	// compute the adjustments we need to make
 	adjwidth = (viswidth + extrawidth) - rect.width();
@@ -1010,7 +919,13 @@ osd_dim sdl_window_info::get_min_bounds(int constrain)
 	//assert(GetCurrentThreadId() == window_threadid);
 
 	// get the minimum target size
-	m_target->compute_minimum_size(minwidth, minheight);
+	target()->compute_minimum_size(minwidth, minheight);
+
+	// check if visible area is bigger
+	int32_t viswidth, visheight;
+	target()->compute_visible_area(minwidth, minheight, monitor()->aspect(), target()->orientation(), viswidth, visheight);
+	minwidth = std::max(viswidth, minwidth);
+	minheight = std::max(visheight, minheight);
 
 	// expand to our minimum dimensions
 	if (minwidth < MIN_WINDOW_DIM)
@@ -1023,7 +938,7 @@ osd_dim sdl_window_info::get_min_bounds(int constrain)
 	minheight += wnd_extra_height();
 
 	// if we want it constrained, figure out which one is larger
-	if (constrain && m_target->scale_mode() == SCALE_FRACTIONAL)
+	if (constrain)
 	{
 		// first constrain with no height limit
 		osd_rect test1(0,0,minwidth,10000);
@@ -1075,8 +990,8 @@ osd_dim sdl_window_info::get_max_bounds(int constrain)
 	//assert(GetCurrentThreadId() == window_threadid);
 
 	// compute the maximum client area
-	// m_monitor->refresh();
-	osd_rect maximum = m_monitor->usuable_position_size();
+	// monitor()->refresh();
+	osd_rect maximum = monitor()->usuable_position_size();
 
 	// clamp to the window's max
 	int tempw = maximum.width();
@@ -1097,7 +1012,7 @@ osd_dim sdl_window_info::get_max_bounds(int constrain)
 	maximum = maximum.resize(tempw, temph);
 
 	// constrain to fit
-	if (constrain && m_target->scale_mode() == SCALE_FRACTIONAL)
+	if (constrain)
 		maximum = constrain_to_aspect_ratio(maximum, WMSZ_BOTTOMRIGHT);
 
 	// remove extra window stuff
@@ -1112,37 +1027,30 @@ osd_dim sdl_window_info::get_max_bounds(int constrain)
 
 sdl_window_info::sdl_window_info(
 		running_machine &a_machine,
+		render_module &renderprovider,
 		int index,
-		std::shared_ptr<osd_monitor_info> a_monitor,
+		const std::shared_ptr<osd_monitor_info> &a_monitor,
 		const osd_window_config *config)
-	: osd_window_t(*config)
-	, m_next(nullptr)
+	: osd_window_t(a_machine, renderprovider, index, std::move(a_monitor), *config)
 	, m_startmaximized(0)
 	// Following three are used by input code to defer resizes
 	, m_minimum_dim(0, 0)
 	, m_windowed_dim(0, 0)
 	, m_rendered_event(0, 1)
-	, m_target(nullptr)
 	, m_extra_flags(0)
-	, m_machine(a_machine)
-	, m_monitor(a_monitor)
-	, m_fullscreen(0)
 	, m_mouse_captured(false)
 	, m_mouse_hidden(false)
 {
-	m_index = index;
-
 	//FIXME: these should be per_window in config-> or even better a bit set
 	m_fullscreen = !video_config.windowed;
 	m_prescale = video_config.prescale;
 
 	m_windowed_dim = osd_dim(config->width, config->height);
-	m_original_mode = global_alloc(SDL_DM_Wrapper);
+	m_original_mode = std::make_unique<SDL_DM_Wrapper>();
 }
 
 sdl_window_info::~sdl_window_info()
 {
-	global_free(m_original_mode);
 }
 
 

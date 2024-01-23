@@ -23,6 +23,7 @@ BASE_TARGETOS       = "unix"
 local os_version = str_to_version(backtick("sw_vers -productVersion"))
 links {
 	"Cocoa.framework",
+	"IOKit.framework"
 }
 linkoptions {
 	"-framework QuartzCore",
@@ -108,6 +109,8 @@ project ("osd_" .. _OPTIONS["osd"])
 		MAME_DIR .. "src/osd/modules/debugger/osx/memoryviewer.h",
 		MAME_DIR .. "src/osd/modules/debugger/osx/pointsviewer.mm",
 		MAME_DIR .. "src/osd/modules/debugger/osx/pointsviewer.h",
+		MAME_DIR .. "src/osd/modules/debugger/osx/registerpointsview.mm",
+		MAME_DIR .. "src/osd/modules/debugger/osx/registerpointsview.h",
 		MAME_DIR .. "src/osd/modules/debugger/osx/registersview.mm",
 		MAME_DIR .. "src/osd/modules/debugger/osx/registersview.h",
 		MAME_DIR .. "src/osd/modules/debugger/osx/watchpointsview.mm",
@@ -156,6 +159,7 @@ project ("ocore_" .. _OPTIONS["osd"])
 	files {
 		MAME_DIR .. "src/osd/osdcore.cpp",
 		MAME_DIR .. "src/osd/osdcore.h",
+		MAME_DIR .. "src/osd/osdfile.h",
 		MAME_DIR .. "src/osd/strconv.cpp",
 		MAME_DIR .. "src/osd/strconv.h",
 		MAME_DIR .. "src/osd/osdsync.cpp",
@@ -165,7 +169,6 @@ project ("ocore_" .. _OPTIONS["osd"])
 		MAME_DIR .. "src/osd/modules/lib/osdlib_macosx.cpp",
 		MAME_DIR .. "src/osd/modules/lib/osdlib.h",
 		MAME_DIR .. "src/osd/modules/file/posixdir.cpp",
-		MAME_DIR .. "src/osd/modules/file/posixdomain.cpp",
 		MAME_DIR .. "src/osd/modules/file/posixfile.cpp",
 		MAME_DIR .. "src/osd/modules/file/posixfile.h",
 		MAME_DIR .. "src/osd/modules/file/posixptty.cpp",

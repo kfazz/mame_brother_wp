@@ -14,7 +14,7 @@
 #import "memoryview.h"
 
 #include "debugger.h"
-#include "debug/debugcpu.h"
+#include "debug/debugcon.h"
 #include "debug/dvmemory.h"
 
 #include "util/xmlfile.h"
@@ -46,7 +46,7 @@
 	// create the subview popup
 	subviewButton = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(0, 0, 100, 19)];
 	[subviewButton setAutoresizingMask:(NSViewWidthSizable | NSViewMinXMargin | NSViewMinYMargin)];
-	[subviewButton setBezelStyle:NSShadowlessSquareBezelStyle];
+	[subviewButton setBezelStyle:NSBezelStyleShadowlessSquare];
 	[subviewButton setFocusRingType:NSFocusRingTypeNone];
 	[subviewButton setFont:defaultFont];
 	[subviewButton setTarget:self];
@@ -108,7 +108,7 @@
 	[actionButton release];
 
 	// set default state
-	[memoryView selectSubviewForDevice:machine->debugger().cpu().get_visible_cpu()];
+	[memoryView selectSubviewForDevice:machine->debugger().console().get_visible_cpu()];
 	[memoryView setExpression:@"0"];
 	[expressionField setStringValue:@"0"];
 	[expressionField selectText:self];
@@ -118,9 +118,11 @@
 
 	// calculate the optimal size for everything
 	NSSize const desired = [NSScrollView frameSizeForContentSize:[memoryView maximumFrameSize]
-										   hasHorizontalScroller:YES
-											 hasVerticalScroller:YES
-													  borderType:[memoryScroll borderType]];
+										 horizontalScrollerClass:[NSScroller class]
+										   verticalScrollerClass:[NSScroller class]
+													  borderType:[memoryScroll borderType]
+													 controlSize:NSControlSizeRegular
+												   scrollerStyle:NSScrollerStyleOverlay];
 	[self cascadeWindowWithDesiredSize:desired forView:memoryScroll];
 
 	// don't forget the result
@@ -178,15 +180,15 @@
 
 - (void)saveConfigurationToNode:(util::xml::data_node *)node {
 	[super saveConfigurationToNode:node];
-	node->set_attribute_int("type", MAME_DEBUGGER_WINDOW_TYPE_MEMORY_VIEWER);
-	node->set_attribute_int("memoryregion", [memoryView selectedSubviewIndex]);
+	node->set_attribute_int(osd::debugger::ATTR_WINDOW_TYPE, osd::debugger::WINDOW_TYPE_MEMORY_VIEWER);
+	node->set_attribute_int(osd::debugger::ATTR_WINDOW_MEMORY_REGION, [memoryView selectedSubviewIndex]);
 	[memoryView saveConfigurationToNode:node];
 }
 
 
 - (void)restoreConfigurationFromNode:(util::xml::data_node const *)node {
 	[super restoreConfigurationFromNode:node];
-	int const region = node->get_attribute_int("memoryregion", [memoryView selectedSubviewIndex]);
+	int const region = node->get_attribute_int(osd::debugger::ATTR_WINDOW_MEMORY_REGION, [memoryView selectedSubviewIndex]);
 	[memoryView selectSubviewAtIndex:region];
 	[window setTitle:[NSString stringWithFormat:@"Memory: %@", [memoryView selectedSubviewName]]];
 	[subviewButton selectItemAtIndex:[subviewButton indexOfItemWithTag:[memoryView selectedSubviewIndex]]];

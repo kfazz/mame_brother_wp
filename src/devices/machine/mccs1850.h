@@ -43,36 +43,33 @@ public:
 	auto pse_wr_callback() { return pse_cb.bind(); }
 	auto nuc_wr_callback() { return nuc_cb.bind(); }
 
-	DECLARE_WRITE_LINE_MEMBER( ce_w );
-	DECLARE_WRITE_LINE_MEMBER( sck_w );
-	DECLARE_READ_LINE_MEMBER( sdo_r );
-	DECLARE_WRITE_LINE_MEMBER( sdi_w );
-	DECLARE_WRITE_LINE_MEMBER( pwrsw_w );
-	DECLARE_WRITE_LINE_MEMBER( por_w );
-	DECLARE_WRITE_LINE_MEMBER( test_w );
+	void ce_w(int state);
+	void sck_w(int state);
+	int sdo_r();
+	void sdi_w(int state);
+	void pwrsw_w(int state);
+	void por_w(int state);
+	void test_w(int state);
 
 protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// device_nvram_interface overrides
 	virtual void nvram_default() override;
-	virtual void nvram_read(emu_file &file) override;
-	virtual void nvram_write(emu_file &file) override;
+	virtual bool nvram_read(util::read_stream &file) override;
+	virtual bool nvram_write(util::write_stream &file) override;
 
 	// device_rtc_interface overrides
 	virtual void rtc_clock_updated(int year, int month, int day, int day_of_week, int hour, int minute, int second) override;
 
 private:
-	inline void check_interrupt();
-	inline void set_pse_line(bool state);
-	inline uint8_t read_register(offs_t offset);
-	inline void write_register(offs_t offset, uint8_t data);
-	inline void advance_seconds();
-
-	static const device_timer_id TIMER_CLOCK = 0;
+	void check_interrupt();
+	void set_pse_line(bool state);
+	uint8_t read_register(offs_t offset);
+	void write_register(offs_t offset, uint8_t data);
+	TIMER_CALLBACK_MEMBER(advance_seconds);
 
 	devcb_write_line int_cb, pse_cb, nuc_cb;
 

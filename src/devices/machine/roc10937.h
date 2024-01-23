@@ -21,27 +21,27 @@ public:
 	virtual void update_display();
 	void shift_clock(int data);
 	void write_char(int data);
-	DECLARE_WRITE_LINE_MEMBER( sclk );
-	DECLARE_WRITE_LINE_MEMBER( data );
-	DECLARE_WRITE_LINE_MEMBER( por );
+	void sclk(int state);
+	void data(int state);
+	void por(int state);
 
 
 protected:
 	rocvfd_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
 
 	std::unique_ptr<output_finder<16> > m_outputs;
+	std::unique_ptr<output_finder<1> > m_brightness;
 
 	int m_cursor_pos;
 	int m_window_size;
 	int m_shift_count;
 	int m_shift_data;
 	int m_pcursor_pos;
-	int m_brightness;
 	int m_count;
 	int m_data;
 	int m_duty;
-	int m_disp;
 	int m_sclk;
+	int m_por;
 	uint8_t m_cursor;
 	uint32_t m_chars[16];
 

@@ -27,16 +27,17 @@ DEFINE_DEVICE_TYPE(TTL74123, ttl74123_device, "ttl74123", "74123 TTL")
 //  ttl74123_device - constructor
 //-------------------------------------------------
 
-ttl74123_device::ttl74123_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, TTL74123, tag, owner, clock),
-		m_timer(nullptr),
-		m_connection_type(TTL74123_NOT_GROUNDED_NO_DIODE),
-		m_res(1.0),
-		m_cap(1.0),
-		m_a(0),
-		m_b(0),
-		m_clear(0),
-		m_output_changed_cb(*this)
+ttl74123_device::ttl74123_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	device_t(mconfig, TTL74123, tag, owner, clock),
+	m_clear_timer(nullptr),
+	m_output_timer(nullptr),
+	m_connection_type(TTL74123_NOT_GROUNDED_NO_DIODE),
+	m_res(1.0),
+	m_cap(1.0),
+	m_a(0),
+	m_b(0),
+	m_clear(0),
+	m_output_changed_cb(*this)
 {
 }
 
@@ -46,9 +47,8 @@ ttl74123_device::ttl74123_device(const machine_config &mconfig, const char *tag,
 
 void ttl74123_device::device_start()
 {
-	m_output_changed_cb.resolve_safe();
-
-	m_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(ttl74123_device::clear_callback),this));
+	m_clear_timer = timer_alloc(FUNC(ttl74123_device::clear_callback), this);
+	m_output_timer = timer_alloc(FUNC(ttl74123_device::output_callback), this);
 
 	/* register for state saving */
 	save_item(NAME(m_a));
@@ -110,8 +110,7 @@ attotime ttl74123_device::compute_duration()
 
 int ttl74123_device::timer_running()
 {
-	return (m_timer->remaining() > attotime::zero) &&
-			(m_timer->remaining() != attotime::never);
+	return m_clear_timer->remaining() > attotime::zero && !m_clear_timer->remaining().is_never();
 }
 
 
@@ -133,7 +132,7 @@ void ttl74123_device::set_output()
 {
 	int output = timer_running();
 
-	machine().scheduler().timer_set( attotime::zero, timer_expired_delegate(FUNC(ttl74123_device::output_callback ),this), output);
+	m_output_timer->adjust(attotime::zero, output);
 
 	LOG("74123:  Output: %d\n", output);
 }
@@ -163,9 +162,9 @@ void ttl74123_device::start_pulse()
 		/* retriggering, but not if we are called to quickly */
 		attotime delay_time = attotime(0, ATTOSECONDS_PER_SECOND * m_cap * 220);
 
-		if(m_timer->elapsed() >= delay_time)
+		if(m_clear_timer->elapsed() >= delay_time)
 		{
-			m_timer->adjust(duration);
+			m_clear_timer->adjust(duration);
 
 			LOG("74123:  Retriggering pulse.  Duration: %f\n", duration.as_double());
 		}
@@ -177,7 +176,7 @@ void ttl74123_device::start_pulse()
 	else
 	{
 		/* starting */
-		m_timer->adjust(duration);
+		m_clear_timer->adjust(duration);
 
 		set_output();
 
@@ -190,7 +189,7 @@ void ttl74123_device::start_pulse()
 //  a_w - write register a data
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( ttl74123_device::a_w )
+void ttl74123_device::a_w(int state)
 {
 	/* start/regtrigger pulse if B=HI and falling edge on A (while clear is HI) */
 	if (!state && m_a && m_b && m_clear)
@@ -206,7 +205,7 @@ WRITE_LINE_MEMBER( ttl74123_device::a_w )
 //  b_w - write register b data
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( ttl74123_device::b_w)
+void ttl74123_device::b_w(int state)
 {
 	/* start/regtrigger pulse if A=LO and rising edge on B (while clear is HI) */
 	if (state && !m_b && !m_a && m_clear)
@@ -222,7 +221,7 @@ WRITE_LINE_MEMBER( ttl74123_device::b_w)
 //  clear_w - write register clear data
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( ttl74123_device::clear_w)
+void ttl74123_device::clear_w(int state)
 {
 	/* start/regtrigger pulse if B=HI and A=LO and rising edge on clear */
 	if (state && !m_a && m_b && !m_clear)
@@ -231,7 +230,7 @@ WRITE_LINE_MEMBER( ttl74123_device::clear_w)
 	}
 	else if (!state)  /* clear the output  */
 	{
-		m_timer->adjust(attotime::zero);
+		m_clear_timer->adjust(attotime::zero);
 
 		LOG("74123:  Cleared\n");
 	}
@@ -243,7 +242,7 @@ WRITE_LINE_MEMBER( ttl74123_device::clear_w)
 //  reset_w - reset device
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( ttl74123_device::reset_w)
+void ttl74123_device::reset_w(int state)
 {
 	set_output();
 }

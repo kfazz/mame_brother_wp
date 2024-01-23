@@ -33,7 +33,6 @@ protected:
 	virtual void device_reset() override;
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual ioport_constructor device_input_ports() const override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 	virtual const tiny_rom_entry *device_rom_region() const override;
 
 	// overrides of standard a2bus slot functions
@@ -49,8 +48,10 @@ private:
 	required_region_ptr<uint8_t> m_rom;
 	required_ioport m_dsw1, m_dsw2;
 
-	DECLARE_READ8_MEMBER( dma_r );
-	DECLARE_WRITE8_MEMBER( dma_w );
+	TIMER_CALLBACK_MEMBER(clock_adjust_tick);
+
+	uint8_t dma_r(offs_t offset);
+	void dma_w(offs_t offset, uint8_t data);
 
 	void m65c02_mem(address_map &map);
 

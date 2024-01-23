@@ -8,7 +8,6 @@
 ******************************************************************************/
 
 #include "emu.h"
-#include "debugger.h"
 #include "dspp.h"
 #include "dsppfe.h"
 #include "cpu/drcfe.h"
@@ -94,7 +93,7 @@ registers
 inline void dspp_device::load_fast_iregs(drcuml_block &block)
 {
 #if 0 // TODO
-	for (uint32_t regnum = 0; regnum < ARRAY_LENGTH(m_regmap); regnum++)
+	for (uint32_t regnum = 0; regnum < std::size(m_regmap); regnum++)
 	{
 		if (m_regmap[regnum].is_int_register())
 		{
@@ -115,7 +114,7 @@ void dspp_device::save_fast_iregs(drcuml_block &block)
 #if 0 // TODO
 	int regnum;
 
-	for (regnum = 0; regnum < ARRAY_LENGTH(m_regmap); regnum++)
+	for (regnum = 0; regnum < std::size(m_regmap); regnum++)
 	{
 		if (m_regmap[regnum].is_int_register())
 		{
@@ -188,7 +187,7 @@ void dspp_device::compile_block(offs_t pc)
 	const opcode_desc *seqhead, *seqlast;
 	int override = false;
 
-	g_profiler.start(PROFILER_DRC_COMPILE);
+	auto profile = g_profiler.start(PROFILER_DRC_COMPILE);
 
 	/* get a description of this sequence */
 	const opcode_desc *desclist = m_drcfe->describe_code(pc);
@@ -269,7 +268,6 @@ void dspp_device::compile_block(offs_t pc)
 
 			/* end the sequence */
 			block.end();
-			g_profiler.stop();
 			succeeded = true;
 		}
 		catch (drcuml_block::abort_compilation &)
@@ -292,7 +290,7 @@ void dspp_device::generate_checksum_block(drcuml_block &block, compiler_state *c
 		{
 			uint32_t sum = seqhead->opptr.w[0];
 			uint32_t addr = seqhead->physpc;
-			const void *base = m_codeptr(addr);
+			const void *base = m_code_cache.read_ptr(addr);
 			UML_MOV(block, I0, 0);
 			UML_LOAD(block, I0, base, 0, SIZE_WORD, SCALE_x2);         // load    i0,base,0,word
 
@@ -306,14 +304,14 @@ void dspp_device::generate_checksum_block(drcuml_block &block, compiler_state *c
 	{
 		uint32_t sum = 0;
 		uint32_t addr = seqhead->physpc;
-		const void *base = m_codeptr(addr);
+		const void *base = m_code_cache.read_ptr(addr);
 		UML_LOAD(block, I0, base, 0, SIZE_WORD, SCALE_x2);              // load    i0,base,0,dword
 		sum += seqhead->opptr.w[0];
 		for (curdesc = seqhead->next(); curdesc != seqlast->next(); curdesc = curdesc->next())
 			if (!(curdesc->flags & OPFLAG_VIRTUAL_NOOP))
 			{
 				addr = curdesc->physpc;
-				base = m_codeptr(addr);
+				base = m_code_cache.read_ptr(addr);
 				assert(base != nullptr);
 				UML_LOAD(block, I1, base, 0, SIZE_WORD, SCALE_x2);      // load    i1,base,dword
 				UML_ADD(block, I0, I0, I1);                             // add     i0,i0,i1
@@ -501,10 +499,10 @@ void dspp_device::generate_set_rbase(drcuml_block &block, compiler_state *compil
 		case 0:
 			UML_MOV(block, mem(&m_core->m_rbase[0]), addr);
 			UML_MOV(block, mem(&m_core->m_rbase[1]), addr + 4 - base);
-		// Intentional fall-through
+			[[fallthrough]];
 		case 8:
 			UML_MOV(block, mem(&m_core->m_rbase[2]), addr + 8 - base);
-		// Intentional fall-through
+			[[fallthrough]];
 		case 12:
 			UML_MOV(block, mem(&m_core->m_rbase[3]), addr + 12 - base);
 			break;
@@ -830,7 +828,7 @@ void dspp_device::generate_parse_operands(drcuml_block &block, compiler_state *c
 	uint32_t opoffset = 1;
 	while (opidx < numops)
 	{
-		operand = m_code16(desc->pc + opoffset);
+		operand = m_code_cache.read_word(desc->pc + opoffset);
 		opoffset++;
 
 		if (operand & 0x8000)

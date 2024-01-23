@@ -60,7 +60,6 @@ private:
 	// helpers
 	bool check_condition_branch(uint8_t bc);
 	bool check_condition(uint8_t bc);
-	int32_t sign_extend(uint32_t data, uint8_t len);
 	uint32_t fetch();
 	uint8_t read_byte(offs_t offset);
 	uint16_t read_word(offs_t offset);
@@ -107,11 +106,11 @@ private:
 	void op_iform1b();
 
 	address_space_config m_program_config;
-	address_space *     m_program;
-	memory_access_cache<2, 0, ENDIANNESS_LITTLE> *m_cache;
+	memory_access<32, 2, 0, ENDIANNESS_LITTLE>::cache m_cache;
+	memory_access<32, 2, 0, ENDIANNESS_LITTLE>::specific m_program;
 
 	// internal state
-	int                 m_icount;
+	int                   m_icount;
 	uint32_t              m_pc;
 	uint32_t              m_ppc;
 	uint32_t              m_op;
@@ -119,7 +118,7 @@ private:
 	uint32_t              m_cr[0x20];
 	uint32_t              m_sr[3];
 	uint32_t              m_ce[2];
-	bool                m_pending_interrupt[64];
+	uint64_t              m_pending_interrupt;
 
 	// opcodes tables
 	typedef void (score7_cpu_device::*op_handler)();

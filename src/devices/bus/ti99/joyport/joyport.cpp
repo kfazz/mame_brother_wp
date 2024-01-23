@@ -40,9 +40,9 @@
 #include "handset.h"
 #include "mecmouse.h"
 
-DEFINE_DEVICE_TYPE_NS(TI99_JOYPORT, bus::ti99::joyport, joyport_device, "ti99_joyport", "TI-99 Joystick port")
+DEFINE_DEVICE_TYPE(TI99_JOYPORT, bus::ti99::joyport::joyport_device, "ti99_joyport", "TI-99 Joystick port")
 
-namespace bus { namespace ti99 { namespace joyport {
+namespace bus::ti99::joyport {
 
 device_ti99_joyport_interface::device_ti99_joyport_interface(const machine_config &config, device_t &device)
 	:   device_interface(device, "ti99joyport"),
@@ -87,14 +87,13 @@ void joyport_device::pulse_clock()
     Propagate the interrupt to the defined target. Only used for the handset
     at the prototype 99/4.
 */
-WRITE_LINE_MEMBER( joyport_device::set_interrupt )
+void joyport_device::set_interrupt(int state)
 {
 	m_interrupt(state);
 }
 
 void joyport_device::device_start()
 {
-	m_interrupt.resolve();
 }
 
 void joyport_device::device_config_complete()
@@ -109,7 +108,7 @@ void device_ti99_joyport_interface::interface_config_complete()
 	m_joyport = dynamic_cast<joyport_device*>(device().owner());
 }
 
-} } } // end namespace bus::ti99::joyport
+} // end namespace bus::ti99::joyport
 
 void ti99_joyport_options_plain(device_slot_interface &device)
 {

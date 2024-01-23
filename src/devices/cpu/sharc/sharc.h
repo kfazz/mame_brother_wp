@@ -52,10 +52,6 @@
 #define MODE2_CAFRZ         0x80000     /* Cache freeze */
 
 
-#define SIGN_EXTEND6(x)             (((x) & 0x20) ? (0xffffffc0 | (x)) : (x))
-#define SIGN_EXTEND24(x)            (((x) & 0x800000) ? (0xff000000 | (x)) : (x))
-#define MAKE_EXTRACT_MASK(start_bit, length)    ((0xffffffff << start_bit) & (((uint32_t)0xffffffff) >> (32 - (start_bit + length))))
-
 #define OP_USERFLAG_COUNTER_LOOP            0x00000001
 #define OP_USERFLAG_COND_LOOP               0x00000002
 #define OP_USERFLAG_COND_FIELD              0x000003fc
@@ -103,6 +99,8 @@ public:
 	TIMER_CALLBACK_MEMBER(sharc_iop_delayed_write_callback);
 	TIMER_CALLBACK_MEMBER(sharc_dma_callback);
 
+	void write_stall(int state);
+
 	void sharc_cfunc_unimplemented();
 	void sharc_cfunc_read_iop();
 	void sharc_cfunc_write_iop();
@@ -119,16 +117,16 @@ public:
 
 	void enable_recompiler();
 
-	DECLARE_READ64_MEMBER( pm0_r);
-	DECLARE_WRITE64_MEMBER(pm0_w);
-	DECLARE_READ64_MEMBER( pm1_r);
-	DECLARE_WRITE64_MEMBER(pm1_w);
-	DECLARE_READ32_MEMBER( dmw0_r);
-	DECLARE_WRITE32_MEMBER(dmw0_w);
-	DECLARE_READ32_MEMBER( dmw1_r);
-	DECLARE_WRITE32_MEMBER(dmw1_w);
-	DECLARE_READ32_MEMBER( iop_r);
-	DECLARE_WRITE32_MEMBER(iop_w);
+	uint64_t pm0_r(offs_t offset);
+	void pm0_w(offs_t offset, uint64_t data, uint64_t mem_mask = ~0);
+	uint64_t pm1_r(offs_t offset);
+	void pm1_w(offs_t offset, uint64_t data, uint64_t mem_mask = ~0);
+	uint32_t dmw0_r(offs_t offset);
+	void dmw0_w(offs_t offset, uint32_t data);
+	uint32_t dmw1_r(offs_t offset);
+	void dmw1_w(offs_t offset, uint32_t data);
+	uint32_t iop_r(offs_t offset);
+	void iop_w(offs_t offset, uint32_t data);
 
 	enum ASTAT_FLAGS
 	{
@@ -270,6 +268,7 @@ private:
 		int32_t chained_direction;
 		emu_timer *timer;
 		bool active;
+		bool chained;
 	};
 
 
@@ -379,6 +378,7 @@ private:
 
 		SHARC_DMA_OP dma_op[12];
 		uint32_t dma_status;
+		bool write_stalled;
 
 		int32_t interrupt_active;
 
@@ -475,6 +475,7 @@ private:
 	void schedule_dma_op(int channel, uint32_t src, uint32_t dst, int src_modifier, int dst_modifier, int src_count, int dst_count, int pmode);
 	void dma_op(int channel);
 	void sharc_dma_exec(int channel);
+	void dma_run_cycle(int channel);
 	void add_systemreg_write_latency_effect(int sysreg, uint32_t data, uint32_t prev_data);
 	inline void swap_register(uint32_t *a, uint32_t *b);
 	void systemreg_write_latency_effect();

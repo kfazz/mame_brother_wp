@@ -4,18 +4,19 @@
  * Fujitsu FM-7 series cassette handling
  */
 
-#include <cassert>
-
 #include "fm7_cas.h"
+
+#include "multibyte.h"
+
+#include <cstring>
 
 #define WAVE_HIGH        0x5a9e
 #define WAVE_LOW        -0x5a9e
 
-static int cas_size;
+static int cas_size; // FIXME: global variable prevents multiple instances
 
-static int fm7_fill_wave(int16_t* buffer, uint8_t high, uint8_t low, int sample_pos)
+static int fm7_fill_wave(int16_t* buffer, uint16_t data, int sample_pos)
 {
-	uint16_t data = (high << 8) + low;
 	int sample_count = 0;
 	int x = 0;
 	int count = (data & 0x7fff);
@@ -51,7 +52,7 @@ static int fm7_handle_t77(int16_t* buffer, const uint8_t* casdata)
 
 	while(data_pos < cas_size)
 	{
-		sample_count += fm7_fill_wave(buffer,casdata[data_pos],casdata[data_pos+1],sample_count);
+		sample_count += fm7_fill_wave(buffer,get_u16be(&casdata[data_pos]),sample_count);
 		data_pos+=2;
 	}
 
@@ -76,7 +77,7 @@ static int fm7_cas_fill_wave(int16_t *buffer, int sample_count, uint8_t *bytes)
 	return fm7_handle_t77(buffer,bytes);
 }
 
-static const struct CassetteLegacyWaveFiller fm7_legacy_fill_wave =
+static const cassette_image::LegacyWaveFiller fm7_legacy_fill_wave =
 {
 	fm7_cas_fill_wave,                      /* fill_wave */
 	-1,                                     /* chunk_size */
@@ -87,20 +88,20 @@ static const struct CassetteLegacyWaveFiller fm7_legacy_fill_wave =
 	0                                       /* trailer_samples */
 };
 
-static cassette_image::error fm7_cas_identify(cassette_image *cassette, struct CassetteOptions *opts)
+static cassette_image::error fm7_cas_identify(cassette_image *cassette, cassette_image::Options *opts)
 {
-	return cassette_legacy_identify(cassette, opts, &fm7_legacy_fill_wave);
+	return cassette->legacy_identify(opts, &fm7_legacy_fill_wave);
 }
 
 
 
 static cassette_image::error fm7_cas_load(cassette_image *cassette)
 {
-	return cassette_legacy_construct(cassette, &fm7_legacy_fill_wave);
+	return cassette->legacy_construct(&fm7_legacy_fill_wave);
 }
 
 
-static const struct CassetteFormat fm7_cassette_format = {
+static const cassette_image::Format fm7_cassette_format = {
 	"t77",
 	fm7_cas_identify,
 	fm7_cas_load,

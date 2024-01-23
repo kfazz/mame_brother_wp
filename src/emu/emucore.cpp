@@ -2,25 +2,24 @@
 // copyright-holders:Nicola Salmoria, Aaron Giles
 /***************************************************************************
 
-    emucore.c
+    emucore.cpp
 
     Simple core functions that are defined in emucore.h and which may
     need to be accessed by other MAME-related tools.
+
 ****************************************************************************/
 
 #include "emu.h"
 #include "emucore.h"
 #include "osdcore.h"
 
-const char *const endianness_names[2] = { "little", "big" };
-
-emu_fatalerror::emu_fatalerror(util::format_argument_pack<std::ostream> const &args)
+emu_fatalerror::emu_fatalerror(util::format_argument_pack<char> const &args)
 	: emu_fatalerror(0, args)
 {
 	osd_break_into_debugger(m_text.c_str());
 }
 
-emu_fatalerror::emu_fatalerror(int _exitcode, util::format_argument_pack<std::ostream> const &args)
+emu_fatalerror::emu_fatalerror(int _exitcode, util::format_argument_pack<char> const &args)
 	: m_text(util::string_format(args))
 	, m_code(_exitcode)
 {

@@ -1,4 +1,4 @@
-// license:GPL-2.0+
+// license:CC0-1.0
 // copyright-holders:Couriersud
 /*
  * nmos_fet.cpp
@@ -7,9 +7,10 @@
 
 
 #include "netlist/devices/net_lib.h"
-#include "netlist/analog/nld_twoterm.h"
+#include "netlist/devices/net_lib.h"
 
 NETLIST_START(nmos)
+{
 	/* Standard stuff */
 
 	CLOCK(clk, 100) // 100 Hz
@@ -51,4 +52,4 @@ NETLIST_START(nmos)
 	LOG(log_G, M.G)
 	LOG(log_D, M.D)
 
-NETLIST_END()
+}

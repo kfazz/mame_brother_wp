@@ -70,10 +70,8 @@ rtc4543_device::rtc4543_device(const machine_config &mconfig, device_type type, 
 
 void rtc4543_device::device_start()
 {
-	m_data_cb.resolve_safe();
-
 	// allocate timers
-	m_clock_timer = timer_alloc();
+	m_clock_timer = timer_alloc(FUNC(rtc4543_device::advance_clock), this);
 	m_clock_timer->adjust(attotime::from_hz(clock() / 32768), 0, attotime::from_hz(clock() / 32768));
 
 	// state saving
@@ -101,10 +99,10 @@ void rtc4543_device::device_reset()
 
 
 //-------------------------------------------------
-//  device_timer - handler timer events
+//  advance_clock -
 //-------------------------------------------------
 
-void rtc4543_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(rtc4543_device::advance_clock)
 {
 	advance_seconds();
 }
@@ -132,7 +130,7 @@ void rtc4543_device::rtc_clock_updated(int year, int month, int day, int day_of_
 //  ce_w - chip enable write
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( rtc4543_device::ce_w )
+void rtc4543_device::ce_w(int state)
 {
 	if (!state && m_ce) // complete transfer
 	{
@@ -175,7 +173,7 @@ void rtc4543_device::ce_falling()
 //  wr_w - data direction line write
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( rtc4543_device::wr_w )
+void rtc4543_device::wr_w(int state)
 {
 	if (state != m_wr)
 		LOG("WR: %u\n", state);
@@ -188,7 +186,7 @@ WRITE_LINE_MEMBER( rtc4543_device::wr_w )
 //  clk_w - serial clock write
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( rtc4543_device::clk_w )
+void rtc4543_device::clk_w(int state)
 {
 	if (m_ce)
 	{
@@ -246,7 +244,7 @@ void rtc4543_device::clk_falling()
 //  data_w - I/O write
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( rtc4543_device::data_w )
+void rtc4543_device::data_w(int state)
 {
 	m_data = state & 1;
 }
@@ -256,7 +254,7 @@ WRITE_LINE_MEMBER( rtc4543_device::data_w )
 //  data_r - I/O read
 //-------------------------------------------------
 
-READ_LINE_MEMBER( rtc4543_device::data_r )
+int rtc4543_device::data_r()
 {
 	return m_data;
 }
@@ -268,7 +266,7 @@ READ_LINE_MEMBER( rtc4543_device::data_r )
 
 void rtc4543_device::load_bit(int reg)
 {
-	assert(reg < ARRAY_LENGTH(m_regs));
+	assert(reg < std::size(m_regs));
 	int bit = m_curbit & 7;
 
 	// reload data?
@@ -289,7 +287,7 @@ void rtc4543_device::load_bit(int reg)
 
 void rtc4543_device::store_bit(int reg)
 {
-	assert(reg < ARRAY_LENGTH(m_regs));
+	assert(reg < std::size(m_regs));
 	int bit = m_curbit & 7;
 
 	m_regs[reg] &= ~(1 << bit);

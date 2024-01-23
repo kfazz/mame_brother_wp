@@ -47,25 +47,12 @@ const tiny_rom_entry *adam_keyboard_device::device_rom_region() const
 
 
 //-------------------------------------------------
-//  ADDRESS_MAP( adam_kb_mem )
-//-------------------------------------------------
-
-void adam_keyboard_device::adam_kb_mem(address_map &map)
-{
-	map(0x0000, 0x001f).m(M6801_TAG, FUNC(m6801_cpu_device::m6801_io));
-	map(0x0080, 0x00ff).ram();
-	map(0xf800, 0xffff).rom().region(M6801_TAG, 0);
-}
-
-
-//-------------------------------------------------
 //  device_add_mconfig - add device configuration
 //-------------------------------------------------
 
 void adam_keyboard_device::device_add_mconfig(machine_config &config)
 {
 	M6801(config, m_maincpu, XTAL(4'000'000));
-	m_maincpu->set_addrmap(AS_PROGRAM, &adam_keyboard_device::adam_kb_mem);
 	m_maincpu->in_p1_cb().set(FUNC(adam_keyboard_device::p1_r));
 	m_maincpu->in_p2_cb().set(FUNC(adam_keyboard_device::p2_r));
 	m_maincpu->out_p2_cb().set(FUNC(adam_keyboard_device::p2_w));
@@ -134,7 +121,7 @@ static INPUT_PORTS_START( adam_kb )
 	PORT_START("Y5")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_9) PORT_CHAR('9') PORT_CHAR('(')
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_0) PORT_CHAR('0') PORT_CHAR(')')
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_MINUS) PORT_CHAR('-') PORT_CHAR('\'')
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_MINUS) PORT_CHAR('-') PORT_CHAR('`')
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_EQUALS) PORT_CHAR('+') PORT_CHAR('=')
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_TILDE) PORT_CHAR('^') PORT_CHAR('~')
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_L) PORT_CHAR('l') PORT_CHAR('L')
@@ -162,10 +149,10 @@ static INPUT_PORTS_START( adam_kb )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("CLEAR") PORT_CODE(KEYCODE_PGUP) PORT_CHAR(UCHAR_MAMEKEY(PGUP))
 
 	PORT_START("Y8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_UP) PORT_CODE(KEYCODE_UP) PORT_CHAR(UCHAR_MAMEKEY(UP))
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_RIGHT) PORT_CODE(KEYCODE_RIGHT) PORT_CHAR(UCHAR_MAMEKEY(RIGHT))
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_DOWN) PORT_CODE(KEYCODE_DOWN) PORT_CHAR(UCHAR_MAMEKEY(DOWN))
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_LEFT) PORT_CODE(KEYCODE_LEFT) PORT_CHAR(UCHAR_MAMEKEY(LEFT))
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(u8"\u2191") PORT_CODE(KEYCODE_UP) PORT_CHAR(UCHAR_MAMEKEY(UP)) // U+2191 = ↑
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(u8"\u2192") PORT_CODE(KEYCODE_RIGHT) PORT_CHAR(UCHAR_MAMEKEY(RIGHT)) // U+2192 = →
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(u8"\u2193") PORT_CODE(KEYCODE_DOWN) PORT_CHAR(UCHAR_MAMEKEY(DOWN)) // U+2193 = ↓
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(u8"\u2190") PORT_CODE(KEYCODE_LEFT) PORT_CHAR(UCHAR_MAMEKEY(LEFT)) // U+2190 = ←
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("BACKSPACE") PORT_CODE(KEYCODE_BACKSPACE) PORT_CHAR(8)
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("INSERT") PORT_CODE(KEYCODE_DEL) PORT_CHAR(UCHAR_MAMEKEY(DEL))
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("PRINT") PORT_CODE(KEYCODE_END) PORT_CHAR(UCHAR_MAMEKEY(END))
@@ -243,7 +230,7 @@ void adam_keyboard_device::adamnet_reset_w(int state)
 //  p1_r -
 //-------------------------------------------------
 
-READ8_MEMBER( adam_keyboard_device::p1_r )
+uint8_t adam_keyboard_device::p1_r()
 {
 	/*
 
@@ -275,7 +262,7 @@ READ8_MEMBER( adam_keyboard_device::p1_r )
 //  p2_r -
 //-------------------------------------------------
 
-READ8_MEMBER( adam_keyboard_device::p2_r )
+uint8_t adam_keyboard_device::p2_r()
 {
 	/*
 
@@ -302,7 +289,7 @@ READ8_MEMBER( adam_keyboard_device::p2_r )
 //  p2_w -
 //-------------------------------------------------
 
-WRITE8_MEMBER( adam_keyboard_device::p2_w )
+void adam_keyboard_device::p2_w(uint8_t data)
 {
 	/*
 
@@ -324,7 +311,7 @@ WRITE8_MEMBER( adam_keyboard_device::p2_w )
 //  p3_r -
 //-------------------------------------------------
 
-READ8_MEMBER( adam_keyboard_device::p3_r )
+uint8_t adam_keyboard_device::p3_r()
 {
 	return 0xff;
 }
@@ -334,7 +321,7 @@ READ8_MEMBER( adam_keyboard_device::p3_r )
 //  p3_w -
 //-------------------------------------------------
 
-WRITE8_MEMBER( adam_keyboard_device::p3_w )
+void adam_keyboard_device::p3_w(uint8_t data)
 {
 	/*
 
@@ -359,7 +346,7 @@ WRITE8_MEMBER( adam_keyboard_device::p3_w )
 //  p4_r -
 //-------------------------------------------------
 
-READ8_MEMBER( adam_keyboard_device::p4_r )
+uint8_t adam_keyboard_device::p4_r()
 {
 	return 0xff;
 }
@@ -369,7 +356,7 @@ READ8_MEMBER( adam_keyboard_device::p4_r )
 //  p4_w -
 //-------------------------------------------------
 
-WRITE8_MEMBER( adam_keyboard_device::p4_w )
+void adam_keyboard_device::p4_w(uint8_t data)
 {
 	/*
 

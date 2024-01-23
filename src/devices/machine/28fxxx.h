@@ -21,7 +21,7 @@ public:
 		RESET               = 0xff
 	};
 
-	DECLARE_WRITE_LINE_MEMBER(vpp) { m_program_power = state; }
+	void vpp(int state) { m_program_power = state; }
 	u8 read(address_space &space, offs_t offset, u8 mem_mask = ~0);
 	void write(offs_t offset, u8 data);
 
@@ -31,8 +31,8 @@ protected:
 	virtual void device_start() override;
 
 	virtual void nvram_default() override;
-	virtual void nvram_read(emu_file &file) override;
-	virtual void nvram_write(emu_file &file) override;
+	virtual bool nvram_read(util::read_stream &file) override;
+	virtual bool nvram_write(util::write_stream &file) override;
 
 	optional_memory_region m_region;
 

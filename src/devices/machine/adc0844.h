@@ -49,9 +49,10 @@ public:
 protected:
 	adc0844_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
 
-	// device-level overrides
+	// device_t implementation
 	virtual void device_start() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+
+	virtual TIMER_CALLBACK_MEMBER(conversion_complete);
 
 	uint8_t clamp(int value);
 
@@ -81,9 +82,7 @@ public:
 	virtual void write(u8 data) override;
 
 protected:
-	// device-level overrides
-	virtual void device_start() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+	virtual TIMER_CALLBACK_MEMBER(conversion_complete) override;
 
 private:
 	devcb_read8 m_ch5_cb, m_ch6_cb, m_ch7_cb, m_ch8_cb;

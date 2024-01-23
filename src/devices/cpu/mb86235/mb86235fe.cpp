@@ -63,7 +63,7 @@ mb86235_frontend::mb86235_frontend(mb86235_device *core, uint32_t window_start, 
 
 bool mb86235_frontend::describe(opcode_desc &desc, const opcode_desc *prev)
 {
-	uint64_t opcode = desc.opptr.q[0] = m_core->m_pcache->read_qword(desc.pc, 0);
+	uint64_t opcode = desc.opptr.q[0] = m_core->m_pcache.read_qword(desc.pc, 0);
 
 	desc.length = 1;
 	desc.cycles = 1;
@@ -804,7 +804,7 @@ void mb86235_frontend::describe_control(opcode_desc &desc)
 	int ef1 = (desc.opptr.q[0] >> 16) & 0x3f;
 	int ef2 = desc.opptr.q[0] & 0xffff;
 	int cop = (desc.opptr.q[0] >> 22) & 0x1f;
-	int rel12 = (desc.opptr.q[0] & 0x800) ? (0xfffff000 | (desc.opptr.q[0] & 0xfff)) : (desc.opptr.q[0] & 0xfff);
+	int rel12 = util::sext<int>(desc.opptr.q[0], 12);
 
 	switch (cop)
 	{

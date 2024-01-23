@@ -85,12 +85,12 @@ const tiny_rom_entry *c64_xl80_device::device_rom_region() const
 
 MC6845_UPDATE_ROW( c64_xl80_device::crtc_update_row )
 {
-	const pen_t *pen = m_palette->pens();
+	pen_t const *const pen = m_palette->pens();
 
 	for (int column = 0; column < x_count; column++)
 	{
-		uint8_t code = m_ram[((ma + column) & 0x7ff)];
-		uint16_t addr = (code << 3) | (ra & 0x07);
+		uint8_t const code = m_ram[((ma + column) & 0x7ff)];
+		uint16_t const addr = (m_case << 10) | ((code & 0x7f) << 3) | (ra & 0x07);
 		uint8_t data = m_char_rom->base()[addr & 0x7ff];
 
 		if (column == cursor_x)
@@ -100,10 +100,10 @@ MC6845_UPDATE_ROW( c64_xl80_device::crtc_update_row )
 
 		for (int bit = 0; bit < 8; bit++)
 		{
-			int x = (column * 8) + bit;
-			int color = BIT(data, 7) && de;
+			int const x = (column * 8) + bit;
+			int const color = BIT(data ^ code, 7) && de;
 
-			bitmap.pix32(vbp + y, hbp + x) = pen[color];
+			bitmap.pix(vbp + y, hbp + x) = pen[color];
 
 			data <<= 1;
 		}
@@ -157,7 +157,8 @@ c64_xl80_device::c64_xl80_device(const machine_config &mconfig, const char *tag,
 	m_crtc(*this, HD46505SP_TAG),
 	m_palette(*this, "palette"),
 	m_char_rom(*this, HD46505SP_TAG),
-	m_ram(*this, "ram")
+	m_ram(*this, "ram", RAM_SIZE, ENDIANNESS_LITTLE),
+	m_case(0)
 {
 }
 
@@ -168,8 +169,8 @@ c64_xl80_device::c64_xl80_device(const machine_config &mconfig, const char *tag,
 
 void c64_xl80_device::device_start()
 {
-	// allocate memory
-	m_ram.allocate(RAM_SIZE);
+	// state saving
+	save_item(NAME(m_case));
 }
 
 
@@ -188,20 +189,17 @@ void c64_xl80_device::device_reset()
 
 uint8_t c64_xl80_device::c64_cd_r(offs_t offset, uint8_t data, int sphi2, int ba, int roml, int romh, int io1, int io2)
 {
-	if (!io2 && BIT(offset, 2))
+	if (!roml)
 	{
-		if (offset & 0x01)
-		{
+		if (BIT(offset, 12))
+			data = m_ram[offset & 0x7ff];
+		else
+			data = m_roml[offset & 0xfff];
+	}
+	else if (!io2 && !BIT(offset, 1))
+	{
+		if (BIT(offset, 0))
 			data = m_crtc->register_r();
-		}
-	}
-	else if (offset >= 0x8000 && offset < 0x9000)
-	{
-		data = m_roml[offset & 0xfff];
-	}
-	else if (offset >= 0x9800 && offset < 0xa000)
-	{
-		data = m_ram[offset & 0x7ff];
 	}
 
 	return data;
@@ -218,15 +216,16 @@ void c64_xl80_device::c64_cd_w(offs_t offset, uint8_t data, int sphi2, int ba, i
 	{
 		m_ram[offset & 0x7ff] = data;
 	}
-	else if (!io2 && BIT(offset, 2))
+	else if (!io2 && !BIT(offset, 1))
 	{
-		if (offset & 0x01)
-		{
-			m_crtc->register_w(data);
-		}
-		else
-		{
+		if (!BIT(offset, 0))
 			m_crtc->address_w(data);
-		}
+		else
+			m_crtc->register_w(data);
+	}
+	else if (!io2)
+	{
+		m_case = BIT(data, 0);
+		// BIT(data, 2); // unknown
 	}
 }

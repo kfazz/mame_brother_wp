@@ -1,4 +1,4 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
 
 #ifndef PEXCEPTION_H_
@@ -39,11 +39,11 @@ namespace plib {
 	public:
 		explicit pexception(const pstring &text);
 
-		const pstring &text() const noexcept { return m_text; }
+		const putf8string &text() const noexcept { return m_text; }
 		const char* what() const noexcept override { return m_text.c_str(); }
 
 	private:
-		pstring m_text;
+		putf8string m_text;
 	};
 
 	class file_e : public plib::pexception
@@ -83,13 +83,13 @@ namespace plib {
 	};
 
 	// FIXME: currently only a stub for later use. More use could be added by
-	// using “-fnon-call-exceptions" and sigaction to enable c++ exception supported.
+	// using `-fnon-call-exceptions` and sigaction to enable c++ exception supported.
 	//
 
-	class fpexception_e : public pexception
+	class fp_exception_e : public pexception
 	{
 	public:
-		explicit fpexception_e(const pstring &text);
+		explicit fp_exception_e(const pstring &text);
 	};
 
 	static constexpr unsigned FP_INEXACT = 0x0001;
@@ -101,14 +101,14 @@ namespace plib {
 
 	/// \brief Catch SIGFPE on linux for debugging purposes.
 	///
-	class fpsignalenabler
+	class fp_signal_enabler
 	{
 	public:
-		explicit fpsignalenabler(unsigned fpexceptions);
+		explicit fp_signal_enabler(unsigned fp_exceptions);
 
-		PCOPYASSIGNMOVE(fpsignalenabler, delete)
+		PCOPYASSIGNMOVE(fp_signal_enabler, delete)
 
-		~fpsignalenabler();
+		~fp_signal_enabler();
 
 		/// \brief is the functionality supported.
 		///
@@ -125,7 +125,7 @@ namespace plib {
 	private:
 		int m_last_enabled;
 
-		static bool m_enable;
+		static bool m_enable; // NOLINT
 	};
 
 

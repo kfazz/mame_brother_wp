@@ -8,7 +8,7 @@
  * byte PS/2 mouse protocol. Serial I/O is driven at 10kHz by a 40kHz timer
  * to generate somewhat accurate clock rising and falling edges, as well as
  * sampling or writing the data line in the middle of each high or low cycle
- * as exoected by the protocol.
+ * as expected by the protocol.
  *
  * The original IBM PS/2 mouse had only two buttons and the documented protocol
  * reflects this, however it also allows a third button to be added without any
@@ -37,7 +37,6 @@
 #include "emu.h"
 #include "hle_mouse.h"
 
-#define LOG_GENERAL (1U << 0)
 #define LOG_RXTX    (1U << 1)
 #define LOG_COMMAND (1U << 2)
 #define LOG_REPORT  (1U << 3)
@@ -104,8 +103,8 @@ void hle_ps2_mouse_device::device_start()
 
 	set_pc_kbdc_device();
 
-	m_serial = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(hle_ps2_mouse_device::serial), this));
-	m_sample = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(hle_ps2_mouse_device::sample), this));
+	m_serial = timer_alloc(FUNC(hle_ps2_mouse_device::serial), this);
+	m_sample = timer_alloc(FUNC(hle_ps2_mouse_device::sample), this);
 }
 
 void hle_ps2_mouse_device::device_reset()
@@ -155,7 +154,7 @@ void hle_ps2_mouse_device::resume()
 	}
 }
 
-void hle_ps2_mouse_device::serial(void *ptr, s32 param)
+void hle_ps2_mouse_device::serial(s32 param)
 {
 	// host may inhibit device communication by holding the clock low for 100µs
 	if (!clock_signal() && clock_held(100))
@@ -474,7 +473,7 @@ void hle_ps2_mouse_device::command(u8 const command)
 	}
 }
 
-void hle_ps2_mouse_device::sample(void *ptr, s32 param)
+void hle_ps2_mouse_device::sample(s32 param)
 {
 	// read mouse state
 	s16 const x = m_port_x_axis->read();

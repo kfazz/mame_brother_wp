@@ -114,16 +114,16 @@
 #include "multiconn.h"
 #include "gkracker.h"
 
-#define LOG_WARN         (1U<<1)   // Warnings
-#define LOG_READ         (1U<<2)   // Reading
-#define LOG_WRITE        (1U<<3)   // Writing
+#define LOG_WARN         (1U << 1)   // Warnings
+#define LOG_READ         (1U << 2)   // Reading
+#define LOG_WRITE        (1U << 3)   // Writing
 
-#define VERBOSE ( LOG_WARN )
+#define VERBOSE (LOG_WARN)
 #include "logmacro.h"
 
-DEFINE_DEVICE_TYPE_NS(TI99_GROMPORT, bus::ti99::gromport, gromport_device, "gromport", "TI-99 Cartridge port")
+DEFINE_DEVICE_TYPE(TI99_GROMPORT, bus::ti99::gromport::gromport_device, "gromport", "TI-99 Cartridge port")
 
-namespace bus { namespace ti99 { namespace gromport {
+namespace bus::ti99::gromport {
 
 gromport_device::gromport_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	:   device_t(mconfig, TI99_GROMPORT, tag, owner, clock),
@@ -139,7 +139,7 @@ gromport_device::gromport_device(const machine_config &mconfig, const char *tag,
     Reading via the GROM port. Only 13 address lines are passed through
     on the TI-99/4A, and 14 lines on the TI-99/8.
 */
-READ8Z_MEMBER(gromport_device::readz)
+void gromport_device::readz(offs_t offset, uint8_t *value)
 {
 	if (m_connector != nullptr)
 	{
@@ -161,7 +161,7 @@ void gromport_device::write(offs_t offset, uint8_t data)
 	}
 }
 
-READ8Z_MEMBER(gromport_device::crureadz)
+void gromport_device::crureadz(offs_t offset, uint8_t *value)
 {
 	if (m_connector != nullptr)
 		m_connector->crureadz(offset, value);
@@ -173,7 +173,7 @@ void gromport_device::cruwrite(offs_t offset, uint8_t data)
 		m_connector->cruwrite(offset, data);
 }
 
-WRITE_LINE_MEMBER(gromport_device::ready_line)
+void gromport_device::ready_line(int state)
 {
 	m_console_ready(state);
 }
@@ -181,14 +181,14 @@ WRITE_LINE_MEMBER(gromport_device::ready_line)
 /*
     Asserted when the console addresses cartridge rom.
 */
-WRITE_LINE_MEMBER(gromport_device::romgq_line)
+void gromport_device::romgq_line(int state)
 {
 	m_romgq = state;
 	if (m_connector != nullptr)
 		m_connector->romgq_line(state);
 }
 
-WRITE_LINE_MEMBER(gromport_device::gclock_in)
+void gromport_device::gclock_in(int state)
 {
 	if (m_connector != nullptr)
 		m_connector->gclock_in(state);
@@ -205,8 +205,6 @@ void gromport_device::set_gromlines(line_state mline, line_state moline, line_st
 
 void gromport_device::device_start()
 {
-	m_console_ready.resolve();
-	m_console_reset.resolve();
 
 	save_item(NAME(m_romgq));
 }
@@ -278,7 +276,7 @@ cartridge_connector_device::cartridge_connector_device(const machine_config &mco
 {
 }
 
-WRITE_LINE_MEMBER( cartridge_connector_device::ready_line )
+void  cartridge_connector_device::ready_line(int state)
 {
 	m_gromport->ready_line(state);
 }
@@ -288,7 +286,7 @@ void cartridge_connector_device::device_config_complete()
 	m_gromport = static_cast<gromport_device*>(owner());
 }
 
-} } } // end namespace bus::ti99::gromport
+} // end namespace bus::ti99::gromport
 
 void ti99_gromport_options(device_slot_interface &device)
 {

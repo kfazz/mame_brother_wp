@@ -62,8 +62,8 @@ public:
 	// 4008/4009 or 4289 outputs
 	u8 get_4289_a() const { return m_4289_a; } // 8-bit address
 	u8 get_4289_c() const { return m_4289_c; } // 4-bit chip select
-	DECLARE_READ_LINE_MEMBER(get_4289_pm) const { return BIT(m_4289_pm, 0); } // 0 = active
-	DECLARE_READ_LINE_MEMBER(get_4289_f_l) const { return BIT(m_4289_f_l, 0); } // 1 = odd, 0 = even
+	int get_4289_pm() const { return BIT(m_4289_pm, 0); } // 0 = active
+	int get_4289_f_l() const { return BIT(m_4289_f_l, 0); } // 1 = odd, 0 = even
 
 protected:
 	enum class cycle : u8 { OP, IM, IN };
@@ -182,7 +182,7 @@ private:
 	// address spaces
 	address_space_config const  m_space_config[7];
 	address_space               *m_spaces[7];
-	memory_access_cache<0, 0, ENDIANNESS_LITTLE> *m_cache;
+	memory_access<12, 0, 0, ENDIANNESS_LITTLE>::cache m_cache;
 
 	// bus snooping callback
 	bus_cycle_delegate          m_bus_cycle_cb;

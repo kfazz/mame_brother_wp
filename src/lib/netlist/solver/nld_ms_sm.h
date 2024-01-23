@@ -1,4 +1,4 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
 
 #ifndef NLD_MS_SM_H_
@@ -22,7 +22,7 @@
 ///
 /// The approach is iterative and applied for each row changed.
 ///
-/// The performance for a typical circuit like kidniki compared to Gaussian
+/// The performance for a typical circuit like `kidniki` compared to Gaussian
 /// elimination is poor:
 ///
 /// a) The code needs to be run for each row change.
@@ -33,21 +33,18 @@
 ///
 
 #include "nld_matrix_solver.h"
+#include "nld_matrix_solver_ext.h"
 #include "nld_solver.h"
 #include "plib/vector_ops.h"
 
 #include <algorithm>
 
-namespace netlist
-{
-namespace solver
+namespace netlist::solver
 {
 
 	template <typename FT, int SIZE>
 	class matrix_solver_sm_t: public matrix_solver_ext_t<FT, SIZE>
 	{
-		friend class matrix_solver_t;
-
 	public:
 
 		using float_ext_type = FT;
@@ -55,10 +52,10 @@ namespace solver
 		// FIXME: dirty hack to make this compile
 		static constexpr const std::size_t storage_N = 100;
 
-		matrix_solver_sm_t(netlist_state_t &anetlist, const pstring &name,
-			const analog_net_t::list_t &nets,
+		matrix_solver_sm_t(devices::nld_solver &main_solver, const pstring &name,
+			const matrix_solver_t::net_list_t &nets,
 			const solver_parameters_t *params, const std::size_t size)
-		: matrix_solver_ext_t<FT, SIZE>(anetlist, name, nets, params, size)
+		: matrix_solver_ext_t<FT, SIZE>(main_solver, name, nets, params, size)
 		, m_cnt(0)
 		{
 			this->build_mat_ptr(m_A);
@@ -67,7 +64,7 @@ namespace solver
 		void reset() override { matrix_solver_t::reset(); }
 
 	protected:
-		void vsolve_non_dynamic() override;
+		void upstream_solve_non_dynamic() override;
 		void solve_non_dynamic();
 
 		void LE_invert();
@@ -224,7 +221,7 @@ namespace solver
 			}
 			for (std::size_t row = 0; row < iN; row ++)
 			{
-				std::size_t colcount = 0;
+				std::size_t col_count = 0;
 
 				auto &nz = this->m_terms[row].m_nz;
 				for (unsigned & col : nz)
@@ -234,33 +231,33 @@ namespace solver
 						lA(row,col) = A(row,col);
 					// FIXME: comparison to zero
 					if (v[col] != plib::constants<float_type>::zero())
-						cols[colcount++] = col;
+						cols[col_count++] = col;
 				}
 
-				if (colcount > 0)
+				if (col_count > 0)
 				{
-					auto lamba(plib::constants<FT>::zero());
+					auto lambda(plib::constants<FT>::zero());
 					std::array<float_type, m_pitch> w = {0};
 
-					// compute w and lamba
+					// compute w and lambda
 					for (std::size_t i = 0; i < iN; i++)
 						z[i] = Ainv(i, row); // u is row'th column
 
-					for (std::size_t j = 0; j < colcount; j++)
-						lamba += v[cols[j]] * z[cols[j]];
+					for (std::size_t j = 0; j < col_count; j++)
+						lambda += v[cols[j]] * z[cols[j]];
 
-					for (std::size_t j=0; j<colcount; j++)
+					for (std::size_t j=0; j<col_count; j++)
 					{
 						std::size_t col = cols[j];
 						float_type f = v[col];
 						for (std::size_t k = 0; k < iN; k++)
-							w[k] += Ainv(col,k) * f; // Transpose(Ainv) * v
+							w[k] += Ainv(col,k) * f; //# Transpose(Ainv) * v
 					}
 
-					lamba = -plib::reciprocal(plib::constants<float_type>::one() + lamba);
+					lambda = -plib::reciprocal(plib::constants<float_type>::one() + lambda);
 					for (std::size_t i=0; i<iN; i++)
 					{
-						const float_type f = lamba * z[i];
+						const float_type f = lambda * z[i];
 						// FIXME: comparison to zero
 						if (f != plib::constants<float_type>::zero())
 							for (std::size_t k = 0; k < iN; k++)
@@ -277,7 +274,7 @@ namespace solver
 	}
 
 	template <typename FT, int SIZE>
-	void matrix_solver_sm_t<FT, SIZE>::vsolve_non_dynamic()
+	void matrix_solver_sm_t<FT, SIZE>::upstream_solve_non_dynamic()
 	{
 
 		this->clear_square_mat(this->m_A);
@@ -287,7 +284,6 @@ namespace solver
 	}
 
 
-} // namespace solver
-} // namespace netlist
+} // namespace netlist::solver
 
 #endif // NLD_MS_SM_H_

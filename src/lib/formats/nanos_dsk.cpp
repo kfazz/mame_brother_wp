@@ -2,13 +2,11 @@
 // copyright-holders:Olivier Galibert
 /*********************************************************************
 
-    formats/nanos_dsk.c
+    formats/nanos_dsk.cpp
 
     nanos format
 
 *********************************************************************/
-
-#include <cassert>
 
 #include "formats/nanos_dsk.h"
 
@@ -16,17 +14,17 @@ nanos_format::nanos_format() : upd765_format(formats)
 {
 }
 
-const char *nanos_format::name() const
+const char *nanos_format::name() const noexcept
 {
 	return "nanos";
 }
 
-const char *nanos_format::description() const
+const char *nanos_format::description() const noexcept
 {
 	return "NANOS disk image";
 }
 
-const char *nanos_format::extensions() const
+const char *nanos_format::extensions() const noexcept
 {
 	return "img";
 }
@@ -45,4 +43,4 @@ const nanos_format::format nanos_format::formats[] = {
 	{}
 };
 
-const floppy_format_type FLOPPY_NANOS_FORMAT = &floppy_image_format_creator<nanos_format>;
+const nanos_format FLOPPY_NANOS_FORMAT;

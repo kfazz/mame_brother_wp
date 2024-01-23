@@ -92,9 +92,6 @@ device_memory_interface::space_config_vector cesblit_device::memory_space_config
 
 void cesblit_device::device_start()
 {
-	// resolve callbacks
-	m_blit_irq_cb.resolve();
-
 	// default to rom reading from a region
 	m_space = &space(AS_PROGRAM);
 	memory_region *region = memregion(tag());
@@ -131,12 +128,12 @@ void cesblit_device::device_stop()
     READ/WRITE HANDLERS
 ***************************************************************************/
 
-READ16_MEMBER(cesblit_device::status_r)
+uint16_t cesblit_device::status_r()
 {
 	return 0x0000;  // bit 7 = blitter busy
 }
 
-WRITE16_MEMBER(cesblit_device::regs_w)
+void cesblit_device::regs_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	uint16_t olddata = m_regs[offset];
 	uint16_t newdata = COMBINE_DATA( &m_regs[offset] );
@@ -146,24 +143,24 @@ WRITE16_MEMBER(cesblit_device::regs_w)
 //      case 0x00/2:    // bit 15: FPGA programming serial in (lsb first)
 
 		case 0x10/2:
-			if (!m_blit_irq_cb.isnull() && !BIT(olddata, 3) && BIT(newdata, 3))
+			if (!BIT(olddata, 3) && BIT(newdata, 3))
 				m_blit_irq_cb(CLEAR_LINE);
 			break;
 
 		case 0x0e/2:
 			do_blit();
-			if (!m_blit_irq_cb.isnull() && BIT(m_regs[0x10/2], 3))
+			if (BIT(m_regs[0x10/2], 3))
 				m_blit_irq_cb(ASSERT_LINE);
 			break;
 	}
 }
 
-WRITE16_MEMBER(cesblit_device::color_w)
+void cesblit_device::color_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	COMBINE_DATA( &m_color );
 }
 
-WRITE16_MEMBER(cesblit_device::addr_hi_w)
+void cesblit_device::addr_hi_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	COMBINE_DATA( &m_addr_hi );
 }
@@ -213,8 +210,6 @@ void cesblit_device::do_blit()
 	// Draw
 
 	bitmap_ind16 &bitmap = m_bitmap[layer][buffer];
-	int x,y;
-	uint16_t pen;
 
 	switch (mode & 0x20)
 	{
@@ -227,17 +222,17 @@ void cesblit_device::do_blit()
 				uint8_t dst_pen = (m_color >> 8) & 0xff;
 				uint8_t src_pen = (m_color >> 0) & 0xff;
 
-				for (y = y0; y != y1; y += dy)
+				for (int y = y0; y != y1; y += dy)
 				{
-					for (x = x0; x != x1; x += dx)
+					for (int x = x0; x != x1; x += dx)
 					{
-						pen = m_space->read_byte(addr);
+						uint16_t pen = m_space->read_byte(addr);
 
 						if (pen == src_pen)
 							pen = dst_pen;
 
 						if (pen != 0xff)
-							bitmap.pix16((sy + y) & 0x1ff, (sx + x) & 0x1ff) = pen + color;
+							bitmap.pix((sy + y) & 0x1ff, (sx + x) & 0x1ff) = pen + color;
 
 						++addr;
 					}
@@ -247,14 +242,14 @@ void cesblit_device::do_blit()
 			{
 				// copy from ROM as is
 
-				for (y = y0; y != y1; y += dy)
+				for (int y = y0; y != y1; y += dy)
 				{
-					for (x = x0; x != x1; x += dx)
+					for (int x = x0; x != x1; x += dx)
 					{
-						pen = m_space->read_byte(addr);
+						uint16_t pen = m_space->read_byte(addr);
 
 						if (pen != 0xff)
-							bitmap.pix16((sy + y) & 0x1ff, (sx + x) & 0x1ff) = pen + color;
+							bitmap.pix((sy + y) & 0x1ff, (sx + x) & 0x1ff) = pen + color;
 
 						++addr;
 					}
@@ -263,16 +258,18 @@ void cesblit_device::do_blit()
 			break;
 
 		case 0x20:    // solid fill
-			pen = ((m_addr_hi >> 8) & 0xff) + color;
-
-			if ((pen & 0xff) == 0xff)
-				pen = 0xff;
-
-			for (y = y0; y != y1; y += dy)
 			{
-				for (x = x0; x != x1; x += dx)
+				uint16_t pen = ((m_addr_hi >> 8) & 0xff) + color;
+
+				if ((pen & 0xff) == 0xff)
+					pen = 0xff;
+
+				for (int y = y0; y != y1; y += dy)
 				{
-						bitmap.pix16((sy + y) & 0x1ff, (sx + x) & 0x1ff) = pen;
+					for (int x = x0; x != x1; x += dx)
+					{
+						bitmap.pix((sy + y) & 0x1ff, (sx + x) & 0x1ff) = pen;
+					}
 				}
 			}
 			break;

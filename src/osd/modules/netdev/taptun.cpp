@@ -1,8 +1,12 @@
 // license:BSD-3-Clause
 // copyright-holders:Carl
+#include "netdev_module.h"
+
+#include "modules/osdmodule.h"
+
 #if defined(OSD_NET_USE_TAPTUN)
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #include <windows.h>
 #include <winioctl.h>
 #else
@@ -14,21 +18,25 @@
 #endif
 
 #include "emu.h"
+#include "dinetwork.h"
 #include "osdnet.h"
-#include "modules/osdmodule.h"
-#include "netdev_module.h"
+#include "unicode.h"
 
 #ifdef __linux__
 #define IFF_TAP     0x0002
 #define IFF_NO_PI   0x1000
 #define TUNSETIFF     _IOW('T', 202, int)
-#elif defined(WIN32)
+#elif defined(_WIN32)
 #include "tap-windows6/tap-windows.h"
 
 // for some reason this isn't defined in the header, and presumably it changes
 // with major? versions of the driver - perhaps it should be configurable?
 #define PRODUCT_TAP_WIN_COMPONENT_ID "tap0901"
 #endif
+
+namespace osd {
+
+namespace {
 
 // Ethernet minimum frame length
 static constexpr int ETHERNET_MIN_FRAME = 64;
@@ -42,7 +50,7 @@ public:
 	}
 	virtual ~taptun_module() { }
 
-	virtual int init(const osd_options &options);
+	virtual int init(osd_interface &osd, const osd_options &options);
 	virtual void exit();
 
 	virtual bool probe() { return true; }
@@ -61,7 +69,7 @@ public:
 protected:
 	int recv_dev(uint8_t **buf) override;
 private:
-#if defined(WIN32)
+#if defined(_WIN32)
 	HANDLE m_handle = INVALID_HANDLE_VALUE;
 	OVERLAPPED m_overlapped;
 	bool m_receive_pending;
@@ -97,7 +105,7 @@ netdev_tap::netdev_tap(const char *name, class device_network_interface *ifdev, 
 	osd_printf_verbose("netdev_tap: network up!\n");
 	strncpy(m_ifname, ifr.ifr_name, 10);
 	fcntl(m_fd, F_SETFL, O_NONBLOCK);
-#elif defined(WIN32)
+#elif defined(_WIN32)
 	std::wstring device_path(L"" USERMODEDEVICEDIR);
 	device_path.append(wstring_from_utf8(name));
 	device_path.append(L"" TAP_WIN_SUFFIX);
@@ -120,7 +128,7 @@ netdev_tap::netdev_tap(const char *name, class device_network_interface *ifdev, 
 
 netdev_tap::~netdev_tap()
 {
-#if defined(WIN32)
+#if defined(_WIN32)
 	if (m_handle != INVALID_HANDLE_VALUE)
 	{
 		if (m_receive_pending)
@@ -168,7 +176,7 @@ static u32 finalise_frame(u8 buf[], u32 length)
 	return length;
 }
 
-#if defined(WIN32)
+#if defined(_WIN32)
 int netdev_tap::send(uint8_t *buf, int len)
 {
 	OVERLAPPED overlapped = {};
@@ -285,16 +293,21 @@ static std::vector<std::wstring> get_tap_adapters()
 
 				// check if the ComponentId value indicates a TAP-Windows adapter
 				if (RegQueryValueExW(unit_key, L"ComponentId", NULL, &data_type, LPBYTE(component_id), &component_id_len) == ERROR_SUCCESS
-					&& data_type == REG_SZ
-					&& safe_string(component_id, component_id_len) == L"" PRODUCT_TAP_WIN_COMPONENT_ID)
+					&& data_type == REG_SZ)
 				{
-					WCHAR net_cfg_instance_id[MAX_PATH];
-					DWORD net_cfg_instance_id_len = sizeof(net_cfg_instance_id);
+					std::wstring const value(safe_string(component_id, component_id_len));
 
-					// add the adapter to the result
-					if (RegQueryValueExW(unit_key, L"NetCfgInstanceId", NULL, &data_type, LPBYTE(net_cfg_instance_id), &net_cfg_instance_id_len) == ERROR_SUCCESS
-						&& data_type == REG_SZ)
-						result.push_back(safe_string(net_cfg_instance_id, net_cfg_instance_id_len));
+					// some older versions may not set the "root\" prefix
+					if (value == L"root\\" PRODUCT_TAP_WIN_COMPONENT_ID || value == L"" PRODUCT_TAP_WIN_COMPONENT_ID)
+					{
+						WCHAR net_cfg_instance_id[MAX_PATH];
+						DWORD net_cfg_instance_id_len = sizeof(net_cfg_instance_id);
+
+						// add the adapter to the result
+						if (RegQueryValueExW(unit_key, L"NetCfgInstanceId", NULL, &data_type, LPBYTE(net_cfg_instance_id), &net_cfg_instance_id_len) == ERROR_SUCCESS
+							&& data_type == REG_SZ)
+							result.push_back(safe_string(net_cfg_instance_id, net_cfg_instance_id_len));
+					}
 				}
 
 				RegCloseKey(unit_key);
@@ -337,13 +350,13 @@ int netdev_tap::recv_dev(uint8_t **buf)
 
 static CREATE_NETDEV(create_tap)
 {
-	auto *dev = global_alloc(netdev_tap(ifname, ifdev, rate));
+	auto *dev = new netdev_tap(ifname, ifdev, rate);
 	return dynamic_cast<osd_netdev *>(dev);
 }
 
-int taptun_module::init(const osd_options &options)
+int taptun_module::init(osd_interface &osd, const osd_options &options)
 {
-#if defined(WIN32)
+#if defined(_WIN32)
 	for (std::wstring &id : get_tap_adapters())
 		add_netdev(utf8_from_wstring(id).c_str(), utf8_from_wstring(get_connection_name(id)).c_str(), create_tap);
 #else
@@ -357,13 +370,16 @@ void taptun_module::exit()
 	clear_netdev();
 }
 
+} // anonymous namespace
+
+} // namespace osd
+
 
 #else
-	#include "modules/osdmodule.h"
-	#include "netdev_module.h"
 
-	MODULE_NOT_SUPPORTED(taptun_module, OSD_NETDEV_PROVIDER, "taptun")
+namespace osd { namespace { MODULE_NOT_SUPPORTED(taptun_module, OSD_NETDEV_PROVIDER, "taptun") } }
+
 #endif
 
 
-MODULE_DEFINITION(NETDEV_TAPTUN, taptun_module)
+MODULE_DEFINITION(NETDEV_TAPTUN, osd::taptun_module)

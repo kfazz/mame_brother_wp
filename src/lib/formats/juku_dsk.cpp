@@ -14,17 +14,17 @@ juku_format::juku_format() : wd177x_format(formats)
 {
 }
 
-const char *juku_format::name() const
+const char *juku_format::name() const noexcept
 {
 	return "juku";
 }
 
-const char *juku_format::description() const
+const char *juku_format::description() const noexcept
 {
 	return "Juku disk image";
 }
 
-const char *juku_format::extensions() const
+const char *juku_format::extensions() const noexcept
 {
 	return "juk";
 }
@@ -42,4 +42,4 @@ const juku_format::format juku_format::formats[] =
 	{}
 };
 
-const floppy_format_type FLOPPY_JUKU_FORMAT = &floppy_image_format_creator<juku_format>;
+const juku_format FLOPPY_JUKU_FORMAT;

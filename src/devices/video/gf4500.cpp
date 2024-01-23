@@ -11,22 +11,8 @@
 #include "emu.h"
 #include "video/gf4500.h"
 
-#define VERBOSE_LEVEL ( 0 )
-
-static inline void ATTR_PRINTF(3,4) verboselog( device_t &device, int n_level, const char *s_fmt, ...)
-{
-	if (VERBOSE_LEVEL >= n_level)
-	{
-		va_list v;
-		char buf[32768];
-		va_start(v, s_fmt);
-		vsprintf(buf, s_fmt, v);
-		va_end(v);
-		device.logerror("%s: %s", device.machine().describe_context(), buf);
-	}
-}
-
-#define BITS(x,m,n) (((x)>>(n))&(((uint32_t)1<<((m)-(n)+1))-1))
+#define VERBOSE (0)
+#include "logmacro.h"
 
 #define GF4500_FRAMEBUF_OFFSET 0x20000
 
@@ -80,21 +66,19 @@ void gf4500_device::vram_write16( uint16_t data )
 
 static rgb_t gf4500_get_color_16( uint16_t data )
 {
-	uint8_t r, g, b;
-	r = BITS(data, 15, 11) << 3;
-	g = BITS(data, 10, 5) << 2;
-	b = BITS(data, 4, 0) << 3;
+	uint8_t r = BIT(data, 11, 5) << 3;
+	uint8_t g = BIT(data, 5, 6) << 2;
+	uint8_t b = BIT(data, 0, 5) << 3;
 	return rgb_t(r, g, b);
 }
 
 uint32_t gf4500_device::screen_update(screen_device &device, bitmap_rgb32 &bitmap, const rectangle &cliprect)
 {
-	uint16_t *vram = (uint16_t *)(m_data.get() + GF4500_FRAMEBUF_OFFSET / 4);
-	int x, y;
-	for (y = 0; y < 240; y++)
+	uint16_t const *vram = (uint16_t *)(m_data.get() + GF4500_FRAMEBUF_OFFSET / 4);
+	for (int y = 0; y < 240; y++)
 	{
-		uint32_t *scanline = &bitmap.pix32(y);
-		for (x = 0; x < 320; x++)
+		uint32_t *scanline = &bitmap.pix(y);
+		for (int x = 0; x < 320; x++)
 		{
 			*scanline++ = gf4500_get_color_16(*vram++);
 		}
@@ -103,7 +87,7 @@ uint32_t gf4500_device::screen_update(screen_device &device, bitmap_rgb32 &bitma
 	return 0;
 }
 
-READ32_MEMBER( gf4500_device::read )
+uint32_t gf4500_device::read(offs_t offset)
 {
 	uint32_t data = m_data[offset];
 	switch (offset)
@@ -114,17 +98,17 @@ READ32_MEMBER( gf4500_device::read )
 	}
 	if ((offset < (GF4500_FRAMEBUF_OFFSET / 4)) || (offset >= ((GF4500_FRAMEBUF_OFFSET + (321 * 240 * 2)) / 4)))
 	{
-		verboselog( *this, 9, "(GFO) %08X -> %08X\n", 0x34000000 + (offset << 2), data);
+		LOG("%s: (GFO) %08X -> %08X\n", machine().describe_context(), 0x34000000 + (offset << 2), data);
 	}
 	return data;
 }
 
-WRITE32_MEMBER( gf4500_device::write )
+void gf4500_device::write(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	COMBINE_DATA(&m_data[offset]);
 	if ((offset < (GF4500_FRAMEBUF_OFFSET / 4)) || (offset >= ((GF4500_FRAMEBUF_OFFSET + (321 * 240 * 2)) / 4)))
 	{
-		verboselog( *this, 9, "(GFO) %08X <- %08X\n", 0x34000000 + (offset << 2), data);
+		LOG("%s: (GFO) %08X <- %08X\n", machine().describe_context(), 0x34000000 + (offset << 2), data);
 	}
 	switch (offset)
 	{

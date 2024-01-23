@@ -13,8 +13,10 @@
 
 #pragma once
 
-#include "osdcore.h"
 #include "palette.h"
+
+#include <algorithm>
+#include <memory>
 
 
 //**************************************************************************
@@ -24,7 +26,7 @@
 // bitmap_format describes the various bitmap formats we use
 enum bitmap_format
 {
-	BITMAP_FORMAT_INVALID = 0,      // invalid forma
+	BITMAP_FORMAT_INVALID = 0,      // invalid format
 	BITMAP_FORMAT_IND8,             // 8bpp indexed
 	BITMAP_FORMAT_IND16,            // 16bpp indexed
 	BITMAP_FORMAT_IND32,            // 32bpp indexed
@@ -71,6 +73,20 @@ public:
 		if (src.min_y < min_y) min_y = src.min_y;
 		if (src.max_y > max_y) max_y = src.max_y;
 		return *this;
+	}
+
+	rectangle operator&(const rectangle &b)
+	{
+		rectangle a(*this);
+		a &= b;
+		return a;
+	}
+
+	rectangle operator|(const rectangle &b)
+	{
+		rectangle a(*this);
+		a |= b;
+		return a;
 	}
 
 	// comparisons
@@ -120,60 +136,60 @@ class bitmap_t
 protected:
 	// construction/destruction -- subclasses only to ensure type correctness
 	bitmap_t(const bitmap_t &) = delete;
-	bitmap_t(bitmap_t &&that);
-	bitmap_t(bitmap_format format, uint8_t bpp, int width = 0, int height = 0, int xslop = 0, int yslop = 0);
-	bitmap_t(bitmap_format format, uint8_t bpp, void *base, int width, int height, int rowpixels);
-	bitmap_t(bitmap_format format, uint8_t bpp, bitmap_t &source, const rectangle &subrect);
+	bitmap_t(bitmap_t &&that) noexcept;
+	bitmap_t(bitmap_format format, uint8_t bpp, int width = 0, int height = 0, int xslop = 0, int yslop = 0) noexcept;
+	bitmap_t(bitmap_format format, uint8_t bpp, void *base, int width, int height, int rowpixels) noexcept;
+	bitmap_t(bitmap_format format, uint8_t bpp, bitmap_t &source, const rectangle &subrect) noexcept;
 	virtual ~bitmap_t();
 
 	// prevent implicit copying
 	bitmap_t &operator=(const bitmap_t &) = delete;
-	bitmap_t &operator=(bitmap_t &&that);
+	bitmap_t &operator=(bitmap_t &&that) noexcept;
 
 public:
 	// allocation/deallocation
-	void reset();
+	void reset() noexcept;
 
 	// getters
-	int32_t width() const { return m_width; }
-	int32_t height() const { return m_height; }
-	int32_t rowpixels() const { return m_rowpixels; }
-	int32_t rowbytes() const { return m_rowpixels * m_bpp / 8; }
-	uint8_t bpp() const { return m_bpp; }
-	bitmap_format format() const { return m_format; }
-	bool valid() const { return (m_base != nullptr); }
-	palette_t *palette() const { return m_palette; }
-	const rectangle &cliprect() const { return m_cliprect; }
+	int32_t width() const noexcept { return m_width; }
+	int32_t height() const noexcept { return m_height; }
+	int32_t rowpixels() const noexcept { return m_rowpixels; }
+	int32_t rowbytes() const noexcept { return m_rowpixels * m_bpp / 8; }
+	uint8_t bpp() const noexcept { return m_bpp; }
+	bitmap_format format() const noexcept { return m_format; }
+	bool valid() const noexcept { return (m_base != nullptr); }
+	palette_t *palette() const noexcept { return m_palette; }
+	const rectangle &cliprect() const noexcept { return m_cliprect; }
 
-	// allocation/sizing
-	void allocate(int width, int height, int xslop = 0, int yslop = 0);
-	void resize(int width, int height, int xslop = 0, int yslop = 0);
+	// allocation/sizing (bitmap will become invalid if allocation fails)
+	void allocate(int width, int height, int xslop = 0, int yslop = 0) noexcept;
+	void resize(int width, int height, int xslop = 0, int yslop = 0) noexcept;
 
 	// operations
-	void set_palette(palette_t *palette);
-	void fill(uint32_t color) { fill(color, m_cliprect); }
-	void fill(uint32_t color, const rectangle &cliprect);
-	void plot_box(int x, int y, int width, int height, uint32_t color)
+	void set_palette(palette_t *palette) noexcept;
+	void fill(uint64_t color) noexcept { fill(color, m_cliprect); }
+	void fill(uint64_t color, const rectangle &bounds) noexcept;
+	void plot_box(int32_t x, int32_t y, int32_t width, int32_t height, uint64_t color) noexcept
 	{
-		rectangle clip(x, x + width - 1, y, y + height - 1);
-		fill(color, clip);
+		fill(color, rectangle(x, x + width - 1, y, y + height - 1));
 	}
 
 	// pixel access
-	template<typename PixelType>
-	PixelType &pixt(int32_t y, int32_t x = 0) const { return *(reinterpret_cast<PixelType *>(m_base) + y * m_rowpixels + x); }
-	void *raw_pixptr(int32_t y, int32_t x = 0) const { return reinterpret_cast<uint8_t *>(m_base) + (y * m_rowpixels + x) * m_bpp / 8; }
+	void *raw_pixptr(int32_t y, int32_t x = 0) noexcept { return reinterpret_cast<uint8_t *>(m_base) + (y * m_rowpixels + x) * m_bpp / 8; }
+	void const *raw_pixptr(int32_t y, int32_t x = 0) const noexcept { return reinterpret_cast<uint8_t *>(m_base) + (y * m_rowpixels + x) * m_bpp / 8; }
 
 protected:
 	// for use by subclasses only to ensure type correctness
-	void wrap(void *base, int width, int height, int rowpixels);
-	void wrap(const bitmap_t &source, const rectangle &subrect);
+	template <typename PixelType> PixelType &pixt(int32_t y, int32_t x = 0) noexcept { return *(reinterpret_cast<PixelType *>(m_base) + y * m_rowpixels + x); }
+	template <typename PixelType> PixelType const &pixt(int32_t y, int32_t x = 0) const noexcept { return *(reinterpret_cast<PixelType *>(m_base) + y * m_rowpixels + x); }
+	void wrap(void *base, int width, int height, int rowpixels) noexcept;
+	void wrap(bitmap_t &source, const rectangle &subrect) noexcept;
 
 private:
 	// internal helpers
-	int32_t compute_rowpixels(int width, int xslop);
-	void compute_base(int xslop, int yslop);
-	bool valid_format() const;
+	static int32_t compute_rowpixels(int width, int xslop) noexcept;
+	void compute_base(int xslop, int yslop) noexcept;
+	bool valid_format() const noexcept;
 
 	// internal state
 	std::unique_ptr<uint8_t []> m_alloc;        // pointer to allocated pixel memory
@@ -191,45 +207,64 @@ private:
 
 // ======================> bitmap_specific, bitmap8_t, bitmap16_t, bitmap32_t, bitmap64_t
 
-template<typename PixelType>
+template <typename PixelType>
 class bitmap_specific : public bitmap_t
 {
-	static constexpr int PixelBits = 8 * sizeof(PixelType);
+	static constexpr int PIXEL_BITS = 8 * sizeof(PixelType);
 
 protected:
 	// construction/destruction -- subclasses only
-	bitmap_specific(bitmap_specific<PixelType> &&) = default;
-	bitmap_specific(bitmap_format format, int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap_t(format, PixelBits, width, height, xslop, yslop) { }
-	bitmap_specific(bitmap_format format, PixelType *base, int width, int height, int rowpixels) : bitmap_t(format, PixelBits, base, width, height, rowpixels) { }
-	bitmap_specific(bitmap_format format, bitmap_specific<PixelType> &source, const rectangle &subrect) : bitmap_t(format, PixelBits, source, subrect) { }
+	bitmap_specific(bitmap_specific<PixelType> &&) noexcept = default;
+	bitmap_specific(bitmap_format format, int width = 0, int height = 0, int xslop = 0, int yslop = 0) noexcept : bitmap_t(format, PIXEL_BITS, width, height, xslop, yslop) { }
+	bitmap_specific(bitmap_format format, PixelType *base, int width, int height, int rowpixels) noexcept : bitmap_t(format, PIXEL_BITS, base, width, height, rowpixels) { }
+	bitmap_specific(bitmap_format format, bitmap_specific<PixelType> &source, const rectangle &subrect) noexcept : bitmap_t(format, PIXEL_BITS, source, subrect) { }
 
-	bitmap_specific<PixelType> &operator=(bitmap_specific<PixelType> &&) = default;
+	bitmap_specific<PixelType> &operator=(bitmap_specific<PixelType> &&) noexcept = default;
 
 public:
 	using pixel_t = PixelType;
 
 	// getters
-	uint8_t bpp() const { return PixelBits; }
+	uint8_t bpp() const noexcept { return PIXEL_BITS; }
 
 	// pixel accessors
-	PixelType &pix(int32_t y, int32_t x = 0) const { return pixt<PixelType>(y, x); }
-	PixelType &pix8(int32_t y, int32_t x = 0) const { static_assert(PixelBits == 8, "must be 8bpp"); return pixt<PixelType>(y, x); }
-	PixelType &pix16(int32_t y, int32_t x = 0) const { static_assert(PixelBits == 16, "must be 16bpp"); return pixt<PixelType>(y, x); }
-	PixelType &pix32(int32_t y, int32_t x = 0) const { static_assert(PixelBits == 32, "must be 32bpp"); return pixt<PixelType>(y, x); }
-	PixelType &pix64(int32_t y, int32_t x = 0) const { static_assert(PixelBits == 64, "must be 64bpp"); return pixt<PixelType>(y, x); }
+	PixelType &pix(int32_t y, int32_t x = 0) noexcept { return pixt<PixelType>(y, x); }
+	PixelType const &pix(int32_t y, int32_t x = 0) const noexcept { return pixt<PixelType>(y, x); }
+
+	// operations
+	void fill(PixelType color) noexcept { fill(color, cliprect()); }
+	void fill(PixelType color, const rectangle &bounds) noexcept
+	{
+		// if we have a cliprect, intersect with that
+		rectangle fill(bounds);
+		fill &= cliprect();
+		if (!fill.empty())
+		{
+			for (int32_t y = fill.top(); y <= fill.bottom(); y++)
+				std::fill_n(&pix(y, fill.left()), fill.width(), color);
+		}
+	}
+	void plot_box(int32_t x, int32_t y, int32_t width, int32_t height, PixelType color) noexcept
+	{
+		fill(color, rectangle(x, x + width - 1, y, y + height - 1));
+	}
 };
 
 // 8bpp bitmaps
 using bitmap8_t = bitmap_specific<uint8_t>;
+extern template class bitmap_specific<uint8_t>;
 
 // 16bpp bitmaps
 using bitmap16_t = bitmap_specific<uint16_t>;
+extern template class bitmap_specific<uint16_t>;
 
 // 32bpp bitmaps
 using bitmap32_t = bitmap_specific<uint32_t>;
+extern template class bitmap_specific<uint32_t>;
 
 // 64bpp bitmaps
 using bitmap64_t = bitmap_specific<uint64_t>;
+extern template class bitmap_specific<uint64_t>;
 
 
 // ======================> bitmap_ind8, bitmap_ind16, bitmap_ind32, bitmap_ind64
@@ -241,17 +276,17 @@ class bitmap_ind8 : public bitmap8_t
 
 public:
 	// construction/destruction
-	bitmap_ind8(bitmap_ind8 &&) = default;
-	bitmap_ind8(int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap8_t(k_bitmap_format, width, height, xslop, yslop) { }
-	bitmap_ind8(uint8_t *base, int width, int height, int rowpixels) : bitmap8_t(k_bitmap_format, base, width, height, rowpixels) { }
-	bitmap_ind8(bitmap_ind8 &source, const rectangle &subrect) : bitmap8_t(k_bitmap_format, source, subrect) { }
-	void wrap(uint8_t *base, int width, int height, int rowpixels) { bitmap_t::wrap(base, width, height, rowpixels); }
-	void wrap(const bitmap_ind8 &source, const rectangle &subrect) { bitmap_t::wrap(static_cast<const bitmap_t &>(source), subrect); }
+	bitmap_ind8(bitmap_ind8 &&) noexcept = default;
+	bitmap_ind8(int width = 0, int height = 0, int xslop = 0, int yslop = 0) noexcept : bitmap8_t(k_bitmap_format, width, height, xslop, yslop) { }
+	bitmap_ind8(uint8_t *base, int width, int height, int rowpixels) noexcept : bitmap8_t(k_bitmap_format, base, width, height, rowpixels) { }
+	bitmap_ind8(bitmap_ind8 &source, const rectangle &subrect) noexcept : bitmap8_t(k_bitmap_format, source, subrect) { }
+	void wrap(uint8_t *base, int width, int height, int rowpixels) noexcept { bitmap_t::wrap(base, width, height, rowpixels); }
+	void wrap(bitmap_ind8 &source, const rectangle &subrect) noexcept { bitmap_t::wrap(static_cast<bitmap_t &>(source), subrect); }
 
 	// getters
-	bitmap_format format() const { return k_bitmap_format; }
+	bitmap_format format() const noexcept { return k_bitmap_format; }
 
-	bitmap_ind8 &operator=(bitmap_ind8 &&) = default;
+	bitmap_ind8 &operator=(bitmap_ind8 &&) noexcept = default;
 };
 
 // BITMAP_FORMAT_IND16 bitmaps
@@ -261,17 +296,17 @@ class bitmap_ind16 : public bitmap16_t
 
 public:
 	// construction/destruction
-	bitmap_ind16(bitmap_ind16 &&) = default;
-	bitmap_ind16(int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap16_t(k_bitmap_format, width, height, xslop, yslop) { }
-	bitmap_ind16(uint16_t *base, int width, int height, int rowpixels) : bitmap16_t(k_bitmap_format, base, width, height, rowpixels) { }
-	bitmap_ind16(bitmap_ind16 &source, const rectangle &subrect) : bitmap16_t(k_bitmap_format, source, subrect) { }
-	void wrap(uint16_t *base, int width, int height, int rowpixels) { bitmap_t::wrap(base, width, height, rowpixels); }
-	void wrap(const bitmap_ind8 &source, const rectangle &subrect) { bitmap_t::wrap(static_cast<const bitmap_t &>(source), subrect); }
+	bitmap_ind16(bitmap_ind16 &&) noexcept = default;
+	bitmap_ind16(int width = 0, int height = 0, int xslop = 0, int yslop = 0) noexcept : bitmap16_t(k_bitmap_format, width, height, xslop, yslop) { }
+	bitmap_ind16(uint16_t *base, int width, int height, int rowpixels) noexcept : bitmap16_t(k_bitmap_format, base, width, height, rowpixels) { }
+	bitmap_ind16(bitmap_ind16 &source, const rectangle &subrect) noexcept : bitmap16_t(k_bitmap_format, source, subrect) { }
+	void wrap(uint16_t *base, int width, int height, int rowpixels) noexcept { bitmap_t::wrap(base, width, height, rowpixels); }
+	void wrap(bitmap_ind16 &source, const rectangle &subrect) noexcept { bitmap_t::wrap(static_cast<bitmap_t &>(source), subrect); }
 
 	// getters
-	bitmap_format format() const { return k_bitmap_format; }
+	bitmap_format format() const noexcept { return k_bitmap_format; }
 
-	bitmap_ind16 &operator=(bitmap_ind16 &&) = default;
+	bitmap_ind16 &operator=(bitmap_ind16 &&) noexcept = default;
 };
 
 // BITMAP_FORMAT_IND32 bitmaps
@@ -281,17 +316,17 @@ class bitmap_ind32 : public bitmap32_t
 
 public:
 	// construction/destruction
-	bitmap_ind32(bitmap_ind32 &&) = default;
-	bitmap_ind32(int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap32_t(k_bitmap_format, width, height, xslop, yslop) { }
-	bitmap_ind32(uint32_t *base, int width, int height, int rowpixels) : bitmap32_t(k_bitmap_format, base, width, height, rowpixels) { }
-	bitmap_ind32(bitmap_ind32 &source, const rectangle &subrect) : bitmap32_t(k_bitmap_format, source, subrect) { }
-	void wrap(uint32_t *base, int width, int height, int rowpixels) { bitmap_t::wrap(base, width, height, rowpixels); }
-	void wrap(const bitmap_ind8 &source, const rectangle &subrect) { bitmap_t::wrap(static_cast<const bitmap_t &>(source), subrect); }
+	bitmap_ind32(bitmap_ind32 &&) noexcept = default;
+	bitmap_ind32(int width = 0, int height = 0, int xslop = 0, int yslop = 0) noexcept : bitmap32_t(k_bitmap_format, width, height, xslop, yslop) { }
+	bitmap_ind32(uint32_t *base, int width, int height, int rowpixels) noexcept : bitmap32_t(k_bitmap_format, base, width, height, rowpixels) { }
+	bitmap_ind32(bitmap_ind32 &source, const rectangle &subrect) noexcept : bitmap32_t(k_bitmap_format, source, subrect) { }
+	void wrap(uint32_t *base, int width, int height, int rowpixels) noexcept { bitmap_t::wrap(base, width, height, rowpixels); }
+	void wrap(bitmap_ind32 &source, const rectangle &subrect) noexcept { bitmap_t::wrap(static_cast<bitmap_t &>(source), subrect); }
 
 	// getters
-	bitmap_format format() const { return k_bitmap_format; }
+	bitmap_format format() const noexcept { return k_bitmap_format; }
 
-	bitmap_ind32 &operator=(bitmap_ind32 &&) = default;
+	bitmap_ind32 &operator=(bitmap_ind32 &&) noexcept = default;
 };
 
 // BITMAP_FORMAT_IND64 bitmaps
@@ -301,17 +336,17 @@ class bitmap_ind64 : public bitmap64_t
 
 public:
 	// construction/destruction
-	bitmap_ind64(bitmap_ind64 &&) = default;
-	bitmap_ind64(int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap64_t(k_bitmap_format, width, height, xslop, yslop) { }
-	bitmap_ind64(uint64_t *base, int width, int height, int rowpixels) : bitmap64_t(k_bitmap_format, base, width, height, rowpixels) { }
-	bitmap_ind64(bitmap_ind64 &source, const rectangle &subrect) : bitmap64_t(k_bitmap_format, source, subrect) { }
-	void wrap(uint64_t *base, int width, int height, int rowpixels) { bitmap_t::wrap(base, width, height, rowpixels); }
-	void wrap(const bitmap_ind8 &source, const rectangle &subrect) { bitmap_t::wrap(static_cast<const bitmap_t &>(source), subrect); }
+	bitmap_ind64(bitmap_ind64 &&) noexcept = default;
+	bitmap_ind64(int width = 0, int height = 0, int xslop = 0, int yslop = 0) noexcept : bitmap64_t(k_bitmap_format, width, height, xslop, yslop) { }
+	bitmap_ind64(uint64_t *base, int width, int height, int rowpixels) noexcept : bitmap64_t(k_bitmap_format, base, width, height, rowpixels) { }
+	bitmap_ind64(bitmap_ind64 &source, const rectangle &subrect) noexcept : bitmap64_t(k_bitmap_format, source, subrect) { }
+	void wrap(uint64_t *base, int width, int height, int rowpixels) noexcept { bitmap_t::wrap(base, width, height, rowpixels); }
+	void wrap(bitmap_ind64 &source, const rectangle &subrect) noexcept { bitmap_t::wrap(static_cast<bitmap_t &>(source), subrect); }
 
 	// getters
-	bitmap_format format() const { return k_bitmap_format; }
+	bitmap_format format() const noexcept { return k_bitmap_format; }
 
-	bitmap_ind64 &operator=(bitmap_ind64 &&) = default;
+	bitmap_ind64 &operator=(bitmap_ind64 &&) noexcept = default;
 };
 
 
@@ -324,17 +359,17 @@ class bitmap_yuy16 : public bitmap16_t
 
 public:
 	// construction/destruction
-	bitmap_yuy16(bitmap_yuy16 &&) = default;
-	bitmap_yuy16(int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap16_t(k_bitmap_format, width, height, xslop, yslop) { }
-	bitmap_yuy16(uint16_t *base, int width, int height, int rowpixels) : bitmap16_t(k_bitmap_format, base, width, height, rowpixels) { }
-	bitmap_yuy16(bitmap_yuy16 &source, const rectangle &subrect) : bitmap16_t(k_bitmap_format, source, subrect) { }
-	void wrap(uint16_t *base, int width, int height, int rowpixels) { bitmap_t::wrap(base, width, height, rowpixels); }
-	void wrap(const bitmap_yuy16 &source, const rectangle &subrect) { bitmap_t::wrap(static_cast<const bitmap_t &>(source), subrect); }
+	bitmap_yuy16(bitmap_yuy16 &&) noexcept = default;
+	bitmap_yuy16(int width = 0, int height = 0, int xslop = 0, int yslop = 0) noexcept : bitmap16_t(k_bitmap_format, width, height, xslop, yslop) { }
+	bitmap_yuy16(uint16_t *base, int width, int height, int rowpixels) noexcept : bitmap16_t(k_bitmap_format, base, width, height, rowpixels) { }
+	bitmap_yuy16(bitmap_yuy16 &source, const rectangle &subrect) noexcept : bitmap16_t(k_bitmap_format, source, subrect) { }
+	void wrap(uint16_t *base, int width, int height, int rowpixels) noexcept { bitmap_t::wrap(base, width, height, rowpixels); }
+	void wrap(bitmap_yuy16 &source, const rectangle &subrect) noexcept { bitmap_t::wrap(static_cast<bitmap_t &>(source), subrect); }
 
 	// getters
-	bitmap_format format() const { return k_bitmap_format; }
+	bitmap_format format() const noexcept { return k_bitmap_format; }
 
-	bitmap_yuy16 &operator=(bitmap_yuy16 &&) = default;
+	bitmap_yuy16 &operator=(bitmap_yuy16 &&) noexcept = default;
 };
 
 // BITMAP_FORMAT_RGB32 bitmaps
@@ -344,17 +379,17 @@ class bitmap_rgb32 : public bitmap32_t
 
 public:
 	// construction/destruction
-	bitmap_rgb32(bitmap_rgb32 &&) = default;
-	bitmap_rgb32(int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap32_t(k_bitmap_format, width, height, xslop, yslop) { }
-	bitmap_rgb32(uint32_t *base, int width, int height, int rowpixels) : bitmap32_t(k_bitmap_format, base, width, height, rowpixels) { }
-	bitmap_rgb32(bitmap_rgb32 &source, const rectangle &subrect) : bitmap32_t(k_bitmap_format, source, subrect) { }
-	void wrap(uint32_t *base, int width, int height, int rowpixels) { bitmap_t::wrap(base, width, height, rowpixels); }
-	void wrap(const bitmap_rgb32 &source, const rectangle &subrect) { bitmap_t::wrap(static_cast<const bitmap_t &>(source), subrect); }
+	bitmap_rgb32(bitmap_rgb32 &&) noexcept = default;
+	bitmap_rgb32(int width = 0, int height = 0, int xslop = 0, int yslop = 0) noexcept : bitmap32_t(k_bitmap_format, width, height, xslop, yslop) { }
+	bitmap_rgb32(uint32_t *base, int width, int height, int rowpixels) noexcept : bitmap32_t(k_bitmap_format, base, width, height, rowpixels) { }
+	bitmap_rgb32(bitmap_rgb32 &source, const rectangle &subrect) noexcept : bitmap32_t(k_bitmap_format, source, subrect) { }
+	void wrap(uint32_t *base, int width, int height, int rowpixels) noexcept { bitmap_t::wrap(base, width, height, rowpixels); }
+	void wrap(bitmap_rgb32 &source, const rectangle &subrect) noexcept { bitmap_t::wrap(static_cast<bitmap_t &>(source), subrect); }
 
 	// getters
-	bitmap_format format() const { return k_bitmap_format; }
+	bitmap_format format() const noexcept { return k_bitmap_format; }
 
-	bitmap_rgb32 &operator=(bitmap_rgb32 &&) = default;
+	bitmap_rgb32 &operator=(bitmap_rgb32 &&) noexcept = default;
 };
 
 // BITMAP_FORMAT_ARGB32 bitmaps
@@ -364,18 +399,17 @@ class bitmap_argb32 : public bitmap32_t
 
 public:
 	// construction/destruction
-	bitmap_argb32(bitmap_argb32 &&) = default;
-	bitmap_argb32(int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap32_t(k_bitmap_format, width, height, xslop, yslop) { }
-	bitmap_argb32(uint32_t *base, int width, int height, int rowpixels) : bitmap32_t(k_bitmap_format, base, width, height, rowpixels) { }
-	bitmap_argb32(bitmap_argb32 &source, const rectangle &subrect) : bitmap32_t(k_bitmap_format, source, subrect) { }
-	void wrap(uint32_t *base, int width, int height, int rowpixels) { bitmap_t::wrap(base, width, height, rowpixels); }
-	void wrap(const bitmap_argb32 &source, const rectangle &subrect) { bitmap_t::wrap(static_cast<const bitmap_t &>(source), subrect); }
+	bitmap_argb32(bitmap_argb32 &&) noexcept = default;
+	bitmap_argb32(int width = 0, int height = 0, int xslop = 0, int yslop = 0) noexcept : bitmap32_t(k_bitmap_format, width, height, xslop, yslop) { }
+	bitmap_argb32(uint32_t *base, int width, int height, int rowpixels) noexcept : bitmap32_t(k_bitmap_format, base, width, height, rowpixels) { }
+	bitmap_argb32(bitmap_argb32 &source, const rectangle &subrect) noexcept : bitmap32_t(k_bitmap_format, source, subrect) { }
+	void wrap(uint32_t *base, int width, int height, int rowpixels) noexcept { bitmap_t::wrap(base, width, height, rowpixels); }
+	void wrap(bitmap_argb32 &source, const rectangle &subrect) noexcept { bitmap_t::wrap(static_cast<bitmap_t &>(source), subrect); }
 
 	// getters
-	bitmap_format format() const { return k_bitmap_format; }
+	bitmap_format format() const noexcept { return k_bitmap_format; }
 
-	bitmap_argb32 &operator=(bitmap_argb32 &&) = default;
+	bitmap_argb32 &operator=(bitmap_argb32 &&) noexcept = default;
 };
 
-
-#endif  // MAME_UTIL_BITMAP_H
+#endif // MAME_UTIL_BITMAP_H

@@ -2,7 +2,7 @@
 // copyright-holders:Olivier Galibert
 /***************************************************************************
 
-    m6510.c
+    m6510.cpp
 
     6502 with 6 i/o pins, also known as 8500
 
@@ -15,8 +15,8 @@
 #include "m6510.h"
 #include "m6510d.h"
 
-DEFINE_DEVICE_TYPE(M6510, m6510_device, "m6510", "MOS Technology M6510")
-DEFINE_DEVICE_TYPE(M6508, m6508_device, "m6508", "MOS Technology M6508")
+DEFINE_DEVICE_TYPE(M6510, m6510_device, "m6510", "MOS Technology 6510")
+DEFINE_DEVICE_TYPE(M6508, m6508_device, "m6508", "MOS Technology 6508")
 
 m6510_device::m6510_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	m6510_device(mconfig, M6510, tag, owner, clock)
@@ -25,8 +25,9 @@ m6510_device::m6510_device(const machine_config &mconfig, const char *tag, devic
 
 m6510_device::m6510_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock) :
 	m6502_device(mconfig, type, tag, owner, clock),
-	read_port(*this),
-	write_port(*this), dir(0), port(0), drive(0)
+	read_port(*this, 0),
+	write_port(*this),
+	dir(0), port(0), drive(0)
 {
 	pullup = 0x00;
 	floating = 0x00;
@@ -45,9 +46,6 @@ std::unique_ptr<util::disasm_interface> m6510_device::create_disassembler()
 
 void m6510_device::init_port()
 {
-	read_port.resolve_safe(0);
-	write_port.resolve_safe();
-
 	save_item(NAME(pullup));
 	save_item(NAME(floating));
 	save_item(NAME(dir));
@@ -113,7 +111,7 @@ m6510_device::mi_6510::mi_6510(m6510_device *_base)
 
 uint8_t m6510_device::mi_6510::read(uint16_t adr)
 {
-	uint8_t res = program->read_byte(adr);
+	uint8_t res = program.read_byte(adr);
 	if(adr == 0x0000)
 		res = base->dir_r();
 	else if(adr == 0x0001)
@@ -123,7 +121,7 @@ uint8_t m6510_device::mi_6510::read(uint16_t adr)
 
 uint8_t m6510_device::mi_6510::read_sync(uint16_t adr)
 {
-	uint8_t res = scache->read_byte(adr);
+	uint8_t res = csprogram.read_byte(adr);
 	if(adr == 0x0000)
 		res = base->dir_r();
 	else if(adr == 0x0001)
@@ -133,7 +131,7 @@ uint8_t m6510_device::mi_6510::read_sync(uint16_t adr)
 
 uint8_t m6510_device::mi_6510::read_arg(uint16_t adr)
 {
-	uint8_t res = cache->read_byte(adr);
+	uint8_t res = cprogram.read_byte(adr);
 	if(adr == 0x0000)
 		res = base->dir_r();
 	else if(adr == 0x0001)
@@ -143,7 +141,7 @@ uint8_t m6510_device::mi_6510::read_arg(uint16_t adr)
 
 void m6510_device::mi_6510::write(uint16_t adr, uint8_t val)
 {
-	program->write_byte(adr, val);
+	program.write_byte(adr, val);
 	if(adr == 0x0000)
 		base->dir_w(val);
 	else if(adr == 0x0001)
@@ -175,7 +173,7 @@ m6508_device::mi_6508::mi_6508(m6508_device *_base)
 
 uint8_t m6508_device::mi_6508::read(uint16_t adr)
 {
-	uint8_t res = program->read_byte(adr);
+	uint8_t res = program.read_byte(adr);
 	if(adr == 0x0000)
 		res = base->dir_r();
 	else if(adr == 0x0001)
@@ -187,7 +185,7 @@ uint8_t m6508_device::mi_6508::read(uint16_t adr)
 
 uint8_t m6508_device::mi_6508::read_sync(uint16_t adr)
 {
-	uint8_t res = scache->read_byte(adr);
+	uint8_t res = csprogram.read_byte(adr);
 	if(adr == 0x0000)
 		res = base->dir_r();
 	else if(adr == 0x0001)
@@ -199,7 +197,7 @@ uint8_t m6508_device::mi_6508::read_sync(uint16_t adr)
 
 uint8_t m6508_device::mi_6508::read_arg(uint16_t adr)
 {
-	uint8_t res = cache->read_byte(adr);
+	uint8_t res = cprogram.read_byte(adr);
 	if(adr == 0x0000)
 		res = base->dir_r();
 	else if(adr == 0x0001)
@@ -211,7 +209,7 @@ uint8_t m6508_device::mi_6508::read_arg(uint16_t adr)
 
 void m6508_device::mi_6508::write(uint16_t adr, uint8_t val)
 {
-	program->write_byte(adr, val);
+	program.write_byte(adr, val);
 	if(adr == 0x0000)
 		base->dir_w(val);
 	else if(adr == 0x0001)

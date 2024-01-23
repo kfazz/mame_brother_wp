@@ -40,9 +40,9 @@ amiga_dmac_device::amiga_dmac_device(const machine_config &mconfig, const char *
 	m_cfgout_handler(*this),
 	m_int_handler(*this),
 	m_xdack_handler(*this),
-	m_scsi_read_handler(*this),
+	m_scsi_read_handler(*this, 0),
 	m_scsi_write_handler(*this),
-	m_io_read_handler(*this),
+	m_io_read_handler(*this, 0),
 	m_io_write_handler(*this),
 	m_space(nullptr),
 	m_rom(nullptr),
@@ -64,14 +64,6 @@ amiga_dmac_device::amiga_dmac_device(const machine_config &mconfig, const char *
 
 void amiga_dmac_device::device_start()
 {
-	// resolve callbacks
-	m_cfgout_handler.resolve_safe();
-	m_int_handler.resolve_safe();
-	m_xdack_handler.resolve_safe();
-	m_scsi_read_handler.resolve_safe(0);
-	m_scsi_write_handler.resolve_safe();
-	m_io_read_handler.resolve_safe(0);
-	m_io_write_handler.resolve_safe();
 }
 
 //-------------------------------------------------
@@ -112,9 +104,10 @@ void amiga_dmac_device::autoconfig_base_address(offs_t address)
 		LOG("-> installing dmac\n");
 
 		// internal dmac registers
-		m_space->install_readwrite_handler(address, address + 0xff,
-				read16_delegate(*this, FUNC(amiga_dmac_device::register_read)),
-				write16_delegate(*this, FUNC(amiga_dmac_device::register_write)), 0xffff);
+		m_space->install_read_handler(address, address + 0xff,
+				read16_delegate(*this, FUNC(amiga_dmac_device::register_read)), 0xffff);
+		m_space->install_write_handler(address, address + 0xff,
+				write16s_delegate(*this, FUNC(amiga_dmac_device::register_write)), 0xffff);
 
 		// install access to the rom space
 		if (m_rom)
@@ -166,7 +159,7 @@ void amiga_dmac_device::start_dma()
 //  IMPLEMENTATION
 //**************************************************************************
 
-READ16_MEMBER( amiga_dmac_device::register_read )
+uint16_t amiga_dmac_device::register_read(address_space &space, offs_t offset, uint16_t mem_mask)
 {
 	uint16_t data = 0xffff;
 
@@ -243,7 +236,7 @@ READ16_MEMBER( amiga_dmac_device::register_read )
 	return data;
 }
 
-WRITE16_MEMBER( amiga_dmac_device::register_write )
+void amiga_dmac_device::register_write(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	switch (offset)
 	{
@@ -332,7 +325,7 @@ WRITE16_MEMBER( amiga_dmac_device::register_write )
 }
 
 // this signal tells us to expose our autoconfig values
-WRITE_LINE_MEMBER( amiga_dmac_device::configin_w )
+void amiga_dmac_device::configin_w(int state)
 {
 	LOG("%s('%s'): configin_w (%d)\n", shortname(), basetag(), state);
 
@@ -387,7 +380,7 @@ WRITE_LINE_MEMBER( amiga_dmac_device::configin_w )
 }
 
 // this sets the ram size depending on the line voltage
-WRITE_LINE_MEMBER( amiga_dmac_device::ramsz_w )
+void amiga_dmac_device::ramsz_w(int state)
 {
 	LOG("%s('%s'): ramsz_w (%d)\n", shortname(), basetag(), state);
 
@@ -401,7 +394,7 @@ WRITE_LINE_MEMBER( amiga_dmac_device::ramsz_w )
 }
 
 // reset the device
-WRITE_LINE_MEMBER( amiga_dmac_device::rst_w )
+void amiga_dmac_device::rst_w(int state)
 {
 	LOG("%s('%s'): rst_w (%d)\n", shortname(), basetag(), state);
 
@@ -412,7 +405,7 @@ WRITE_LINE_MEMBER( amiga_dmac_device::rst_w )
 }
 
 // external interrupt
-WRITE_LINE_MEMBER( amiga_dmac_device::intx_w )
+void amiga_dmac_device::intx_w(int state)
 {
 	LOG("%s('%s'): intx_w (%d)\n", shortname(), basetag(), state);
 
@@ -425,7 +418,7 @@ WRITE_LINE_MEMBER( amiga_dmac_device::intx_w )
 }
 
 // data request
-WRITE_LINE_MEMBER( amiga_dmac_device::xdreq_w )
+void amiga_dmac_device::xdreq_w(int state)
 {
 	LOG("%s('%s'): xdreq_w (%d)\n", shortname(), basetag(), state);
 

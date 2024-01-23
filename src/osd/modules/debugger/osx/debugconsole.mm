@@ -24,6 +24,7 @@
 #include "debugger.h"
 #include "debug/debugcon.h"
 #include "debug/debugcpu.h"
+#include "debug/points.h"
 
 #include "util/xmlfile.h"
 
@@ -141,19 +142,25 @@
 	NSRect const    available = [[NSScreen mainScreen] visibleFrame];
 	NSSize const    regCurrent = [regScroll frame].size;
 	NSSize const    regSize = [NSScrollView frameSizeForContentSize:[regView maximumFrameSize]
-											  hasHorizontalScroller:YES
-												hasVerticalScroller:YES
-														 borderType:[regScroll borderType]];
+											horizontalScrollerClass:[NSScroller class]
+											  verticalScrollerClass:[NSScroller class]
+														 borderType:[regScroll borderType]
+														controlSize:NSControlSizeRegular
+													  scrollerStyle:NSScrollerStyleOverlay];
 	NSSize const    dasmCurrent = [dasmScroll frame].size;
 	NSSize const    dasmSize = [NSScrollView frameSizeForContentSize:[dasmView maximumFrameSize]
-											  hasHorizontalScroller:YES
-												hasVerticalScroller:YES
-														 borderType:[dasmScroll borderType]];
+											 horizontalScrollerClass:[NSScroller class]
+											   verticalScrollerClass:[NSScroller class]
+														  borderType:[dasmScroll borderType]
+														 controlSize:NSControlSizeRegular
+													   scrollerStyle:NSScrollerStyleOverlay];
 	NSSize const    consoleCurrent = [consoleContainer frame].size;
 	NSSize          consoleSize = [NSScrollView frameSizeForContentSize:[consoleView maximumFrameSize]
-												  hasHorizontalScroller:YES
-													hasVerticalScroller:YES
-															 borderType:[consoleScroll borderType]];
+												horizontalScrollerClass:[NSScroller class]
+												  verticalScrollerClass:[NSScroller class]
+															 borderType:[consoleScroll borderType]
+															controlSize:NSControlSizeRegular
+														  scrollerStyle:NSScrollerStyleOverlay];
 	NSRect          windowFrame = [window frame];
 	NSSize          adjustment;
 
@@ -181,7 +188,7 @@
 	[dasmSplit setFrame:rhsFrame];
 
 	// select the current processor
-	[self setCPU:machine->debugger().cpu().get_visible_cpu()];
+	[self setCPU:machine->debugger().console().get_visible_cpu()];
 
 	[[NSNotificationCenter defaultCenter] addObserver:self
 											 selector:@selector(auxiliaryWindowWillClose:)
@@ -219,7 +226,7 @@
 	NSString *command = [sender stringValue];
 	if ([command length] == 0)
 	{
-		machine->debugger().cpu().get_visible_cpu()->debug()->single_step();
+		machine->debugger().console().get_visible_cpu()->debug()->single_step();
 		[history reset];
 	}
 	else
@@ -234,10 +241,10 @@
 
 - (IBAction)debugToggleBreakpoint:(id)sender {
 	device_t &device = *[dasmView source]->device();
-	if ([dasmView cursorVisible] && (machine->debugger().cpu().get_visible_cpu() == &device))
+	if ([dasmView cursorVisible] && (machine->debugger().console().get_visible_cpu() == &device))
 	{
 		offs_t const address = [dasmView selectedAddress];
-		const device_debug::breakpoint *bp = [dasmView source]->device()->debug()->breakpoint_find(address);
+		const debug_breakpoint *bp = [dasmView source]->device()->debug()->breakpoint_find(address);
 
 		// if it doesn't exist, add a new one
 		NSString *command;
@@ -252,9 +259,9 @@
 
 - (IBAction)debugToggleBreakpointEnable:(id)sender {
 	device_t &device = *[dasmView source]->device();
-	if ([dasmView cursorVisible] && (machine->debugger().cpu().get_visible_cpu() == &device))
+	if ([dasmView cursorVisible] && (machine->debugger().console().get_visible_cpu() == &device))
 	{
-		const device_debug::breakpoint *bp = [dasmView source]->device()->debug()->breakpoint_find([dasmView selectedAddress]);
+		const debug_breakpoint *bp = [dasmView source]->device()->debug()->breakpoint_find([dasmView selectedAddress]);
 		if (bp != nullptr)
 		{
 			NSString *command;
@@ -270,7 +277,7 @@
 
 - (IBAction)debugRunToCursor:(id)sender {
 	device_t &device = *[dasmView source]->device();
-	if ([dasmView cursorVisible] && (machine->debugger().cpu().get_visible_cpu() == &device))
+	if ([dasmView cursorVisible] && (machine->debugger().console().get_visible_cpu() == &device))
 	{
 		NSString *command = [NSString stringWithFormat:@"go 0x%lX", (unsigned long)[dasmView selectedAddress]];
 		machine->debugger().console().execute_command([command UTF8String], 1);
@@ -379,32 +386,35 @@
 
 - (void)loadConfiguration:(util::xml::data_node const *)parentnode {
 	util::xml::data_node const *node = nullptr;
-	for (node = parentnode->get_child("window"); node; node = node->get_next_sibling("window"))
+	for (node = parentnode->get_child(osd::debugger::NODE_WINDOW); node; node = node->get_next_sibling(osd::debugger::NODE_WINDOW))
 	{
 		MAMEDebugWindowHandler *win = nil;
-		switch (node->get_attribute_int("type", -1))
+		switch (node->get_attribute_int(osd::debugger::ATTR_WINDOW_TYPE, -1))
 		{
-		case MAME_DEBUGGER_WINDOW_TYPE_CONSOLE:
+		case osd::debugger::WINDOW_TYPE_CONSOLE:
 			[self restoreConfigurationFromNode:node];
 			break;
-		case MAME_DEBUGGER_WINDOW_TYPE_MEMORY_VIEWER:
+		case osd::debugger::WINDOW_TYPE_MEMORY_VIEWER:
 			win = [[MAMEMemoryViewer alloc] initWithMachine:*machine console:self];
 			break;
-		case MAME_DEBUGGER_WINDOW_TYPE_DISASSEMBLY_VIEWER:
+		case osd::debugger::WINDOW_TYPE_DISASSEMBLY_VIEWER:
 			win = [[MAMEDisassemblyViewer alloc] initWithMachine:*machine console:self];
 			break;
-		case MAME_DEBUGGER_WINDOW_TYPE_ERROR_LOG_VIEWER:
+		case osd::debugger::WINDOW_TYPE_ERROR_LOG_VIEWER:
 			win = [[MAMEErrorLogViewer alloc] initWithMachine:*machine console:self];
 			break;
-		case MAME_DEBUGGER_WINDOW_TYPE_POINTS_VIEWER:
+		case osd::debugger::WINDOW_TYPE_POINTS_VIEWER:
 			win = [[MAMEPointsViewer alloc] initWithMachine:*machine console:self];
 			break;
-		case MAME_DEBUGGER_WINDOW_TYPE_DEVICES_VIEWER:
+		case osd::debugger::WINDOW_TYPE_DEVICES_VIEWER:
 			win = [[MAMEDevicesViewer alloc] initWithMachine:*machine console:self];
 			break;
-		case MAME_DEBUGGER_WINDOW_TYPE_DEVICE_INFO_VIEWER:
-			// FIXME: needs device info on init, make another variant
-			//win = [[MAMEDeviceInfoViewer alloc] initWithMachine:*machine console:self];
+		case osd::debugger::WINDOW_TYPE_DEVICE_INFO_VIEWER:
+			{
+				// FIXME: feels like a leaky abstraction, but device is needed for init
+				device_t *const device = machine->root_device().subdevice(node->get_attribute_string(osd::debugger::ATTR_WINDOW_DEVICE_TAG, ":"));
+				win = [[MAMEDeviceInfoViewer alloc] initWithDevice:(device ? *device : machine->root_device()) machine:*machine console:self];
+			}
 			break;
 		default:
 			break;
@@ -422,34 +432,36 @@
 
 - (void)saveConfigurationToNode:(util::xml::data_node *)node {
 	[super saveConfigurationToNode:node];
-	node->set_attribute_int("type", MAME_DEBUGGER_WINDOW_TYPE_CONSOLE);
-	util::xml::data_node *const splits = node->add_child("splits", nullptr);
+	node->set_attribute_int(osd::debugger::ATTR_WINDOW_TYPE, osd::debugger::WINDOW_TYPE_CONSOLE);
+	util::xml::data_node *const splits = node->add_child(osd::debugger::NODE_WINDOW_SPLITS, nullptr);
 	if (splits)
 	{
-		splits->set_attribute_float("state",
+		splits->set_attribute_float(osd::debugger::ATTR_SPLITS_CONSOLE_STATE,
 									[regSplit isSubviewCollapsed:[[regSplit subviews] objectAtIndex:0]]
 								  ? 0.0
 								  : NSMaxX([[[regSplit subviews] objectAtIndex:0] frame]));
-		splits->set_attribute_float("disassembly",
+		splits->set_attribute_float(osd::debugger::ATTR_SPLITS_CONSOLE_DISASSEMBLY,
 									[dasmSplit isSubviewCollapsed:[[dasmSplit subviews] objectAtIndex:0]]
 								  ? 0.0
 								  : NSMaxY([[[dasmSplit subviews] objectAtIndex:0] frame]));
 	}
 	[dasmView saveConfigurationToNode:node];
+	[history saveConfigurationToNode:node];
 }
 
 
 - (void)restoreConfigurationFromNode:(util::xml::data_node const *)node {
 	[super restoreConfigurationFromNode:node];
-	util::xml::data_node const *const splits = node->get_child("splits");
+	util::xml::data_node const *const splits = node->get_child(osd::debugger::NODE_WINDOW_SPLITS);
 	if (splits)
 	{
-		[regSplit setPosition:splits->get_attribute_float("state", NSMaxX([[[regSplit subviews] objectAtIndex:0] frame]))
+		[regSplit setPosition:splits->get_attribute_float(osd::debugger::ATTR_SPLITS_CONSOLE_STATE, NSMaxX([[[regSplit subviews] objectAtIndex:0] frame]))
 			 ofDividerAtIndex:0];
-		[dasmSplit setPosition:splits->get_attribute_float("disassembly", NSMaxY([[[dasmSplit subviews] objectAtIndex:0] frame]))
+		[dasmSplit setPosition:splits->get_attribute_float(osd::debugger::ATTR_SPLITS_CONSOLE_DISASSEMBLY, NSMaxY([[[dasmSplit subviews] objectAtIndex:0] frame]))
 			  ofDividerAtIndex:0];
 	}
 	[dasmView restoreConfigurationFromNode:node];
+	[history restoreConfigurationFromNode:node];
 }
 
 
@@ -499,7 +511,7 @@
 		[[NSNotificationCenter defaultCenter] postNotificationName:MAMEHideDebuggerNotification
 															object:self
 														  userInfo:info];
-		machine->debugger().cpu().get_visible_cpu()->debug()->go();
+		machine->debugger().console().get_visible_cpu()->debug()->go();
 	}
 }
 
@@ -562,9 +574,9 @@
 	SEL const action = [item action];
 	BOOL const inContextMenu = ([item menu] == [dasmView menu]);
 	BOOL const haveCursor = [dasmView cursorVisible];
-	BOOL const isCurrent = (machine->debugger().cpu().get_visible_cpu() == [dasmView source]->device());
+	BOOL const isCurrent = (machine->debugger().console().get_visible_cpu() == [dasmView source]->device());
 
-	const device_debug::breakpoint *breakpoint = nullptr;
+	const debug_breakpoint *breakpoint = nullptr;
 	if (haveCursor)
 	{
 		breakpoint = [dasmView source]->device()->debug()->breakpoint_find([dasmView selectedAddress]);

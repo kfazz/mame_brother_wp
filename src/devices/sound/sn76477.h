@@ -42,6 +42,8 @@
 
 #include "machine/rescap.h"
 
+#include "wavwrite.h"
+
 
 /*****************************************************************************
  *
@@ -102,14 +104,14 @@ public:
 
 
 	/* these functions take 0 or 1 as a logic input */
-	WRITE_LINE_MEMBER( enable_w );      /* active LO, 0 = enabled, 1 = disabled */
-	WRITE_LINE_MEMBER( mixer_a_w );
-	WRITE_LINE_MEMBER( mixer_b_w );
-	WRITE_LINE_MEMBER( mixer_c_w );
-	WRITE_LINE_MEMBER( envelope_1_w );
-	WRITE_LINE_MEMBER( envelope_2_w );
-	WRITE_LINE_MEMBER( vco_w );         /* 0 = external, 1 = controlled by SLF */
-	WRITE_LINE_MEMBER( noise_clock_w ); /* noise clock write, if noise_clock_res = 0 */
+	void enable_w(int state);      /* active LO, 0 = enabled, 1 = disabled */
+	void mixer_a_w(int state);
+	void mixer_b_w(int state);
+	void mixer_c_w(int state);
+	void envelope_1_w(int state);
+	void envelope_2_w(int state);
+	void vco_w(int state);         /* 0 = external, 1 = controlled by SLF */
+	void noise_clock_w(int state); /* noise clock write, if noise_clock_res = 0 */
 
 	/* these functions take a resistor value in Ohms */
 	void one_shot_res_w(double data);
@@ -147,7 +149,7 @@ protected:
 	virtual void device_stop() override;
 
 	// sound stream update overrides
-	virtual void sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples) override;
+	virtual void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
 
 private:
 	/* chip's external interface */
@@ -186,24 +188,24 @@ private:
 	double m_pitch_voltage;
 
 	// internal state
-	double m_one_shot_cap_voltage;        /* voltage on the one-shot cap */
-	uint32_t m_one_shot_running_ff;         /* 1 = one-shot running, 0 = stopped */
+	double m_one_shot_cap_voltage;        // voltage on the one-shot cap
+	uint32_t m_one_shot_running_ff;       // 1 = one-shot running, 0 = stopped
 
-	double m_slf_cap_voltage;             /* voltage on the SLF cap */
-	uint32_t m_slf_out_ff;                  /* output of the SLF */
+	double m_slf_cap_voltage;             // voltage on the SLF cap
+	uint32_t m_slf_out_ff;                // output of the SLF
 
-	double m_vco_cap_voltage;             /* voltage on the VCO cap */
-	uint32_t m_vco_out_ff;                  /* output of the VCO */
-	uint32_t m_vco_alt_pos_edge_ff;         /* keeps track of the # of positive edges for VCO Alt envelope */
+	double m_vco_cap_voltage;             // voltage on the VCO cap
+	uint32_t m_vco_out_ff;                // output of the VCO
+	uint32_t m_vco_alt_pos_edge_ff;       // keeps track of the # of positive edges for VCO Alt envelope
 
-	double m_noise_filter_cap_voltage;    /* voltage on the noise filter cap */
-	uint32_t m_real_noise_bit_ff;           /* the current noise bit before filtering */
-	uint32_t m_filtered_noise_bit_ff;       /* the noise bit after filtering */
-	uint32_t m_noise_gen_count;             /* noise freq emulation */
+	double m_noise_filter_cap_voltage;    // voltage on the noise filter cap
+	uint32_t m_real_noise_bit_ff;         // the current noise bit before filtering
+	uint32_t m_filtered_noise_bit_ff;     // the noise bit after filtering
+	uint32_t m_noise_gen_count;           // noise freq emulation
 
-	double m_attack_decay_cap_voltage;    /* voltage on the attack/decay cap */
+	double m_attack_decay_cap_voltage;    // voltage on the attack/decay cap
 
-	uint32_t m_rng;                         /* current value of the random number generator */
+	uint32_t m_rng;                       // current value of the random number generator
 
 	// configured by the drivers and used to setup m_mixer_mode & m_envelope_mode at start
 	uint32_t m_mixer_a;
@@ -213,10 +215,10 @@ private:
 	uint32_t m_envelope_2;
 
 	/* others */
-	sound_stream *m_channel;              /* returned by stream_create() */
-	int m_our_sample_rate;                    /* from machine.sample_rate() */
+	sound_stream *m_channel;              // returned by stream_create()
+	int m_our_sample_rate;                // from machine.sample_rate()
 
-	wav_file *m_file;                     /* handle of the wave file to produce */
+	util::wav_file_ptr m_file;            // handle of the wave file to produce
 
 	double compute_one_shot_cap_charging_rate();
 	double compute_one_shot_cap_discharging_rate();

@@ -82,8 +82,7 @@ void bbc_datacentre_device::device_add_mconfig(machine_config &config)
 	ATA_INTERFACE(config, m_ide).options(ata_devices, "hdd", "hdd", false);
 	m_ide->irq_handler().set(FUNC(bbc_datacentre_device::irq_w));
 
-	/* 24LC512 - 512Kb I2C Serial EEPROM */
-	I2CMEM(config, m_nvram).set_page_size(128).set_data_size(0x10000);
+	I2C_24C512(config, m_nvram); // 24LC512
 
 	/* import floppy images - delayed to allow RAMFS to initialise before import */
 	QUICKLOAD(config, "import0", "ssd,dsd,img", attotime::from_seconds(1)).set_load_callback(FUNC(bbc_datacentre_device::quickload_cb<0>));
@@ -150,18 +149,18 @@ uint8_t bbc_datacentre_device::fred_r(offs_t offset)
 	case 0x40:
 		if (offset & 0x07)
 		{
-			data = m_ide->read_cs0(offset & 0x07, 0xff);
+			data = m_ide->cs0_r(offset & 0x07, 0xff);
 		}
 		else
 		{
-			m_ide_data = m_ide->read_cs0(offset & 0x07);
+			m_ide_data = m_ide->cs0_r(offset & 0x07);
 			data = m_ide_data & 0xff;
 		}
 		break;
 	case 0x48:
 		if (offset & 0x04)
 		{
-			data = m_ide->read_cs1(offset & 0x07, 0xff);
+			data = m_ide->cs1_r(offset & 0x07, 0xff);
 		}
 		else
 		{
@@ -207,18 +206,18 @@ void bbc_datacentre_device::fred_w(offs_t offset, uint8_t data)
 	case 0x40:
 		if (offset & 0x07)
 		{
-			m_ide->write_cs0(offset & 0x07, data, 0xff);
+			m_ide->cs0_w(offset & 0x07, data, 0xff);
 		}
 		else
 		{
 			m_ide_data = (m_ide_data & 0xff00) | data;
-			m_ide->write_cs0(offset & 0x07, m_ide_data);
+			m_ide->cs0_w(offset & 0x07, m_ide_data);
 		}
 		break;
 	case 0x48:
 		if (offset & 0x04)
 		{
-			m_ide->write_cs1(offset & 0x07, data, 0xff);
+			m_ide->cs1_w(offset & 0x07, data, 0xff);
 		}
 		else
 		{
@@ -277,7 +276,7 @@ void bbc_datacentre_device::jim_w(offs_t offset, uint8_t data)
 	m_ram[((m_page_ram & 0x0fff) << 8) | offset] = data;
 }
 
-WRITE_LINE_MEMBER(bbc_datacentre_device::irq_w)
+void bbc_datacentre_device::irq_w(int state)
 {
 	if (BIT(m_links->read(), 1))
 	{
@@ -310,13 +309,13 @@ INPUT_CHANGED_MEMBER(bbc_datacentre_device::import_nvrest)
 template<int Drive>
 QUICKLOAD_LOAD_MEMBER(bbc_datacentre_device::quickload_cb)
 {
-	/* simulate *IMPORT from USB to RAMFS */
+	// simulate *IMPORT from USB to RAMFS
 	if (image.is_filetype("ssd") || image.is_filetype("img") || image.is_filetype("dsd"))
 	{
-		uint32_t ram_addr = (Drive * 0x40000) | 0x1000;
+		uint32_t const ram_addr = (Drive * 0x40000) | 0x1000;
 		offs_t offset = 0;
 
-		/* import tracks */
+		// import tracks
 		for (int i = 0; i < 80; i++)
 		{
 			image.fread(m_ram.get() + ram_addr + offset, 0xa00);
@@ -329,9 +328,8 @@ QUICKLOAD_LOAD_MEMBER(bbc_datacentre_device::quickload_cb)
 	}
 	else
 	{
-		image.seterror(IMAGE_ERROR_INVALIDIMAGE, "Invalid filetype, must be SSD, DSD, or IMG");
-		return image_init_result::FAIL;
+		return std::make_pair(image_error::INVALIDIMAGE, "Unsupported file type, must be SSD, DSD, or IMG");
 	}
 
-	return image_init_result::PASS;
+	return std::make_pair(std::error_condition(), std::string());
 }

@@ -1,11 +1,13 @@
 // license:BSD-3-Clause
 // copyright-holders:Andrew Gardner
-#ifndef __DEBUG_QT_BREAK_POINTS_WINDOW_H__
-#define __DEBUG_QT_BREAK_POINTS_WINDOW_H__
+#ifndef MAME_DEBUGGER_QT_BREAKPOINTSWINDOW_H
+#define MAME_DEBUGGER_QT_BREAKPOINTSWINDOW_H
 
 #include "debuggerview.h"
 #include "windowqt.h"
 
+
+namespace osd::debugger::qt {
 
 //============================================================
 //  The Breakpoints Window.
@@ -15,42 +17,22 @@ class BreakpointsWindow : public WindowQt
 	Q_OBJECT
 
 public:
-	BreakpointsWindow(running_machine* machine, QWidget* parent=nullptr);
+	BreakpointsWindow(DebuggerQt &debugger, QWidget *parent = nullptr);
 	virtual ~BreakpointsWindow();
 
+	virtual void restoreConfiguration(util::xml::data_node const &node) override;
+
+protected:
+	virtual void saveConfigurationToNode(util::xml::data_node &node) override;
 
 private slots:
-	void typeChanged(QAction* changedTo);
-
+	void typeChanged(QAction *changedTo);
 
 private:
 	// Widgets
-	DebuggerView* m_breakpointsView;
+	DebuggerView *m_breakpointsView;
 };
 
+} // namespace osd::debugger::qt
 
-//=========================================================================
-//  A way to store the configuration of a window long enough to read/write.
-//=========================================================================
-class BreakpointsWindowQtConfig : public WindowQtConfig
-{
-public:
-	BreakpointsWindowQtConfig() :
-		WindowQtConfig(WIN_TYPE_BREAK_POINTS),
-		m_bwType(0)
-	{
-	}
-
-	~BreakpointsWindowQtConfig() {}
-
-	// Settings
-	int m_bwType;
-
-	void buildFromQWidget(QWidget* widget);
-	void applyToQWidget(QWidget* widget);
-	void addToXmlDataNode(util::xml::data_node &node) const;
-	void recoverFromXmlNode(util::xml::data_node const &node);
-};
-
-
-#endif
+#endif // MAME_DEBUGGER_QT_BREAKPOINTSWINDOW_H

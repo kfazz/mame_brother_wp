@@ -7,7 +7,6 @@
 
  ***********************************************************************************************************/
 
-
 #include "emu.h"
 #include "slot.h"
 
@@ -46,11 +45,11 @@ device_vc4000_cart_interface::~device_vc4000_cart_interface()
 //  rom_alloc - alloc the space for the cart
 //-------------------------------------------------
 
-void device_vc4000_cart_interface::rom_alloc(uint32_t size, const char *tag)
+void device_vc4000_cart_interface::rom_alloc(uint32_t size)
 {
 	if (m_rom == nullptr)
 	{
-		m_rom = device().machine().memory().region_alloc(std::string(tag).append(VC4000SLOT_ROM_REGION_TAG).c_str(), size, 1, ENDIANNESS_LITTLE)->base();
+		m_rom = device().machine().memory().region_alloc(device().subtag("^cart:rom"), size, 1, ENDIANNESS_LITTLE)->base();
 		m_rom_size = size;
 	}
 }
@@ -85,7 +84,7 @@ vc4000_cart_slot_device::vc4000_cart_slot_device(
 		device_t *owner,
 		uint32_t clock)
 	: device_t(mconfig, type, tag, owner, clock)
-	, device_image_interface(mconfig, *this)
+	, device_cartrom_image_interface(mconfig, *this)
 	, device_single_card_slot_interface<device_vc4000_cart_interface>(mconfig, *this)
 	, m_type(VC4000_STD)
 	, m_cart(nullptr)
@@ -146,7 +145,7 @@ static int vc4000_get_pcb_id(const char *slot)
 {
 	for (auto & elem : slot_list)
 	{
-		if (!core_stricmp(elem.slot_option, slot))
+		if (!strcmp(elem.slot_option, slot))
 			return elem.pcb_id;
 	}
 
@@ -169,19 +168,16 @@ static const char *vc4000_get_slot(int type)
  call load
  -------------------------------------------------*/
 
-image_init_result vc4000_cart_slot_device::call_load()
+std::pair<std::error_condition, std::string> vc4000_cart_slot_device::call_load()
 {
 	if (m_cart)
 	{
-		uint32_t size = !loaded_through_softlist() ? length() : get_software_region_length("rom");
+		uint32_t const size = !loaded_through_softlist() ? length() : get_software_region_length("rom");
 
 		if (size > 0x1800)
-		{
-			seterror(IMAGE_ERROR_UNSPECIFIED, "Image extends beyond the expected size for a VC4000 cart");
-			return image_init_result::FAIL;
-		}
+			return std::make_pair(image_error::INVALIDLENGTH, "Image exceeds the expected size for a VC4000 cartridge (6K)");
 
-		m_cart->rom_alloc(size, tag());
+		m_cart->rom_alloc(size);
 
 		if (!loaded_through_softlist())
 			fread(m_cart->get_rom_base(), size);
@@ -211,11 +207,9 @@ image_init_result vc4000_cart_slot_device::call_load()
 		}
 
 		//printf("Type: %s\n", vc4000_get_slot(m_type));
-
-		return image_init_result::PASS;
 	}
 
-	return image_init_result::PASS;
+	return std::make_pair(std::error_condition(), std::string());
 }
 
 
@@ -227,17 +221,17 @@ std::string vc4000_cart_slot_device::get_default_card_software(get_default_card_
 {
 	if (hook.image_file())
 	{
-		const char *slot_string;
-		uint32_t size = hook.image_file()->size();
+		std::uint64_t size;
+		hook.image_file()->length(size); // FIXME: check error result
 		int type = VC4000_STD;
 
 		// attempt to identify the non-standard types
 		if (size > 0x1000)  // 6k rom + 1k ram - Chess2 only
 			type = VC4000_CHESS2;
-		else if (size > 0x0800) // some 4k roms have 1k of mirrored ram
+		else if (size > 0x0800) // some 4k roms have 1k of mirrored RAM
 			type = VC4000_RAM1K;
 
-		slot_string = vc4000_get_slot(type);
+		char const *const slot_string = vc4000_get_slot(type);
 
 		//printf("type: %s\n", slot_string);
 

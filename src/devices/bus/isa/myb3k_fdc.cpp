@@ -24,10 +24,7 @@
 
 #include "emu.h"
 #include "myb3k_fdc.h"
-#include "formats/pc_dsk.h"
-#include "formats/imd_dsk.h"
 
-//#define LOG_GENERAL (1U << 0) //defined in logmacro.h already
 #define LOG_READ    (1U << 1)
 #define LOG_CMD     (1U << 2)
 
@@ -55,19 +52,6 @@ void isa8_myb3k_fdc471x_device_base::map(address_map &map)
 	map(0x04, 0x04).w(FUNC(isa8_myb3k_fdc471x_device_base::myb3k_fdc_command));
 	map(0x05, 0x05).r(FUNC(isa8_myb3k_fdc471x_device_base::myb3k_fdc_status));
 }
-
-FLOPPY_FORMATS_MEMBER( isa8_myb3k_fdc4710_device::myb3k_floppy_formats )
-	FLOPPY_IMD_FORMAT
-FLOPPY_FORMATS_END
-
-FLOPPY_FORMATS_MEMBER( isa8_myb3k_fdc4711_device::myb3k_floppy_formats )
-	FLOPPY_PC_FORMAT,
-	FLOPPY_IMD_FORMAT
-FLOPPY_FORMATS_END
-
-FLOPPY_FORMATS_MEMBER( isa8_myb3k_fdc4712_device::myb3k_floppy_formats )
-	FLOPPY_IMD_FORMAT
-FLOPPY_FORMATS_END
 
 static void myb3k_sd_floppies(device_slot_interface &device)
 {
@@ -97,8 +81,8 @@ void isa8_myb3k_fdc471x_device_base::device_add_mconfig(machine_config &config)
 void isa8_myb3k_fdc4710_device::device_add_mconfig(machine_config &config)
 {
 	MB8876(config, m_fdc, XTAL(15'974'400) / 8); /* From StepOne schematics */
-	FLOPPY_CONNECTOR(config, m_floppy_connectors[0], myb3k_sd_floppies, "525sd", isa8_myb3k_fdc4710_device::myb3k_floppy_formats);
-	FLOPPY_CONNECTOR(config, m_floppy_connectors[1], myb3k_sd_floppies, "525sd", isa8_myb3k_fdc4710_device::myb3k_floppy_formats);
+	FLOPPY_CONNECTOR(config, m_floppy_connectors[0], myb3k_sd_floppies, "525sd", floppy_image_device::default_mfm_floppy_formats);
+	FLOPPY_CONNECTOR(config, m_floppy_connectors[1], myb3k_sd_floppies, "525sd", floppy_image_device::default_mfm_floppy_formats);
 
 	isa8_myb3k_fdc471x_device_base::device_add_mconfig(config);
 }
@@ -107,10 +91,10 @@ void isa8_myb3k_fdc4710_device::device_add_mconfig(machine_config &config)
 void isa8_myb3k_fdc4711_device::device_add_mconfig(machine_config &config)
 {
 	FD1791(config, m_fdc, XTAL(15'974'400) / 16);
-	FLOPPY_CONNECTOR(config, m_floppy_connectors[0], myb3k_qd_floppies, "525qd", isa8_myb3k_fdc4711_device::myb3k_floppy_formats);
-	FLOPPY_CONNECTOR(config, m_floppy_connectors[1], myb3k_qd_floppies, "525qd", isa8_myb3k_fdc4711_device::myb3k_floppy_formats);
-	FLOPPY_CONNECTOR(config, m_floppy_connectors[2], myb3k_qd_floppies, "525qd", isa8_myb3k_fdc4711_device::myb3k_floppy_formats);
-	FLOPPY_CONNECTOR(config, m_floppy_connectors[3], myb3k_qd_floppies, "525qd", isa8_myb3k_fdc4711_device::myb3k_floppy_formats);
+	FLOPPY_CONNECTOR(config, m_floppy_connectors[0], myb3k_qd_floppies, "525qd", floppy_image_device::default_pc_floppy_formats);
+	FLOPPY_CONNECTOR(config, m_floppy_connectors[1], myb3k_qd_floppies, "525qd", floppy_image_device::default_pc_floppy_formats);
+	FLOPPY_CONNECTOR(config, m_floppy_connectors[2], myb3k_qd_floppies, "525qd", floppy_image_device::default_pc_floppy_formats);
+	FLOPPY_CONNECTOR(config, m_floppy_connectors[3], myb3k_qd_floppies, "525qd", floppy_image_device::default_pc_floppy_formats);
 
 	isa8_myb3k_fdc471x_device_base::device_add_mconfig(config);
 }
@@ -118,10 +102,10 @@ void isa8_myb3k_fdc4711_device::device_add_mconfig(machine_config &config)
 void isa8_myb3k_fdc4712_device::device_add_mconfig(machine_config &config)
 {
 	MB8876(config, m_fdc, XTAL(15'974'400) / 8);
-	FLOPPY_CONNECTOR(config, m_floppy_connectors[0], myb3k_8inch_floppies, "8dsdd", isa8_myb3k_fdc4712_device::myb3k_floppy_formats);
-	FLOPPY_CONNECTOR(config, m_floppy_connectors[1], myb3k_8inch_floppies, "8dsdd", isa8_myb3k_fdc4712_device::myb3k_floppy_formats);
-	FLOPPY_CONNECTOR(config, m_floppy_connectors[2], myb3k_8inch_floppies, "8dsdd", isa8_myb3k_fdc4712_device::myb3k_floppy_formats);
-	FLOPPY_CONNECTOR(config, m_floppy_connectors[3], myb3k_8inch_floppies, "8dsdd", isa8_myb3k_fdc4712_device::myb3k_floppy_formats);
+	FLOPPY_CONNECTOR(config, m_floppy_connectors[0], myb3k_8inch_floppies, "8dsdd", floppy_image_device::default_mfm_floppy_formats);
+	FLOPPY_CONNECTOR(config, m_floppy_connectors[1], myb3k_8inch_floppies, "8dsdd", floppy_image_device::default_mfm_floppy_formats);
+	FLOPPY_CONNECTOR(config, m_floppy_connectors[2], myb3k_8inch_floppies, "8dsdd", floppy_image_device::default_mfm_floppy_formats);
+	FLOPPY_CONNECTOR(config, m_floppy_connectors[3], myb3k_8inch_floppies, "8dsdd", floppy_image_device::default_mfm_floppy_formats);
 
 	isa8_myb3k_fdc471x_device_base::device_add_mconfig(config);
 }
@@ -177,7 +161,7 @@ void isa8_myb3k_fdc471x_device_base::device_start()
 //-------------------------------------------------
 //  irq_w - signal interrupt request to ISA bus
 //-------------------------------------------------
-WRITE_LINE_MEMBER( isa8_myb3k_fdc471x_device_base::irq_w )
+void isa8_myb3k_fdc471x_device_base::irq_w(int state)
 {
 	LOG("%s: %d\n", FUNCNAME, state);
 	m_isa->irq6_w(state ? ASSERT_LINE : CLEAR_LINE);
@@ -186,7 +170,7 @@ WRITE_LINE_MEMBER( isa8_myb3k_fdc471x_device_base::irq_w )
 //-------------------------------------------------
 //  drq_w - signal dma request to ISA bus
 //-------------------------------------------------
-WRITE_LINE_MEMBER( isa8_myb3k_fdc471x_device_base::drq_w )
+void isa8_myb3k_fdc471x_device_base::drq_w(int state)
 {
 	LOG("%s: %d\n", FUNCNAME, state);
 
@@ -194,8 +178,10 @@ WRITE_LINE_MEMBER( isa8_myb3k_fdc471x_device_base::drq_w )
 	{
 	case 1:
 		m_isa->drq1_w(state);
+		[[fallthrough]]; // FIXME: really?
 	case 2:
 		m_isa->drq2_w(state);
+		[[fallthrough]]; // FIXME: really?
 	default:
 		break;
 	}
@@ -227,7 +213,7 @@ void isa8_myb3k_fdc471x_device_base::eop_w(int state)
 //--------------------------------------------------------
 //  myb3k_inv_fdc_data_r - a LS240 inverts databus for FDC
 //--------------------------------------------------------
-READ8_MEMBER( isa8_myb3k_fdc471x_device_base::myb3k_inv_fdc_data_r )
+uint8_t isa8_myb3k_fdc471x_device_base::myb3k_inv_fdc_data_r(offs_t offset)
 {
 	uint8_t tmp = m_fdc->read(offset);
 	LOGR("%s: %02x -> %02x\n", FUNCNAME, tmp, (~tmp) & 0xff);
@@ -237,7 +223,7 @@ READ8_MEMBER( isa8_myb3k_fdc471x_device_base::myb3k_inv_fdc_data_r )
 //--------------------------------------------------------
 //  myb3k_inv_fdc_data_w - a LS240 inverts databus for FDC
 //--------------------------------------------------------
-WRITE8_MEMBER( isa8_myb3k_fdc471x_device_base::myb3k_inv_fdc_data_w )
+void isa8_myb3k_fdc471x_device_base::myb3k_inv_fdc_data_w(offs_t offset, uint8_t data)
 {
 	LOG("%s: %02x -> %02x\n", FUNCNAME, data, (~data) & 0xff);
 	m_fdc->write(offset, (~data) & 0xff);
@@ -247,7 +233,7 @@ WRITE8_MEMBER( isa8_myb3k_fdc471x_device_base::myb3k_inv_fdc_data_w )
 //  myb3k_fdc_command - descrete fdc card features
 //-------------------------------------------------
 
-WRITE8_MEMBER( isa8_myb3k_fdc471x_device_base::myb3k_fdc_command )
+void isa8_myb3k_fdc471x_device_base::myb3k_fdc_command(uint8_t data)
 {
 	LOG("%s: %02x\n", FUNCNAME, data);
 
@@ -282,10 +268,10 @@ WRITE8_MEMBER( isa8_myb3k_fdc471x_device_base::myb3k_fdc_command )
 	m_fdc->dden_w(dden ? 0 : 1); // active low == MFM
 }
 
-WRITE8_MEMBER( isa8_myb3k_fdc4712_device::myb3k_fdc_command )
+void isa8_myb3k_fdc4712_device::myb3k_fdc_command(uint8_t data)
 {
 	selected_drive = data & FDC_DRIVE_SEL;
-	isa8_myb3k_fdc471x_device_base::myb3k_fdc_command(space, offset, data, mem_mask);
+	isa8_myb3k_fdc471x_device_base::myb3k_fdc_command(data);
 }
 
 //-------------------------------------------------
@@ -293,7 +279,7 @@ WRITE8_MEMBER( isa8_myb3k_fdc4712_device::myb3k_fdc_command )
 //-------------------------------------------------
 #define FDC_MSM_END_IR 0x01
 
-READ8_MEMBER( isa8_myb3k_fdc471x_device_base::myb3k_fdc_status )
+uint8_t isa8_myb3k_fdc471x_device_base::myb3k_fdc_status()
 {
 	LOG("%s\n", FUNCNAME);
 
@@ -301,9 +287,9 @@ READ8_MEMBER( isa8_myb3k_fdc471x_device_base::myb3k_fdc_status )
 	return 0x00;
 }
 
-READ8_MEMBER( isa8_myb3k_fdc4712_device::myb3k_fdc_status )
+uint8_t isa8_myb3k_fdc4712_device::myb3k_fdc_status()
 {
-	uint8_t status = isa8_myb3k_fdc471x_device_base::myb3k_fdc_status(space, offset, mem_mask);
+	uint8_t status = isa8_myb3k_fdc471x_device_base::myb3k_fdc_status();
 
 	auto floppy_connector = m_floppy_connectors[selected_drive];
 	floppy_image_device *floppy = nullptr;

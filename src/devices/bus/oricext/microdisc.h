@@ -26,32 +26,31 @@ protected:
 		P_EPROM  = 0x80
 	};
 
-	required_device<fd1793_device> fdc;
-
-	uint8_t *microdisc_rom;
-	floppy_image_device *floppies[4];
-	uint8_t port_314;
-	bool intrq_state, drq_state, hld_state;
-
 	virtual void device_start() override;
 	virtual void device_reset() override;
 	const tiny_rom_entry *device_rom_region() const override;
 	virtual void device_add_mconfig(machine_config &config) override;
 
-	void remap();
+	virtual void map_io(address_space_installer &space) override;
+	virtual void map_rom() override;
 
 private:
-	DECLARE_WRITE_LINE_MEMBER(fdc_irq_w);
-	DECLARE_WRITE_LINE_MEMBER(fdc_drq_w);
-	DECLARE_WRITE_LINE_MEMBER(fdc_hld_w);
+	required_device<fd1793_device> fdc;
+	required_region_ptr<uint8_t> microdisc_rom;
+	required_device_array<floppy_connector, 4> floppies;
 
-	DECLARE_WRITE8_MEMBER(port_314_w);
-	DECLARE_READ8_MEMBER(port_314_r);
-	DECLARE_READ8_MEMBER(port_318_r);
+	uint8_t port_314;
+	bool intrq_state, drq_state, hld_state;
 
-	void map(address_map &map);
+	void fdc_irq_w(int state);
+	void fdc_drq_w(int state);
+	void fdc_hld_w(int state);
 
-	DECLARE_FLOPPY_FORMATS(floppy_formats);
+	void port_314_w(uint8_t data);
+	uint8_t port_314_r();
+	uint8_t port_318_r();
+
+	static void floppy_formats(format_registration &fr);
 };
 
 #endif // MAME_BUS_ORICEXT_MICRODISC_H

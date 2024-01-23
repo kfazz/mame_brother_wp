@@ -73,9 +73,6 @@ bool upd1990a_device::is_serial_mode()
 void upd1990a_device::device_start()
 {
 	(void)m_variant;
-	// resolve callbacks
-	m_write_data.resolve_safe();
-	m_write_tp.resolve_safe();
 
 	for (auto & elem : m_shift_reg)
 		elem = 0;
@@ -92,11 +89,11 @@ void upd1990a_device::device_start()
 	m_testmode = false;
 
 	// allocate timers
-	m_timer_clock = timer_alloc(TIMER_CLOCK);
+	m_timer_clock = timer_alloc(FUNC(upd1990a_device::clock_tick), this);
 	m_timer_clock->adjust(attotime::from_hz(clock() / 32768.0), 0, attotime::from_hz(clock() / 32768.0)); // 1 second on XTAL(32'768)
-	m_timer_tp = timer_alloc(TIMER_TP);
-	m_timer_data_out = timer_alloc(TIMER_DATA_OUT);
-	m_timer_test_mode = timer_alloc(TIMER_TEST_MODE);
+	m_timer_tp = timer_alloc(FUNC(upd1990a_device::tp_tick), this);
+	m_timer_data_out = timer_alloc(FUNC(upd1990a_device::data_out_tick), this);
+	m_timer_test_mode = timer_alloc(FUNC(upd1990a_device::test_tick), this);
 
 	// state saving
 	save_item(NAME(m_time_counter));
@@ -130,58 +127,55 @@ void upd1990a_device::rtc_clock_updated(int year, int month, int day, int day_of
 
 
 //-------------------------------------------------
-//  device_timer - handler timer events
+//  timer handlers
 //-------------------------------------------------
 
-void upd1990a_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(upd1990a_device::clock_tick)
 {
-	switch (id)
+	advance_seconds();
+}
+
+TIMER_CALLBACK_MEMBER(upd1990a_device::tp_tick)
+{
+	m_tp = !m_tp;
+	m_write_tp(m_tp);
+}
+
+TIMER_CALLBACK_MEMBER(upd1990a_device::data_out_tick)
+{
+	m_data_out = !m_data_out;
+	m_write_data(get_data_out());
+}
+
+TIMER_CALLBACK_MEMBER(upd1990a_device::test_tick)
+{
+	if (m_oe)
 	{
-	case TIMER_CLOCK:
-		advance_seconds();
-		break;
-
-	case TIMER_TP:
-		m_tp = !m_tp;
-		m_write_tp(m_tp);
-		break;
-
-	case TIMER_DATA_OUT:
-		m_data_out = !m_data_out;
+		/* TODO: completely untested */
+		/* time counter is advanced from "Second" counter input */
+		int max_shift = is_serial_mode() ? 6 : 5;
+		m_data_out = (m_time_counter[max_shift - 1] == 0);
 		m_write_data(get_data_out());
-		break;
 
-	case TIMER_TEST_MODE:
-		if (m_oe)
+		for (int i = 0; i < max_shift; i++)
 		{
-			/* TODO: completely untested */
-			/* time counter is advanced from "Second" counter input */
-			int max_shift = is_serial_mode() ? 6 : 5;
-			m_data_out = (m_time_counter[max_shift - 1] == 0);
-			m_write_data(get_data_out());
-
-			for (int i = 0; i < max_shift; i++)
-			{
-				m_time_counter[i]++;
-				if (m_time_counter[i] != 0)
-					return;
-			}
+			m_time_counter[i]++;
+			if (m_time_counter[i] != 0)
+				return;
 		}
-		else
+	}
+	else
+	{
+		/* each counter is advanced in parallel, overflow carry does not affect next counter */
+		m_data_out = 0;
+
+		int max_shift = is_serial_mode() ? 6 : 5;
+		for (int i = 0; i < max_shift; i++)
 		{
-			/* each counter is advanced in parallel, overflow carry does not affect next counter */
-			m_data_out = 0;
-
-			int max_shift = is_serial_mode() ? 6 : 5;
-			for (int i = 0; i < max_shift; i++)
-			{
-				m_time_counter[i]++;
-				m_data_out |= (m_time_counter[i] == 0);
-			}
-			m_write_data(get_data_out());
+			m_time_counter[i]++;
+			m_data_out |= (m_time_counter[i] == 0);
 		}
-
-		break;
+		m_write_data(get_data_out());
 	}
 }
 
@@ -190,7 +184,7 @@ void upd1990a_device::device_timer(emu_timer &timer, device_timer_id id, int par
 //  stb_w -
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( upd1990a_device::stb_w )
+void upd1990a_device::stb_w(int state)
 {
 	if (!m_cs)
 		return;
@@ -376,7 +370,7 @@ WRITE_LINE_MEMBER( upd1990a_device::stb_w )
 //  clk_w -
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( upd1990a_device::clk_w )
+void upd1990a_device::clk_w(int state)
 {
 	if (!m_cs)
 		return;
@@ -423,14 +417,14 @@ WRITE_LINE_MEMBER( upd1990a_device::clk_w )
 //  misc input pins
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( upd1990a_device::cs_w )
+void upd1990a_device::cs_w(int state)
 {
 	// chip select
 	LOG("uPD1990A CS %u\n", state);
 	m_cs = state;
 }
 
-WRITE_LINE_MEMBER( upd1990a_device::oe_w )
+void upd1990a_device::oe_w(int state)
 {
 	// output enable
 	LOG("uPD1990A OE %u\n", state);
@@ -442,25 +436,25 @@ WRITE_LINE_MEMBER( upd1990a_device::oe_w )
 		m_write_data(get_data_out());
 }
 
-WRITE_LINE_MEMBER( upd1990a_device::c0_w )
+void upd1990a_device::c0_w(int state)
 {
 	LOG("uPD1990A C0 %u\n", state);
 	m_c_unlatched = (m_c_unlatched & 0x06) | state;
 }
 
-WRITE_LINE_MEMBER( upd1990a_device::c1_w )
+void upd1990a_device::c1_w(int state)
 {
 	LOG("uPD1990A C1 %u\n", state);
 	m_c_unlatched = (m_c_unlatched & 0x05) | (state << 1);
 }
 
-WRITE_LINE_MEMBER( upd1990a_device::c2_w )
+void upd1990a_device::c2_w(int state)
 {
 	LOG("uPD1990A C2 %u\n", state);
 	m_c_unlatched = (m_c_unlatched & 0x03) | (state << 2);
 }
 
-WRITE_LINE_MEMBER( upd1990a_device::data_in_w )
+void upd1990a_device::data_in_w(int state)
 {
 	// data input
 	LOG("uPD1990A DATA IN %u\n", state);
@@ -479,12 +473,12 @@ int upd1990a_device::get_data_out()
 }
 
 
-READ_LINE_MEMBER( upd1990a_device::data_out_r )
+int upd1990a_device::data_out_r()
 {
 	return get_data_out();
 }
 
-READ_LINE_MEMBER( upd1990a_device::tp_r )
+int upd1990a_device::tp_r()
 {
 	return m_tp;
 }

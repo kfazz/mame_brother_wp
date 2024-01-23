@@ -17,6 +17,8 @@
 #include "debug/debugvw.h"
 
 
+namespace osd::debugger::win {
+
 class debugview_info : protected debugbase_info
 {
 public:
@@ -42,6 +44,7 @@ public:
 	bool cursor_supported() const { return m_view->cursor_supported(); }
 	bool cursor_visible() const { return m_view->cursor_visible(); }
 
+	int source_index() const;
 	char const *source_name() const;
 	device_t *source_device() const;
 	bool source_is_visible_cpu() const;
@@ -51,13 +54,27 @@ public:
 
 	HWND create_source_combobox(HWND parent, LONG_PTR userdata);
 
+	virtual void restore_configuration_from_node(util::xml::data_node const &node);
+	virtual void save_configuration_to_node(util::xml::data_node &node);
+
 protected:
+	enum
+	{
+		ID_CONTEXT_COPY_VISIBLE = 1,
+		ID_CONTEXT_PASTE
+	};
+
 	template <typename T> T *view() const { return downcast<T *>(m_view); }
+
+	virtual void add_items_to_context_menu(HMENU menu);
+	virtual void update_context_menu(HMENU menu);
+	virtual void handle_context_menu(unsigned command);
 
 private:
 	void draw_contents(HDC windc);
 	void update();
 	uint32_t process_scroll(WORD type, HWND wnd);
+	bool process_context_menu(int x, int y);
 	LRESULT view_proc(UINT message, WPARAM wparam, LPARAM lparam);
 
 	static void static_update(debug_view &view, void *osdprivate);
@@ -70,8 +87,11 @@ private:
 	HWND            m_wnd;
 	HWND            m_hscroll;
 	HWND            m_vscroll;
+	HMENU           m_contextmenu;
 
 	static bool     s_window_class_registered;
 };
 
-#endif
+} // namespace osd::debugger::win
+
+#endif // MAME_DEBUGGER_WIN_DEBUGVIEWINFO_H

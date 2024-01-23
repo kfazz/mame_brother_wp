@@ -22,7 +22,7 @@
 
 // ======================> ef9364_device
 
-class ef9364_device :   public device_t,
+class ef9364_device : public device_t,
 						public device_memory_interface,
 						public device_video_interface
 {
@@ -44,6 +44,7 @@ public:
 			nb_of_pages = nb_bitplanes;
 		}
 	}
+	void set_erase(uint8_t data) { erase_char = data; }
 
 	// device interface
 	void update_scanline(uint16_t scanline);
@@ -52,6 +53,9 @@ public:
 	uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	void char_latch_w(uint8_t data);
 	void command_w(uint8_t cmd);
+
+	uint8_t videoram_r(offs_t offset) { return m_textram->read_byte(offset); }
+	void videoram_w(offs_t offset, uint8_t data) { m_textram->write_byte(offset, data); }
 
 protected:
 	// device-level overrides
@@ -80,6 +84,7 @@ private:
 	uint8_t x_curs_pos;
 	uint8_t y_curs_pos;
 	uint8_t char_latch;
+	uint8_t erase_char;
 
 	uint8_t m_border[80];                     //border color
 
@@ -92,7 +97,6 @@ private:
 	int   cursor_state;
 
 	uint32_t clock_freq;
-	bitmap_rgb32 m_screen_out;
 
 	required_device<palette_device> m_palette;
 };

@@ -30,65 +30,83 @@ DEFINE_DEVICE_TYPE(SH7604_BUS, sh7604_bus_device, "sh7604bus", "SH7604 BUS Contr
 //  LIVE DEVICE
 //**************************************************************************
 
-READ16_MEMBER(sh7604_bus_device::bus_control_1_r)
+uint16_t sh7604_bus_device::bus_control_1_r()
 {
-	return (m_bcr1 & 0x1ff7) | (m_is_slave == true ? 0x8000 : 0);
+	return (m_bcr1 & 0x1ff7) | (m_is_slave ? 0x8000 : 0);
 }
 
-WRITE16_MEMBER(sh7604_bus_device::bus_control_1_w)
+void sh7604_bus_device::bus_control_1_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	COMBINE_DATA(&m_bcr1);
-	if(m_bcr1 & 0x1000) // ENDIAN
+	if (m_bcr1 & 0x1000) // ENDIAN
 		throw emu_fatalerror("%s: enabled little endian for Area 2\n", tag());
-	if(m_bcr1 & 0x0800) // PSHR
+	if (m_bcr1 & 0x0800) // PSHR
 		throw emu_fatalerror("%s: enabled partial space share mode\n", tag());
 }
 
-READ16_MEMBER(sh7604_bus_device::bus_control_2_r) { return m_bcr2 & 0x00fc; }
-WRITE16_MEMBER(sh7604_bus_device::bus_control_2_w)
+uint16_t sh7604_bus_device::bus_control_2_r()
 {
-	COMBINE_DATA(&m_bcr2);
-	if(m_bcr2 != 0x00fc)
-		throw emu_fatalerror("%s: unexpected bus size register set %04x\n", tag(),data);
+	return m_bcr2 & 0x00fc;
 }
 
-READ16_MEMBER(sh7604_bus_device::wait_control_r) { return m_wcr; }
-WRITE16_MEMBER(sh7604_bus_device::wait_control_w) { COMBINE_DATA(&m_wcr); }
+void sh7604_bus_device::bus_control_2_w(offs_t offset, uint16_t data, uint16_t mem_mask)
+{
+	COMBINE_DATA(&m_bcr2);
+	if (m_bcr2 != 0x00fc)
+		throw emu_fatalerror("%s: unexpected bus size register set %04x\n", tag(), data);
+}
 
-READ16_MEMBER(sh7604_bus_device::memory_control_r) { return m_mcr & 0xfefc; }
-WRITE16_MEMBER(sh7604_bus_device::memory_control_w) { COMBINE_DATA(&m_mcr); }
+uint16_t sh7604_bus_device::wait_control_r()
+{
+	return m_wcr;
+}
 
-READ16_MEMBER(sh7604_bus_device::refresh_timer_status_r)
+void sh7604_bus_device::wait_control_w(offs_t offset, uint16_t data, uint16_t mem_mask)
+{
+	COMBINE_DATA(&m_wcr);
+}
+
+uint16_t sh7604_bus_device::memory_control_r()
+{
+	return m_mcr & 0xfefc;
+}
+
+void sh7604_bus_device::memory_control_w(offs_t offset, uint16_t data, uint16_t mem_mask)
+{
+	COMBINE_DATA(&m_mcr);
+}
+
+uint16_t sh7604_bus_device::refresh_timer_status_r()
 {
 	return m_rtcsr & 0x00f8;
 }
 
-WRITE16_MEMBER(sh7604_bus_device::refresh_timer_control_w)
+void sh7604_bus_device::refresh_timer_control_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	COMBINE_DATA(&m_rtcsr);
 
-	if(m_rtcsr & 0x40)
-		throw emu_fatalerror("%s: enabled timer irq register with clock setting = %02x\n",tag(),data & 0x38);
+	if (m_rtcsr & 0x40)
+		throw emu_fatalerror("%s: enabled timer irq register with clock setting = %02x\n", tag(), data & 0x38);
 }
 
-READ16_MEMBER(sh7604_bus_device::refresh_timer_counter_r)
+uint16_t sh7604_bus_device::refresh_timer_counter_r()
 {
-	throw emu_fatalerror("%s: reading timer counter!\n",tag());
+	throw emu_fatalerror("%s: reading timer counter!\n", tag());
 	return 0;
 }
 
-WRITE16_MEMBER(sh7604_bus_device::refresh_timer_counter_w)
+void sh7604_bus_device::refresh_timer_counter_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
-	throw emu_fatalerror("%s: writing timer counter %04x\n",tag(),data);
+	throw emu_fatalerror("%s: writing timer counter %04x\n", tag(), data);
 	//COMBINE_DATA(&m_rtcnt);
 }
 
-READ16_MEMBER(sh7604_bus_device::refresh_timer_constant_r)
+uint16_t sh7604_bus_device::refresh_timer_constant_r()
 {
 	return m_rtcor & 0xff;
 }
 
-WRITE16_MEMBER(sh7604_bus_device::refresh_timer_constant_w)
+void sh7604_bus_device::refresh_timer_constant_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	COMBINE_DATA(&m_rtcor);
 }
@@ -142,22 +160,22 @@ void sh7604_bus_device::device_reset()
 //  READ/WRITE HANDLERS
 //**************************************************************************
 
-READ32_MEMBER( sh7604_bus_device::read )
+uint32_t sh7604_bus_device::read(address_space &space, offs_t offset)
 {
 	// 16 bit access only, TODO
 	return space.read_word(offset) & 0xffff;
 }
 
-WRITE32_MEMBER( sh7604_bus_device::write )
+void sh7604_bus_device::write(address_space &space, offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	// TODO: 8 bit access is invalid
 	// if accessing bits 16-31, one must write ID = 0xa55a
-	if(ACCESSING_BITS_16_31)
+	if (ACCESSING_BITS_16_31)
 	{
 		// throw fatalerror if something trips it, presumably the write is going to be ignored
-		if((data & 0xffff0000) != 0xa55a0000)
-			throw emu_fatalerror("%s: making bus write with ID signature = %04x!\n", tag(),data >> 16);
+		if ((data & 0xffff0000) != 0xa55a0000)
+			throw emu_fatalerror("%s: making bus write with ID signature = %04x!\n", tag(), data >> 16);
 	}
 
-	space.write_word(offset,data & 0xffff);
+	space.write_word(offset, data & 0xffff);
 }

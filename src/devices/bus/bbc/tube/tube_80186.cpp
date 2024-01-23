@@ -66,7 +66,7 @@ ROM_END
 
 void bbc_tube_80186_device::device_add_mconfig(machine_config &config)
 {
-	I80186(config, m_i80186, 20_MHz_XTAL / 2);
+	I80186(config, m_i80186, 20_MHz_XTAL);
 	m_i80186->set_addrmap(AS_PROGRAM, &bbc_tube_80186_device::tube_80186_mem);
 	m_i80186->set_addrmap(AS_IO, &bbc_tube_80186_device::tube_80186_io);
 	m_i80186->tmrout0_handler().set_inputline(m_i80186, INPUT_LINE_HALT).invert();
@@ -75,12 +75,14 @@ void bbc_tube_80186_device::device_add_mconfig(machine_config &config)
 	TUBE(config, m_ula, 0);
 	m_ula->pirq_handler().set(m_i80186, FUNC(i80186_cpu_device::int0_w));
 	m_ula->drq_handler().set(m_i80186, FUNC(i80186_cpu_device::drq0_w));
+	m_ula->prst_handler().set(FUNC(bbc_tube_80186_device::prst_w));
 
 	/* internal ram */
 	RAM(config, m_ram).set_default_size("512K");
 
 	/* software lists */
 	SOFTWARE_LIST(config, "flop_ls_80186").set_original("bbc_flop_80186");
+	SOFTWARE_LIST(config, "pc_disk_list").set_compatible("ibm5150");
 }
 
 void bbc_tube_pcplus_device::device_add_mconfig(machine_config &config)
@@ -166,6 +168,13 @@ void bbc_tube_pcplus_device::device_reset()
 //**************************************************************************
 //  IMPLEMENTATION
 //**************************************************************************
+
+void bbc_tube_80186_device::prst_w(int state)
+{
+	device_reset();
+
+	m_i80186->set_input_line(INPUT_LINE_RESET, state);
+}
 
 uint8_t bbc_tube_80186_device::host_r(offs_t offset)
 {

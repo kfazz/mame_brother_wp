@@ -8,9 +8,10 @@
 
 **********************************************************************/
 
-
 #include "emu.h"
 #include "fdc.h"
+
+#include "formats/acorn_dsk.h"
 
 
 //**************************************************************************
@@ -23,10 +24,12 @@ DEFINE_DEVICE_TYPE(CMS_FDC, cms_fdc_device, "cms_fdc", "CMS Floppy Disc Controll
 //  MACHINE_DRIVER( cms_fdc )
 //-------------------------------------------------
 
-FLOPPY_FORMATS_MEMBER(cms_fdc_device::floppy_formats )
-	FLOPPY_ACORN_SSD_FORMAT,
-	FLOPPY_ACORN_DSD_FORMAT
-FLOPPY_FORMATS_END
+void cms_fdc_device::floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_ACORN_SSD_FORMAT);
+	fr.add(FLOPPY_ACORN_DSD_FORMAT);
+}
 
 static void cms_floppies(device_slot_interface &device)
 {
@@ -71,7 +74,7 @@ void cms_fdc_device::device_start()
 {
 	address_space &space = m_bus->memspace();
 
-	space.install_readwrite_handler(0xfc50, 0xfc5f, read8_delegate(*this, FUNC(cms_fdc_device::wd1770_state_r)), write8_delegate(*this, FUNC(cms_fdc_device::wd1770_control_w)));
+	space.install_readwrite_handler(0xfc50, 0xfc5f, read8smo_delegate(*this, FUNC(cms_fdc_device::wd1770_state_r)), write8smo_delegate(*this, FUNC(cms_fdc_device::wd1770_control_w)));
 	space.install_readwrite_handler(0xfc40, 0xfc4f, read8sm_delegate(*m_fdc, FUNC(wd1770_device::read)), write8sm_delegate(*m_fdc, FUNC(wd1770_device::write)));
 }
 
@@ -80,7 +83,7 @@ void cms_fdc_device::device_start()
 //  IMPLEMENTATION
 //**************************************************************************
 
-READ8_MEMBER(cms_fdc_device::wd1770_state_r)
+uint8_t cms_fdc_device::wd1770_state_r()
 {
 	uint8_t data = 0x3f;
 
@@ -90,7 +93,7 @@ READ8_MEMBER(cms_fdc_device::wd1770_state_r)
 	return data;
 }
 
-WRITE8_MEMBER(cms_fdc_device::wd1770_control_w)
+void cms_fdc_device::wd1770_control_w(uint8_t data)
 {
 	floppy_image_device *floppy = nullptr;
 

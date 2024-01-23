@@ -14,7 +14,7 @@
 #include "keyboard.h"
 
 
-namespace bus { namespace amiga { namespace keyboard {
+namespace bus::amiga::keyboard {
 
 //**************************************************************************
 //  TYPE DECLARATIONS
@@ -27,17 +27,17 @@ public:
 	a1200_kbd_device(machine_config const &mconfig, char const *tag, device_t *owner, uint32_t clock);
 
 	// from host
-	virtual DECLARE_WRITE_LINE_MEMBER(kdat_w) override;
+	virtual void kdat_w(int state) override;
 
 	DECLARE_INPUT_CHANGED_MEMBER(layout_changed);
 
 protected:
 	// MPU I/O
-	DECLARE_READ8_MEMBER(mpu_portb_r);
-	DECLARE_WRITE8_MEMBER(mpu_porta_w);
-	DECLARE_WRITE8_MEMBER(mpu_portb_w);
-	DECLARE_WRITE8_MEMBER(mpu_portc_w);
-	DECLARE_WRITE_LINE_MEMBER(mpu_tcmp);
+	u8 mpu_portb_r();
+	void mpu_porta_w(offs_t offset, u8 data, u8 mem_mask = ~0);
+	void mpu_portb_w(offs_t offset, u8 data, u8 mem_mask = ~0);
+	void mpu_portc_w(offs_t offset, u8 data, u8 mem_mask = ~0);
+	void mpu_tcmp(int state);
 
 	virtual tiny_rom_entry const *device_rom_region() const override;
 	virtual void device_add_mconfig(machine_config &config) override;
@@ -55,7 +55,7 @@ private:
 	bool                        m_host_kdat, m_mpu_kdat;
 };
 
-} } } // namespace bus::amiga::keyboard
+} // namespace bus::amiga::keyboard
 
 
 //**************************************************************************

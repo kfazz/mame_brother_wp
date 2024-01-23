@@ -15,7 +15,6 @@
 
 #include "emu.h"
 #include "98034.h"
-#include "coreutil.h"
 
 // Debugging
 //#define VERBOSE 1
@@ -114,7 +113,7 @@ void hp98034_io_card_device::device_reset()
 	update_dc();
 }
 
-READ16_MEMBER(hp98034_io_card_device::reg_r)
+uint16_t hp98034_io_card_device::reg_r(address_space &space, offs_t offset)
 {
 	uint16_t res = m_odr;
 
@@ -147,14 +146,14 @@ READ16_MEMBER(hp98034_io_card_device::reg_r)
 	//   This is meant to gain some margin to NP in the race with
 	//   CPU (in real hw the margin was probably no more than a
 	//   couple of µs).
-	machine().scheduler().boost_interleave(attotime::from_usec(5) , attotime::from_usec(100));
+	machine().scheduler().add_quantum(attotime::from_usec(5) , attotime::from_usec(100));
 	space.device().execute().spin();
 	machine().scheduler().synchronize();
 	LOG("%.06f RD R%u=%04x %s\n" , machine().time().as_double() , offset + 4 , res , machine().describe_context());
 	return res;
 }
 
-WRITE16_MEMBER(hp98034_io_card_device::reg_w)
+void hp98034_io_card_device::reg_w(address_space &space, offs_t offset, uint16_t data)
 {
 	m_idr = (uint8_t)data;
 
@@ -170,7 +169,7 @@ WRITE16_MEMBER(hp98034_io_card_device::reg_w)
 
 	update_flg();
 	// See reg_r above
-	machine().scheduler().boost_interleave(attotime::from_usec(5) , attotime::from_usec(100));
+	machine().scheduler().add_quantum(attotime::from_usec(5) , attotime::from_usec(100));
 	space.device().execute().spin();
 	machine().scheduler().synchronize();
 	LOG("%.06f WR R%u=%04x %s\n" , machine().time().as_double() , offset + 4 , data , machine().describe_context());
@@ -199,19 +198,19 @@ uint8_t hp98034_io_card_device::dc_r()
 	return res;
 }
 
-WRITE8_MEMBER(hp98034_io_card_device::hpib_data_w)
+void hp98034_io_card_device::hpib_data_w(uint8_t data)
 {
 	m_data_out = data;
 	update_data_out();
 }
 
-WRITE8_MEMBER(hp98034_io_card_device::hpib_ctrl_w)
+void hp98034_io_card_device::hpib_ctrl_w(uint8_t data)
 {
 	m_ctrl_out = data;
 	update_ctrl_out();
 }
 
-READ8_MEMBER(hp98034_io_card_device::hpib_ctrl_r)
+uint8_t hp98034_io_card_device::hpib_ctrl_r()
 {
 	uint8_t res = 0;
 
@@ -243,40 +242,40 @@ READ8_MEMBER(hp98034_io_card_device::hpib_ctrl_r)
 	return res;
 }
 
-READ8_MEMBER(hp98034_io_card_device::hpib_data_r)
+uint8_t hp98034_io_card_device::hpib_data_r()
 {
-	return ~m_ieee488->read_dio();
+	return ~m_ieee488->dio_r();
 }
 
-READ8_MEMBER(hp98034_io_card_device::idr_r)
+uint8_t hp98034_io_card_device::idr_r()
 {
 	return m_idr;
 }
 
-WRITE8_MEMBER(hp98034_io_card_device::odr_w)
+void hp98034_io_card_device::odr_w(uint8_t data)
 {
 	m_odr = data;
 }
 
-READ8_MEMBER(hp98034_io_card_device::mode_reg_r)
+uint8_t hp98034_io_card_device::mode_reg_r()
 {
 	LOG("%.06f MR=%02x\n" , machine().time().as_double() , m_mode_reg);
 	return m_mode_reg;
 }
 
-WRITE8_MEMBER(hp98034_io_card_device::mode_reg_clear_w)
+void hp98034_io_card_device::mode_reg_clear_w(uint8_t data)
 {
 	LOG("%.06f clear_w\n" , machine().time().as_double());
 	m_mode_reg = 0xff;
 	m_force_flg = false;
 	if (update_flg()) {
 		// See reg_r above
-		machine().scheduler().boost_interleave(attotime::zero , attotime::from_usec(100));
+		machine().scheduler().perfect_quantum(attotime::from_usec(100));
 		machine().scheduler().synchronize();
 	}
 }
 
-READ8_MEMBER(hp98034_io_card_device::switch_r)
+uint8_t hp98034_io_card_device::switch_r()
 {
 	return m_sw1->read() | 0xc0;
 }
@@ -292,7 +291,7 @@ uint8_t hp98034_io_card_device::int_ack_r()
 	return res;
 }
 
-WRITE_LINE_MEMBER(hp98034_io_card_device::ieee488_ctrl_w)
+void hp98034_io_card_device::ieee488_ctrl_w(int state)
 {
 	update_clr_hpib();
 }
@@ -303,7 +302,7 @@ void hp98034_io_card_device::update_dc()
 	sts_w(BIT(m_dc , 4));
 	if (update_flg()) {
 		// See reg_r above
-		machine().scheduler().boost_interleave(attotime::zero , attotime::from_usec(100));
+		machine().scheduler().perfect_quantum(attotime::from_usec(100));
 		machine().scheduler().synchronize();
 	}
 	update_clr_hpib();
@@ -331,7 +330,7 @@ void hp98034_io_card_device::update_data_out()
 	if (m_clr_hpib) {
 		m_data_out = 0;
 	}
-	m_ieee488->write_dio(~m_data_out);
+	m_ieee488->host_dio_w(~m_data_out);
 }
 
 void hp98034_io_card_device::update_ctrl_out()

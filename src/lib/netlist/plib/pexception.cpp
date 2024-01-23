@@ -1,10 +1,11 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
 
 #include "pexception.h"
 #include "pfmtlog.h"
 
 #include <cfenv>
+#include <cfloat>
 #include <iostream>
 
 #if (defined(__x86_64__) || defined(__i386__)) && defined(__linux__)
@@ -19,7 +20,7 @@ namespace plib {
 	// terminate
 	//============================================================
 
-	void terminate(const char *msg) noexcept
+	[[noreturn]] void terminate(const char *msg) noexcept
 	{
 		try
 		{
@@ -27,7 +28,7 @@ namespace plib {
 		}
 		catch (...)
 		{
-			/* ignore */
+			// ignore
 		}
 		std::terminate();
 	}
@@ -44,7 +45,7 @@ namespace plib {
 		}
 		catch (...)
 		{
-			/* ignore */
+			// ignore
 		}
 		std::terminate();
 	}
@@ -95,34 +96,48 @@ namespace plib {
 	}
 
 
-	fpexception_e::fpexception_e(const pstring &text)
+	fp_exception_e::fp_exception_e(const pstring &text)
 		: pexception(pfmt("Exception error: {}")(text))
 	{
 	}
 
 
-	bool fpsignalenabler::m_enable = false;
+	bool fp_signal_enabler::m_enable = false; // NOLINT
 
-	fpsignalenabler::fpsignalenabler(unsigned fpexceptions)
+	//FIXME: mingw needs to be compiled with `-fnon-call-exceptions`
+
+	fp_signal_enabler::fp_signal_enabler(unsigned fp_exceptions)
 	{
 	#if HAS_FEENABLE_EXCEPT
 		if (m_enable)
 		{
 			int b = 0;
-			if (fpexceptions & plib::FP_INEXACT) b = b | FE_INEXACT;
-			if (fpexceptions & plib::FP_DIVBYZERO) b = b | FE_DIVBYZERO;
-			if (fpexceptions & plib::FP_UNDERFLOW) b = b | FE_UNDERFLOW;
-			if (fpexceptions & plib::FP_OVERFLOW) b = b | FE_OVERFLOW;
-			if (fpexceptions & plib::FP_INVALID) b = b | FE_INVALID;
-			m_last_enabled = feenableexcept(b);
+			if (fp_exceptions & plib::FP_INEXACT) b = b | FE_INEXACT;
+			if (fp_exceptions & plib::FP_DIVBYZERO) b = b | FE_DIVBYZERO;
+			if (fp_exceptions & plib::FP_UNDERFLOW) b = b | FE_UNDERFLOW;
+			if (fp_exceptions & plib::FP_OVERFLOW) b = b | FE_OVERFLOW;
+			if (fp_exceptions & plib::FP_INVALID) b = b | FE_INVALID;
+			if ((b & m_last_enabled) != b)
+				m_last_enabled = feenableexcept(b);
+		}
+	#elif defined(_WIN32) && defined(_EM_INEXACT)
+		if (m_enable)
+		{
+			int b = _EM_DENORMAL | _EM_INEXACT | _EM_ZERODIVIDE | _EM_UNDERFLOW | _EM_OVERFLOW | _EM_INVALID;
+			if (fp_exceptions & plib::FP_INEXACT) b &= ~_EM_INEXACT;
+			if (fp_exceptions & plib::FP_DIVBYZERO) b &= ~_EM_ZERODIVIDE;
+			if (fp_exceptions & plib::FP_UNDERFLOW) b &= ~_EM_UNDERFLOW;
+			if (fp_exceptions & plib::FP_OVERFLOW) b &= ~_EM_OVERFLOW;
+			if (fp_exceptions & plib::FP_INVALID) b &= ~_EM_INVALID;
+			m_last_enabled = _controlfp(0, 0);
+			_controlfp(b, _MCW_EM );
 		}
 	#else
 		m_last_enabled = 0;
 	#endif
 	}
 
-
-	fpsignalenabler::~fpsignalenabler()
+	fp_signal_enabler::~fp_signal_enabler()
 	{
 	#if HAS_FEENABLE_EXCEPT
 		if (m_enable)
@@ -130,15 +145,26 @@ namespace plib {
 			fedisableexcept(FE_ALL_EXCEPT);  // Enable all floating point exceptions but FE_INEXACT
 			feenableexcept(m_last_enabled);  // Enable all floating point exceptions but FE_INEXACT
 		}
+	#elif defined(_WIN32) && defined(_EM_INEXACT)
+		if (m_enable)
+		{
+			_controlfp(m_last_enabled, _MCW_EM);
+		}
 	#endif
 	}
 
-	bool fpsignalenabler::supported()
+	bool fp_signal_enabler::supported()
 	{
+	#if HAS_FEENABLE_EXCEPT
 		return true;
+	#elif defined(_WIN32) && defined(_EM_INEXACT)
+		return true;
+	#else
+		return false;
+	#endif
 	}
 
-	bool fpsignalenabler::global_enable(bool enable)
+	bool fp_signal_enabler::global_enable(bool enable)
 	{
 		bool old = m_enable;
 		m_enable = enable;

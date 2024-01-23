@@ -98,34 +98,41 @@ public:
 	uint8_t dma_channel1() { return m_dma_channel1; }
 	uint8_t dma_channel2() { if(m_dma_combine == 0) return m_dma_channel2; else return m_dma_channel1; }
 
-	DECLARE_READ8_MEMBER(global_reg_select_r);
-	DECLARE_WRITE8_MEMBER(global_reg_select_w);
-	DECLARE_READ8_MEMBER(global_reg_data_r);
-	DECLARE_WRITE8_MEMBER(global_reg_data_w);
-	DECLARE_READ8_MEMBER(dram_r);
-	DECLARE_WRITE8_MEMBER(dram_w);
-	DECLARE_READ8_MEMBER(adlib_r);
-	DECLARE_WRITE8_MEMBER(adlib_w);
-	DECLARE_READ8_MEMBER(adlib_cmd_r);
-	DECLARE_WRITE8_MEMBER(adlib_cmd_w);
-	DECLARE_READ8_MEMBER(mix_ctrl_r);
-	DECLARE_WRITE8_MEMBER(mix_ctrl_w);
-	DECLARE_READ8_MEMBER(stat_r);
-	DECLARE_WRITE8_MEMBER(stat_w);
-	DECLARE_READ8_MEMBER(sb_r);
-	DECLARE_WRITE8_MEMBER(sb_w);
-	DECLARE_WRITE8_MEMBER(sb2x6_w);
+	uint8_t global_reg_select_r(offs_t offset);
+	void global_reg_select_w(offs_t offset, uint8_t data);
+	uint8_t global_reg_data_r(offs_t offset);
+	void global_reg_data_w(offs_t offset, uint8_t data);
+	uint8_t dram_r(offs_t offset);
+	void dram_w(offs_t offset, uint8_t data);
+	uint8_t adlib_r(offs_t offset);
+	void adlib_w(offs_t offset, uint8_t data);
+	uint8_t adlib_cmd_r(offs_t offset);
+	void adlib_cmd_w(offs_t offset, uint8_t data);
+	uint8_t mix_ctrl_r(offs_t offset);
+	void mix_ctrl_w(offs_t offset, uint8_t data);
+	uint8_t stat_r();
+	void stat_w(uint8_t data);
+	uint8_t sb_r(offs_t offset);
+	void sb_w(offs_t offset, uint8_t data);
+	void sb2x6_w(uint8_t data);
 
 	// DMA signals
 	uint8_t dack_r(int line);
 	void dack_w(int line,uint8_t data);
 	void eop_w(int state);
 
-	// optional information overrides
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
-	virtual void sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples) override;
+	// device_sound_interface overrides
+	virtual void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
 
 protected:
+	// device-level overrides
+	virtual void device_start() override;
+	virtual void device_reset() override;
+	virtual void device_stop() override;
+	virtual void device_clock_changed() override;
+
+	virtual void update_irq() override;
+
 	// voice-specific registers
 	gus_voice m_voice[32];
 
@@ -147,18 +154,13 @@ protected:
 
 	void set_irq(uint8_t source, uint8_t voice);
 	void reset_irq(uint8_t source);
-	void update_volume_ramps();
+
+	TIMER_CALLBACK_MEMBER(adlib_timer1_tick);
+	TIMER_CALLBACK_MEMBER(adlib_timer2_tick);
+	TIMER_CALLBACK_MEMBER(dma_tick);
+	TIMER_CALLBACK_MEMBER(update_volume_ramps);
 
 	std::vector<uint8_t> m_wave_ram;
-
-	// device-level overrides
-	virtual void device_start() override;
-	virtual void device_reset() override;
-	virtual void device_stop() override;
-	virtual void device_clock_changed() override;
-
-	virtual void update_irq() override;
-
 private:
 	// internal state
 	sound_stream* m_stream;
@@ -199,11 +201,6 @@ private:
 	uint32_t m_dma_current;
 	uint16_t m_volume_table[4096];
 
-	static const device_timer_id ADLIB_TIMER1 = 0;
-	static const device_timer_id ADLIB_TIMER2 = 1;
-	static const device_timer_id DMA_TIMER = 2;
-	static const device_timer_id VOL_RAMP_TIMER = 3;
-
 	int m_txirq;
 	int m_rxirq;
 
@@ -231,14 +228,14 @@ public:
 	void set_midi_irq(uint8_t source);
 	void reset_midi_irq(uint8_t source);
 
-	DECLARE_READ8_MEMBER(board_r);
-	DECLARE_READ8_MEMBER(synth_r);
-	DECLARE_WRITE8_MEMBER(board_w);
-	DECLARE_WRITE8_MEMBER(synth_w);
-	DECLARE_READ8_MEMBER(adlib_r);
-	DECLARE_WRITE8_MEMBER(adlib_w);
-	DECLARE_READ8_MEMBER(joy_r);
-	DECLARE_WRITE8_MEMBER(joy_w);
+	uint8_t board_r(offs_t offset);
+	uint8_t synth_r(offs_t offset);
+	void board_w(offs_t offset, uint8_t data);
+	void synth_w(offs_t offset, uint8_t data);
+	uint8_t adlib_r(offs_t offset);
+	void adlib_w(offs_t offset, uint8_t data);
+	uint8_t joy_r(offs_t offset);
+	void joy_w(offs_t offset, uint8_t data);
 
 	// DMA overrides
 	virtual uint8_t dack_r(int line) override;
@@ -256,18 +253,18 @@ protected:
 	virtual ioport_constructor device_input_ports() const override;
 
 private:
-	DECLARE_WRITE_LINE_MEMBER(midi_txirq);
-	DECLARE_WRITE_LINE_MEMBER(midi_rxirq);
-	DECLARE_WRITE_LINE_MEMBER(wavetable_irq);
-	DECLARE_WRITE_LINE_MEMBER(volumeramp_irq);
-	DECLARE_WRITE_LINE_MEMBER(timer1_irq);
-	DECLARE_WRITE_LINE_MEMBER(timer2_irq);
-	DECLARE_WRITE_LINE_MEMBER(sb_irq);
-	DECLARE_WRITE_LINE_MEMBER(dma_irq);
-	DECLARE_WRITE_LINE_MEMBER(drq1_w);
-	DECLARE_WRITE_LINE_MEMBER(drq2_w);
-	DECLARE_WRITE_LINE_MEMBER(nmi_w);
-	DECLARE_WRITE_LINE_MEMBER(write_acia_clock);
+	void midi_txirq(int state);
+	void midi_rxirq(int state);
+	void wavetable_irq(int state);
+	void volumeramp_irq(int state);
+	void timer1_irq(int state);
+	void timer2_irq(int state);
+	void sb_irq(int state);
+	void dma_irq(int state);
+	void drq1_w(int state);
+	void drq2_w(int state);
+	void nmi_w(int state);
+	void write_acia_clock(int state);
 
 	required_device<gf1_device> m_gf1;
 

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE softwarelist SYSTEM "softwarelist.dtd">
 <!--
-license:CC0
+license:CC0-1.0
 
     Note: Most games do not support multi cart system - the ones that are has the text "CART-AM" in the header.
     All titles that doesn't support it have a supported="no" flag.
@@ -278,7 +278,26 @@ license:CC0
 
 	<!-- Game: Final Fight Revenge -->
 	<software name="ffreveng" supported="no">
-		<description>Final Fight Revenge (JUET 990714 V1.000)</description>
+		<description>Final Fight Revenge / Final Revenge (JUET 990930 V1.100)</description>
+		<year>1999</year>
+		<publisher>Capcom</publisher>
+		<part name="cart" interface="stv_cart">
+			<dataarea name="rom" size="0x3000000">
+				<rom name="ffr110.ic35" size="0x100000" crc="3ffea541" sha1="715b070b1d574a99aeb12086de380b0b3aaa25a1" offset="0x000001" loadflag="load16_byte"/>
+				<!-- actual source ROM board have 21x 16Mbit FlashROMs instead -->
+				<rom name="opr21872.7"  size="0x200000" crc="32d36fee" sha1="441c4254ef2e9301e1006d69462a850ce339314b" offset="0x200000" loadflag="load16_word_swap"/>
+				<rom name="mpr21873.2"  size="0x400000" crc="dac5bd98" sha1="6102035ce9eb2f83d7d9b20f989a151f45087c67" offset="0x400000" loadflag="load16_word_swap"/>
+				<rom name="mpr21874.3"  size="0x400000" crc="0a7be2f1" sha1="e2d13f36e54d1e2cb9d584db829c04a6ff65108c" offset="0x800000" loadflag="load16_word_swap"/>
+				<rom name="mpr21875.4"  size="0x400000" crc="ccb75029" sha1="9611a08a2ad0e0e82137ded6205440a948a339a4" offset="0xc00000" loadflag="load16_word_swap"/>
+				<rom name="mpr21876.5"  size="0x400000" crc="bb92a7fc" sha1="d9e0fab1104a46adeb0a0cfc0d070d4c63a28d55" offset="0x1000000" loadflag="load16_word_swap"/>
+				<rom name="mpr21877.6"  size="0x400000" crc="c22a4a75" sha1="3276bc0628e71b432f21ba9a4f5ff7ccc8769cd9" offset="0x1400000" loadflag="load16_word_swap"/>
+				<rom name="opr21878.1"  size="0x200000" crc="2ea4a64d" sha1="928a973dce5eba0a1628d61ba56a530de990a946" offset="0x1800000" loadflag="load16_word_swap"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="ffrevng10" supported="no" cloneof="ffreveng">
+		<description>Final Fight Revenge / Final Revenge (JUET 990714 V1.000)</description>
 		<year>1999</year>
 		<publisher>Capcom</publisher>
 		<part name="cart" interface="stv_cart">
@@ -570,6 +589,28 @@ license:CC0
 				<rom name="mpr20999.6"  size="0x400000" crc="82e31f25" sha1="0cf74af14abb6ede21d19bc22041214232751594" offset="0x1400000" loadflag="load16_word_swap"/>
 				<rom name="mpr20994.1"  size="0x400000" crc="a69243a0" sha1="e5a1b6ec62bdd5b015ed6cf48f5a6aabaf4bd837" offset="0x1800000" loadflag="load16_word_swap"/>
 				<rom name="mpr21001.8"  size="0x400000" crc="95fbe549" sha1="8cfb48f353b2849600373d66f293f103bca700df" offset="0x1c00000" loadflag="load16_word_swap"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<!-- Game: Name Club Disney -->
+	<software name="nclubdis" supported="no"> <!-- needs security card -->
+		<description>Name Club Disney (J 980614 V1.000)</description>
+		<year>1998</year>
+		<publisher>Sega</publisher>
+		<part name="cart" interface="stv_cart">
+			<dataarea name="rom" size="0x3000000">
+				<rom name="ic22" size="0x200000" crc="cfd5eb54" sha1="878195c70ad931d3015d497d2739a0867ff83cf7" offset="0x0200000" loadflag="load16_word_swap" status="baddump" /> <!-- tests bad but believed good, flagged so it gets double checked if possible -->
+				<rom name="ic24" size="0x200000" crc="943682eb" sha1="ad41625244509affe7b6d6caffef58bb7bf75b72" offset="0x0400000" loadflag="load16_word_swap"/>
+				<rom name="ic26" size="0x200000" crc="a17bd53a" sha1="e05079e3bfc7187b70ddc4b48de9e5ffcb19e473" offset="0x0600000" loadflag="load16_word_swap"/>
+				<rom name="ic28" size="0x200000" crc="9a597bff" sha1="8cc265a89bbc42d4e6d55e23a4ed87fc1224c9dc" offset="0x0800000" loadflag="load16_word_swap"/>
+				<rom name="ic30" size="0x200000" crc="3eb020f6" sha1="6b87a6e7ab9eb820b7661fa6ea8c29bf8ead820d" offset="0x0a00000" loadflag="load16_word_swap"/>
+				<rom name="ic32" size="0x200000" crc="ac26d375" sha1="a01125eb4bca7823eb12d4e03d93612e09dcddda" offset="0x0c00000" loadflag="load16_word_swap"/>
+				<rom name="ic34" size="0x200000" crc="e157cd99" sha1="52c976540157cc63c599ee34ec5bade7e489599d" offset="0x0e00000" loadflag="load16_word_swap"/> <!-- 111xxxxxxxxxxxxxxxxxx = 0xFF -->
+				<rom name="ic36" size="0x200000" crc="9a4109e5" sha1="ba59caac5f5a80fc52c507d8a47f322a380aa9a1" offset="0x1000000" loadflag="load16_word_swap"/> <!-- FIXED BITS (11111111), but present -->
+				<rom name="ic23" size="0x200000" crc="9a4109e5" sha1="ba59caac5f5a80fc52c507d8a47f322a380aa9a1" offset="0x1200000" loadflag="load16_word_swap"/> <!-- FIXED BITS (11111111), but present -->
+				<rom name="ic25" size="0x200000" crc="9a4109e5" sha1="ba59caac5f5a80fc52c507d8a47f322a380aa9a1" offset="0x1400000" loadflag="load16_word_swap"/> <!-- FIXED BITS (11111111), but present -->
+				<!-- ic27, ic29, ic31, ic33, ic35, ic37 not populated -->
 			</dataarea>
 		</part>
 	</software>
@@ -949,7 +990,7 @@ license:CC0
 	</software>
 
 	<!-- Game: Puzzle &amp; Action: Treasure Hunt -->
-	<software name="thunt" supported="no"  cloneof="sandor">
+	<software name="thunt" supported="no" cloneof="sandor">
 		<description>Puzzle &amp; Action: Treasure Hunt (JUET 970901 V2.00E)</description>
 		<year>1997</year>
 		<publisher>Sega</publisher>
@@ -966,7 +1007,7 @@ license:CC0
 	</software>
 
 	<!-- Game: Puzzle &amp; Action: BoMulEul Chajara -->
-	<software name="thuntk" supported="no"  cloneof="sandor">
+	<software name="thuntk" supported="no" cloneof="sandor">
 		<description>Puzzle &amp; Action: BoMulEul Chajara (JUET 970125 V2.00K)</description>
 		<year>1997</year>
 		<publisher>Sega / Deniam</publisher>
@@ -1030,7 +1071,8 @@ license:CC0
 		<publisher>Sega</publisher>
 		<part name="cart" interface="stv_cart">
 			<dataarea name="rom" size="0x3000000">
-				<rom name="epr17944.13" size="0x100000" crc="a5bdc560" sha1="d3830480a611b7d88760c672ce46a2ea74076487" offset="0x000001" loadflag="load16_byte"/>
+				<rom name="epr17944.13" size="0x080000" crc="3304c175" sha1="6d847efad73d361cac4d7fcb452ccf89efa13e24" offset="0x000001" loadflag="load16_byte"/>
+				<rom size="0x080000" offset="0x100001" loadflag="reload"/>
 				<rom name="mpr17946.2" size="0x400000" crc="4cb245f7" sha1="363d9936b27043b5858c956a45736ac05aefc54e" offset="0x400000" loadflag="load16_word_swap"/>
 				<rom name="mpr17947.3" size="0x400000" crc="fef4a9fb" sha1="1b4bd095962db769da17d3644df10f62d041e914" offset="0x800000" loadflag="load16_word_swap"/>
 				<rom name="mpr17948.4" size="0x400000" crc="3e2b251a" sha1="be6191c18727d7cbc6399fd4c1aaae59304af30c" offset="0xc00000" loadflag="load16_word_swap"/>

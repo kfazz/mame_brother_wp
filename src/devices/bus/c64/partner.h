@@ -31,7 +31,7 @@ public:
 	// optional information overrides
 	virtual ioport_constructor device_input_ports() const override;
 
-	DECLARE_WRITE_LINE_MEMBER( nmi_w );
+	void nmi_w(int state);
 
 protected:
 	// device-level overrides
@@ -44,7 +44,7 @@ protected:
 	virtual int c64_game_r(offs_t offset, int sphi2, int ba, int rw) override;
 
 private:
-	optional_shared_ptr<uint8_t> m_ram;
+	memory_share_creator<uint8_t> m_ram;
 
 	int m_a0;
 	int m_a6;

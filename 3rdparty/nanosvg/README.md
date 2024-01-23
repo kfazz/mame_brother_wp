@@ -1,9 +1,11 @@
+*This project is not actively maintained.*
+
 Nano SVG
 ==========
 
 ## Parser
 
-![screenshot of some splines rendered witht the sample program](/example/screenshot-1.png?raw=true)
+![screenshot of some splines rendered with the sample program](/example/screenshot-1.png?raw=true)
 
 NanoSVG is a simple stupid single-header-file SVG parse. The output of the parser is a list of cubic bezier shapes.
 
@@ -17,7 +19,7 @@ That is, you should get the same looking data as your designed in your favorite 
 NanoSVG can return the paths in few different units. For example if you want to render an image, you may choose
 to get the paths in pixels, or if you are feeding the data into a CNC-cutter, you may want to use millimeters. 
 
-The units passed to NanoVG should be one of: 'px', 'pt', 'pc' 'mm', 'cm', or 'in'.
+The units passed to NanoSVG should be one of: 'px', 'pt', 'pc' 'mm', 'cm', or 'in'.
 DPI (dots-per-inch) controls how the unit conversion is done.
 
 If you don't know or care about the units stuff, "px" and 96 should get you going.
@@ -74,6 +76,16 @@ By default, NanoSVG parses only the most common colors. In order to get support 
 #define NANOSVG_ALL_COLOR_KEYWORDS	// Include full list of color keywords.
 #define NANOSVG_IMPLEMENTATION		// Expands implementation
 #include "nanosvg.h"
+```
+
+Alternatively, you can install the library using CMake and import it into your project using the standard CMake `find_package` command.
+
+```CMake
+add_executable(myexe main.c)
+
+find_package(NanoSVG REQUIRED)
+
+target_link_libraries(myexe NanoSVG::nanosvg NanoSVG::nanosvgrast)
 ```
 
 ## Compiling Example Project

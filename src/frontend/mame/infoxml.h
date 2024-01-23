@@ -16,6 +16,8 @@
 #include "emuopts.h"
 
 #include <functional>
+#include <string>
+#include <string_view>
 #include <vector>
 
 
@@ -33,6 +35,9 @@ public:
 	// output
 	void output(std::ostream &out, const std::vector<std::string> &patterns);
 	void output(std::ostream &out, const std::function<bool(const char *shortname, bool &done)> &filter = { }, bool include_devices = true);
+
+	static char const *feature_name(device_t::feature_type feature);
+	static std::string format_sourcefile(std::string_view path);
 
 private:
 	// internal state

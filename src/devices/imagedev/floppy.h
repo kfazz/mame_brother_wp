@@ -11,41 +11,16 @@
 
 #pragma once
 
-#include "formats/flopimg.h"
-#include "formats/d88_dsk.h"
-#include "formats/dfi_dsk.h"
-#include "formats/hxchfe_dsk.h"
-#include "formats/hxcmfm_dsk.h"
-#include "formats/imd_dsk.h"
-#include "formats/ipf_dsk.h"
-#include "formats/mfi_dsk.h"
-#include "formats/td0_dsk.h"
-#include "formats/cqm_dsk.h"
-#include "formats/dsk_dsk.h"
 #include "sound/samples.h"
-#include "softlist_dev.h"
+#include "screen.h"
 
-#define DECLARE_FLOPPY_FORMATS(_name) \
-	static const floppy_format_type _name []
+class floppy_image;
+class floppy_image_format_t;
 
-#define FLOPPY_FORMATS_MEMBER(_member) \
-	const floppy_format_type _member [] = {
-#define FLOPPY_FORMATS_END0 \
-		, \
-		nullptr };
-#define FLOPPY_FORMATS_END \
-		, \
-		FLOPPY_D88_FORMAT, \
-		FLOPPY_DFI_FORMAT, \
-		FLOPPY_HFE_FORMAT, \
-		FLOPPY_IMD_FORMAT, \
-		FLOPPY_IPF_FORMAT, \
-		FLOPPY_MFI_FORMAT, \
-		FLOPPY_MFM_FORMAT, \
-		FLOPPY_TD0_FORMAT, \
-		FLOPPY_CQM_FORMAT, \
-		FLOPPY_DSK_FORMAT \
-	FLOPPY_FORMATS_END0
+namespace fs {
+	class manager_t;
+	class meta_data;
+};
 
 class floppy_sound_device;
 
@@ -53,42 +28,85 @@ class floppy_sound_device;
     TYPE DEFINITIONS
 ***************************************************************************/
 
+class format_registration {
+public:
+	format_registration();
+
+	void add(const floppy_image_format_t &format);
+	void add(const fs::manager_t &fs);
+
+	void add_fm_containers();
+	void add_mfm_containers();
+	void add_pc_formats();
+
+	std::vector<const floppy_image_format_t *> m_formats;
+	std::vector<const fs::manager_t *> m_fs;
+};
+
 class floppy_image_device : public device_t,
 							public device_image_interface
 {
 public:
-	typedef delegate<image_init_result (floppy_image_device *)> load_cb;
+	typedef delegate<void (floppy_image_device *)> load_cb;
 	typedef delegate<void (floppy_image_device *)> unload_cb;
 	typedef delegate<void (floppy_image_device *, int)> index_pulse_cb;
 	typedef delegate<void (floppy_image_device *, int)> ready_cb;
 	typedef delegate<void (floppy_image_device *, int)> wpt_cb;
 	typedef delegate<void (floppy_image_device *, int)> led_cb;
 
+	struct fs_info {
+		const fs::manager_t *m_manager;
+		const floppy_image_format_t *m_type;
+		u32 m_image_size;
+		const char *m_name;
+		u32 m_key;
+		const char *m_description;
+
+		fs_info(const fs::manager_t *manager, const floppy_image_format_t *type, u32 image_size, const char *name, const char *description) :
+			m_manager(manager),
+			m_type(type),
+			m_image_size(image_size),
+			m_name(name),
+			m_key(0),
+			m_description(description)
+		{}
+
+		fs_info(const char *name, u32 key, const char *description) :
+			m_manager(nullptr),
+			m_type(nullptr),
+			m_image_size(0),
+			m_name(name),
+			m_key(key),
+			m_description(description)
+		{}
+	};
+
 	// construction/destruction
 	virtual ~floppy_image_device();
 
-	virtual void handled_variants(uint32_t *variants, int &var_count) const = 0;
-
-	void set_formats(const floppy_format_type *formats);
-	floppy_image_format_t *get_formats() const;
-	floppy_image_format_t *get_load_format() const;
-	floppy_image_format_t *identify(std::string filename);
+	void set_formats(std::function<void (format_registration &fr)> formats);
+	const std::vector<const floppy_image_format_t *> &get_formats() const;
+	const std::vector<fs_info> &get_fs() const { return m_fs; }
+	const floppy_image_format_t *get_load_format() const;
+	std::pair<std::error_condition, const floppy_image_format_t *> identify(std::string_view filename);
 	void set_rpm(float rpm);
 
-	// image-level overrides
-	virtual image_init_result call_load() override;
+	void init_fs(const fs_info *fs, const fs::meta_data &meta);
+
+	// device_image_interface implementation
+	virtual std::pair<std::error_condition, std::string> call_load() override;
 	virtual void call_unload() override;
-	virtual image_init_result call_create(int format_type, util::option_resolution *format_options) override;
+	virtual std::pair<std::error_condition, std::string> call_create(int format_type, util::option_resolution *format_options) override;
 	virtual const char *image_interface() const noexcept override = 0;
-	virtual iodevice_t image_type() const noexcept override { return IO_FLOPPY; }
 
 	virtual bool is_readable()  const noexcept override { return true; }
 	virtual bool is_writeable() const noexcept override { return true; }
 	virtual bool is_creatable() const noexcept override { return true; }
-	virtual bool must_be_loaded() const noexcept override { return false; }
 	virtual bool is_reset_on_load() const noexcept override { return false; }
-	virtual const char *file_extensions() const noexcept override { return extension_list; }
-	void setup_write(floppy_image_format_t *output_format);
+	virtual const char *file_extensions() const noexcept override { return m_extension_list; }
+	virtual const char *image_type_name() const noexcept override { return "floppydisk"; }
+	virtual const char *image_brief_type_name() const noexcept override { return "flop"; }
+	void setup_write(const floppy_image_format_t *output_format);
 
 	void setup_load_cb(load_cb cb);
 	void setup_unload_cb(unload_cb cb);
@@ -97,124 +115,151 @@ public:
 	void setup_wpt_cb(wpt_cb cb);
 	void setup_led_cb(led_cb cb);
 
-	std::vector<uint32_t> &get_buffer() { return image->get_buffer(cyl, ss, subcyl); }
-	int get_cyl() { return cyl; }
+	std::vector<uint32_t> &get_buffer();
+	int get_cyl() const { return m_cyl; }
+	bool on_track() const { return !m_subcyl; }
 
-	void mon_w(int state);
+	virtual void mon_w(int state);
 	bool ready_r();
 	void set_ready(bool state);
 	double get_pos();
+	virtual void tfsel_w(int state) { }    // 35SEL line for Apple Sony drives
 
-	bool wpt_r() { return wpt; }
-	int dskchg_r() { return dskchg; }
-	bool trk00_r() { return (has_trk00_sensor ? (cyl != 0) : 1); }
-	int idx_r() { return idx; }
-	int mon_r() { return mon; }
-	bool ss_r() { return ss; }
+	virtual bool wpt_r(); // Mac sony drives using this for various reporting
+	int dskchg_r() { return m_dskchg; }
+	bool trk00_r() { return (m_has_trk00_sensor ? (m_cyl != 0) : 1); }
+	int idx_r() { return m_idx; }
+	int mon_r() { return m_mon; }
+	bool ss_r() { return m_ss; }
 	bool twosid_r();
 
-	void seek_phase_w(int phases);
-	void stp_w(int state);
-	void dir_w(int state) { dir = state; }
-	void ss_w(int state) { if (sides > 1) ss = state; }
-	void inuse_w(int state) { }
-	void dskchg_w(int state) { if (dskchg_writable) dskchg = state; }
-	void ds_w(int state) { ds = state; check_led(); }
+	virtual bool writing_disabled() const;
 
-	void index_resync();
+	virtual void seek_phase_w(int phases);
+	void stp_w(int state);
+	void dir_w(int state) { m_dir = state; }
+	void ss_w(int state) { m_actual_ss = state; if (m_sides > 1) m_ss = state; }
+	void inuse_w(int state) { }
+	void dskchg_w(int state) { if (m_dskchg_writable) m_dskchg = state; }
+	void ds_w(int state) { m_ds = state; check_led(); }
+
 	attotime time_next_index();
 	attotime get_next_transition(const attotime &from_when);
 	void write_flux(const attotime &start, const attotime &end, int transition_count, const attotime *transitions);
 	void set_write_splice(const attotime &when);
-	int get_sides() { return sides; }
+	int get_sides() { return m_sides; }
 	uint32_t get_form_factor() const;
 	uint32_t get_variant() const;
 
-	static const floppy_format_type default_floppy_formats[];
+	static void default_fm_floppy_formats(format_registration &fr);
+	static void default_mfm_floppy_formats(format_registration &fr);
+	static void default_pc_floppy_formats(format_registration &fr);
 
 	// Enable sound
 	void    enable_sound(bool doit) { m_make_sound = doit; }
 
 protected:
+	struct fs_enum;
+
 	floppy_image_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
 
-	// device-level overrides
+	// device_t implementation
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
-
+	virtual void device_config_complete() override;
 	virtual void device_add_mconfig(machine_config &config) override;
 
 	// device_image_interface implementation
-	virtual const software_list_loader &get_software_list_loader() const override { return image_software_list_loader::instance(); }
+	virtual const software_list_loader &get_software_list_loader() const override;
 
+	TIMER_CALLBACK_MEMBER(index_resync);
+
+	virtual void track_changed();
 	virtual void setup_characteristics() = 0;
 
 	void init_floppy_load(bool write_supported);
 
-	floppy_image_format_t *input_format;
-	floppy_image_format_t *output_format;
-	floppy_image          *image;
-	char                  extension_list[256];
-	floppy_image_format_t *fif_list;
-	emu_timer             *index_timer;
+	std::function<void (format_registration &fr)> m_format_registration_cb;
+	const floppy_image_format_t *m_input_format;
+	const floppy_image_format_t *m_output_format;
+	std::vector<uint32_t> m_variants;
+	std::unique_ptr<floppy_image> m_image;
+	char                  m_extension_list[256];
+	std::vector<const floppy_image_format_t *> m_fif_list;
+	std::vector<fs_info>  m_fs;
+	std::vector<const fs::manager_t *> m_fs_managers;
+	emu_timer             *m_index_timer;
 
 	/* Physical characteristics, filled by setup_characteristics */
-	int tracks; /* addressable tracks */
-	int sides;  /* number of heads */
-	uint32_t form_factor; /* 3"5, 5"25, etc */
-	bool motor_always_on;
-	bool dskchg_writable;
-	bool has_trk00_sensor;
+	int m_tracks; /* addressable tracks */
+	int m_sides;  /* number of heads */
+	uint32_t m_form_factor; /* 3"5, 5"25, etc */
+	bool m_motor_always_on;
+	bool m_dskchg_writable;
+	bool m_has_trk00_sensor;
 
-	int drive_index;
+	int m_drive_index;
 
 	/* state of input lines */
-	int dir;  /* direction */
-	int stp;  /* step */
-	int wtg;  /* write gate */
-	int mon;  /* motor on */
-	int ss; /* side select */
-	int ds; /* drive select */
+	int m_dir;  /* direction */
+	int m_stp;  /* step */
+	int m_wtg;  /* write gate */
+	int m_mon;  /* motor on */
+	int m_ss, m_actual_ss; /* side select (forced to 0 if single-sided drive / actual value) */
+	int m_ds; /* drive select */
+
+	int m_phases; /* phases lines, when they exist */
 
 	/* state of output lines */
-	int idx;  /* index pulse */
-	int wpt;  /* write protect */
-	int rdy;  /* ready */
-	int dskchg;     /* disk changed */
-	bool ready;
+	int m_idx;  /* index pulse */
+	int m_wpt;  /* write protect */
+	int m_rdy;  /* ready */
+	int m_dskchg;     /* disk changed */
+	bool m_ready;
 
 	/* rotation per minute => gives index pulse frequency */
-	float rpm;
-	int floppy_ratio_1; // rpm/300*1000
+	float m_rpm;
+	/* angular speed, where a full circle is 2e8 */
+	double m_angular_speed;
 
-	attotime revolution_start_time, rev_time;
-	uint32_t revolution_count;
-	int cyl, subcyl;
-
+	attotime m_revolution_start_time, m_rev_time;
+	uint32_t m_revolution_count;
+	int m_cyl, m_subcyl;
 	/* Current floppy zone cache */
-	attotime cache_start_time, cache_end_time, cache_weak_start;
-	int cache_index;
-	u32 cache_entry;
-	bool cache_weak;
+	attotime m_cache_start_time, m_cache_end_time, m_cache_weak_start;
+	attotime m_amplifier_freakout_time;
+	int m_cache_index;
+	u32 m_cache_entry;
+	bool m_cache_weak;
 
-	bool image_dirty;
-	int ready_counter;
+	bool m_image_dirty, m_track_dirty;
+	int m_ready_counter;
 
-	load_cb cur_load_cb;
-	unload_cb cur_unload_cb;
-	index_pulse_cb cur_index_pulse_cb;
-	ready_cb cur_ready_cb;
-	wpt_cb cur_wpt_cb;
-	led_cb cur_led_cb;
+	load_cb m_cur_load_cb;
+	unload_cb m_cur_unload_cb;
+	index_pulse_cb m_cur_index_pulse_cb;
+	ready_cb m_cur_ready_cb;
+	wpt_cb m_cur_wpt_cb;
+	led_cb m_cur_led_cb;
+
+
+	// Temporary structure storing a write span
+	struct wspan {
+		int start, end;
+		std::vector<int> flux_change_positions;
+	};
+
+	static void wspan_split_on_wrap(std::vector<wspan> &wspans);
+	static void wspan_remove_damaged(std::vector<wspan> &wspans, const std::vector<uint32_t> &track);
+	static void wspan_write(const std::vector<wspan> &wspans, std::vector<uint32_t> &track);
+
+	void register_formats();
 
 	void check_led();
 	uint32_t find_position(attotime &base, const attotime &when);
 	int find_index(uint32_t position, const std::vector<uint32_t> &buf) const;
-	bool test_track_last_entry_warps(const std::vector<uint32_t> &buf) const;
 	attotime position_to_time(const attotime &base, int position) const;
 
-	void write_zone(uint32_t *buf, int &cells, int &index, uint32_t spos, uint32_t epos, uint32_t mg);
 	void commit_image();
 
 	u32 hash32(u32 val) const;
@@ -227,6 +272,35 @@ protected:
 	// Sound
 	bool    m_make_sound;
 	floppy_sound_device* m_sound_out;
+
+	// Flux visualization
+	struct flux_per_pixel_info {
+		uint32_t m_position;      // 0-199999999 Angular position in the track, 0xffffffff if not in the floppy image
+		uint16_t m_r;             // Distance from the center
+		uint8_t m_combined_track; // No need to store head, it's y >= flux_screen_sy/2
+		uint8_t m_color;          // Computed gray level from the flux counts
+	};
+
+	struct flux_per_combined_track_info {
+		std::vector<flux_per_pixel_info *> m_pixels[2];
+		uint32_t m_span;
+		uint8_t m_track;
+		uint8_t m_subtrack;
+	};
+
+	std::vector<flux_per_pixel_info> m_flux_per_pixel_infos;
+	std::vector<flux_per_combined_track_info> m_flux_per_combined_track_infos;
+
+	optional_device<screen_device> m_flux_screen;
+
+	static constexpr int flux_screen_sx = 501;
+	static constexpr int flux_screen_sy = 1002;
+	static constexpr int flux_min_r     = 100;
+	static constexpr int flux_max_r     = 245;
+
+	void flux_image_prepare();
+	void flux_image_compute_for_track(int track, int head);
+	uint32_t flux_screen_update(screen_device &device, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 };
 
 #define DECLARE_FLOPPY_IMAGE_DEVICE(Type, Name, Interface) \
@@ -234,7 +308,6 @@ protected:
 	public: \
 		Name(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock); \
 		virtual ~Name(); \
-		virtual void handled_variants(uint32_t *variants, int &var_count) const override; \
 		virtual const char *image_interface() const noexcept override { return Interface; } \
 	protected: \
 		virtual void setup_characteristics() override; \
@@ -249,6 +322,7 @@ DECLARE_FLOPPY_IMAGE_DEVICE(FLOPPY_35_HD,        floppy_35_hd,        "floppy_3_
 DECLARE_FLOPPY_IMAGE_DEVICE(FLOPPY_35_ED,        floppy_35_ed,        "floppy_3_5")
 DECLARE_FLOPPY_IMAGE_DEVICE(FLOPPY_525_SSSD_35T, floppy_525_sssd_35t, "floppy_5_25")
 DECLARE_FLOPPY_IMAGE_DEVICE(FLOPPY_525_SD_35T,   floppy_525_sd_35t,   "floppy_5_25")
+DECLARE_FLOPPY_IMAGE_DEVICE(FLOPPY_525_VTECH,    floppy_525_vtech,    "floppy_5_25")
 DECLARE_FLOPPY_IMAGE_DEVICE(FLOPPY_525_SSSD,     floppy_525_sssd,     "floppy_5_25")
 DECLARE_FLOPPY_IMAGE_DEVICE(FLOPPY_525_SD,       floppy_525_sd,       "floppy_5_25")
 DECLARE_FLOPPY_IMAGE_DEVICE(FLOPPY_525_SSDD,     floppy_525_ssdd,     "floppy_5_25")
@@ -263,10 +337,13 @@ DECLARE_FLOPPY_IMAGE_DEVICE(FLOPPY_8_DSDD,       floppy_8_dsdd,       "floppy_8"
 DECLARE_FLOPPY_IMAGE_DEVICE(EPSON_SMD_165,       epson_smd_165,       "floppy_3_5")
 DECLARE_FLOPPY_IMAGE_DEVICE(EPSON_SD_320,        epson_sd_320,        "floppy_5_25")
 DECLARE_FLOPPY_IMAGE_DEVICE(EPSON_SD_321,        epson_sd_321,        "floppy_5_25")
+DECLARE_FLOPPY_IMAGE_DEVICE(PANA_JU_363,         pana_ju_363,         "floppy_3_5")
 DECLARE_FLOPPY_IMAGE_DEVICE(SONY_OA_D31V,        sony_oa_d31v,        "floppy_3_5")
 DECLARE_FLOPPY_IMAGE_DEVICE(SONY_OA_D32W,        sony_oa_d32w,        "floppy_3_5")
 DECLARE_FLOPPY_IMAGE_DEVICE(SONY_OA_D32V,        sony_oa_d32v,        "floppy_3_5")
 DECLARE_FLOPPY_IMAGE_DEVICE(TEAC_FD_30A,         teac_fd_30a,         "floppy_3")
+DECLARE_FLOPPY_IMAGE_DEVICE(TEAC_FD_55A,         teac_fd_55a,         "floppy_5_25")
+DECLARE_FLOPPY_IMAGE_DEVICE(TEAC_FD_55B,         teac_fd_55b,         "floppy_5_25")
 DECLARE_FLOPPY_IMAGE_DEVICE(TEAC_FD_55E,         teac_fd_55e,         "floppy_5_25")
 DECLARE_FLOPPY_IMAGE_DEVICE(TEAC_FD_55F,         teac_fd_55f,         "floppy_5_25")
 DECLARE_FLOPPY_IMAGE_DEVICE(TEAC_FD_55G,         teac_fd_55g,         "floppy_5_25")
@@ -274,6 +351,70 @@ DECLARE_FLOPPY_IMAGE_DEVICE(ALPS_3255190X,       alps_3255190x,       "floppy_5_
 DECLARE_FLOPPY_IMAGE_DEVICE(IBM_6360,            ibm_6360,            "floppy_8")
 
 DECLARE_DEVICE_TYPE(FLOPPYSOUND, floppy_sound_device)
+
+class mac_floppy_device : public floppy_image_device {
+public:
+	virtual ~mac_floppy_device() = default;
+
+	virtual bool wpt_r() override;
+	virtual void mon_w(int) override;
+	virtual void tfsel_w(int state) override;
+	virtual void seek_phase_w(int phases) override;
+	virtual const char *image_interface() const noexcept override { return "floppy_3_5"; }
+	virtual bool writing_disabled() const override;
+
+protected:
+	u8 m_reg;
+	bool m_strb;
+	bool m_mfm, m_has_mfm;
+
+	mac_floppy_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
+
+	virtual void device_start() override;
+	virtual void device_reset() override;
+	virtual void track_changed() override;
+
+	virtual bool is_2m() const = 0;
+};
+
+// 400K GCR
+class oa_d34v_device : public mac_floppy_device {
+public:
+	oa_d34v_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+	virtual ~oa_d34v_device() = default;
+protected:
+	virtual void setup_characteristics() override;
+	virtual void track_changed() override;
+
+	virtual bool is_2m() const override;
+};
+
+// 400/800K GCR (e.g. dual-sided)
+class mfd51w_device : public mac_floppy_device {
+public:
+	mfd51w_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+	virtual ~mfd51w_device() = default;
+protected:
+	virtual void setup_characteristics() override;
+
+	virtual bool is_2m() const override;
+};
+
+// 400/800K GCR + 1.44 MFM (Superdrive)
+class mfd75w_device : public mac_floppy_device {
+public:
+	mfd75w_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+	virtual ~mfd75w_device() = default;
+
+protected:
+	virtual void setup_characteristics() override;
+
+	virtual bool is_2m() const override;
+};
+
+DECLARE_DEVICE_TYPE(OAD34V, oa_d34v_device)
+DECLARE_DEVICE_TYPE(MFD51W, mfd51w_device)
+DECLARE_DEVICE_TYPE(MFD75W, mfd75w_device)
 
 
 /*
@@ -294,7 +435,7 @@ protected:
 
 private:
 	// device_sound_interface overrides
-	void sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples) override;
+	virtual void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
 	sound_stream*   m_sound;
 
 	int         m_step_base;
@@ -319,39 +460,44 @@ class floppy_connector: public device_t,
 						public device_slot_interface
 {
 public:
-	template <typename T>
-	floppy_connector(const machine_config &mconfig, const char *tag, device_t *owner, T &&opts, const char *dflt, const floppy_format_type formats[], bool fixed = false)
+
+	template <typename T, typename U>
+	floppy_connector(const machine_config &mconfig, const char *tag, device_t *owner, T &&opts, const char *dflt, U &&formats, bool fixed = false)
 		: floppy_connector(mconfig, tag, owner, 0)
 	{
 		option_reset();
 		opts(*this);
 		set_default_option(dflt);
 		set_fixed(fixed);
-		set_formats(formats);
+		set_formats(std::forward<U>(formats));
 	}
-	floppy_connector(const machine_config &mconfig, const char *tag, device_t *owner, const char *option, const device_type &devtype, bool is_default, const floppy_format_type formats[])
+
+	template <typename T>
+	floppy_connector(const machine_config &mconfig, const char *tag, device_t *owner, const char *option, device_type drivetype, bool is_default, T &&formats)
 		: floppy_connector(mconfig, tag, owner, 0)
 	{
 		option_reset();
-		option_add(option, devtype);
+		option_add(option, drivetype);
 		if(is_default)
 			set_default_option(option);
 		set_fixed(false);
-		set_formats(formats);
+		set_formats(std::forward<T>(formats));
 	}
+
 	floppy_connector(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock = 0);
 	virtual ~floppy_connector();
 
-	void set_formats(const floppy_format_type formats[]);
-	floppy_image_device *get_device();
+	template <typename T> void set_formats(T &&_formats) { formats = std::forward<T>(_formats); }
 	void enable_sound(bool doit) { m_enable_sound = doit; }
+
+	floppy_image_device *get_device();
 
 protected:
 	virtual void device_start() override;
 	virtual void device_config_complete() override;
 
 private:
-	const floppy_format_type *formats;
+	std::function<void (format_registration &fr)> formats;
 	bool m_enable_sound;
 };
 

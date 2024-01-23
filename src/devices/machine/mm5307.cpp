@@ -121,26 +121,13 @@ mm5307ab_device::mm5307ab_device(const machine_config &mconfig, const char *tag,
 
 
 //-------------------------------------------------
-//  device_resolve_objects - resolve objects that
-//  may be needed for other devices to set
-//  initial conditions at start time
-//-------------------------------------------------
-
-void mm5307_device::device_resolve_objects()
-{
-	// Resolve callback
-	m_output_cb.resolve_safe();
-}
-
-
-//-------------------------------------------------
 //  device_start - device-specific startup
 //-------------------------------------------------
 
 void mm5307_device::device_start()
 {
 	// Create timer
-	m_periodic_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(mm5307_device::periodic_update), this));
+	m_periodic_timer = timer_alloc(FUNC(mm5307_device::periodic_update), this);
 
 	// Register for saving
 	save_item(NAME(m_freq_control));

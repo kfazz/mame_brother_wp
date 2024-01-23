@@ -135,56 +135,56 @@ southbridge_device::southbridge_device(const machine_config &mconfig, device_typ
  *
  **********************************************************/
 
-READ32_MEMBER(southbridge_device::ide1_read32_cs0_r)
+uint32_t southbridge_device::ide1_read32_cs0_r(offs_t offset, uint32_t mem_mask)
 {
 	if (!m_ide_io_ports_enabled)
 		return 0xffffffff;
 	return m_ide->read_cs0(offset, mem_mask);
 }
 
-WRITE32_MEMBER(southbridge_device::ide1_write32_cs0_w)
+void southbridge_device::ide1_write32_cs0_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	if (!m_ide_io_ports_enabled)
 		return;
 	m_ide->write_cs0(offset, data, mem_mask);
 }
 
-READ32_MEMBER(southbridge_device::ide2_read32_cs0_r)
+uint32_t southbridge_device::ide2_read32_cs0_r(offs_t offset, uint32_t mem_mask)
 {
 	if (!m_ide_io_ports_enabled)
 		return 0xffffffff;
 	return m_ide2->read_cs0(offset, mem_mask);
 }
 
-WRITE32_MEMBER(southbridge_device::ide2_write32_cs0_w)
+void southbridge_device::ide2_write32_cs0_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	if (!m_ide_io_ports_enabled)
 		return;
 	m_ide2->write_cs0(offset, data, mem_mask);
 }
 
-READ8_MEMBER(southbridge_device::ide1_read_cs1_r)
+uint8_t southbridge_device::ide1_read_cs1_r()
 {
 	if (!m_ide_io_ports_enabled)
 		return 0xff;
 	return m_ide->read_cs1(1, 0xff0000) >> 16;
 }
 
-WRITE8_MEMBER(southbridge_device::ide1_write_cs1_w)
+void southbridge_device::ide1_write_cs1_w(uint8_t data)
 {
 	if (!m_ide_io_ports_enabled)
 		return;
 	m_ide->write_cs1(1, data << 16, 0xff0000);
 }
 
-READ8_MEMBER(southbridge_device::ide2_read_cs1_r)
+uint8_t southbridge_device::ide2_read_cs1_r()
 {
 	if (!m_ide_io_ports_enabled)
 		return 0xff;
 	return m_ide2->read_cs1(1, 0xff0000) >> 16;
 }
 
-WRITE8_MEMBER(southbridge_device::ide2_write_cs1_w)
+void southbridge_device::ide2_write_cs1_w(uint8_t data)
 {
 	if (!m_ide_io_ports_enabled)
 		return;
@@ -194,7 +194,7 @@ WRITE8_MEMBER(southbridge_device::ide2_write_cs1_w)
 // With EISA it is possible to select whether each IRQ line is edge sensitive or level sensitive
 // Each bit corresponds to an IRQ, 0 for edge triggered 1 for level sensitive
 // IRQs 0 1 2 8 13 are always edge triggered
-READ8_MEMBER(southbridge_device::eisa_irq_read)
+uint8_t southbridge_device::eisa_irq_read(offs_t offset)
 {
 	if (offset == 0)
 		return m_eisa_irq_mode & 0xff;
@@ -202,7 +202,7 @@ READ8_MEMBER(southbridge_device::eisa_irq_read)
 		return m_eisa_irq_mode >> 8;
 }
 
-WRITE8_MEMBER(southbridge_device::eisa_irq_write)
+void southbridge_device::eisa_irq_write(offs_t offset, uint8_t data)
 {
 	if (offset == 0)
 		m_eisa_irq_mode = (m_eisa_irq_mode & 0xff00) | data;
@@ -222,15 +222,15 @@ void southbridge_device::device_start()
 	spaceio->install_readwrite_handler(0x0000, 0x001f, read8sm_delegate(*m_dma8237_1, FUNC(am9517a_device::read)), write8sm_delegate(*m_dma8237_1, FUNC(am9517a_device::write)), 0xffffffff);
 	spaceio->install_readwrite_handler(0x0020, 0x003f, read8sm_delegate(*m_pic8259_master, FUNC(pic8259_device::read)), write8sm_delegate(*m_pic8259_master, FUNC(pic8259_device::write)), 0xffffffff);
 	spaceio->install_readwrite_handler(0x0040, 0x005f, read8sm_delegate(*m_pit8254, FUNC(pit8254_device::read)), write8sm_delegate(*m_pit8254, FUNC(pit8254_device::write)), 0xffffffff);
-	spaceio->install_readwrite_handler(0x0060, 0x0063, read8_delegate(*this, FUNC(southbridge_device::at_portb_r)), write8_delegate(*this, FUNC(southbridge_device::at_portb_w)), 0x0000ff00);
-	spaceio->install_readwrite_handler(0x0080, 0x009f, read8_delegate(*this, FUNC(southbridge_device::at_page8_r)), write8_delegate(*this, FUNC(southbridge_device::at_page8_w)), 0xffffffff);
+	spaceio->install_readwrite_handler(0x0060, 0x0063, read8smo_delegate(*this, FUNC(southbridge_device::at_portb_r)), write8smo_delegate(*this, FUNC(southbridge_device::at_portb_w)), 0x0000ff00);
+	spaceio->install_readwrite_handler(0x0080, 0x009f, read8sm_delegate(*this, FUNC(southbridge_device::at_page8_r)), write8sm_delegate(*this, FUNC(southbridge_device::at_page8_w)), 0xffffffff);
 	spaceio->install_readwrite_handler(0x00a0, 0x00bf, read8sm_delegate(*m_pic8259_slave, FUNC(pic8259_device::read)), write8sm_delegate(*m_pic8259_slave, FUNC(pic8259_device::write)), 0xffffffff);
-	spaceio->install_readwrite_handler(0x00c0, 0x00df, read8_delegate(*this, FUNC(southbridge_device::at_dma8237_2_r)), write8_delegate(*this, FUNC(southbridge_device::at_dma8237_2_w)), 0xffffffff);
-	spaceio->install_readwrite_handler(0x0170, 0x0177, read32_delegate(*this, FUNC(southbridge_device::ide2_read32_cs0_r)), write32_delegate(*this, FUNC(southbridge_device::ide2_write32_cs0_w)), 0xffffffff);
-	spaceio->install_readwrite_handler(0x01f0, 0x01f7, read32_delegate(*this, FUNC(southbridge_device::ide1_read32_cs0_r)), write32_delegate(*this, FUNC(southbridge_device::ide1_write32_cs0_w)), 0xffffffff);
-	spaceio->install_readwrite_handler(0x0374, 0x0377, read8_delegate(*this, FUNC(southbridge_device::ide2_read_cs1_r)), write8_delegate(*this, FUNC(southbridge_device::ide2_write_cs1_w)), 0xff0000);
-	spaceio->install_readwrite_handler(0x03f4, 0x03f7, read8_delegate(*this, FUNC(southbridge_device::ide1_read_cs1_r)), write8_delegate(*this, FUNC(southbridge_device::ide1_write_cs1_w)), 0xff0000);
-	spaceio->install_readwrite_handler(0x04d0, 0x04d3, read8_delegate(*this, FUNC(southbridge_device::eisa_irq_read)), write8_delegate(*this, FUNC(southbridge_device::eisa_irq_write)), 0x0000ffff);
+	spaceio->install_readwrite_handler(0x00c0, 0x00df, read8sm_delegate(*this, FUNC(southbridge_device::at_dma8237_2_r)), write8sm_delegate(*this, FUNC(southbridge_device::at_dma8237_2_w)), 0xffffffff);
+	spaceio->install_readwrite_handler(0x0170, 0x0177, read32s_delegate(*this, FUNC(southbridge_device::ide2_read32_cs0_r)), write32s_delegate(*this, FUNC(southbridge_device::ide2_write32_cs0_w)), 0xffffffff);
+	spaceio->install_readwrite_handler(0x01f0, 0x01f7, read32s_delegate(*this, FUNC(southbridge_device::ide1_read32_cs0_r)), write32s_delegate(*this, FUNC(southbridge_device::ide1_write32_cs0_w)), 0xffffffff);
+	spaceio->install_readwrite_handler(0x0374, 0x0377, read8smo_delegate(*this, FUNC(southbridge_device::ide2_read_cs1_r)), write8smo_delegate(*this, FUNC(southbridge_device::ide2_write_cs1_w)), 0xff0000);
+	spaceio->install_readwrite_handler(0x03f4, 0x03f7, read8smo_delegate(*this, FUNC(southbridge_device::ide1_read_cs1_r)), write8smo_delegate(*this, FUNC(southbridge_device::ide1_write_cs1_w)), 0xff0000);
+	spaceio->install_readwrite_handler(0x04d0, 0x04d3, read8sm_delegate(*this, FUNC(southbridge_device::eisa_irq_read)), write8sm_delegate(*this, FUNC(southbridge_device::eisa_irq_write)), 0x0000ffff);
 	spaceio->nop_readwrite(0x00e0, 0x00ef);
 }
 
@@ -254,7 +254,7 @@ void southbridge_device::device_reset()
  * pic8259 configuration
  *
  *************************************************************/
-READ8_MEMBER( southbridge_device::get_slave_ack )
+uint8_t southbridge_device::get_slave_ack(offs_t offset)
 {
 	if (offset==2) // IRQ = 2
 		return m_pic8259_slave->acknowledge();
@@ -282,19 +282,19 @@ void southbridge_device::at_speaker_set_spkrdata(uint8_t data)
  *
  *************************************************************/
 
-WRITE_LINE_MEMBER( southbridge_device::at_pit8254_out0_changed )
+void southbridge_device::at_pit8254_out0_changed(int state)
 {
 	if (m_pic8259_master)
 		m_pic8259_master->ir0_w(state);
 }
 
-WRITE_LINE_MEMBER( southbridge_device::at_pit8254_out1_changed )
+void southbridge_device::at_pit8254_out1_changed(int state)
 {
 	if(state)
 		m_refresh = !m_refresh;
 }
 
-WRITE_LINE_MEMBER( southbridge_device::at_pit8254_out2_changed )
+void southbridge_device::at_pit8254_out2_changed(int state)
 {
 	m_pit_out2 = state ? 1 : 0;
 	m_speaker->level_w(m_at_spkrdata & m_pit_out2);
@@ -306,7 +306,7 @@ WRITE_LINE_MEMBER( southbridge_device::at_pit8254_out2_changed )
  *
  *************************************************************************/
 
-READ8_MEMBER( southbridge_device::at_page8_r )
+uint8_t southbridge_device::at_page8_r(offs_t offset)
 {
 	uint8_t data = m_at_pages[offset % 0x10];
 
@@ -329,7 +329,7 @@ READ8_MEMBER( southbridge_device::at_page8_r )
 }
 
 
-WRITE8_MEMBER( southbridge_device::at_page8_w )
+void southbridge_device::at_page8_w(offs_t offset, uint8_t data)
 {
 	m_at_pages[offset % 0x10] = data;
 
@@ -353,7 +353,7 @@ WRITE8_MEMBER( southbridge_device::at_page8_w )
 }
 
 
-WRITE_LINE_MEMBER( southbridge_device::pc_dma_hrq_changed )
+void southbridge_device::pc_dma_hrq_changed(int state)
 {
 	m_maincpu->set_input_line(INPUT_LINE_HALT, state ? ASSERT_LINE : CLEAR_LINE);
 
@@ -361,7 +361,7 @@ WRITE_LINE_MEMBER( southbridge_device::pc_dma_hrq_changed )
 	m_dma8237_2->hack_w( state );
 }
 
-READ8_MEMBER(southbridge_device::pc_dma_read_byte)
+uint8_t southbridge_device::pc_dma_read_byte(offs_t offset)
 {
 	address_space& prog_space = m_maincpu->space(AS_PROGRAM); // get the right address space
 	if(m_dma_channel == -1)
@@ -374,7 +374,7 @@ READ8_MEMBER(southbridge_device::pc_dma_read_byte)
 }
 
 
-WRITE8_MEMBER(southbridge_device::pc_dma_write_byte)
+void southbridge_device::pc_dma_write_byte(offs_t offset, uint8_t data)
 {
 	address_space& prog_space = m_maincpu->space(AS_PROGRAM); // get the right address space
 	if(m_dma_channel == -1)
@@ -385,7 +385,7 @@ WRITE8_MEMBER(southbridge_device::pc_dma_write_byte)
 }
 
 
-READ8_MEMBER(southbridge_device::pc_dma_read_word)
+uint8_t southbridge_device::pc_dma_read_word(offs_t offset)
 {
 	address_space& prog_space = m_maincpu->space(AS_PROGRAM); // get the right address space
 	if(m_dma_channel == -1)
@@ -400,7 +400,7 @@ READ8_MEMBER(southbridge_device::pc_dma_read_word)
 }
 
 
-WRITE8_MEMBER(southbridge_device::pc_dma_write_word)
+void southbridge_device::pc_dma_write_word(offs_t offset, uint8_t data)
 {
 	address_space& prog_space = m_maincpu->space(AS_PROGRAM); // get the right address space
 	if(m_dma_channel == -1)
@@ -411,24 +411,24 @@ WRITE8_MEMBER(southbridge_device::pc_dma_write_word)
 }
 
 
-READ8_MEMBER( southbridge_device::pc_dma8237_0_dack_r ) { return m_isabus->dack_r(0); }
-READ8_MEMBER( southbridge_device::pc_dma8237_1_dack_r ) { return m_isabus->dack_r(1); }
-READ8_MEMBER( southbridge_device::pc_dma8237_2_dack_r ) { return m_isabus->dack_r(2); }
-READ8_MEMBER( southbridge_device::pc_dma8237_3_dack_r ) { return m_isabus->dack_r(3); }
-READ8_MEMBER( southbridge_device::pc_dma8237_5_dack_r ) { return m_isabus->dack_r(5); }
-READ8_MEMBER( southbridge_device::pc_dma8237_6_dack_r ) { return m_isabus->dack_r(6); }
-READ8_MEMBER( southbridge_device::pc_dma8237_7_dack_r ) { return m_isabus->dack_r(7); }
+uint8_t southbridge_device::pc_dma8237_0_dack_r() { return m_isabus->dack_r(0); }
+uint8_t southbridge_device::pc_dma8237_1_dack_r() { return m_isabus->dack_r(1); }
+uint8_t southbridge_device::pc_dma8237_2_dack_r() { return m_isabus->dack_r(2); }
+uint8_t southbridge_device::pc_dma8237_3_dack_r() { return m_isabus->dack_r(3); }
+uint8_t southbridge_device::pc_dma8237_5_dack_r() { return m_isabus->dack_r(5); }
+uint8_t southbridge_device::pc_dma8237_6_dack_r() { return m_isabus->dack_r(6); }
+uint8_t southbridge_device::pc_dma8237_7_dack_r() { return m_isabus->dack_r(7); }
 
 
-WRITE8_MEMBER( southbridge_device::pc_dma8237_0_dack_w ){ m_isabus->dack_w(0, data); }
-WRITE8_MEMBER( southbridge_device::pc_dma8237_1_dack_w ){ m_isabus->dack_w(1, data); }
-WRITE8_MEMBER( southbridge_device::pc_dma8237_2_dack_w ){ m_isabus->dack_w(2, data); }
-WRITE8_MEMBER( southbridge_device::pc_dma8237_3_dack_w ){ m_isabus->dack_w(3, data); }
-WRITE8_MEMBER( southbridge_device::pc_dma8237_5_dack_w ){ m_isabus->dack_w(5, data); }
-WRITE8_MEMBER( southbridge_device::pc_dma8237_6_dack_w ){ m_isabus->dack_w(6, data); }
-WRITE8_MEMBER( southbridge_device::pc_dma8237_7_dack_w ){ m_isabus->dack_w(7, data); }
+void southbridge_device::pc_dma8237_0_dack_w(uint8_t data) { m_isabus->dack_w(0, data); }
+void southbridge_device::pc_dma8237_1_dack_w(uint8_t data) { m_isabus->dack_w(1, data); }
+void southbridge_device::pc_dma8237_2_dack_w(uint8_t data) { m_isabus->dack_w(2, data); }
+void southbridge_device::pc_dma8237_3_dack_w(uint8_t data) { m_isabus->dack_w(3, data); }
+void southbridge_device::pc_dma8237_5_dack_w(uint8_t data) { m_isabus->dack_w(5, data); }
+void southbridge_device::pc_dma8237_6_dack_w(uint8_t data) { m_isabus->dack_w(6, data); }
+void southbridge_device::pc_dma8237_7_dack_w(uint8_t data) { m_isabus->dack_w(7, data); }
 
-WRITE_LINE_MEMBER( southbridge_device::at_dma8237_out_eop )
+void southbridge_device::at_dma8237_out_eop(int state)
 {
 	m_cur_eop = state == ASSERT_LINE;
 	if(m_dma_channel != -1)
@@ -450,16 +450,16 @@ void southbridge_device::pc_select_dma_channel(int channel, bool state)
 }
 
 
-WRITE_LINE_MEMBER( southbridge_device::pc_dack0_w ) { pc_select_dma_channel(0, state); }
-WRITE_LINE_MEMBER( southbridge_device::pc_dack1_w ) { pc_select_dma_channel(1, state); }
-WRITE_LINE_MEMBER( southbridge_device::pc_dack2_w ) { pc_select_dma_channel(2, state); }
-WRITE_LINE_MEMBER( southbridge_device::pc_dack3_w ) { pc_select_dma_channel(3, state); }
-WRITE_LINE_MEMBER( southbridge_device::pc_dack4_w ) { m_dma8237_1->hack_w( state ? 0 : 1); } // it's inverted
-WRITE_LINE_MEMBER( southbridge_device::pc_dack5_w ) { pc_select_dma_channel(5, state); }
-WRITE_LINE_MEMBER( southbridge_device::pc_dack6_w ) { pc_select_dma_channel(6, state); }
-WRITE_LINE_MEMBER( southbridge_device::pc_dack7_w ) { pc_select_dma_channel(7, state); }
+void southbridge_device::pc_dack0_w(int state) { pc_select_dma_channel(0, state); }
+void southbridge_device::pc_dack1_w(int state) { pc_select_dma_channel(1, state); }
+void southbridge_device::pc_dack2_w(int state) { pc_select_dma_channel(2, state); }
+void southbridge_device::pc_dack3_w(int state) { pc_select_dma_channel(3, state); }
+void southbridge_device::pc_dack4_w(int state) { m_dma8237_1->hack_w( state ? 0 : 1); } // it's inverted
+void southbridge_device::pc_dack5_w(int state) { pc_select_dma_channel(5, state); }
+void southbridge_device::pc_dack6_w(int state) { pc_select_dma_channel(6, state); }
+void southbridge_device::pc_dack7_w(int state) { pc_select_dma_channel(7, state); }
 
-READ8_MEMBER( southbridge_device::at_portb_r )
+uint8_t southbridge_device::at_portb_r()
 {
 	uint8_t data = m_at_speaker;
 	data &= ~0xd0; // AT BIOS don't likes this being set
@@ -475,7 +475,7 @@ READ8_MEMBER( southbridge_device::at_portb_r )
 	return data;
 }
 
-WRITE8_MEMBER( southbridge_device::at_portb_w )
+void southbridge_device::at_portb_w(uint8_t data)
 {
 	m_at_speaker = data;
 	m_pit8254->write_gate2(BIT(data, 0));
@@ -485,18 +485,18 @@ WRITE8_MEMBER( southbridge_device::at_portb_w )
 		m_maincpu->set_input_line(INPUT_LINE_NMI, CLEAR_LINE);
 }
 
-WRITE_LINE_MEMBER( southbridge_device::iochck_w )
+void southbridge_device::iochck_w(int state)
 {
 	if (!state && !m_channel_check && m_nmi_enabled)
 		m_maincpu->set_input_line(INPUT_LINE_NMI, ASSERT_LINE);
 }
 
-READ8_MEMBER( southbridge_device::at_dma8237_2_r )
+uint8_t southbridge_device::at_dma8237_2_r(offs_t offset)
 {
 	return m_dma8237_2->read(offset / 2);
 }
 
-WRITE8_MEMBER( southbridge_device::at_dma8237_2_w )
+void southbridge_device::at_dma8237_2_w(offs_t offset, uint8_t data)
 {
 	m_dma8237_2->write(offset / 2, data);
 }
@@ -524,13 +524,12 @@ void southbridge_extended_device::device_add_mconfig(machine_config &config)
 	keybc.hot_res().set_inputline(":maincpu", INPUT_LINE_RESET);
 	keybc.gate_a20().set_inputline(":maincpu", INPUT_LINE_A20);
 	keybc.kbd_irq().set("pic8259_master", FUNC(pic8259_device::ir1_w));
-	keybc.kbd_clk().set("pc_kbdc", FUNC(pc_kbdc_device::clock_write_from_mb));
-	keybc.kbd_data().set("pc_kbdc", FUNC(pc_kbdc_device::data_write_from_mb));
+	keybc.kbd_clk().set(m_pc_kbdc, FUNC(pc_kbdc_device::clock_write_from_mb));
+	keybc.kbd_data().set(m_pc_kbdc, FUNC(pc_kbdc_device::data_write_from_mb));
 
-	PC_KBDC(config, m_pc_kbdc, 0);
+	PC_KBDC(config, m_pc_kbdc, pc_at_keyboards, STR_KBD_MICROSOFT_NATURAL);
 	m_pc_kbdc->out_clock_cb().set(m_keybc, FUNC(at_keyboard_controller_device::kbd_clk_w));
 	m_pc_kbdc->out_data_cb().set(m_keybc, FUNC(at_keyboard_controller_device::kbd_data_w));
-	PC_KBDC_SLOT(config, "kbd", pc_at_keyboards, STR_KBD_MICROSOFT_NATURAL).set_pc_kbdc_slot(m_pc_kbdc);
 
 	ds12885_device &rtc(DS12885(config, "rtc"));
 	rtc.irq().set("pic8259_slave", FUNC(pic8259_device::ir0_w));
@@ -546,7 +545,7 @@ southbridge_extended_device::southbridge_extended_device(const machine_config &m
 	: southbridge_device(mconfig, type, tag, owner, clock),
 	m_keybc(*this, "keybc"),
 	m_ds12885(*this, "rtc"),
-	m_pc_kbdc(*this, "pc_kbdc")
+	m_pc_kbdc(*this, "kbd")
 {
 }
 
@@ -562,7 +561,8 @@ void southbridge_extended_device::device_start()
 
 	spaceio.install_readwrite_handler(0x0060, 0x0063, read8smo_delegate(*m_keybc, FUNC(at_keyboard_controller_device::data_r)), write8smo_delegate(*m_keybc, FUNC(at_keyboard_controller_device::data_w)), 0x000000ff);
 	spaceio.install_readwrite_handler(0x0064, 0x0067, read8smo_delegate(*m_keybc, FUNC(at_keyboard_controller_device::status_r)), write8smo_delegate(*m_keybc, FUNC(at_keyboard_controller_device::command_w)), 0xffffffff);
-	spaceio.install_readwrite_handler(0x0070, 0x007f, read8sm_delegate(*m_ds12885, FUNC(ds12885_device::read)), write8sm_delegate(*m_ds12885, FUNC(ds12885_device::write)), 0xffffffff);
+	spaceio.install_write_handler(0x0070, 0x007f, write8smo_delegate(*this, FUNC(southbridge_extended_device::rtc_nmi_w)), 0x00ff00ff);
+	spaceio.install_readwrite_handler(0x0070, 0x007f, read8smo_delegate(*m_ds12885, FUNC(ds12885_device::data_r)), write8smo_delegate(*m_ds12885, FUNC(ds12885_device::data_w)), 0xff00ff00);
 }
 
 //-------------------------------------------------
@@ -574,15 +574,10 @@ void southbridge_extended_device::device_reset()
 	southbridge_device::device_reset();
 }
 
-WRITE8_MEMBER( southbridge_extended_device::write_rtc )
+void southbridge_extended_device::rtc_nmi_w(uint8_t data)
 {
-	if (offset==0) {
-		m_nmi_enabled = BIT(data,7);
-		if (!m_nmi_enabled)
-			m_maincpu->set_input_line(INPUT_LINE_NMI, CLEAR_LINE);
-		m_ds12885->write(0,data);
-	}
-	else {
-		m_ds12885->write(offset,data);
-	}
+	m_nmi_enabled = BIT(data,7);
+	if (!m_nmi_enabled)
+		m_maincpu->set_input_line(INPUT_LINE_NMI, CLEAR_LINE);
+	m_ds12885->address_w(data);
 }

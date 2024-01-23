@@ -148,16 +148,15 @@
 #include "speaker.h"
 #include "machine/keyboard.ipp"
 
-#define LOG_GENERAL (1U << 0)
 #define LOG_RXTX    (1U << 1)
 #define LOG_PORT    (1U << 2)
 
 #define VERBOSE (0)
 #include "logmacro.h"
 
-DEFINE_DEVICE_TYPE_NS(INTERPRO_LLE_EN_US_KEYBOARD, bus::interpro::keyboard, lle_en_us_device, "kbd_lle_en_us", "InterPro Keyboard (LLE, US English)")
+DEFINE_DEVICE_TYPE(INTERPRO_LLE_EN_US_KEYBOARD, bus::interpro::keyboard::lle_en_us_device, "kbd_lle_en_us", "InterPro Keyboard (LLE, US English)")
 
-namespace bus { namespace interpro { namespace keyboard {
+namespace bus::interpro::keyboard {
 
 namespace {
 
@@ -487,7 +486,7 @@ void lle_device_base::ext_map(address_map &map)
 				}, "write");
 }
 
-READ_LINE_MEMBER(lle_device_base::t0_r)
+int lle_device_base::t0_r()
 {
 	if ((VERBOSE & LOG_RXTX) && (m_mcu->pc() == 0x8e) && m_txd)
 	{
@@ -502,12 +501,12 @@ READ_LINE_MEMBER(lle_device_base::t0_r)
 	return !m_txd;
 }
 
-READ_LINE_MEMBER(lle_device_base::t1_r)
+int lle_device_base::t1_r()
 {
 	return BIT(m_lower[m_count >> 3]->read(), m_count & 0x7) ? ASSERT_LINE : CLEAR_LINE;
 }
 
-WRITE8_MEMBER(lle_device_base::p1_w)
+void lle_device_base::p1_w(u8 data)
 {
 	LOGMASKED(LOG_PORT, "p1_w 0x%02x (%s)\n", data, machine().describe_context());
 
@@ -534,7 +533,7 @@ WRITE8_MEMBER(lle_device_base::p1_w)
 	m_p1 = data;
 }
 
-WRITE8_MEMBER(lle_device_base::p2_w)
+void lle_device_base::p2_w(u8 data)
 {
 	LOGMASKED(LOG_PORT, "p2_w 0x%02x (%s)\n", data, machine().describe_context());
 
@@ -573,7 +572,7 @@ WRITE8_MEMBER(lle_device_base::p2_w)
 	m_p2 = data;
 }
 
-READ8_MEMBER(lle_device_base::bus_r)
+u8 lle_device_base::bus_r()
 {
 	if (!BIT(m_p1, 5))
 	{
@@ -587,7 +586,7 @@ READ8_MEMBER(lle_device_base::bus_r)
 	return 0xff;
 }
 
-WRITE8_MEMBER(lle_device_base::bus_w)
+void lle_device_base::bus_w(u8 data)
 {
 	if (data != 0xff)
 		LOGMASKED(LOG_PORT, "bus_w 0x%02x (%s)\n", data, machine().describe_context());
@@ -610,4 +609,4 @@ ioport_constructor lle_en_us_device::device_input_ports() const
 	return INPUT_PORTS_NAME(lle_en_us_device);
 }
 
-} } } // namespace bus::interpro::keyboard
+} // namespace bus::interpro::keyboard

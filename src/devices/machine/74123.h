@@ -84,12 +84,12 @@ public:
 
 	auto out_cb() { return m_output_changed_cb.bind(); }
 
-	DECLARE_WRITE_LINE_MEMBER(a_w);
-	DECLARE_WRITE_LINE_MEMBER(b_w);
-	DECLARE_WRITE_LINE_MEMBER(clear_w);
-	DECLARE_WRITE_LINE_MEMBER(reset_w);
+	void a_w(int state);
+	void b_w(int state);
+	void clear_w(int state);
+	void reset_w(int state);
 
-	DECLARE_READ_LINE_MEMBER(q_r) { return timer_running(); }
+	int q_r() { return timer_running(); }
 
 protected:
 	// device-level overrides
@@ -107,7 +107,8 @@ private:
 	void set_output();
 	attotime compute_duration();
 
-	emu_timer *m_timer;
+	emu_timer *m_clear_timer;
+	emu_timer *m_output_timer;
 	int m_connection_type;  /* the hook up type - one of the constants above */
 	double m_res;           /* resistor connected to RCext */
 	double m_cap;           /* capacitor connected to Cext and RCext */

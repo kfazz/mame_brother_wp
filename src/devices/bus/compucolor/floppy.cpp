@@ -9,6 +9,8 @@
 #include "emu.h"
 #include "floppy.h"
 
+#include "formats/ccvf_dsk.h"
+
 
 
 //**************************************************************************
@@ -33,9 +35,11 @@ void compucolor_floppy_port_devices(device_slot_interface &device)
 //  FLOPPY_FORMATS( floppy_formats )
 //-------------------------------------------------
 
-FLOPPY_FORMATS_MEMBER( compucolor_floppy_device::floppy_formats )
-	FLOPPY_CCVF_FORMAT
-FLOPPY_FORMATS_END
+void compucolor_floppy_device::floppy_formats(format_registration &fr)
+{
+	fr.add_fm_containers();
+	fr.add(FLOPPY_CCVF_FORMAT);
+}
 
 
 //-------------------------------------------------
@@ -125,7 +129,7 @@ void compucolor_floppy_port_device::device_start()
 void compucolor_floppy_device::device_start()
 {
 	// allocate timer
-	m_timer = timer_alloc();
+	m_timer = timer_alloc(FUNC(compucolor_floppy_device::rxd_tick), this);
 	m_timer->adjust(attotime::from_hz(9600*8), 0, attotime::from_hz(9600*8));
 
 	// state saving
@@ -136,10 +140,10 @@ void compucolor_floppy_device::device_start()
 
 
 //-------------------------------------------------
-//  device_timer - handle timer events
+//  rxd_tick -
 //-------------------------------------------------
 
-void compucolor_floppy_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(compucolor_floppy_device::rxd_tick)
 {
 	if (!m_sel && !m_rw)
 	{

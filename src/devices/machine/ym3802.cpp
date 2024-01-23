@@ -23,24 +23,20 @@ ym3802_device::ym3802_device(const machine_config &mconfig, const char *tag, dev
 	, device_serial_interface(mconfig, *this)
 	, m_irq_handler(*this)
 	, m_txd_handler(*this)
-	, m_rxd_handler(*this)
+	, m_rxd_handler(*this, 0xff)
 	, m_reg(REG_MAX)
 	, m_wdr(0)
 	, m_irq_status(0)
 	, m_vector(0)
 	, m_clkm_rate(500000)  // TODO: make these configurable
 	, m_clkf_rate(614400)
-	{
-	}
+{
+}
 
 void ym3802_device::device_start()
 {
-	m_irq_handler.resolve_safe();
-	m_txd_handler.resolve_safe();
-	m_rxd_handler.resolve_safe(0xff);
-	m_clock_timer = timer_alloc(TIMER_SYSTEM_CLOCK);
-	m_midi_timer = timer_alloc(TIMER_TX_CLOCK);
-	m_midi_counter_timer = timer_alloc(TIMER_MIDI_CLOCK);
+	m_midi_timer = timer_alloc(FUNC(ym3802_device::transmit_clk), this);
+	m_midi_counter_timer = timer_alloc(FUNC(ym3802_device::midi_clk), this);
 	save_item(NAME(m_reg));
 }
 
@@ -52,20 +48,6 @@ void ym3802_device::device_reset()
 	receive_register_reset();
 	reset_midi_timer();
 	set_comms_mode();
-}
-
-void ym3802_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
-{
-	// TODO: support clock and timers
-	switch(id)
-	{
-		case TIMER_TX_CLOCK:
-			transmit_clk();
-			break;
-		case TIMER_MIDI_CLOCK:
-			midi_clk();
-			break;
-	}
 }
 
 void ym3802_device::set_irq(uint8_t irq)
@@ -90,7 +72,7 @@ void ym3802_device::reset_irq(uint8_t irq)
 		m_irq_handler(CLEAR_LINE);
 }
 
-void ym3802_device::transmit_clk()
+TIMER_CALLBACK_MEMBER(ym3802_device::transmit_clk)
 {
 	if(m_reg[REG_TCR] & 0x01) // Tx Enable
 	{
@@ -116,7 +98,7 @@ void ym3802_device::transmit_clk()
 	}
 }
 
-void ym3802_device::midi_clk()
+TIMER_CALLBACK_MEMBER(ym3802_device::midi_clk)
 {
 	if(m_midi_counter_base > 1)  // counter is not guaranteed to work if set to 0 or 1.
 	{

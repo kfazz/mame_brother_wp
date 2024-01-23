@@ -177,7 +177,7 @@ const tiny_rom_entry *saa5057_device::device_rom_region() const
 saa5050_device::saa5050_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, type, tag, owner, clock),
 	m_char_rom(*this, "chargen"),
-	m_read_d(*this),
+	m_read_d(*this, 0),
 	m_frame_count(0),
 	m_cols(0),
 	m_rows(0),
@@ -233,9 +233,6 @@ saa5057_device::saa5057_device(const machine_config &mconfig, const char *tag, d
 
 void saa5050_device::device_start()
 {
-	// resolve callbacks
-	m_read_d.resolve_safe(0);
-
 	// register for state saving
 	save_item(NAME(m_code));
 	save_item(NAME(m_held_char));
@@ -512,7 +509,7 @@ void saa5050_device::get_character_data(uint8_t data)
 //  crs_w - character rounding select
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( saa5050_device::crs_w )
+void saa5050_device::crs_w(int state)
 {
 	m_crs = !(state & 1);
 }
@@ -522,7 +519,7 @@ WRITE_LINE_MEMBER( saa5050_device::crs_w )
 //  dew_w - data entry window
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( saa5050_device::dew_w )
+void saa5050_device::dew_w(int state)
 {
 	if (state)
 	{
@@ -538,7 +535,7 @@ WRITE_LINE_MEMBER( saa5050_device::dew_w )
 //  lose_w - load output shift register enable
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( saa5050_device::lose_w )
+void saa5050_device::lose_w(int state)
 {
 	if (state)
 	{
@@ -571,6 +568,16 @@ WRITE_LINE_MEMBER( saa5050_device::lose_w )
 
 
 //-------------------------------------------------
+//  tlc_r - transmitted large character
+//-------------------------------------------------
+
+int saa5050_device::tlc_r()
+{
+	return !m_double_height_bottom_row;
+}
+
+
+//-------------------------------------------------
 //  write - character data write
 //-------------------------------------------------
 
@@ -584,7 +591,7 @@ void saa5050_device::write(uint8_t data)
 //  f1_w - character clock
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( saa5050_device::f1_w )
+void saa5050_device::f1_w(int state)
 {
 	if (state)
 	{
@@ -597,7 +604,7 @@ WRITE_LINE_MEMBER( saa5050_device::f1_w )
 //  tr6_w - pixel clock
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( saa5050_device::tr6_w )
+void saa5050_device::tr6_w(int state)
 {
 	if (state)
 	{
@@ -636,7 +643,7 @@ uint32_t saa5050_device::screen_update(screen_device &screen, bitmap_rgb32 &bitm
 		lose_w(1);
 		lose_w(0);
 
-		int ssy = m_double_height_bottom_row ? sy - 1 : sy;
+		int ssy = tlc_r() ? sy : sy - 1;
 		offs_t video_ram_addr = ssy * m_size;
 
 		for (int sx = 0; sx < m_cols; sx++)
@@ -661,9 +668,7 @@ uint32_t saa5050_device::screen_update(screen_device &screen, bitmap_rgb32 &bitm
 				int g = BIT(color, 1) * 0xff;
 				int b = BIT(color, 2) * 0xff;
 
-				rgb_t rgb = rgb_t(r, g, b);
-
-				bitmap.pix32(y, x++) = rgb;
+				bitmap.pix(y, x++) = rgb_t(r, g, b);
 			}
 		}
 	}

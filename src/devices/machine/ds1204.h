@@ -19,10 +19,10 @@ public:
 	// construction/destruction
 	ds1204_device( const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock = 0 );
 
-	DECLARE_WRITE_LINE_MEMBER( write_rst );
-	DECLARE_WRITE_LINE_MEMBER( write_clk );
-	DECLARE_WRITE_LINE_MEMBER( write_dq );
-	DECLARE_READ_LINE_MEMBER( read_dq );
+	void write_rst(int state);
+	void write_clk(int state);
+	void write_dq(int state);
+	int read_dq();
 
 protected:
 	// device-level overrides
@@ -30,8 +30,8 @@ protected:
 
 	// device_nvram_interface overrides
 	virtual void nvram_default() override;
-	virtual void nvram_read( emu_file &file ) override;
-	virtual void nvram_write( emu_file &file ) override;
+	virtual bool nvram_read( util::read_stream &file ) override;
+	virtual bool nvram_write( util::write_stream &file ) override;
 
 private:
 	inline void ATTR_PRINTF( 3, 4 ) verboselog( int n_level, const char *s_fmt, ... );

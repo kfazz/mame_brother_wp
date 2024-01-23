@@ -29,7 +29,6 @@ public:
 protected:
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// device-level overrides
 	virtual ioport_constructor device_input_ports() const override;
@@ -48,51 +47,65 @@ protected:
 
 private:
 	// PHI write CBs
-	DECLARE_WRITE_LINE_MEMBER(phi_eoi_w);
-	DECLARE_WRITE_LINE_MEMBER(phi_dav_w);
-	DECLARE_WRITE_LINE_MEMBER(phi_nrfd_w);
-	DECLARE_WRITE_LINE_MEMBER(phi_ndac_w);
-	DECLARE_WRITE_LINE_MEMBER(phi_ifc_w);
-	DECLARE_WRITE_LINE_MEMBER(phi_srq_w);
-	DECLARE_WRITE_LINE_MEMBER(phi_atn_w);
-	DECLARE_WRITE_LINE_MEMBER(phi_ren_w);
+	void phi_eoi_w(int state);
+	void phi_dav_w(int state);
+	void phi_nrfd_w(int state);
+	void phi_ndac_w(int state);
+	void phi_ifc_w(int state);
+	void phi_srq_w(int state);
+	void phi_atn_w(int state);
+	void phi_ren_w(int state);
 
 	// PHI DIO r/w CBs
-	DECLARE_READ8_MEMBER(phi_dio_r);
-	DECLARE_WRITE8_MEMBER(phi_dio_w);
+	uint8_t phi_dio_r();
+	void phi_dio_w(uint8_t data);
 
 	// PHI IRQ/Z80 NMI
-	DECLARE_WRITE_LINE_MEMBER(phi_int_w);
+	void phi_int_w(int state);
 
 	// Z80 IRQ
-	DECLARE_WRITE8_MEMBER(z80_m1_w);
+	void z80_m1_w(uint8_t data);
 
 	// Floppy interface
-	DECLARE_WRITE8_MEMBER(data_w);
-	DECLARE_WRITE8_MEMBER(clock_w);
-	DECLARE_WRITE8_MEMBER(reset_w);
-	DECLARE_WRITE8_MEMBER(leds_w);
-	DECLARE_WRITE8_MEMBER(cntl_w);
-	DECLARE_WRITE8_MEMBER(drv_w);
-	DECLARE_WRITE8_MEMBER(xv_w);
-	DECLARE_READ8_MEMBER(data_r);
-	DECLARE_READ8_MEMBER(clock_r);
-	DECLARE_READ8_MEMBER(drivstat_r);
-	DECLARE_READ8_MEMBER(switches_r);
-	DECLARE_READ8_MEMBER(switches2_r);
+	void data_w(uint8_t data);
+	void clock_w(uint8_t data);
+	void reset_w(uint8_t data);
+	void leds_w(uint8_t data);
+	void cntl_w(uint8_t data);
+	void drv_w(uint8_t data);
+	void xv_w(uint8_t data);
+	uint8_t data_r();
+	uint8_t clock_r();
+	uint8_t drivstat_r();
+	uint8_t switches_r();
+	uint8_t switches2_r();
 
 	// PHI register read
-	DECLARE_READ8_MEMBER(phi_reg_r);
+	uint8_t phi_reg_r(offs_t offset);
 
 	// Floppy drive interface
 	void floppy_ready_cb(floppy_image_device *floppy , int state);
+
+	TIMER_CALLBACK_MEMBER(timeout_timer_tick);
+	TIMER_CALLBACK_MEMBER(byte_timer_tick);
+	TIMER_CALLBACK_MEMBER(half_bit_timer_tick);
+
+	uint8_t get_switches2(void) const;
+	attotime get_half_bit_cell_period(void) const;
+	floppy_image_device *get_write_device(void) const;
+	void preset_crc(void);
+	void update_crc(bool bit);
+	bool shift_sr(uint8_t& sr , bool input_bit);
+	void get_next_transition(const attotime& from_when , attotime& edge);
+	void read_bit(bool crc_upd);
+	void write_bit(bool data_bit , bool clock_bit);
 
 	void z80_io_map(address_map &map);
 	void z80_program_map(address_map &map);
 
 	required_device<z80_device> m_cpu;
 	required_device<phi_device> m_phi;
-	required_device<floppy_connector> m_drives[ 2 ];
+	required_device_array<floppy_connector, 2> m_drives;
 	required_ioport m_switches;
 
 	bool m_cpu_irq;
@@ -123,16 +136,6 @@ private:
 
 	// PLL
 	fdc_pll_t m_pll;
-
-	uint8_t get_switches2(void) const;
-	attotime get_half_bit_cell_period(void) const;
-	floppy_image_device *get_write_device(void) const;
-	void preset_crc(void);
-	void update_crc(bool bit);
-	bool shift_sr(uint8_t& sr , bool input_bit);
-	void get_next_transition(const attotime& from_when , attotime& edge);
-	void read_bit(bool crc_upd);
-	void write_bit(bool data_bit , bool clock_bit);
 };
 
 // device type definition

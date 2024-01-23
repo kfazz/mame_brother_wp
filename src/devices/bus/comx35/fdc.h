@@ -12,7 +12,6 @@
 #pragma once
 
 #include "exp.h"
-#include "formats/comx35_dsk.h"
 #include "imagedev/floppy.h"
 #include "machine/wd_fdc.h"
 
@@ -48,7 +47,7 @@ protected:
 	virtual void comx_io_w(offs_t offset, uint8_t data) override;
 
 private:
-	DECLARE_FLOPPY_FORMATS( floppy_formats );
+	static void floppy_formats(format_registration &fr);
 
 	// internal state
 	required_device<wd1770_device> m_fdc;

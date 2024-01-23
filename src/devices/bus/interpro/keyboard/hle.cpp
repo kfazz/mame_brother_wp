@@ -120,9 +120,9 @@
 #define VERBOSE 0
 #include "logmacro.h"
 
-DEFINE_DEVICE_TYPE_NS(INTERPRO_HLE_EN_US_KEYBOARD, bus::interpro::keyboard, hle_en_us_device, "kbd_hle_en_us", "InterPro Keyboard (HLE, US English)")
+DEFINE_DEVICE_TYPE(INTERPRO_HLE_EN_US_KEYBOARD, bus::interpro::keyboard::hle_en_us_device, "kbd_hle_en_us", "InterPro Keyboard (HLE, US English)")
 
-namespace bus { namespace interpro { namespace keyboard {
+namespace bus::interpro::keyboard {
 
 namespace {
 
@@ -272,7 +272,7 @@ hle_device_base::~hle_device_base()
 {
 }
 
-WRITE_LINE_MEMBER(hle_device_base::input_txd)
+void hle_device_base::input_txd(int state)
 {
 	device_buffered_serial_interface::rx_w(state);
 }
@@ -285,7 +285,7 @@ void hle_device_base::device_add_mconfig(machine_config &config)
 
 void hle_device_base::device_start()
 {
-	m_click_timer = timer_alloc(CLICK_TIMER_ID);
+	m_click_timer = timer_alloc(FUNC(hle_device_base::click_tick), this);
 
 	save_item(NAME(m_make_count));
 	save_item(NAME(m_rx_state));
@@ -316,18 +316,10 @@ void hle_device_base::device_reset()
 	start_processing(attotime::from_hz(1'200));
 }
 
-void hle_device_base::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(hle_device_base::click_tick)
 {
-	switch (id)
-	{
-	case CLICK_TIMER_ID:
-		m_beeper_state &= ~u8(BEEPER_CLICK);
-		m_beeper->set_state(m_beeper_state ? 1 : 0);
-		break;
-
-	default:
-		break;
-	}
+	m_beeper_state &= ~u8(BEEPER_CLICK);
+	m_beeper->set_state(m_beeper_state ? 1 : 0);
 }
 
 void hle_device_base::tra_callback()
@@ -461,4 +453,4 @@ u8 hle_en_us_device::translate(u8 row, u8 column)
 	return TRANSLATION_TABLE[map][row][column];
 }
 
-} } } // namespace bus::interpro::keyboard
+} // namespace bus::interpro::keyboard

@@ -37,14 +37,14 @@
 #include "emu.h"
 #include "newport.h"
 
-#define LOG_UNKNOWN     (1 << 0)
-#define LOG_VC2         (1 << 1)
-#define LOG_CMAP        (1 << 2)
-#define LOG_XMAP        (1 << 4)
-#define LOG_REX3        (1 << 6)
-#define LOG_RAMDAC      (1 << 7)
-#define LOG_COMMANDS    (1 << 8)
-#define LOG_REJECTS     (1 << 9)
+#define LOG_UNKNOWN     (1U << 1)
+#define LOG_VC2         (1U << 2)
+#define LOG_CMAP        (1U << 3)
+#define LOG_XMAP        (1U << 4)
+#define LOG_REX3        (1U << 5)
+#define LOG_RAMDAC      (1U << 6)
+#define LOG_COMMANDS    (1U << 7)
+#define LOG_REJECTS     (1U << 8)
 #define LOG_ALL         (LOG_UNKNOWN | LOG_VC2 | LOG_CMAP | LOG_XMAP | LOG_REX3 | LOG_RAMDAC | LOG_COMMANDS | LOG_REJECTS)
 
 #define VERBOSE         (0)
@@ -86,7 +86,7 @@ void xmap9_device::device_reset()
 	m_cursor_cmap = 0;
 	m_popup_cmap = 0;
 	m_mode_table_idx = 0;
-	memset(m_mode_table, 0, sizeof(uint32_t) * ARRAY_LENGTH(m_mode_table));
+	std::fill(std::begin(m_mode_table), std::end(m_mode_table), 0);
 }
 
 void xmap9_device::serialize(FILE *file)
@@ -233,7 +233,7 @@ void cmap_device::device_reset()
 {
 	m_status = 8;
 	m_palette_idx = 0;
-	memset(m_palette, 0, sizeof(uint32_t) * ARRAY_LENGTH(m_palette));
+	std::fill(std::begin(m_palette), std::end(m_palette), 0);
 }
 
 void cmap_device::serialize(FILE *file)
@@ -306,9 +306,6 @@ vc2_device::vc2_device(const machine_config &mconfig, const char *tag, device_t 
 
 void vc2_device::device_start()
 {
-	m_vert_int.resolve_safe();
-	m_screen_timing_changed.resolve_safe();
-
 	m_ram = std::make_unique<uint16_t[]>(RAM_SIZE);
 	m_vt_table = make_unique_clear<uint32_t[]>(2048 * 2048);
 
@@ -816,7 +813,7 @@ uint8_t vc2_device::get_cursor_pixel(int x, int y)
 	}
 }
 
-WRITE_LINE_MEMBER(vc2_device::vblank_w)
+void vc2_device::vblank_w(int state)
 {
 	if (state)
 	{
@@ -913,7 +910,8 @@ void rb2_device::deserialize(FILE *file)
 
 uint32_t rb2_device::expand_to_all_lanes(uint32_t src)
 {
-	switch (m_draw_depth) {
+	switch (m_draw_depth)
+	{
 	case 0:
 		src |= src << 4;
 		src |= src << 8;
@@ -1091,7 +1089,7 @@ newport_base_device::newport_base_device(const machine_config &mconfig, device_t
 	, m_draw_flags_w(*this)
 	, m_set_address(*this)
 	, m_write_pixel(*this)
-	, m_read_pixel(*this)
+	, m_read_pixel(*this, 0)
 {
 }
 
@@ -1111,7 +1109,7 @@ gio64_xl24_device::gio64_xl24_device(const machine_config &mconfig, const char *
 
 void newport_base_device::device_start()
 {
-	m_dcb_timeout_timer = timer_alloc(DCB_TIMEOUT);
+	m_dcb_timeout_timer = timer_alloc(FUNC(newport_base_device::dcb_timeout_tick), this);
 
 	save_item(NAME(m_rex3.m_draw_mode0));
 	save_item(NAME(m_rex3.m_color_host));
@@ -1202,12 +1200,6 @@ void newport_base_device::device_start()
 	save_item(NAME(m_ramdac_lut_g));
 	save_item(NAME(m_ramdac_lut_b));
 	save_item(NAME(m_ramdac_lut_index));
-
-	m_write_mask_w.resolve_safe();
-	m_draw_flags_w.resolve_safe();
-	m_set_address.resolve_safe();
-	m_write_pixel.resolve_safe();
-	m_read_pixel.resolve_safe(0);
 }
 
 //-------------------------------------------------
@@ -1282,12 +1274,9 @@ void newport_base_device::stop_logging()
 }
 #endif
 
-void newport_base_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(newport_base_device::dcb_timeout_tick)
 {
-	if (id == DCB_TIMEOUT)
-	{
-		m_rex3.m_status &= ~STATUS_BACKBUSY;
-	}
+	m_rex3.m_status &= ~STATUS_BACKBUSY;
 }
 
 uint32_t newport_base_device::screen_update(screen_device &device, bitmap_rgb32 &bitmap, const rectangle &cliprect)
@@ -1302,7 +1291,7 @@ uint32_t newport_base_device::screen_update(screen_device &device, bitmap_rgb32 
 	/* loop over rows and copy to the destination */
 	for (int y = cliprect.min_y, sy = y_start; y <= cliprect.max_y && sy < y_end; y++, sy++)
 	{
-		uint32_t *dest = &bitmap.pix32(y, cliprect.min_x);
+		uint32_t *dest = &bitmap.pix(y, cliprect.min_x);
 		const uint32_t *src_rgbci = m_rb2->rgbci(y);
 		const uint32_t *src_cidaux = m_rb2->cidaux(y);
 
@@ -1708,7 +1697,7 @@ void newport_base_device::ramdac_write(uint32_t data)
 	}
 }
 
-WRITE_LINE_MEMBER(newport_base_device::vrint_w)
+void newport_base_device::vrint_w(int state)
 {
 	if (state)
 	{
@@ -1718,7 +1707,7 @@ WRITE_LINE_MEMBER(newport_base_device::vrint_w)
 }
 
 // TOOD: Figure out a better way of doing this
-WRITE_LINE_MEMBER(newport_base_device::update_screen_size)
+void newport_base_device::update_screen_size(int state)
 {
 	const int x_start = m_vc2->readout_x0();
 	const int y_start = m_vc2->readout_y0();
@@ -1729,7 +1718,7 @@ WRITE_LINE_MEMBER(newport_base_device::update_screen_size)
 	m_screen->set_visarea_full();
 }
 
-READ64_MEMBER(newport_base_device::rex3_r)
+uint64_t newport_base_device::rex3_r(offs_t offset, uint64_t mem_mask)
 {
 	uint64_t ret = 0;
 	switch (offset & ~(0x800/8))
@@ -2199,11 +2188,6 @@ READ64_MEMBER(newport_base_device::rex3_r)
 	return ret;
 }
 
-uint32_t newport_base_device::do_endian_swap(uint32_t color)
-{
-	return (color >> 24) | (color << 24) | ((color >> 8) & 0x0000ff00) | ((color << 8) & 0x00ff0000);
-}
-
 uint32_t newport_base_device::get_host_color()
 {
 	static const uint32_t s_color_masks[4] = { 0xf, 0xff, 0xfff, 0xffffffff };
@@ -2259,7 +2243,7 @@ uint32_t newport_base_device::get_host_color()
 		break;
 	}
 	if (BIT(m_rex3.m_draw_mode1, 11))
-		color = do_endian_swap(color);
+		color = swapendian_int32(color);
 	return color;
 }
 
@@ -2708,28 +2692,58 @@ uint32_t newport_base_device::get_rgb_color(int16_t x, int16_t y)
 
 uint8_t newport_base_device::get_octant(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t dx, int32_t dy)
 {
-	if (x1 < x2)
-	{
-		if (y2 < y1)
-			return (dx > dy) ? 0 : 1;
-		else
-			return (dx > dy) ? 7 : 6;
-	}
-	else
-	{
-		if (y2 < y1)
-			return (dx > dy) ? 3 : 2;
-		else
-			return (dx > dy) ? 4 : 5;
-	}
+	uint8_t octant = 0;
+
+	// Octant format: {MSB, 2nd, LSB} = {XMAJOR, XDEC, YDEC}
+	// Mapping of hardware octant to peseudocode octant in manual
+	// | Pseudocode | hardware |  hardware(dec) |
+	// |     1      | 3'b101   |       5        |
+	// |     2      | 3'b001   |       1        |
+	// |     3      | 3'b011   |       3        |
+	// |     4      | 3'b111   |       7        |
+	// |     5      | 3'b110   |       6        |
+	// |     6      | 3'b010   |       2        |
+	// |     7      | 3'b000   |       0        |
+	// |     8      | 3'b100   |       4        |
+
+	/* YDEC */
+	if (y1 > y2)
+		octant |= (1 << 0); // Bit 0
+
+	/* XDEC */
+	if (x1 > x2)
+		octant |= (1 << 1); // Bit 1
+
+	/* XMAJOR */
+	if (dx > dy)
+		octant |= (1 << 2); // Bit 2
+
+	return octant;
+}
+
+void newport_base_device::do_setup(void)
+{
+	const int32_t x1 = util::sext(m_rex3.m_x_start >> 7, 20);
+	const int32_t y1 = util::sext(m_rex3.m_y_start >> 7, 20);
+	const int32_t x2 = util::sext(m_rex3.m_x_end >> 7, 20);
+	const int32_t y2 = util::sext(m_rex3.m_y_end >> 7, 20);
+	const int32_t dx = abs(x1 - x2);
+	const int32_t dy = abs(y1 - y2);
+
+	/* octant for line and block, span */
+	const uint8_t octant = get_octant(x1, y1, x2, y2, dx, dy);
+	m_rex3.m_bres_octant_inc1 &= ~(0x7 << 24);
+	m_rex3.m_bres_octant_inc1 |= (uint32_t)octant << 24;
+	/* FIXME: error terms (incr1, incr2) and Bresenham terms (d) */
+	LOGMASKED(LOG_REX3, "do_setup: octant = %d, x1 = %d, y1 = %d, x2 = %d, y2 = %d, dx = %d, dy = %d\n", octant, x1, y1, x2, y2, dx, dy);
 }
 
 void newport_base_device::do_fline(uint32_t color)
 {
-	const int32_t x1 = (int32_t)((m_rex3.m_x_start >> 7) << 12) >> 12;
-	const int32_t y1 = (int32_t)((m_rex3.m_y_start >> 7) << 12) >> 12;
-	const int32_t x2 = (int32_t)((m_rex3.m_x_end >> 7) << 12) >> 12;
-	const int32_t y2 = (int32_t)((m_rex3.m_y_end >> 7) << 12) >> 12;
+	const int32_t x1 = util::sext(m_rex3.m_x_start >> 7, 20);
+	const int32_t y1 = util::sext(m_rex3.m_y_start >> 7, 20);
+	const int32_t x2 = util::sext(m_rex3.m_x_end >> 7, 20);
+	const int32_t y2 = util::sext(m_rex3.m_y_end >> 7, 20);
 
 	const int32_t x10 = x1 & ~0xf;
 	const int32_t y10 = y1 & ~0xf;
@@ -2756,17 +2770,17 @@ void newport_base_device::do_fline(uint32_t color)
 
 	static const bresenham_octant_info_t s_bresenham_infos[8] =
 	{
-		{  1,  1,  0,  1,  0 },
-		{  0,  1,  1,  1,  1 },
-		{  0, -1,  1,  1,  1 },
-		{ -1, -1,  0,  1,  0 },
-		{ -1, -1,  0, -1,  0 },
-		{  0, -1, -1, -1,  1 },
-		{  0,  1, -1, -1,  1 },
-		{  1,  1,  0, -1,  0 }
+		{  0,  1, -1, -1,  1 }, // Pseudo 7
+		{  0,  1,  1,  1,  1 }, // Pseudo 2
+		{  0, -1, -1, -1,  1 }, // Pseudo 6
+		{  0, -1,  1,  1,  1 }, // Pseudo 3
+		{  1,  1,  0, -1,  0 }, // Pseudo 8
+		{  1,  1,  0,  1,  0 }, // Pseudo 1
+		{ -1, -1,  0, -1,  0 }, // Pseudo 5
+		{ -1, -1,  0,  1,  0 }  // Pseudo 4
 	};
 
-	const uint8_t octant = get_octant(x1, y1, x2, y2, dx, dy);
+	const uint8_t octant = (m_rex3.m_bres_octant_inc1 >> 24) & 0x7;
 	const int32_t incrx1 = s_bresenham_infos[octant].incrx1;
 	const int32_t incrx2 = s_bresenham_infos[octant].incrx2;
 	const int32_t incry1 = s_bresenham_infos[octant].incry1;
@@ -2782,10 +2796,10 @@ void newport_base_device::do_fline(uint32_t color)
 
 	switch (octant)
 	{
-	case 0:
+	case 5: // Pseudo 1
 		// Nothing special needed
 		break;
-	case 1:
+	case 1: // Pseudo 2
 	{
 		const int16_t temp_fract = x1_fract;
 		x1_fract = y1_fract;
@@ -2795,7 +2809,7 @@ void newport_base_device::do_fline(uint32_t color)
 		dy = temp_d;
 		break;
 	}
-	case 2:
+	case 3: // Pseudo 3
 	{
 		const int16_t temp_fract = 0x10 - x1_fract;
 		x1_fract = y1_fract;
@@ -2805,14 +2819,14 @@ void newport_base_device::do_fline(uint32_t color)
 		dy = temp_d;
 		break;
 	}
-	case 3:
+	case 7: // Pseudo 4
 		x1_fract = 0x10 - x1_fract;
 		break;
-	case 4:
+	case 6: // Pseudo 5
 		x1_fract = 0x10 - x1_fract;
 		y1_fract = 0x10 - y1_fract;
 		break;
-	case 5:
+	case 2: // Pseudo 6
 	{
 		const int16_t temp_fract = 0x10 - x1_fract;
 		x1_fract = 0x10 - y1_fract;
@@ -2822,7 +2836,7 @@ void newport_base_device::do_fline(uint32_t color)
 		dy = temp_d;
 		break;
 	}
-	case 6:
+	case 0: // Pseudo 7
 	{
 		const int16_t temp_fract = 0x10 - y1_fract;
 		y1_fract = x1_fract;
@@ -2832,7 +2846,7 @@ void newport_base_device::do_fline(uint32_t color)
 		dy = temp_d;
 		break;
 	}
-	case 7:
+	case 4: // Pseudo 8
 		y1_fract = 0x10 - y1_fract;
 		break;
 	}
@@ -2947,17 +2961,17 @@ void newport_base_device::do_iline(uint32_t color)
 
 	static const bresenham_octant_info_t s_bresenham_infos[8] =
 	{
-		{  1,  1,  0,  1, 0 },
-		{  0,  1,  1,  1, 1 },
-		{  0, -1,  1,  1, 1 },
-		{ -1, -1,  0,  1, 0 },
-		{ -1, -1,  0, -1, 0 },
-		{  0, -1, -1, -1, 1 },
-		{  0,  1, -1, -1, 1 },
-		{  1,  1,  0, -1, 0 }
+		{  0,  1, -1, -1,  1 }, // Pseudo 7
+		{  0,  1,  1,  1,  1 }, // Pseudo 2
+		{  0, -1, -1, -1,  1 }, // Pseudo 6
+		{  0, -1,  1,  1,  1 }, // Pseudo 3
+		{  1,  1,  0, -1,  0 }, // Pseudo 8
+		{  1,  1,  0,  1,  0 }, // Pseudo 1
+		{ -1, -1,  0, -1,  0 }, // Pseudo 5
+		{ -1, -1,  0,  1,  0 }  // Pseudo 4
 	};
 
-	const uint8_t octant = get_octant(x1, y1, x2, y2, dx, dy);
+	const uint8_t octant = (m_rex3.m_bres_octant_inc1 >> 24) & 0x7;
 	const int32_t incrx1 = s_bresenham_infos[octant].incrx1;
 	const int32_t incrx2 = s_bresenham_infos[octant].incrx2;
 	const int32_t incry1 = s_bresenham_infos[octant].incry1;
@@ -3056,7 +3070,6 @@ void newport_base_device::do_iline(uint32_t color)
 
 uint32_t newport_base_device::do_pixel_read()
 {
-	m_rex3.m_bres_octant_inc1 = 0;
 	const int16_t src_x = m_rex3.m_x_start_i + m_rex3.m_x_window - 0x1000;
 	const int16_t src_y = m_rex3.m_y_start_i + m_rex3.m_y_window - 0x1000;
 	uint32_t ret = 0;
@@ -3199,13 +3212,13 @@ uint64_t newport_base_device::do_pixel_word_read()
 void newport_base_device::iterate_shade()
 {
 	if (m_rex3.m_slope_red & 0x7fffff)
-		m_rex3.m_curr_color_red += (m_rex3.m_slope_red << 8) >> 8;
+		m_rex3.m_curr_color_red += util::sext(m_rex3.m_slope_red, 24);
 	if (m_rex3.m_slope_green & 0x7ffff)
-		m_rex3.m_curr_color_green += (m_rex3.m_slope_green << 12) >> 12;
+		m_rex3.m_curr_color_green += util::sext(m_rex3.m_slope_green, 20);
 	if (m_rex3.m_slope_blue & 0x7ffff)
-		m_rex3.m_curr_color_blue += (m_rex3.m_slope_blue << 12) >> 12;
+		m_rex3.m_curr_color_blue += util::sext(m_rex3.m_slope_blue, 20);
 	if (m_rex3.m_slope_alpha & 0x7ffff)
-		m_rex3.m_curr_color_alpha += (m_rex3.m_slope_alpha << 12) >> 12;
+		m_rex3.m_curr_color_alpha += util::sext(m_rex3.m_slope_alpha, 20);
 
 	if (BIT(m_rex3.m_draw_mode0, 21)) // CIClamp
 	{
@@ -3305,10 +3318,10 @@ void newport_base_device::do_rex3_command()
 	int16_t start_y = m_rex3.m_y_start_i;
 	int16_t end_x = m_rex3.m_x_end_i;
 	int16_t end_y = m_rex3.m_y_end_i;
-	int16_t dx = start_x > end_x ? -1 : 1;
-	int16_t dy = start_y > end_y ? -1 : 1;
+	int16_t dx = 1, dy = 1;
+	int8_t octant;
 
-	LOGMASKED(LOG_COMMANDS, "REX3 Command: %08x|%08x - %s %s\n", mode0, mode1, s_opcode_str[mode0 & 3], s_adrmode_str[(mode0 >> 2) & 7]);
+	LOGMASKED(LOG_COMMANDS, "REX3 Command: %08x|%08x - %s %s %s\n", mode0, mode1, s_opcode_str[mode0 & 3], s_adrmode_str[(mode0 >> 2) & 7], BIT(mode0, 5) ? "Setup" : "NoSetup");
 
 	const uint8_t opcode = mode0 & 3;
 	const uint8_t adrmode = (mode0 >> 2) & 7;
@@ -3318,9 +3331,18 @@ void newport_base_device::do_rex3_command()
 		case 0: // NoOp
 			break;
 		case 1: // Read
+			if (BIT(mode0, 5))
+				do_setup();
+			// Our do_pixel_word_read does not use octant, but seems like hardware is still updating it
 			m_rex3.m_host_dataport = do_pixel_word_read();
 			break;
 		case 2: // Draw
+			if (BIT(mode0, 5))
+				do_setup();
+			octant = (m_rex3.m_bres_octant_inc1 >> 24) & 0x7;
+			dx = BIT(octant, 1) ? -1 : 1;
+			dy = BIT(octant, 0) ? -1 : 1;
+
 			switch (adrmode)
 			{
 				case 0: // Span
@@ -3491,6 +3513,12 @@ void newport_base_device::do_rex3_command()
 				const bool stop_on_x = BIT(mode0, 8);
 				const bool stop_on_y = BIT(mode0, 9);
 
+				if (BIT(mode0, 5))
+					do_setup();
+				octant = (m_rex3.m_bres_octant_inc1 >> 24) & 0x7;
+				dx = BIT(octant, 1) ? -1 : 1;
+				dy = BIT(octant, 0) ? -1 : 1;
+
 				end_x += dx;
 				end_y += dy;
 
@@ -3557,7 +3585,7 @@ void newport_base_device::write_y_end(int32_t val)
 	m_rex3.m_xy_end_i = (m_rex3.m_xy_end_i & 0xffff0000) | (uint16_t)m_rex3.m_y_end_i;
 }
 
-WRITE64_MEMBER(newport_base_device::rex3_w)
+void newport_base_device::rex3_w(offs_t offset, uint64_t data, uint64_t mem_mask)
 {
 #if ENABLE_NEWVIEW_LOG
 	if (m_newview_log != nullptr)
@@ -3906,6 +3934,7 @@ WRITE64_MEMBER(newport_base_device::rex3_w)
 		{
 			LOGMASKED(LOG_REX3, "REX3 Line/Span Setup Write: %08x\n", (uint32_t)(data >> 32));
 			m_rex3.m_setup = (uint32_t)(data >> 32);
+			do_setup();
 		}
 		if (ACCESSING_BITS_0_31)
 		{

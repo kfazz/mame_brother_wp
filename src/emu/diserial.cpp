@@ -10,6 +10,14 @@
 #include "emu.h"
 #include "diserial.h"
 
+#define LOG_SETUP  (1U << 1)
+#define LOG_TX     (1U << 2)
+#define LOG_RX     (1U << 3)
+#define VERBOSE    (0)
+
+#define LOG_OUTPUT_FUNC device().logerror
+#include "logmacro.h"
+
 device_serial_interface::device_serial_interface(const machine_config &mconfig, device_t &device) :
 	device_interface(device, "serial"),
 	m_start_bit_hack_for_external_clocks(false),
@@ -130,7 +138,7 @@ void device_serial_interface::rcv_edge()
 	}
 }
 
-WRITE_LINE_MEMBER(device_serial_interface::tx_clock_w)
+void device_serial_interface::tx_clock_w(int state)
 {
 	if(state != m_tra_clock_state) {
 		m_tra_clock_state = state;
@@ -139,7 +147,7 @@ WRITE_LINE_MEMBER(device_serial_interface::tx_clock_w)
 	}
 }
 
-WRITE_LINE_MEMBER(device_serial_interface::rx_clock_w)
+void device_serial_interface::rx_clock_w(int state)
 {
 	if(state != m_rcv_clock_state) {
 		m_rcv_clock_state = state;
@@ -148,7 +156,7 @@ WRITE_LINE_MEMBER(device_serial_interface::rx_clock_w)
 	}
 }
 
-WRITE_LINE_MEMBER(device_serial_interface::clock_w)
+void device_serial_interface::clock_w(int state)
 {
 	tx_clock_w(state);
 	rx_clock_w(state);
@@ -157,7 +165,7 @@ WRITE_LINE_MEMBER(device_serial_interface::clock_w)
 
 void device_serial_interface::set_data_frame(int start_bit_count, int data_bit_count, parity_t parity, stop_bits_t stop_bits)
 {
-	//device().logerror("Start bits: %d; Data bits: %d; Parity: %s; Stop bits: %s\n", start_bit_count, data_bit_count, parity_tostring(parity), stop_bits_tostring(stop_bits));
+	LOGMASKED(LOG_SETUP, "Start bits: %d; Data bits: %d; Parity: %s; Stop bits: %s\n", start_bit_count, data_bit_count, parity_tostring(parity), stop_bits_tostring(stop_bits));
 
 	m_df_word_length = data_bit_count;
 
@@ -208,19 +216,19 @@ void device_serial_interface::receive_register_reset()
 	}
 }
 
-WRITE_LINE_MEMBER(device_serial_interface::rx_w)
+void device_serial_interface::rx_w(int state)
 {
 	m_rcv_line = state;
-	if(m_rcv_flags & RECEIVE_REGISTER_SYNCHRONISED)
+	if (m_rcv_flags & RECEIVE_REGISTER_SYNCHRONISED)
 		return;
 	receive_register_update_bit(state);
-	if(m_rcv_flags & RECEIVE_REGISTER_SYNCHRONISED)
+	if (m_rcv_flags & RECEIVE_REGISTER_SYNCHRONISED)
 	{
-		//device().logerror("Receiver is synchronized\n");
-		if(m_rcv_clock && !(m_rcv_rate.is_never()))
+		LOGMASKED(LOG_RX, "Receiver is synchronized\n");
+		if (m_rcv_clock && !(m_rcv_rate.is_never()))
 			// make start delay just a bit longer to make sure we are called after the sender
 			m_rcv_clock->adjust(((m_rcv_rate*3)/2), 0, m_rcv_rate);
-		else if(m_start_bit_hack_for_external_clocks)
+		else if (m_start_bit_hack_for_external_clocks)
 			m_rcv_bit_count_received--;
 	}
 	return;
@@ -235,7 +243,6 @@ void device_serial_interface::receive_register_update_bit(int bit)
 {
 	int previous_bit;
 
-	//LOG(("receive register receive bit: %1x\n",bit));
 	previous_bit = (m_rcv_register_data & 0x8000) ? 1 : 0;
 
 	/* shift previous bit 7 out */
@@ -254,7 +261,7 @@ void device_serial_interface::receive_register_update_bit(int bit)
 			/* yes */
 			if (bit==0)
 			{
-				//logerror("receive register saw start bit\n");
+				LOGMASKED(LOG_RX, "Receiver saw start bit (%s)\n", device().machine().time().to_string());
 
 				/* seen start bit! */
 				/* not waiting for start bit now! */
@@ -267,14 +274,14 @@ void device_serial_interface::receive_register_update_bit(int bit)
 			}
 		}
 	}
-	else
-	if (m_rcv_flags & RECEIVE_REGISTER_SYNCHRONISED)
+	else if (m_rcv_flags & RECEIVE_REGISTER_SYNCHRONISED)
 	{
-		//device().logerror("Received bit %d\n", m_rcv_bit_count_received);
+		LOGMASKED(LOG_RX, "Received bit %d as %d (%s)\n", m_rcv_bit_count_received, bit, device().machine().time().to_string());
 		m_rcv_bit_count_received++;
 
 		if (!bit && (m_rcv_bit_count_received > (m_rcv_bit_count - m_df_stop_bit_count)))
 		{
+			LOGMASKED(LOG_RX, "Framing error\n");
 			m_rcv_framing_error = true;
 		}
 
@@ -284,7 +291,7 @@ void device_serial_interface::receive_register_update_bit(int bit)
 			m_rcv_bit_count_received = 0;
 			m_rcv_flags &=~RECEIVE_REGISTER_SYNCHRONISED;
 			m_rcv_flags |= RECEIVE_REGISTER_WAITING_FOR_START_BIT;
-			//device().logerror("Receive register full\n");
+			LOGMASKED(LOG_RX, "Receive register full\n");
 			m_rcv_flags |= RECEIVE_REGISTER_FULL;
 		}
 	}
@@ -304,6 +311,7 @@ void device_serial_interface::receive_register_extract()
 	data &= ~(0xff<<m_df_word_length);
 
 	m_rcv_byte_received  = data;
+	LOGMASKED(LOG_RX, "Receive data 0x%02x\n", m_rcv_byte_received);
 
 	if(m_df_parity == PARITY_NONE)
 		return;
@@ -428,13 +436,17 @@ u8 device_serial_interface::transmit_register_get_data_bit()
 
 	bit = (m_tra_register_data>>(m_tra_bit_count-1-m_tra_bit_count_transmitted))&1;
 
+	if (m_tra_bit_count_transmitted < m_df_start_bit_count)
+		LOGMASKED(LOG_TX, "Transmitting start bit %d as %d (%s)\n", m_tra_bit_count_transmitted, bit, device().machine().time().to_string());
+	else
+		LOGMASKED(LOG_TX, "Transmitting bit %d as %d (%s)\n", m_tra_bit_count_transmitted - m_df_start_bit_count, bit, device().machine().time().to_string());
 	m_tra_bit_count_transmitted++;
-	//device().logerror("%d bits transmitted\n", m_tra_bit_count_transmitted);
 
 	/* have all bits of this stream formatted byte been sent? */
 	if (m_tra_bit_count_transmitted==m_tra_bit_count)
 	{
 		/* yes - generate a new byte to send */
+		LOGMASKED(LOG_TX, "Transmit register empty\n");
 		m_tra_flags |= TRANSMIT_REGISTER_EMPTY;
 	}
 

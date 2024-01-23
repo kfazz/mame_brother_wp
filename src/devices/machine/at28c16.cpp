@@ -48,7 +48,7 @@ at28c16_device::at28c16_device(const machine_config &mconfig, const char *tag, d
 		m_a9_12v(0),
 		m_oe_12v(0),
 		m_last_write(-1),
-		m_default_data(*this, DEVICE_SELF, AT28C16_DATA_BYTES)
+		m_default_data(*this, DEVICE_SELF)
 {
 }
 
@@ -72,7 +72,7 @@ device_memory_interface::space_config_vector at28c16_device::memory_space_config
 
 void at28c16_device::device_start()
 {
-	m_write_timer = timer_alloc(0);
+	m_write_timer = timer_alloc( FUNC( at28c16_device::write_complete ), this );
 
 	save_item( NAME(m_a9_12v) );
 	save_item( NAME(m_oe_12v) );
@@ -107,16 +107,20 @@ void at28c16_device::nvram_default()
 //  .nv file
 //-------------------------------------------------
 
-void at28c16_device::nvram_read( emu_file &file )
+bool at28c16_device::nvram_read( util::read_stream &file )
 {
 	std::vector<uint8_t> buffer( AT28C16_TOTAL_BYTES );
+	size_t actual;
 
-	file.read( &buffer[0], AT28C16_TOTAL_BYTES );
+	if (file.read( &buffer[0], AT28C16_TOTAL_BYTES, actual ) || actual != AT28C16_TOTAL_BYTES)
+		return false;
 
 	for( offs_t offs = 0; offs < AT28C16_TOTAL_BYTES; offs++ )
 	{
 		space(AS_PROGRAM).write_byte( offs, buffer[ offs ] );
 	}
+
+	return true;
 }
 
 //-------------------------------------------------
@@ -124,16 +128,17 @@ void at28c16_device::nvram_read( emu_file &file )
 //  .nv file
 //-------------------------------------------------
 
-void at28c16_device::nvram_write( emu_file &file )
+bool at28c16_device::nvram_write( util::write_stream &file )
 {
 	std::vector<uint8_t> buffer ( AT28C16_TOTAL_BYTES );
+	size_t actual;
 
 	for( offs_t offs = 0; offs < AT28C16_TOTAL_BYTES; offs++ )
 	{
 		buffer[ offs ] = space(AS_PROGRAM).read_byte( offs );
 	}
 
-	file.write( &buffer[0], AT28C16_TOTAL_BYTES );
+	return !file.write( &buffer[0], AT28C16_TOTAL_BYTES, actual ) && actual == AT28C16_TOTAL_BYTES;
 }
 
 
@@ -202,7 +207,7 @@ uint8_t at28c16_device::read(offs_t offset)
 }
 
 
-WRITE_LINE_MEMBER( at28c16_device::set_a9_12v )
+void at28c16_device::set_a9_12v(int state)
 {
 	state &= 1;
 	if( m_a9_12v != state )
@@ -213,7 +218,7 @@ WRITE_LINE_MEMBER( at28c16_device::set_a9_12v )
 }
 
 
-WRITE_LINE_MEMBER( at28c16_device::set_oe_12v )
+void at28c16_device::set_oe_12v(int state)
 {
 	state &= 1;
 	if( m_oe_12v != state )
@@ -224,12 +229,7 @@ WRITE_LINE_MEMBER( at28c16_device::set_oe_12v )
 }
 
 
-void at28c16_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER( at28c16_device::write_complete )
 {
-	switch( id )
-	{
-	case 0:
-		m_last_write = -1;
-		break;
-	}
+	m_last_write = -1;
 }

@@ -58,19 +58,12 @@ public:
 
 protected:
 	mc6847_friend_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock,
-			const uint8_t *fontdata, bool is_mc6847t1, double tpfs, int field_sync_falling_edge_scanline, int divider, bool supports_partial_body_scanlines);
-
-	// timer constants
-	static constexpr device_timer_id TIMER_FRAME = 0;
-	static constexpr device_timer_id TIMER_HSYNC_OFF = 1;
-	static constexpr device_timer_id TIMER_HSYNC_ON = 2;
-	static constexpr device_timer_id TIMER_FSYNC = 3;
+			const uint8_t *fontdata, bool is_mc6847t1, double tpfs, int field_sync_falling_edge_scanline, int divider,
+			bool supports_partial_body_scanlines, bool pal);
 
 	// fonts
-	static const uint8_t pal_round_fontdata8x12[];
-	static const uint8_t pal_square_fontdata8x12[];
-	static const uint8_t ntsc_round_fontdata8x12[];
-	static const uint8_t ntsc_square_fontdata8x12[];
+	static const uint8_t vdg_t1_fontdata8x12[];
+	static const uint8_t vdg_fontdata8x12[];
 	static const uint8_t semigraphics4_fontdata8x12[];
 	static const uint8_t semigraphics6_fontdata8x12[];
 	static const uint8_t s68047_fontdata8x12[];
@@ -81,7 +74,7 @@ protected:
 
 	pixel_t *bitmap_addr(bitmap_rgb32 &bitmap, int y, int x)
 	{
-		return &bitmap.pix32(y, x);
+		return &bitmap.pix(y, x);
 	}
 
 	static uint8_t simplify_mode(uint8_t data, uint8_t mode)
@@ -107,7 +100,7 @@ protected:
 				uint8_t character = data[i];
 
 				// based on the mode, determine which entry to use
-				const entry *e = &m_entries[mode % ARRAY_LENGTH(m_entries)];
+				const entry *e = &m_entries[mode % std::size(m_entries)];
 
 				// identify the character in the font data
 				const uint8_t *font_character = e->m_fontdata + (character & e->m_character_mask) * 12;
@@ -183,8 +176,8 @@ protected:
 
 			if( (mode & MODE_AS) || ((mode & (MODE_AG|MODE_GM0) ) == MODE_AG) )
 			{
-				pixel_t *line1 = &bitmap.pix32(y + base_y, base_x);
-				pixel_t *line2 = &bitmap.pix32(y + base_y + 1, base_x);
+				pixel_t *line1 = &bitmap.pix(y + base_y, base_x);
+				pixel_t *line2 = &bitmap.pix(y + base_y + 1, base_x);
 				std::map<std::pair<pixel_t,pixel_t>,pixel_t>::const_iterator newColor;
 
 				for( int pixel = 0; pixel < bitmap.width() - (base_x * 2); ++pixel )
@@ -275,13 +268,12 @@ protected:
 
 	// device-level overrides
 	virtual void device_start() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 	virtual void device_reset() override;
 	virtual void device_post_load() override;
 
 	// other overridables
 	virtual void new_frame();
-	virtual void horizontal_sync_changed(bool line);
+	virtual TIMER_CALLBACK_MEMBER(horizontal_sync_changed);
 	virtual void field_sync_changed(bool line);
 	virtual void enter_bottom_border();
 	virtual void record_border_scanline(uint16_t physical_scanline);
@@ -291,9 +283,6 @@ protected:
 	// miscellaneous
 	void video_flush();
 	std::string describe_context() const;
-
-	// setup functions
-	emu_timer *setup_timer(device_timer_id id, double offset, double period);
 
 	// converts to B&W
 	static pixel_t black_and_white(rgb_t color)
@@ -467,11 +456,9 @@ private:
 		SCANLINE_ZONE_BOTTOM_BORDER,
 		SCANLINE_ZONE_RETRACE,
 		SCANLINE_ZONE_VBLANK,
-		SCANLINE_ZONE_FRAME_END
 	};
 
 	// timers
-	emu_timer *m_frame_timer;
 	emu_timer *m_hsync_on_timer;
 	emu_timer *m_hsync_off_timer;
 	emu_timer *m_fsync_timer;
@@ -482,7 +469,7 @@ protected:
 private:
 	// incidentals
 	const int m_divider;
-	int m_field_sync_falling_edge_scanline;
+	const int m_field_sync_falling_edge_scanline;
 	bool m_wide;
 	bool m_video_changed;
 	uint16_t m_top_border_scanlines;
@@ -490,6 +477,13 @@ private:
 	bool m_recording_scanline;
 	const bool m_supports_partial_body_scanlines;
 
+protected:
+	const bool m_pal;
+	const uint16_t m_lines_top_border;
+	const uint16_t m_lines_until_vblank;
+	const uint16_t m_lines_until_retrace;
+
+private:
 	// video state
 	uint16_t m_physical_scanline;
 	uint16_t m_logical_scanline;
@@ -499,14 +493,19 @@ private:
 	uint32_t m_partial_scanline_clocks;
 
 	// functions
-	void change_horizontal_sync(bool line);
-	void change_field_sync(bool line);
+	virtual TIMER_CALLBACK_MEMBER(change_horizontal_sync);
+	TIMER_CALLBACK_MEMBER(change_field_sync);
 	void update_field_sync_timer();
 	void next_scanline();
 	int32_t get_clocks_since_hsync();
 
 	// debugging
 	std::string scanline_zone_string(scanline_zone zone) const;
+
+protected:
+	bool is_top_pal_padding_line(int scanline) const;
+	bool is_bottom_pal_padding_line(int scanline) const;
+	bool is_pal_padding_line(int scanline) const;
 };
 
 // actual base class for MC6847 family of devices
@@ -524,17 +523,17 @@ public:
 	uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
 	// mode changing operations
-	DECLARE_WRITE_LINE_MEMBER( ag_w )       { change_mode(MODE_AG, state); }
-	DECLARE_WRITE_LINE_MEMBER( gm2_w )      { change_mode(MODE_GM2, state); }
-	DECLARE_WRITE_LINE_MEMBER( gm1_w )      { change_mode(MODE_GM1, state); }
-	DECLARE_WRITE_LINE_MEMBER( gm0_w )      { change_mode(MODE_GM0, state); }
-	DECLARE_WRITE_LINE_MEMBER( as_w )       { change_mode(MODE_AS, state); }
-	DECLARE_WRITE_LINE_MEMBER( css_w )      { change_mode(MODE_CSS, state); }
-	DECLARE_WRITE_LINE_MEMBER( intext_w )   { change_mode(MODE_INTEXT, state); }
-	DECLARE_WRITE_LINE_MEMBER( inv_w )      { change_mode(MODE_INV, state); }
+	void ag_w(int state)       { change_mode(MODE_AG, state); }
+	void gm2_w(int state)      { change_mode(MODE_GM2, state); }
+	void gm1_w(int state)      { change_mode(MODE_GM1, state); }
+	void gm0_w(int state)      { change_mode(MODE_GM0, state); }
+	void as_w(int state)       { change_mode(MODE_AS, state); }
+	void css_w(int state)      { change_mode(MODE_CSS, state); }
+	void intext_w(int state)   { change_mode(MODE_INTEXT, state); }
+	void inv_w(int state)      { change_mode(MODE_INV, state); }
 
 protected:
-	mc6847_base_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, const uint8_t *fontdata, double tpfs);
+	mc6847_base_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, const uint8_t *fontdata, double tpfs, bool pal);
 
 	// device-level overrides
 	virtual void device_config_complete() override;

@@ -25,11 +25,26 @@ tp1 = phi clock (tied to f2q rom access)
 #include "emu.h"
 #include "votrax.h"
 
+#define LOG_PHONE  (1U << 1)
+#define LOG_COMMIT (1U << 2)
+#define LOG_INT    (1U << 3)
+#define LOG_TICK   (1U << 4)
+#define LOG_FILTER (1U << 5)
 
-DEFINE_DEVICE_TYPE(VOTRAX_SC01, votrax_sc01_device, "votrax", "Votrax SC-01")
+//#define VERBOSE (LOG_GENERAL | LOG_PHONE)
+#include "logmacro.h"
+
+
+DEFINE_DEVICE_TYPE(VOTRAX_SC01, votrax_sc01_device, "votrsc01", "Votrax SC-01")
+DEFINE_DEVICE_TYPE(VOTRAX_SC01A, votrax_sc01a_device, "votrsc01a", "Votrax SC-01-A")
 
 // ROM definition for the Votrax phone ROM
 ROM_START( votrax_sc01 )
+	ROM_REGION64_LE( 0x200, "internal", 0 )
+	ROM_LOAD( "sc01.bin", 0x000, 0x200, CRC(528d1c57) SHA1(268b5884dce04e49e2376df3e2dc82e852b708c1) )
+ROM_END
+
+ROM_START( votrax_sc01a )
 	ROM_REGION64_LE( 0x200, "internal", 0 )
 	ROM_LOAD( "sc01a.bin", 0x000, 0x200, CRC(fc416227) SHA1(1d6da90b1807a01b5e186ef08476119a862b5e6d) )
 ROM_END
@@ -74,13 +89,23 @@ const double votrax_sc01_device::s_glottal_wave[9] =
 	1/7.0
 };
 
-
 votrax_sc01_device::votrax_sc01_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, VOTRAX_SC01, tag, owner, clock),
+	: votrax_sc01_device(mconfig, VOTRAX_SC01, tag, owner, clock)
+{
+}
+
+// overridable type for subclass
+votrax_sc01_device::votrax_sc01_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
+	: device_t(mconfig, type, tag, owner, clock),
 	  device_sound_interface(mconfig, *this),
 	  m_stream(nullptr),
 	  m_rom(*this, "internal"),
 	  m_ar_cb(*this)
+{
+}
+
+votrax_sc01a_device::votrax_sc01a_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: votrax_sc01_device(mconfig, VOTRAX_SC01A, tag, owner, clock)
 {
 }
 
@@ -95,9 +120,10 @@ void votrax_sc01_device::write(uint8_t data)
 	m_phone = data & 0x3f;
 
 	if(m_phone != prev || m_phone != 0x3f)
-		logerror("phone %02x.%d %s\n", m_phone, m_inflection, s_phone_table[m_phone]);
+		LOGMASKED(LOG_PHONE, "phone %02x.%d %s\n", m_phone, m_inflection, s_phone_table[m_phone]);
 
 	m_ar_state = CLEAR_LINE;
+	m_ar_cb(m_ar_state);
 
 	// Schedule a commit/ar reset at roughly 0.1ms in the future (one
 	// phi1 transition followed by the rom extra state in practice),
@@ -131,13 +157,13 @@ void votrax_sc01_device::inflection_w(uint8_t data)
 //  for our sound stream
 //-------------------------------------------------
 
-void votrax_sc01_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void votrax_sc01_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
-	for(int i=0; i<samples; i++) {
+	for(int i=0; i<outputs[0].samples(); i++) {
 		m_sample_count++;
 		if(m_sample_count & 1)
 			chip_update();
-		outputs[0][i] = analog_calc();
+		outputs[0].put(i, analog_calc());
 	}
 }
 
@@ -157,6 +183,11 @@ const tiny_rom_entry *votrax_sc01_device::device_rom_region() const
 	return ROM_NAME( votrax_sc01 );
 }
 
+const tiny_rom_entry *votrax_sc01a_device::device_rom_region() const
+{
+	return ROM_NAME( votrax_sc01a );
+}
+
 
 //-------------------------------------------------
 //  device_start - handle device startup
@@ -169,10 +200,9 @@ void votrax_sc01_device::device_start()
 	m_sclock = m_mainclock / 18.0;
 	m_cclock = m_mainclock / 36.0;
 	m_stream = stream_alloc(0, 1, m_sclock);
-	m_timer = timer_alloc();
+	m_timer = timer_alloc(FUNC(votrax_sc01_device::phone_tick), this);
 
 	// reset outputs
-	m_ar_cb.resolve_safe();
 	m_ar_state = ASSERT_LINE;
 
 	// save inputs
@@ -330,10 +360,10 @@ void votrax_sc01_device::device_clock_changed()
 
 
 //-------------------------------------------------
-//  device_timer - handle device timer
+//  phone_tick - process transitions
 //-------------------------------------------------
 
-void votrax_sc01_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(votrax_sc01_device::phone_tick)
 {
 	m_stream->update();
 
@@ -387,8 +417,7 @@ void votrax_sc01_device::phone_commit()
 			// Hard-wired on the die, not an actual part of the rom.
 			m_rom_pause = (m_phone == 0x03) || (m_phone == 0x3e);
 
-			if(0)
-				logerror("commit fa=%x va=%x fc=%x f1=%x f2=%x f2q=%x f3=%x dur=%02x cld=%x vd=%d cl=%d pause=%d\n", m_rom_fa, m_rom_va, m_rom_fc, m_rom_f1, m_rom_f2, m_rom_f2q, m_rom_f3, m_rom_duration, m_rom_cld, m_rom_vd, m_rom_closure, m_rom_pause);
+			LOGMASKED(LOG_COMMIT, "commit fa=%x va=%x fc=%x f1=%x f2=%x f2q=%x f3=%x dur=%02x cld=%x vd=%d cl=%d pause=%d\n", m_rom_fa, m_rom_va, m_rom_fc, m_rom_f1, m_rom_f2, m_rom_f2q, m_rom_f3, m_rom_duration, m_rom_cld, m_rom_vd, m_rom_closure, m_rom_pause);
 
 			// That does not happen in the sc01(a) rom, but let's
 			// cover our behind.
@@ -438,29 +467,30 @@ void votrax_sc01_device::chip_update()
 	// The formants are frozen on a pause phone unless both voice and
 	// noise volumes are zero.
 	if(tick_208 && (!m_rom_pause || !(m_filt_fa || m_filt_va))) {
-		//      interpolate(m_cur_va,  m_rom_va);
+		// interpolate(m_cur_va,  m_rom_va);
 		interpolate(m_cur_fc,  m_rom_fc);
 		interpolate(m_cur_f1,  m_rom_f1);
 		interpolate(m_cur_f2,  m_rom_f2);
 		interpolate(m_cur_f2q, m_rom_f2q);
 		interpolate(m_cur_f3,  m_rom_f3);
-		//      logerror("int fa=%x va=%x fc=%x f1=%x f2=%02x f2q=%02x f3=%x\n", m_cur_fa >> 4, m_cur_va >> 4, m_cur_fc >> 4, m_cur_f1 >> 4, m_cur_f2 >> 3, m_cur_f2q >> 4, m_cur_f3 >> 4);
+		LOGMASKED(LOG_INT, "int fa=%x va=%x fc=%x f1=%x f2=%02x f2q=%02x f3=%x\n", m_cur_fa >> 4, m_cur_va >> 4, m_cur_fc >> 4, m_cur_f1 >> 4, m_cur_f2 >> 3, m_cur_f2q >> 4, m_cur_f3 >> 4);
 	}
 
 	// Non-formant update. Same bug there, va should be updated, not fc.
 	if(tick_625) {
 		if(m_ticks >= m_rom_vd)
 			interpolate(m_cur_fa, m_rom_fa);
-		if(m_ticks >= m_rom_cld)
-			//          interpolate(m_cur_fc, m_rom_fc);
+		if(m_ticks >= m_rom_cld) {
+			// interpolate(m_cur_fc, m_rom_fc);
 			interpolate(m_cur_va, m_rom_va);
-		//      logerror("int fa=%x va=%x fc=%x f1=%x f2=%02x f2q=%02x f3=%x\n", m_cur_fa >> 4, m_cur_va >> 4, m_cur_fc >> 4, m_cur_f1 >> 4, m_cur_f2 >> 3, m_cur_f2q >> 4, m_cur_f3 >> 4);
+			LOGMASKED(LOG_INT, "int fa=%x va=%x fc=%x f1=%x f2=%02x f2q=%02x f3=%x\n", m_cur_fa >> 4, m_cur_va >> 4, m_cur_fc >> 4, m_cur_f1 >> 4, m_cur_f2 >> 3, m_cur_f2q >> 4, m_cur_f3 >> 4);
+		}
 	}
 
 	// Closure counter, reset every other tick in theory when not
 	// active (on the extra rom cycle).
 	//
-	// The closure level is immediatly used in the analog path,
+	// The closure level is immediately used in the analog path,
 	// there's no pitch synchronization.
 
 	if(!m_cur_closure && (m_filt_fa || m_filt_va))
@@ -470,14 +500,17 @@ void votrax_sc01_device::chip_update()
 
 	// Pitch counter.  Equality comparison, so it's possible to make
 	// it miss by manipulating the inflection inputs, but it'll wrap.
-	// There's a delay, hence the +1.
-	m_pitch = (m_pitch + 1) & 0x7f;
-	if(m_pitch == (0x7f ^ (m_inflection << 4) ^ m_filt_f1) + 1)
+	// There's a delay, hence the +2.
+
+	// Intrinsically pre-divides by two, so we added one bit on the 7
+
+	m_pitch = (m_pitch + 1) & 0xff;
+	if(m_pitch == (0xe0 ^ (m_inflection << 5) ^ (m_filt_f1 << 1)) + 2)
 		m_pitch = 0;
 
 	// Filters are updated in index 1 of the pitch wave, which does
 	// indeed mean four times in a row.
-	if((m_pitch >> 2) == 1)
+	if((m_pitch & 0xf9) == 0x08)
 		filters_commit(false);
 
 	// Noise shift register.  15 bits, with a nxor on the last two
@@ -486,7 +519,7 @@ void votrax_sc01_device::chip_update()
 	m_noise = ((m_noise << 1) & 0x7ffe) | inp;
 	m_cur_noise = !(((m_noise >> 14) ^ (m_noise >> 13)) & 1);
 
-	//  logerror("tick %02x.%03x 625=%d 208=%d pitch=%02x.%x ns=%04x ni=%d noise=%d cl=%x.%x clf=%d/%d\n", m_ticks, m_phonetick, tick_625, tick_208, m_pitch >> 2, m_pitch & 3, m_noise, inp, m_cur_noise, m_closure >> 2, m_closure & 3, m_rom_closure, m_cur_closure);
+	LOGMASKED(LOG_TICK, "%s tick %02x.%03x 625=%d 208=%d pitch=%02x.%x ns=%04x ni=%d noise=%d cl=%x.%x clf=%d/%d\n", machine().time().to_string(), m_ticks, m_phonetick, tick_625, tick_208, m_pitch >> 3, m_pitch & 7, m_noise, inp, m_cur_noise, m_closure >> 2, m_closure & 3, m_rom_closure, m_cur_closure);
 }
 
 void votrax_sc01_device::filters_commit(bool force)
@@ -559,18 +592,16 @@ void votrax_sc01_device::filters_commit(bool force)
 								  14083);
 	}
 
-	if(0)
-		if(m_filt_fa || m_filt_va || m_filt_fc || m_filt_f1 || m_filt_f2 || m_filt_f2q || m_filt_f3)
-			logerror("filter fa=%x va=%x fc=%x f1=%x f2=%02x f2q=%x f3=%x\n",
-					 m_filt_fa, m_filt_va, m_filt_fc, m_filt_f1, m_filt_f2, m_filt_f2q, m_filt_f3);
+	if(m_filt_fa | m_filt_va | m_filt_fc | m_filt_f1 | m_filt_f2 | m_filt_f2q | m_filt_f3)
+		LOGMASKED(LOG_FILTER, "filter fa=%x va=%x fc=%x f1=%x f2=%02x f2q=%x f3=%x\n", m_filt_fa, m_filt_va, m_filt_fc, m_filt_f1, m_filt_f2, m_filt_f2q, m_filt_f3);
 }
 
-stream_sample_t votrax_sc01_device::analog_calc()
+stream_buffer::sample_t votrax_sc01_device::analog_calc()
 {
 	// Voice-only path.
 	// 1. Pick up the pitch wave
 
-	double v = m_pitch >= (9 << 2) ? 0 : s_glottal_wave[m_pitch >> 2];
+	double v = m_pitch >= (9 << 3) ? 0 : s_glottal_wave[m_pitch >> 3];
 
 	// 2. Multiply by the initial amplifier.  It's linear on the die,
 	// even if it's not in the patent.
@@ -622,14 +653,14 @@ stream_sample_t votrax_sc01_device::analog_calc()
 	shift_hist(vn, m_vn_4);
 
 	// 13. Apply the glottal closure amplitude, also linear
-	vn = vn * (7 ^ (m_cur_closure >> 2)) / 7.0;
+	vn = vn * (7 ^ (m_closure >> 2)) / 7.0;
 	shift_hist(vn, m_vn_5);
 
 	// 13. Apply the final fixed filter
 	vn = apply_filter(m_vn_5, m_vn_6, m_fx_a, m_fx_b);
 	shift_hist(vn, m_vn_6);
 
-	return int(vn*50000);
+	return vn*0.35;
 }
 
 /*
@@ -659,16 +690,16 @@ stream_sample_t votrax_sc01_device::analog_calc()
   defined as the ratio Vo/Vi.  To do that, you use some properties:
 
   - The intensity through an element is equal to the voltage
-    difference through the element divided by the impedence
+    difference through the element divided by the impedance
 
-  - The impedence of a resistance is equal to its resistance
+  - The impedance of a resistance is equal to its resistance
 
-  - The impedence of a capacitor is 1/(s*C) where C is its capacitance
+  - The impedance of a capacitor is 1/(s*C) where C is its capacitance
 
-  - The impedence of elements in series is the sum of the impedences
+  - The impedance of elements in series is the sum of their impedances
 
-  - The impedence of elements in parallel is the inverse of the sum of
-    the inverses
+  - The impedance of elements in parallel is the inverse of the sum of
+    their inverses
 
   - The sum of all intensities flowing into a node is 0 (there's no
     charge accumulation in a wire)
@@ -713,7 +744,7 @@ stream_sample_t votrax_sc01_device::analog_calc()
   |        H(s) = -------------------------
   |                 1 + k[1]*s + k[2]*s^2
 
-  We can always reintroduce the global multipler later, and it's 1 in
+  We can always reintroduce the global multiplier later, and it's 1 in
   most of our cases anyway.
 
   The we pose:
@@ -874,8 +905,11 @@ void votrax_sc01_device::build_lowpass_filter(double *a, double *b,
 											  double c1t, // Unswitched cap, over amp-op, top
 											  double c1b) // Switched cap, over amp-op, bottom
 {
+	// The caps values puts the cutoff at around 150Hz, put that's no good.
+	// Recordings shows we want it around 4K, so fuzz it.
+
 	// Compute the only coefficient we care about
-	double k = c1b / (m_cclock * c1t);
+	double k = c1b / (m_cclock * c1t) * (150.0/4000.0);
 
 	// Compute the filter cutoff frequency
 	double fpeak = 1/(2*M_PI*k);
@@ -998,7 +1032,7 @@ void votrax_sc01_device::build_injection_filter(double *a, double *b,
 	b[1] = k1 + m;
 
 	// That ends up in a numerically unstable filter.  Neutralize it for now.
-	a[0] = 1;
+	a[0] = 0;
 	a[1] = 0;
 	b[0] = 1;
 	b[1] = 0;

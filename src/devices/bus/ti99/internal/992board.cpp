@@ -7,21 +7,27 @@
     This component implements the custom video controller and interface chip
     from the TI-99/2 console.
 
+    Also, we emulate the expansion port at the backside of the console; there
+    are no known expansions except for a RAM expansion that is mentioned
+    in the specifications.
+
     May 2018
+    June 2020
 
 ***************************************************************************/
 
 #include "emu.h"
 #include "992board.h"
 
-#define LOG_WARN        (1U<<1)   // Warnings
-#define LOG_CRU         (1U<<2)     // CRU logging
-#define LOG_CASSETTE    (1U<<3)     // Cassette logging
-#define LOG_HEXBUS      (1U<<4)     // Hexbus logging
-#define LOG_BANK        (1U<<5)     // Change ROM banks
-#define LOG_KEYBOARD    (1U<<6)   // Keyboard operation
+#define LOG_WARN        (1U << 1)   // Warnings
+#define LOG_CRU         (1U << 2)   // CRU logging
+#define LOG_CASSETTE    (1U << 3)   // Cassette logging
+#define LOG_HEXBUS      (1U << 4)   // Hexbus logging
+#define LOG_BANK        (1U << 5)   // Change ROM banks
+#define LOG_KEYBOARD    (1U << 6)   // Keyboard operation
+#define LOG_EXPRAM      (1U << 7)   // Expansion RAM
 
-#define VERBOSE ( LOG_WARN )
+#define VERBOSE (LOG_GENERAL | LOG_WARN)
 
 #include "logmacro.h"
 
@@ -123,21 +129,23 @@
    [2] VDC Controller CF40052
 */
 
-DEFINE_DEVICE_TYPE_NS(VIDEO99224, bus::ti99::internal, video992_24_device, "video992_24", "TI-99/2 CRT Controller 24K version")
-DEFINE_DEVICE_TYPE_NS(VIDEO99232, bus::ti99::internal, video992_32_device, "video992_32", "TI-99/2 CRT Controller 32K version")
-DEFINE_DEVICE_TYPE_NS(IO99224, bus::ti99::internal, io992_24_device, "io992_24", "TI-99/2 I/O controller 24K version")
-DEFINE_DEVICE_TYPE_NS(IO99232, bus::ti99::internal, io992_32_device, "io992_32", "TI-99/2 I/O controller 32K version")
+DEFINE_DEVICE_TYPE(VIDEO99224, bus::ti99::internal::video992_24_device, "video992_24", "TI-99/2 CRT Controller 24K version")
+DEFINE_DEVICE_TYPE(VIDEO99232, bus::ti99::internal::video992_32_device, "video992_32", "TI-99/2 CRT Controller 32K version")
+DEFINE_DEVICE_TYPE(IO99224, bus::ti99::internal::io992_24_device, "io992_24", "TI-99/2 I/O controller 24K version")
+DEFINE_DEVICE_TYPE(IO99232, bus::ti99::internal::io992_32_device, "io992_32", "TI-99/2 I/O controller 32K version")
 
+DEFINE_DEVICE_TYPE(TI992_EXPPORT, bus::ti99::internal::ti992_expport_device, "ti992_expport", "TI-99/2 Expansion Port")
+DEFINE_DEVICE_TYPE(TI992_RAM32K, bus::ti99::internal::ti992_expram_device, "ti992_ram32k", "TI-99/2 RAM Expansion 32K")
 
-namespace bus { namespace ti99 { namespace internal {
+namespace bus::ti99::internal {
 
-video992_device::video992_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, type, tag, owner, clock),
-	  device_video_interface(mconfig, *this),
-	  m_mem_read_cb(*this),
-	  m_hold_cb(*this),
-	  m_int_cb(*this),
-	  m_videna(true)
+video992_device::video992_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock) :
+	device_t(mconfig, type, tag, owner, clock),
+	device_video_interface(mconfig, *this),
+	m_mem_read_cb(*this, 0),
+	m_hold_cb(*this),
+	m_int_cb(*this),
+	m_videna(true)
 {
 }
 
@@ -153,34 +161,21 @@ video992_32_device::video992_32_device(const machine_config &mconfig, const char
 	m_beol = 0x7f;
 }
 
-std::string video992_device::tts(attotime t)
-{
-	char buf[256];
-	const char *sign = "";
-	if(t.seconds() < 0) {
-		t = attotime::zero-t;
-		sign = "-";
-	}
-	int nsec = t.attoseconds() / ATTOSECONDS_PER_NANOSECOND;
-	sprintf(buf, "%s%04d.%03d,%03d,%03d", sign, int(t.seconds()), nsec/1000000, (nsec/1000)%1000, nsec % 1000);
-	return buf;
-}
-
-
-void video992_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(video992_device::hold_cpu)
 {
 	int raw_vpos = screen().vpos();
 
-	if (id == HOLD_TIME)
-	{
-		// logerror("release time: %s, diff: %s\n", tts(machine().time()), tts(machine().time()-m_hold_time));
-		// We're holding the CPU; release it until the next start
-		m_hold_cb(CLEAR_LINE);
-		m_free_timer->adjust(screen().time_until_pos((raw_vpos+1) % screen().height(), HORZ_DISPLAY_START));
-		return;
-	}
+	LOG("release time: %s, diff: %s\n", machine().time().to_string(), (machine().time()-m_hold_time).to_string());
+	// We're holding the CPU; release it until the next start
+	m_hold_cb(CLEAR_LINE);
+	m_free_timer->adjust(screen().time_until_pos((raw_vpos+1) % screen().height(), HORZ_DISPLAY_START));
+}
 
-	// logerror("hold time: %s\n", tts(machine().time()));
+TIMER_CALLBACK_MEMBER(video992_device::free_cpu)
+{
+	int raw_vpos = screen().vpos();
+
+	LOG("hold time: %s\n", machine().time().to_string());
 	if (m_videna)
 	{
 		// Hold the CPU
@@ -194,31 +189,31 @@ void video992_device::device_timer(emu_timer &timer, device_timer_id id, int par
 	}
 
 	int vpos = raw_vpos * m_vertical_size / screen().height();
-	uint32_t *p = &m_tmpbmp.pix32(vpos);
+	uint32_t *p = &m_tmpbmp.pix(vpos);
 	bool endofline = false;
 
 	int linelength = 0;
 
-	// logerror("draw line %d\n", vpos);
+	LOG("draw line %d\n", vpos);
 	// Get control byte
 	uint8_t control = m_mem_read_cb(0xef00);
-	bool text_white = ((control & 0x04)!=0);
-	bool border_white = ((control & 0x02)!=0);
-	bool background_white = ((control & 0x01)!=0)? text_white : !text_white;
+	bool text_white = BIT(control, 2);
+	bool border_white = BIT(control, 1);
+	bool background_white = BIT(control, 0) ? text_white : !text_white;
 
 	int y = vpos - m_top_border;
 	if (y < 0 || y >= 192)
 	{
 		// Draw border colour
 		for (int i = 0; i < TOTAL_HORZ; i++)
-			p[i] = border_white? rgb_t::white() : rgb_t::black();
+			p[i] = border_white ? rgb_t::white() : rgb_t::black();
 
 		// vblank is set at the last cycle of the first inactive line
 		// not confirmed by the specs, just doing like 9928A.
-		if ( y == 193 )
+		if (y == 193)
 		{
-			m_int_cb( ASSERT_LINE );
-			m_int_cb( CLEAR_LINE );
+			m_int_cb(ASSERT_LINE);
+			m_int_cb(CLEAR_LINE);
 		}
 	}
 	else
@@ -226,12 +221,12 @@ void video992_device::device_timer(emu_timer &timer, device_timer_id id, int par
 		// Draw regular line
 		// Left border
 		for (int i = 0; i < HORZ_DISPLAY_START; i++)
-			p[i] = border_white? rgb_t::white() : rgb_t::black();
+			p[i] = border_white ? rgb_t::white() : rgb_t::black();
 
 		int addr = ((y << 2) & 0x3e0) | 0xec00;
 
 		// Active display
-		for (int x = HORZ_DISPLAY_START; x<HORZ_DISPLAY_START+256; x+=8)
+		for (int x = HORZ_DISPLAY_START; x < HORZ_DISPLAY_START + 256; x+=8)
 		{
 			uint8_t charcode = 0;
 			uint8_t pattern = 0;
@@ -247,16 +242,16 @@ void video992_device::device_timer(emu_timer &timer, device_timer_id id, int par
 			if (!endofline && m_videna)
 			{
 				// Get the pattern
-				int addrp = 0x1c00 | (charcode << 3) | (y%8);
+				int addrp = 0x1c00 | (charcode << 3) | (y & 7);
 				pattern = m_mem_read_cb(addrp);
 				linelength++;
 			}
 			for (int i = 0; i < 8; i++)
 			{
-				if ((pattern & 0x80)!=0)
-					p[x+i] = text_white? rgb_t::white() : rgb_t::black();
+				if (BIT(pattern, 7))
+					p[x+i] = text_white ? rgb_t::white() : rgb_t::black();
 				else
-					p[x+i] = background_white? rgb_t::white() : rgb_t::black();
+					p[x+i] = background_white ? rgb_t::white() : rgb_t::black();
 
 				pattern <<= 1;
 			}
@@ -265,27 +260,27 @@ void video992_device::device_timer(emu_timer &timer, device_timer_id id, int par
 
 		// Right border
 		for (int i = HORZ_DISPLAY_START + 256; i < TOTAL_HORZ; i++)
-			p[i] = border_white? rgb_t::white() : rgb_t::black();
+			p[i] = border_white ? rgb_t::white() : rgb_t::black();
 	}
 
 	// +1 for the minimum hold time
-	// logerror("line length: %d\n", linelength);
-	m_hold_timer->adjust(screen().time_until_pos(raw_vpos, HORZ_DISPLAY_START + linelength*8 + 1));
+	LOG("line length: %d\n", linelength);
+	m_hold_timer->adjust(screen().time_until_pos(raw_vpos, HORZ_DISPLAY_START + linelength * 8 + 1));
 }
 
 
-uint32_t video992_device::screen_update( screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect )
+uint32_t video992_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
 {
-	copybitmap( bitmap, m_tmpbmp, 0, 0, 0, 0, cliprect );
+	copybitmap(bitmap, m_tmpbmp, 0, 0, 0, 0, cliprect);
 	return 0;
 }
 
 /*
     VIDENA pin, positive logic
 */
-WRITE_LINE_MEMBER( video992_device::videna )
+void video992_device::videna(int state)
 {
-	m_videna = (state==ASSERT_LINE);
+	m_videna = state;
 }
 
 void video992_device::device_start()
@@ -294,16 +289,12 @@ void video992_device::device_start()
 	m_vertical_size = TOTAL_VERT_NTSC;
 	m_tmpbmp.allocate(TOTAL_HORZ, TOTAL_VERT_NTSC);
 
-	m_hold_timer = timer_alloc(HOLD_TIME);
-	m_free_timer = timer_alloc(FREE_TIME);
+	m_hold_timer = timer_alloc(FUNC(video992_device::hold_cpu), this);
+	m_free_timer = timer_alloc(FUNC(video992_device::free_cpu), this);
 
 	m_border_color = rgb_t::black();
 	m_background_color = rgb_t::white();
 	m_text_color = rgb_t::black();
-
-	m_mem_read_cb.resolve();
-	m_hold_cb.resolve();
-	m_int_cb.resolve();
 }
 
 void video992_device::device_reset()
@@ -344,15 +335,13 @@ void video992_device::device_reset()
     E80E: Cassette
 
     [3] I/O Controller CF40051, Preliminary specification, Texas Instruments
-
-    TODO: Loading still unstable; often failing
 */
 
 io992_device::io992_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
 	: bus::hexbus::hexbus_chained_device(mconfig, type, tag, owner, clock),
-		m_hexbus(*this, "^" TI_HEXBUS_TAG),
-		m_cassette(*this, "^" TI_CASSETTE),
-		m_videoctrl(*this, "^" TI992_VDC_TAG),
+		m_hexbus(*owner, TI992_HEXBUS_TAG),
+		m_cassette(*owner, TI992_CASSETTE),
+		m_videoctrl(*owner, TI992_VDC_TAG),
 		m_keyboard(*this, "LINE%u", 0U),
 		m_set_rom_bank(*this),
 		m_key_row(0),
@@ -451,18 +440,16 @@ void io992_device::device_start()
 
 	// Establish callback for inbound propagations
 	m_hexbus_outbound->set_chain_element(this);
-
-	m_set_rom_bank.resolve();
 }
 
 uint8_t io992_device::cruread(offs_t offset)
 {
-	int address = offset << 1;
+	offs_t address = offset << 1;
 	double inp = 0;
 
 	// CRU E000-E7fE: Keyboard
 	// Read: 1110 0*** **** xxx0 (mirror 07f0)
-	if ((address & 0xf800)==0xe000)
+	if ((address & 0xf800) == 0xe000)
 		return BIT(m_keyboard[m_key_row]->read(), offset & 7);
 
 	// CRU E800-EFFE: Hexbus and other functions
@@ -474,21 +461,21 @@ uint8_t io992_device::cruread(offs_t offset)
 	case 0xe802:
 	case 0xe804:
 	case 0xe806:
-		return data_bit(offset&3);
+		return data_bit(offset & 3);
 	case 0xe808:
-		return (bus_hsk_level()==ASSERT_LINE)? 0:1;
+		return (bus_hsk_level() == ASSERT_LINE) ? 0 : 1;
 	case 0xe80a:
-		return (bus_bav_level()==ASSERT_LINE)? 0:1;
+		return (bus_bav_level() == ASSERT_LINE) ? 0 : 1;
 
 	case 0xe80c:
 		// e80c (bit 6) seems to indicate that the HSK* line has been released
 		// and is now asserted again
-		return (m_hsk_released && (bus_hsk_level()==ASSERT_LINE))? 1:0;
+		return (m_hsk_released && (bus_hsk_level() == ASSERT_LINE)) ? 1 : 0;
 
 	case 0xe80e:
 		inp = m_cassette->input();
 		LOGMASKED(LOG_CASSETTE, "value=%f\n", inp);
-		return (inp > 0)? 1:0;
+		return (inp > 0) ? 1 : 0;
 
 	default:
 		LOGMASKED(LOG_CRU, "Invalid CRU access to %04x\n", address);
@@ -498,7 +485,7 @@ uint8_t io992_device::cruread(offs_t offset)
 
 void io992_device::cruwrite(offs_t offset, uint8_t data)
 {
-	int address = (offset << 1) & 0xf80e;
+	offs_t address = (offset << 1) & 0xf80e;
 
 	LOGMASKED(LOG_CRU, "CRU %04x <- %1x\n", address, data);
 
@@ -513,15 +500,15 @@ void io992_device::cruwrite(offs_t offset, uint8_t data)
 		if (m_have_banked_rom)
 		{
 			LOGMASKED(LOG_BANK, "set bank = %d\n", data);
-			m_set_rom_bank(data==1);
+			m_set_rom_bank(data == 1);
 		}
-		// no break
+		[[fallthrough]];
 	case 0xe002:
 	case 0xe004:
 	case 0xe006:
 	case 0xe008:
 	case 0xe00a:
-		if (data == 0) m_key_row = offset&7;
+		if (data == 0) m_key_row = offset & 7;
 		break;
 	case 0xe00c:
 		LOGMASKED(LOG_WARN, "Unmapped CRU write to address e00c\n");
@@ -540,12 +527,12 @@ void io992_device::cruwrite(offs_t offset, uint8_t data)
 		break;
 
 	case 0xe80a:  // BAV
-		set_bav_line(data!=0? CLEAR_LINE : ASSERT_LINE);
+		set_bav_line(data != 0 ? CLEAR_LINE : ASSERT_LINE);
 		break;
 
 	case 0xe808:  // HSK
-		set_hsk_line(data!=0? CLEAR_LINE : ASSERT_LINE);
-		m_hsk_released = (bus_hsk_level()==CLEAR_LINE);
+		set_hsk_line(data != 0 ? CLEAR_LINE : ASSERT_LINE);
+		m_hsk_released = (bus_hsk_level() == CLEAR_LINE);
 		break;
 
 	case 0xe80c:
@@ -555,7 +542,7 @@ void io992_device::cruwrite(offs_t offset, uint8_t data)
 	case 0xe80e:
 		LOGMASKED(LOG_CRU, "Cassette output = %d\n", data);
 		// Tape output. See also ti99_4x.cpp.
-		m_cassette->output((data==1)? +1 : -1);
+		m_cassette->output((data == 1) ? +1 : -1);
 		break;
 	}
 }
@@ -574,13 +561,13 @@ void io992_device::hexbus_value_changed(uint8_t data)
 {
 	// Only latch the incoming data when BAV* is asserted and the Hexbus
 	// is not inhibited
-	if (own_bav_level()==ASSERT_LINE)
+	if (own_bav_level() == ASSERT_LINE)
 	{
-		if (bus_hsk_level()==ASSERT_LINE)
+		if (bus_hsk_level() == ASSERT_LINE)
 		{
 			// According to the Hexbus spec, the incoming HSK must be latched
 			// by hardware
-			LOGMASKED(LOG_HEXBUS, "Latching HSK*; got data %01x\n", (data>>4)|(data&3));
+			LOGMASKED(LOG_HEXBUS, "Latching HSK*; got data %01x\n", (data >> 4) | (data & 3));
 			latch_hsk();
 		}
 		else
@@ -590,7 +577,7 @@ void io992_device::hexbus_value_changed(uint8_t data)
 		}
 	}
 	else
-		LOGMASKED(LOG_HEXBUS, "Ignoring Hexbus change (to %02x), BAV*=%d\n", data, (own_bav_level()==ASSERT_LINE)? 0:1);
+		LOGMASKED(LOG_HEXBUS, "Ignoring Hexbus change (to %02x), BAV*=%d\n", data, (own_bav_level() == ASSERT_LINE) ? 0 : 1);
 }
 
 ioport_constructor io992_device::device_input_ports() const
@@ -598,6 +585,82 @@ ioport_constructor io992_device::device_input_ports() const
 	return INPUT_PORTS_NAME( keys992 );
 }
 
-}   }   }
+/********************************************************************
+    Expansion port
+********************************************************************/
 
+ti992_expport_device::ti992_expport_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	:   device_t(mconfig, TI992_EXPPORT, tag, owner, clock),
+		device_slot_interface(mconfig, *this),
+		m_connected(nullptr)
+{
+}
+
+void ti992_expport_device::readz(offs_t offset, uint8_t *value)
+{
+	if (m_connected != nullptr)
+		m_connected->readz(offset, value);
+}
+
+void ti992_expport_device::write(offs_t offset, uint8_t data)
+{
+	if (m_connected != nullptr)
+		m_connected->write(offset, data);
+}
+
+void ti992_expport_device::device_config_complete()
+{
+	m_connected = static_cast<ti992_expport_attached_device*>(subdevices().first());
+}
+
+/*
+    32K Expansion cartridge
+    Maps at 6000 - DFFF
+    This is the only known expansion device
+*/
+ti992_expram_device::ti992_expram_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	ti992_expport_attached_device(mconfig, TI992_RAM32K, tag, owner, clock),
+	m_ram(*this, "ram32k")
+{
+}
+
+void ti992_expram_device::readz(offs_t offset, uint8_t *value)
+{
+	// 000 -> 100     100 -> 000
+	// 001 -> 101     101 -> 001
+	// 010 -> 110     110 -> 010
+	// 011 -> 011     111 -> 111
+	offs_t address = offset;
+	if ((offset & 0x6000) != 0x6000) address ^= 0x8000;
+	if ((address & 0x8000) == 0)
+	{
+		*value = m_ram->read(address);
+		LOGMASKED(LOG_EXPRAM, "expram %04x -> %02x\n", offset, *value);
+	}
+}
+
+void ti992_expram_device::write(offs_t offset, uint8_t value)
+{
+	offs_t address = offset;
+	if ((offset & 0x6000) != 0x6000) address ^= 0x8000;
+	if ((address & 0x8000) == 0)
+	{
+		m_ram->write(address, value);
+		LOGMASKED(LOG_EXPRAM, "expram %04x <- %02x\n", offset, value);
+	}
+}
+
+void ti992_expram_device::device_add_mconfig(machine_config &config)
+{
+	RAM(config, m_ram, 0);
+	m_ram->set_default_size("32k");
+	m_ram->set_default_value(0);
+}
+
+} // namespace bus::ti99::internal
+
+void ti992_expport_options(device_slot_interface &device)
+{
+	device.option_add("ram32k", TI992_RAM32K);
+}
 

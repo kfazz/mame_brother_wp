@@ -1,4 +1,4 @@
-// license:GPL-2.0+
+// license:CC0-1.0
 // copyright-holders:Couriersud
 /*
  * ne555_astable.c
@@ -8,6 +8,7 @@
 #include "netlist/devices/net_lib.h"
 
 NETLIST_START(ls629)
+{
 
 	/*
 	 * Astable ne555
@@ -25,10 +26,11 @@ NETLIST_START(ls629)
 	SN74LS629(OSC, 0.022e-6)
 
 	NET_C(GND, OSC.GND)
+	NET_C(V5, OSC.VCC)
 	NET_C(VR, OSC.RNG)
 	NET_C(VF, OSC.FC)
 	NET_C(GND, OSC.ENQ)
 
 	LOG(log2, OSC.Y)
 
-NETLIST_END()
+}

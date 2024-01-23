@@ -26,14 +26,18 @@ protected:
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual void device_start() override;
 
+	// optional information overrides
+	virtual const tiny_rom_entry *device_rom_region() const override;
+
 	// z88cart_interface overrides
-	virtual DECLARE_READ8_MEMBER(read) override;
-	virtual DECLARE_WRITE8_MEMBER(write) override;
+	virtual uint8_t read(offs_t offset) override;
+	virtual void write(offs_t offset, uint8_t data) override;
 	virtual uint8_t* get_cart_base() override;
 	virtual uint32_t get_cart_size() override { return 0x100000; }
 
 private:
 	required_device<intelfsh8_device> m_flash;
+	required_memory_region   m_region;
 };
 
 // device type definition

@@ -51,17 +51,17 @@ public:
 	auto dmar() { return m_dmar_cb_func.bind(); }
 
 	// irq/sts/flg/dmar signal handlers for card devices
-	DECLARE_WRITE_LINE_MEMBER(irq_w);
-	DECLARE_WRITE_LINE_MEMBER(sts_w);
-	DECLARE_WRITE_LINE_MEMBER(flg_w);
-	DECLARE_WRITE_LINE_MEMBER(irq_nextsc_w);
-	DECLARE_WRITE_LINE_MEMBER(sts_nextsc_w);
-	DECLARE_WRITE_LINE_MEMBER(flg_nextsc_w);
-	DECLARE_WRITE_LINE_MEMBER(dmar_w);
+	void irq_w(int state);
+	void sts_w(int state);
+	void flg_w(int state);
+	void irq_nextsc_w(int state);
+	void sts_nextsc_w(int state);
+	void flg_nextsc_w(int state);
+	void dmar_w(int state);
 
 	// getter for r/w handlers
 	// return value is SC (negative if no card is attached to slot)
-	int get_rw_handlers(read16_delegate& rhandler , write16_delegate& whandler);
+	int get_rw_handlers(read16m_delegate& rhandler , write16m_delegate& whandler);
 
 	bool has_dual_sc() const;
 
@@ -84,8 +84,8 @@ class device_hp9845_io_interface : public device_interface
 public:
 	void set_slot_device(hp9845_io_slot_device &dev);
 
-	virtual DECLARE_READ16_MEMBER(reg_r) = 0;
-	virtual DECLARE_WRITE16_MEMBER(reg_w) = 0;
+	virtual uint16_t reg_r(address_space &space, offs_t offset) = 0;
+	virtual void reg_w(address_space &space, offs_t offset, uint16_t data) = 0;
 
 	// SC getter
 	uint8_t get_sc();
@@ -103,13 +103,13 @@ protected:
 	required_ioport m_select_code_port;
 
 	// card device handling
-	DECLARE_WRITE_LINE_MEMBER(irq_w);
-	DECLARE_WRITE_LINE_MEMBER(sts_w);
-	DECLARE_WRITE_LINE_MEMBER(flg_w);
-	DECLARE_WRITE_LINE_MEMBER(irq_nextsc_w);
-	DECLARE_WRITE_LINE_MEMBER(sts_nextsc_w);
-	DECLARE_WRITE_LINE_MEMBER(flg_nextsc_w);
-	DECLARE_WRITE_LINE_MEMBER(dmar_w);
+	void irq_w(int state);
+	void sts_w(int state);
+	void flg_w(int state);
+	void irq_nextsc_w(int state);
+	void sts_nextsc_w(int state);
+	void flg_nextsc_w(int state);
+	void dmar_w(int state);
 };
 
 // device type definition

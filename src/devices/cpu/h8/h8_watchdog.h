@@ -50,20 +50,21 @@ public:
 	enum { B, H, S };
 
 	h8_watchdog_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
-	h8_watchdog_device(const machine_config &mconfig, const char *tag, device_t *owner, const char *intc, int irq, int type)
+	template<typename T, typename U> h8_watchdog_device(const machine_config &mconfig, const char *tag, device_t *owner, T &&cpu, U &&intc, int irq, int type)
 		: h8_watchdog_device(mconfig, tag, owner, 0)
 	{
-		set_info(intc, irq, type);
+		m_cpu.set_tag(std::forward<T>(cpu));
+		m_intc.set_tag(std::forward<U>(intc));
+		m_irq = irq;
+		m_type = type;
 	}
-
-	void set_info(const char *intc, int irq, int type);
 
 	uint64_t internal_update(uint64_t current_time);
 
-	DECLARE_READ16_MEMBER(wd_r);
-	DECLARE_WRITE16_MEMBER(wd_w);
-	DECLARE_READ16_MEMBER(rst_r);
-	DECLARE_WRITE16_MEMBER(rst_w);
+	uint16_t wd_r();
+	void wd_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
+	uint16_t rst_r();
+	void rst_w(uint16_t data);
 
 protected:
 	virtual void device_start() override;
@@ -86,13 +87,12 @@ private:
 	static const int div_bh[8];
 	static const int div_s[8];
 
-	required_device<h8_device> cpu;
-	h8_intc_device *intc;
-	const char *intc_tag;
-	int irq;
-	int type;
-	uint8_t tcnt, tcsr, rst;
-	uint64_t tcnt_cycle_base;
+	required_device<h8_device> m_cpu;
+	required_device<h8_intc_device> m_intc;
+	int m_irq;
+	int m_type;
+	uint8_t m_tcnt, m_tcsr, m_rst;
+	uint64_t m_tcnt_cycle_base;
 
 	void tcnt_update(uint64_t current_time = 0);
 };

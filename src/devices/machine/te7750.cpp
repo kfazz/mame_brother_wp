@@ -177,6 +177,7 @@
 //**************************************************************************
 
 DEFINE_DEVICE_TYPE(TE7750, te7750_device, "te7750", "TE7750 Super I/O Expander")
+DEFINE_DEVICE_TYPE(TE7751, te7751_device, "te7751", "TE7751 Super I/O Expander")
 DEFINE_DEVICE_TYPE(TE7752, te7752_device, "te7752", "TE7752 Super I/O Expander")
 
 //**************************************************************************
@@ -189,15 +190,24 @@ DEFINE_DEVICE_TYPE(TE7752, te7752_device, "te7752", "TE7752 Super I/O Expander")
 
 te7750_device::te7750_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock)
 	: device_t(mconfig, type, tag, owner, clock)
-	, m_input_cb(*this)
+	, m_input_cb(*this, 0xff)
 	, m_output_cb(*this)
-	, m_ios_cb(*this)
+	, m_ios_cb(*this, 0) // assume soft mode unless specified
 {
 	std::fill(std::begin(m_data_dir), std::end(m_data_dir), 0xff);
 }
 
 te7750_device::te7750_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
 	: te7750_device(mconfig, TE7750, tag, owner, clock)
+{
+}
+
+//-------------------------------------------------
+//  te7751_device - constructor
+//-------------------------------------------------
+
+te7751_device::te7751_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
+	: te7750_device(mconfig, TE7751, tag, owner, clock)
 {
 }
 
@@ -216,13 +226,6 @@ te7752_device::te7752_device(const machine_config &mconfig, const char *tag, dev
 
 void te7750_device::device_start()
 {
-	// resolve port callbacks
-	m_input_cb.resolve_all_safe(0xff);
-	m_output_cb.resolve_all_safe();
-
-	// resolve IOS (assume soft mode unless specified)
-	m_ios_cb.resolve_safe(0);
-
 	// save state
 	save_item(NAME(m_data_latch));
 	save_item(NAME(m_data_dir));

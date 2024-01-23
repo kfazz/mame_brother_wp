@@ -78,12 +78,12 @@ inline void cdp1862_device::initialize_palette()
 //  cdp1862_device - constructor
 //-------------------------------------------------
 
-cdp1862_device::cdp1862_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, CDP1862, tag, owner, clock),
-		device_video_interface(mconfig, *this),
-		m_read_rd(*this),
-		m_read_bd(*this),
-		m_read_gd(*this)
+cdp1862_device::cdp1862_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	device_t(mconfig, CDP1862, tag, owner, clock),
+	device_video_interface(mconfig, *this),
+	m_read_rd(*this, 0),
+	m_read_bd(*this, 0),
+	m_read_gd(*this, 0)
 {
 }
 
@@ -94,11 +94,6 @@ cdp1862_device::cdp1862_device(const machine_config &mconfig, const char *tag, d
 
 void cdp1862_device::device_start()
 {
-	// resolve callbacks
-	m_read_rd.resolve_safe(0);
-	m_read_bd.resolve_safe(0);
-	m_read_gd.resolve_safe(0);
-
 	// find devices
 	screen().register_screen_bitmap(m_bitmap);
 
@@ -131,7 +126,6 @@ void cdp1862_device::dma_w(uint8_t data)
 	int rd = 1, bd = 1, gd = 1;
 	int sx = screen().hpos() + 4;
 	int y = screen().vpos();
-	int x;
 
 	if (!m_con)
 	{
@@ -140,7 +134,7 @@ void cdp1862_device::dma_w(uint8_t data)
 		gd = m_read_gd();
 	}
 
-	for (x = 0; x < 8; x++)
+	for (int x = 0; x < 8; x++)
 	{
 		int color = CDP1862_BACKGROUND_COLOR_SEQUENCE[m_bgcolor] + 8;
 
@@ -149,7 +143,7 @@ void cdp1862_device::dma_w(uint8_t data)
 			color = (gd << 2) | (bd << 1) | rd;
 		}
 
-		m_bitmap.pix32(y, sx + x) = m_palette[color];
+		m_bitmap.pix(y, sx + x) = m_palette[color];
 
 		data <<= 1;
 	}

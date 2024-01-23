@@ -1,4 +1,4 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
 
 #ifndef NLD_MS_GMRES_H_
@@ -8,18 +8,17 @@
 /// \file nld_ms_gmres.h
 ///
 
+#include "nld_matrix_solver_ext.h"
 #include "nld_ms_direct.h"
 #include "nld_solver.h"
 #include "plib/gmres.h"
-#include "plib/mat_cr.h"
 #include "plib/parray.h"
+#include "plib/pmatrix_cr.h"
 #include "plib/vector_ops.h"
 
 #include <algorithm>
 
-namespace netlist
-{
-namespace solver
+namespace netlist::solver
 {
 
 	template <typename FT, int SIZE>
@@ -33,12 +32,12 @@ namespace solver
 		// maximize the efficiency of the incomplete LUT.
 		// This is already preconditioning.
 
-		matrix_solver_GMRES_t(netlist_state_t &anetlist, const pstring &name,
-			analog_net_t::list_t &nets,
-			const solver_parameters_t *params,
+		matrix_solver_GMRES_t(devices::nld_solver &main_solver, const pstring &name,
+			matrix_solver_t::net_list_t &nets,
+			const solver::solver_parameters_t *params,
 			const std::size_t size)
-			: matrix_solver_direct_t<FT, SIZE>(anetlist, name, nets, params, size)
-			, m_ops(size, 0)
+			: matrix_solver_direct_t<FT, SIZE>(main_solver, name, nets, params, size)
+			, m_ops(this->m_arena, size, 0)
 			, m_gmres(size)
 			{
 			const std::size_t iN = this->size();
@@ -51,7 +50,7 @@ namespace solver
 				terms_for_net_t & row = this->m_terms[k];
 				for (const auto &nz_j : row.m_nz)
 				{
-					fill[k][static_cast<mattype>(nz_j)] = 0;
+					fill[k][static_cast<matrix_type>(nz_j)] = 0;
 				}
 			}
 
@@ -63,7 +62,7 @@ namespace solver
 			for (std::size_t k=0; k<iN; k++)
 			{
 				std::size_t cnt = 0;
-				for (std::size_t j=0; j< this->m_terms[k].railstart();j++)
+				for (std::size_t j=0; j< this->m_terms[k].rail_start();j++)
 				{
 					for (std::size_t i = m_ops.m_mat.row_idx[k]; i<m_ops.m_mat.row_idx[k+1]; i++)
 						if (this->m_terms[k].m_connected_net_idx[j] == static_cast<int>(m_ops.m_mat.col_idx[i]))
@@ -73,19 +72,19 @@ namespace solver
 							break;
 						}
 				}
-				nl_assert(cnt == this->m_terms[k].railstart());
-				this->m_mat_ptr[k][this->m_terms[k].railstart()] = &m_ops.m_mat.A[m_ops.m_mat.diag[k]];
+				nl_assert(cnt == this->m_terms[k].rail_start());
+				this->m_mat_ptr[k][this->m_terms[k].rail_start()] = &m_ops.m_mat.A[m_ops.m_mat.diagonal[k]];
 			}
 		}
 
-		void vsolve_non_dynamic() override;
+		void upstream_solve_non_dynamic() override;
 
 	private:
 
-		using mattype = typename plib::pmatrix_cr_t<FT, SIZE>::index_type;
+		using matrix_type = typename plib::pmatrix_cr<arena_type, FT, SIZE>::index_type;
 
 		//plib::mat_precondition_none<FT, SIZE> m_ops;
-		plib::mat_precondition_ILU<FT, SIZE> m_ops;
+		plib::mat_precondition_ILU<arena_type, FT, SIZE> m_ops;
 		//plib::mat_precondition_diag<FT, SIZE> m_ops;
 		plib::gmres_t<FT, SIZE> m_gmres;
 	};
@@ -95,7 +94,7 @@ namespace solver
 	// ----------------------------------------------------------------------------------------
 
 	template <typename FT, int SIZE>
-	void matrix_solver_GMRES_t<FT, SIZE>::vsolve_non_dynamic()
+	void matrix_solver_GMRES_t<FT, SIZE>::upstream_solve_non_dynamic()
 	{
 		const std::size_t iN = this->size();
 
@@ -109,7 +108,7 @@ namespace solver
 			this->m_new_V[k] = static_cast<float_type>(this->m_terms[k].getV());
 		}
 
-		const auto accuracy(static_cast<float_type>(this->m_params.m_accuracy));
+		const float_type accuracy(static_cast<float_type>(this->m_params.m_accuracy));
 
 		auto iter = std::max(plib::constants<std::size_t>::one(), this->m_params.m_gs_loops());
 		auto gsl = m_gmres.solve(m_ops, this->m_new_V, this->m_RHS, iter, accuracy);
@@ -119,7 +118,7 @@ namespace solver
 		if (gsl > iter)
 		{
 			this->m_iterative_fail++;
-			matrix_solver_direct_t<FT, SIZE>::vsolve_non_dynamic();
+			matrix_solver_direct_t<FT, SIZE>::upstream_solve_non_dynamic();
 		}
 
 	}
@@ -127,7 +126,6 @@ namespace solver
 
 
 
-} // namespace solver
-} // namespace netlist
+} // namespace netlist::solver
 
 #endif // NLD_MS_GMRES_H_

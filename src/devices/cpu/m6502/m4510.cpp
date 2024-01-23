@@ -15,7 +15,7 @@
 #include "m4510.h"
 #include "m4510d.h"
 
-DEFINE_DEVICE_TYPE(M4510, m4510_device, "m4510", "CSG M4510")
+DEFINE_DEVICE_TYPE(M4510, m4510_device, "m4510", "CSG 4510")
 
 m4510_device::m4510_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	m65ce02_device(mconfig, M4510, tag, owner, clock),
@@ -57,8 +57,9 @@ void m4510_device::device_reset()
 	m65ce02_device::device_reset();
 }
 
-bool m4510_device::memory_translate(int spacenum, int intention, offs_t &address)
+bool m4510_device::memory_translate(int spacenum, int intention, offs_t &address, address_space *&target_space)
 {
+	target_space = &space(spacenum);
 	if (spacenum == AS_PROGRAM)
 	{
 		address = map(address);
@@ -74,22 +75,22 @@ m4510_device::mi_4510::mi_4510(m4510_device *_base)
 
 uint8_t m4510_device::mi_4510::read(uint16_t adr)
 {
-	return program->read_byte(base->map(adr));
+	return program.read_byte(base->map(adr));
 }
 
 uint8_t m4510_device::mi_4510::read_sync(uint16_t adr)
 {
-	return scache->read_byte(base->map(adr));
+	return csprogram.read_byte(base->map(adr));
 }
 
 uint8_t m4510_device::mi_4510::read_arg(uint16_t adr)
 {
-	return cache->read_byte(base->map(adr));
+	return cprogram.read_byte(base->map(adr));
 }
 
 void m4510_device::mi_4510::write(uint16_t adr, uint8_t val)
 {
-	program->write_byte(base->map(adr), val);
+	program.write_byte(base->map(adr), val);
 }
 
 #include "cpu/m6502/m4510.hxx"

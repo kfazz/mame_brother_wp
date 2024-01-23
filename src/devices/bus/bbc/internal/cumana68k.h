@@ -8,19 +8,17 @@
 
 **********************************************************************/
 
-
 #ifndef MAME_BUS_BBC_INTERNAL_CUMANA68K_H
 #define MAME_BUS_BBC_INTERNAL_CUMANA68K_H
 
 #include "internal.h"
-#include "cpu/m68000/m68000.h"
+#include "cpu/m68000/m68008.h"
 #include "machine/6821pia.h"
 #include "machine/input_merger.h"
 #include "machine/mc146818.h"
 #include "machine/nscsi_cb.h"
 #include "imagedev/floppy.h"
 #include "machine/wd_fdc.h"
-#include "formats/os9_dsk.h"
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -34,13 +32,13 @@ public:
 	// construction/destruction
 	bbc_cumana68k_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_WRITE8_MEMBER(pia_rtc_pb_w);
-	DECLARE_WRITE8_MEMBER(pia_sasi_pb_w);
+	void pia_rtc_pb_w(uint8_t data);
+	void pia_sasi_pb_w(uint8_t data);
 
-	DECLARE_READ8_MEMBER(mem6502_r);
-	DECLARE_WRITE8_MEMBER(mem6502_w);
+	uint8_t mem6502_r(offs_t offset);
+	void mem6502_w(offs_t offset, uint8_t data);
 
-	DECLARE_FLOPPY_FORMATS(floppy_formats);
+	static void floppy_formats(format_registration &fr);
 
 protected:
 	// device-level overrides
@@ -51,11 +49,11 @@ protected:
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual const tiny_rom_entry *device_rom_region() const override;
 
-	DECLARE_WRITE_LINE_MEMBER(irq6502_w) override;
+	void irq6502_w(int state) override;
 
 private:
-	DECLARE_WRITE_LINE_MEMBER(reset68008_w);
-	DECLARE_WRITE_LINE_MEMBER(rtc_ce_w);
+	void reset68008_w(int state);
+	void rtc_ce_w(int state);
 
 	required_device<m68000_base_device> m_m68008;
 	required_device<pia6821_device> m_pia_sasi;
@@ -70,13 +68,8 @@ private:
 
 	void fsel_w(offs_t offset, uint8_t data);
 
-	uint8_t sasi_r();
-	void sasi_w(uint8_t data);
-
 	int m_masknmi;
 
-	uint8_t rtc_r();
-	void rtc_w(uint8_t data);
 	void mc146818_set(int as, int ds, int rw);
 	uint8_t m_mc146818_data;
 	int m_mc146818_as;

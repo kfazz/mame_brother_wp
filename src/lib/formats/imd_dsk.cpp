@@ -2,15 +2,19 @@
 // copyright-holders:Miodrag Milanovic
 /*********************************************************************
 
-    formats/imd_dsk.c
+    formats/imd_dsk.cpp
 
     IMD disk images
 
 *********************************************************************/
 
 #include "imd_dsk.h"
+#include "flopimg_legacy.h"
 
-#include <cassert>
+#include "ioprocs.h"
+
+#include "osdcore.h" // osd_printf_*
+
 #include <cstring>
 
 
@@ -19,6 +23,7 @@ struct imddsk_tag
 {
 	int heads;
 	int tracks;
+	int track_sectors[84*2]; /* number of sectors for each track */
 	int sector_size;
 	uint64_t track_offsets[84*2]; /* offset within data for each track */
 };
@@ -54,6 +59,11 @@ static int imd_get_heads_per_disk(floppy_image_legacy *floppy)
 static int imd_get_tracks_per_disk(floppy_image_legacy *floppy)
 {
 	return get_tag(floppy)->tracks;
+}
+
+static int imd_get_sectors_per_track(floppy_image_legacy *floppy, int head, int track)
+{
+	return get_tag(floppy)->track_sectors[(track<<1) + head];
 }
 
 static uint64_t imd_get_track_offset(floppy_image_legacy *floppy, int head, int track)
@@ -158,18 +168,18 @@ static floperr_t imd_expand_file(floppy_image_legacy *floppy , uint64_t offset ,
 		return FLOPPY_ERROR_SUCCESS;
 	}
 
-	auto buffer = global_alloc_array(uint8_t , size_after_off);
+	auto buffer = std::make_unique<uint8_t []>(size_after_off);
 
 	// Read the part of file after offset
-	floppy_image_read(floppy , buffer , offset , size_after_off);
+	floppy_image_read(floppy, buffer.get(), offset, size_after_off);
 
 	// Add zeroes
-	floppy_image_write_filler(floppy , 0 , offset , amount);
+	floppy_image_write_filler(floppy, 0, offset, amount);
 
 	// Write back the part of file after offset
-	floppy_image_write(floppy, buffer, offset + amount, size_after_off);
+	floppy_image_write(floppy, buffer.get(), offset + amount, size_after_off);
 
-	global_free_array(buffer);
+	buffer.reset();
 
 	// Update track offsets
 	struct imddsk_tag *tag = get_tag(floppy);
@@ -208,7 +218,7 @@ static floperr_t imd_write_indexed_sector(floppy_image_legacy *floppy, int head,
 		if (err) {
 			return err;
 		}
-		// Fall through!
+		[[fallthrough]];
 
 	case 1:
 	case 3:
@@ -330,9 +340,11 @@ FLOPPY_CONSTRUCT( imd_dsk_construct )
 	tag->heads = 1;
 	do {
 		floppy_image_read(floppy, header, pos, 5);
-		if ((header[2] & 1)==1) tag->heads = 2;
-		tag->track_offsets[(header[1]<<1) + (header[2] & 1)] = pos;
 		sector_num = header[3];
+		int track = (header[1]<<1) + (header[2] & 1);
+		if ((header[2] & 1)==1) tag->heads = 2;
+		tag->track_offsets[track] = pos;
+		tag->track_sectors[track] = sector_num;
 		pos += 5 + sector_num; // skip header and sector numbering map
 		if(header[2] & 0x80) pos += sector_num; // skip cylinder numbering map
 		if(header[2] & 0x40) pos += sector_num; // skip head numbering map
@@ -361,6 +373,7 @@ FLOPPY_CONSTRUCT( imd_dsk_construct )
 	callbacks->get_heads_per_disk = imd_get_heads_per_disk;
 	callbacks->get_tracks_per_disk = imd_get_tracks_per_disk;
 	callbacks->get_indexed_sector_info = imd_get_indexed_sector_info;
+	callbacks->get_sectors_per_track = imd_get_sectors_per_track;
 
 	return FLOPPY_ERROR_SUCCESS;
 }
@@ -370,7 +383,7 @@ FLOPPY_CONSTRUCT( imd_dsk_construct )
 // copyright-holders:Olivier Galibert
 /*********************************************************************
 
-    formats/imd_dsk.c
+    formats/imd_dsk.cpp
 
     IMD disk images
 
@@ -380,17 +393,17 @@ imd_format::imd_format()
 {
 }
 
-const char *imd_format::name() const
+const char *imd_format::name() const noexcept
 {
 	return "imd";
 }
 
-const char *imd_format::description() const
+const char *imd_format::description() const noexcept
 {
 	return "IMD disk image";
 }
 
-const char *imd_format::extensions() const
+const char *imd_format::extensions() const noexcept
 {
 	return "imd";
 }
@@ -409,100 +422,209 @@ void imd_format::fixnum(char *start, char *end) const
 	};
 }
 
-int imd_format::identify(io_generic *io, uint32_t form_factor)
+int imd_format::identify(util::random_read &io, uint32_t form_factor, const std::vector<uint32_t> &variants) const
 {
 	char h[4];
 
-	io_generic_read(io, h, 0, 4);
+	size_t actual;
+	io.read_at(0, h, 4, actual);
 	if(!memcmp(h, "IMD ", 4))
-		return 100;
+		return FIFID_SIGN;
 
 	return 0;
 }
 
-bool imd_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
+bool imd_format::load(util::random_read &io, uint32_t form_factor, const std::vector<uint32_t> &variants, floppy_image &image) const
 {
-	uint64_t size = io_generic_size(io);
-	std::vector<uint8_t> img(size);
-	io_generic_read(io, &img[0], 0, size);
+	std::vector<uint8_t> comment;
+	std::vector<std::vector<uint8_t> > snum;
+	std::vector<std::vector<uint8_t> > tnum;
+	std::vector<std::vector<uint8_t> > hnum;
 
-	uint64_t pos;
-	for(pos=0; pos < size && img[pos] != 0x1a; pos++) {};
+	std::vector<uint8_t> mode;
+	std::vector<uint8_t> track;
+	std::vector<uint8_t> head;
+	std::vector<uint8_t> sector_count;
+	std::vector<uint8_t> ssize;
+
+	int trackmult;
+	uint64_t size;
+	if(io.length(size))
+		return false;
+	std::vector<uint8_t> img(size);
+	size_t actual;
+	io.read_at(0, &img[0], size, actual);
+
+	uint64_t pos, savepos;
+	for(pos=0; pos < size && img[pos] != 0x1a; pos++) { }
 	pos++;
+
+	comment.resize(pos);
+	memcpy(&comment[0], &img[0], pos);
 
 	if(pos >= size)
 		return false;
 
 	int tracks, heads;
-	image->get_maximal_geometry(tracks, heads);
+	image.get_maximal_geometry(tracks, heads);
 
-	while(pos < size) {
-		uint8_t mode = img[pos++];
+	mode.clear();
+	track.clear();
+	head.clear();
+	sector_count.clear();
+	ssize.clear();
+	trackmult = 1;
+
+	// we have to walk the whole file to find out the number of tracks
+	savepos = pos;
+	uint8_t maxtrack = 0;
+	while(pos < size)
+	{
+		pos++;   // skip mode
 		uint8_t track = img[pos++];
 		uint8_t head = img[pos++];
 		uint8_t sector_count = img[pos++];
-		uint8_t ssize = img[pos++];
+		uint8_t sector_size = img[pos++];
+		int actual_size = sector_size < 7 ? 128 << sector_size : 8192;
 
-		if(track >= tracks)
+		if (track > maxtrack)
 		{
-			osd_printf_error("imd_format: Track %d exceeds maximum of %d\n", track, tracks);
+			maxtrack = track;
+		}
+
+		pos += sector_count;
+		if (head & 0x80)
+		{
+			pos += sector_count;
+		}
+		if (head & 0x40)
+		{
+			pos += sector_count;
+		}
+
+		for (int i = 0; i < sector_count; i++)
+		{
+			uint8_t stype = img[pos++];
+			if (stype == 0 || stype > 8)
+			{
+			}
+			else
+			{
+				if (stype == 2 || stype == 4 || stype == 6 || stype == 8)
+				{
+					pos++;
+				}
+				else
+				{
+					pos += actual_size;
+				}
+			}
+		}
+	}
+
+	if(form_factor == floppy_image::FF_525)
+	{
+		// On 5.25, check if the drive is QD or HD but we're a 40 track
+		// image.  If so, put the image on even tracks.
+		if ((has_variant(variants, floppy_image::DSQD)) ||
+			(has_variant(variants, floppy_image::DSHD)))
+		{
+			if (maxtrack <= 39)
+				trackmult = 2;
+		}
+		else
+		{
+			if (maxtrack > 42)
+				return false;
+		}
+	}
+
+	pos = savepos;
+	while(pos < size) {
+		mode.push_back(img[pos++]);
+		track.push_back(img[pos++]);
+		head.push_back(img[pos++]);
+		sector_count.push_back(img[pos++]);
+		ssize.push_back(img[pos++]);
+
+		if(track.back() >= tracks)
+		{
+			osd_printf_error("imd_format: Track %d exceeds maximum of %d\n", track.back(), tracks);
 			return false;
 		}
 
-		if((head & 0x3f) >= heads)
+		if((head.back() & 0x3f) >= heads)
 		{
-			osd_printf_error("imd_format: Head %d exceeds maximum of %d\n", head & 0x3f, heads);
+			osd_printf_error("imd_format: Head %d exceeds maximum of %d\n", head.back() & 0x3f, heads);
 			return false;
 		}
 
-		if(ssize == 0xff)
+		if(ssize.back() == 0xff)
 		{
-			osd_printf_error("imd_format: Unsupported variable sector size on track %d head %d", track, head & 0x3f);
+			osd_printf_error("imd_format: Unsupported variable sector size on track %d head %d", track.back(), head.back() & 0x3f);
 			return false;
 		}
 
-		uint32_t actual_size = ssize < 7 ? 128 << ssize : 8192;
+		uint32_t actual_size = ssize.back() < 7 ? 128 << ssize.back() : 8192;
 
 		static const int rates[3] = { 500000, 300000, 250000 };
-		bool fm = mode < 3;
-		int rate = rates[mode % 3];
+		bool fm = mode.back() < 3;
+		int rate = rates[mode.back() % 3];
 		int rpm = form_factor == floppy_image::FF_8 || (form_factor == floppy_image::FF_525 && rate >= 300000) ? 360 : 300;
 		int cell_count = (fm ? 1 : 2)*rate*60/rpm;
 
-		const uint8_t *snum = &img[pos];
-		pos += sector_count;
-		const uint8_t *tnum = head & 0x80 ? &img[pos] : nullptr;
-		if(tnum)
-			pos += sector_count;
-		const uint8_t *hnum = head & 0x40 ? &img[pos] : nullptr;
-		if(hnum)
-			pos += sector_count;
+		//const uint8_t *snum = &img[pos];
+		snum.push_back(std::vector<uint8_t>(sector_count.back()));
+		memcpy(&snum.back()[0], &img[pos], sector_count.back());
+		pos += sector_count.back();
 
-		head &= 0x3f;
+		//const uint8_t *tnum = head & 0x80 ? &img[pos] : nullptr;
+		if (head.back() & 0x80)
+		{
+			tnum.push_back(std::vector<uint8_t>(sector_count.back()));
+			memcpy(&tnum.back()[0], &img[pos], sector_count.back());
+			pos += sector_count.back();
+		}
+		else
+		{
+			tnum.push_back(std::vector<uint8_t>(0));
+		}
+
+		//const uint8_t *hnum = head & 0x40 ? &img[pos] : nullptr;
+		if (head.back() & 0x40)
+		{
+			hnum.push_back(std::vector<uint8_t>(sector_count.back()));
+			memcpy(&hnum.back()[0], &img[pos], sector_count.back());
+			pos += sector_count.back();
+		}
+		else
+		{
+			hnum.push_back(std::vector<uint8_t>(0));
+		}
+
+		uint8_t chead = head.back() & 0x3f;
 
 		int gap_3 = calc_default_pc_gap3_size(form_factor, actual_size);
 
 		desc_pc_sector sects[256];
 
-		for(int i=0; i<sector_count; i++) {
-			uint8_t stype = img[pos++];
-			sects[i].track       = tnum ? tnum[i] : track;
-			sects[i].head        = hnum ? hnum[i] : head;
-			sects[i].sector      = snum[i];
-			sects[i].size        = ssize;
+		for(int i=0; i<sector_count.back(); i++) {
+			uint8_t stype        = img[pos++];
+			sects[i].track       = tnum.back().size() ? tnum.back()[i] : track.back();
+			sects[i].head        = hnum.back().size() ? hnum.back()[i] : head.back();
+			sects[i].sector      = snum.back()[i];
+			sects[i].size        = ssize.back();
 			sects[i].actual_size = actual_size;
 
 			if(stype == 0 || stype > 8) {
 				sects[i].data = nullptr;
-
 			} else {
 				sects[i].deleted = stype == 3 || stype == 4 || stype == 7 || stype == 8;
 				sects[i].bad_crc = stype == 5 || stype == 6 || stype == 7 || stype == 8;
 
 				if(stype == 2 || stype == 4 || stype == 6 || stype == 8) {
-					sects[i].data = global_alloc_array(uint8_t, actual_size);
+					sects[i].data = new uint8_t [actual_size];
 					memset(sects[i].data, img[pos++], actual_size);
-
 				} else {
 					sects[i].data = &img[pos];
 					pos += actual_size;
@@ -510,26 +632,25 @@ bool imd_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
 			}
 		}
 
-		if(sector_count) {
+		if(sector_count.back()) {
 			if(fm) {
-				build_pc_track_fm(track, head, image, cell_count, sector_count, sects, gap_3);
+				build_pc_track_fm(track.back()*trackmult, chead, image, cell_count, sector_count.back(), sects, gap_3);
 			} else {
-				build_pc_track_mfm(track, head, image, cell_count, sector_count, sects, gap_3);
+				build_pc_track_mfm(track.back()*trackmult, chead, image, cell_count, sector_count.back(), sects, gap_3);
 			}
 		}
 
-		for(int i=0; i<sector_count; i++)
+		for(int i=0; i< sector_count.back(); i++)
 			if(sects[i].data && (sects[i].data < &img[0] || sects[i].data >= (&img[0] + size)))
-				global_free_array(sects[i].data);
+				delete [] sects[i].data;
 	}
 
 	return true;
 }
 
-
-bool imd_format::supports_save() const
+bool imd_format::supports_save() const noexcept
 {
 	return false;
 }
 
-const floppy_format_type FLOPPY_IMD_FORMAT = &floppy_image_format_creator<imd_format>;
+const imd_format FLOPPY_IMD_FORMAT;

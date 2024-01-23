@@ -29,10 +29,11 @@ DEFINE_DEVICE_TYPE(A2BUS_CORVFDC02, a2bus_corvfdc02_device, "crvfdc02", "Corvus 
 #define FDC02_ROM_REGION    "fdc02_rom"
 #define FDC02_FDC_TAG       "fdc02_fdc"
 
-FLOPPY_FORMATS_MEMBER( a2bus_corvfdc02_device::corv_floppy_formats )
-	FLOPPY_CONCEPT_525DSDD_FORMAT,
-	FLOPPY_IMD_FORMAT
-FLOPPY_FORMATS_END
+void a2bus_corvfdc02_device::corv_floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_CONCEPT_525DSDD_FORMAT);
+}
 
 static void corv_floppies(device_slot_interface &device)
 {
@@ -100,7 +101,7 @@ void a2bus_corvfdc02_device::device_start()
 {
 	m_rom = device().machine().root_device().memregion(this->subtag(FDC02_ROM_REGION).c_str())->base();
 
-	m_timer = timer_alloc(0);
+	m_timer = timer_alloc(FUNC(a2bus_corvfdc02_device::tc_tick), this);
 
 	save_item(NAME(m_fdc_local_status));
 	save_item(NAME(m_fdc_local_command));
@@ -117,7 +118,7 @@ void a2bus_corvfdc02_device::device_reset()
 	m_timer->adjust(attotime::never);
 }
 
-void a2bus_corvfdc02_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(a2bus_corvfdc02_device::tc_tick)
 {
 	m_fdc->tc_w(true);
 	m_fdc->tc_w(false);
@@ -242,7 +243,7 @@ uint8_t a2bus_corvfdc02_device::read_cnxx(uint8_t offset)
 	return m_rom[offset & 0x1f];
 }
 
-WRITE_LINE_MEMBER(a2bus_corvfdc02_device::intrq_w)
+void a2bus_corvfdc02_device::intrq_w(int state)
 {
 	if (state)
 	{
@@ -259,7 +260,7 @@ WRITE_LINE_MEMBER(a2bus_corvfdc02_device::intrq_w)
 	}
 }
 
-WRITE_LINE_MEMBER(a2bus_corvfdc02_device::drq_w)
+void a2bus_corvfdc02_device::drq_w(int state)
 {
 	if (state)
 	{

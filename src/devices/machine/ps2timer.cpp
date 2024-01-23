@@ -42,10 +42,10 @@ ps2_timer_device::ps2_timer_device(const machine_config &mconfig, const char *ta
 void ps2_timer_device::device_start()
 {
 	if (!m_compare_timer)
-		m_compare_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(ps2_timer_device::compare), this));
+		m_compare_timer = timer_alloc(FUNC(ps2_timer_device::compare), this);
 
 	if (!m_overflow_timer)
-		m_overflow_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(ps2_timer_device::overflow), this));
+		m_overflow_timer = timer_alloc(FUNC(ps2_timer_device::overflow), this);
 }
 
 void ps2_timer_device::device_reset()
@@ -190,7 +190,7 @@ TIMER_CALLBACK_MEMBER(ps2_timer_device::overflow)
 {
 }
 
-READ32_MEMBER(ps2_timer_device::read)
+uint32_t ps2_timer_device::read(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t ret = 0;
 	switch (offset)
@@ -226,7 +226,7 @@ READ32_MEMBER(ps2_timer_device::read)
 	return ret;
 }
 
-WRITE32_MEMBER(ps2_timer_device::write)
+void ps2_timer_device::write(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	switch (offset)
 	{

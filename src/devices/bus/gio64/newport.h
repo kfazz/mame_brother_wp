@@ -102,7 +102,7 @@ private:
 	virtual void device_reset() override;
 
 	// device_palette_interface overrides
-	virtual uint32_t palette_entries() const override { return 0x2000; }
+	virtual uint32_t palette_entries() const noexcept override { return 0x2000; }
 
 	// Initializers
 	void set_revision(uint32_t revision) { m_revision = revision; }
@@ -139,7 +139,7 @@ public:
 	uint16_t next_did_line_entry();
 	uint8_t get_cursor_pixel(int x, int y);
 
-	DECLARE_WRITE_LINE_MEMBER(vblank_w);
+	void vblank_w(int state);
 
 	auto vert_int() { return m_vert_int.bind(); }
 	auto screen_timing_changed() { return m_screen_timing_changed.bind(); } // Hack. TODO: Figure out a better way
@@ -292,13 +292,13 @@ class newport_base_device : public device_t
 public:
 	newport_base_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ64_MEMBER(rex3_r);
-	DECLARE_WRITE64_MEMBER(rex3_w);
+	uint64_t rex3_r(offs_t offset, uint64_t mem_mask = ~0);
+	void rex3_w(offs_t offset, uint64_t data, uint64_t mem_mask = ~0);
 
 	uint32_t screen_update(screen_device &device, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
-	DECLARE_WRITE_LINE_MEMBER(vrint_w);
-	DECLARE_WRITE_LINE_MEMBER(update_screen_size);
+	void vrint_w(int state);
+	void update_screen_size(int state);
 
 	auto write_mask() { return m_write_mask_w.bind(); }
 	auto draw_flags() { return m_draw_flags_w.bind(); }
@@ -311,7 +311,6 @@ public:
 
 protected:
 	// device_t overrides
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual void device_start() override;
 	virtual void device_reset() override;
@@ -319,7 +318,7 @@ protected:
 	void device_add_mconfig(machine_config &config, uint32_t xmap_revision, uint32_t cmap_revision, uint32_t global_mask);
 	void mem_map(address_map &map) override;
 
-	static constexpr device_timer_id DCB_TIMEOUT = 0;
+	TIMER_CALLBACK_MEMBER(dcb_timeout_tick);
 
 	enum
 	{
@@ -476,8 +475,6 @@ protected:
 	uint32_t convert_8bpp_bgr_to_24bpp_rgb(uint8_t pix_in);
 	uint32_t convert_12bpp_bgr_to_24bpp_rgb(uint16_t pix_in);
 
-	uint32_t do_endian_swap(uint32_t color);
-
 	struct bresenham_octant_info_t
 	{
 		int16_t incrx1;
@@ -487,6 +484,7 @@ protected:
 		uint8_t loop;
 	};
 	uint8_t get_octant(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t dx, int32_t dy);
+	void do_setup();
 	void do_fline(uint32_t color);
 	void do_iline(uint32_t color);
 

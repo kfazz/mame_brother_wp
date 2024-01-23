@@ -11,6 +11,8 @@
 
 ****************************************************************************************/
 
+#include "corestr.h"
+#include "multibyte.h"
 
 /* Set to generate prg & chr files when the cart is loaded */
 #define SPLIT_PRG   0
@@ -53,7 +55,7 @@ enum
 static const unif unif_list[] =
 {
 /*       UNIF                       NVW  WRAM  CRAM     IDX*/
-	{ "DREAMTECH01",                0,    0, CHRRAM_8,  DREAMTECH_BOARD},       //UNIF only!
+	{ "DREAMTECH01",                0,    0, CHRRAM_8,  DREAMTECH_BOARD},
 	{ "NES-ANROM",                  0,    0, CHRRAM_8,  STD_AXROM},
 	{ "NES-AOROM",                  0,    0, CHRRAM_8,  STD_AXROM},
 	{ "NES-CNROM",                  0,    0, CHRRAM_0,  STD_CNROM},
@@ -92,41 +94,40 @@ static const unif unif_list[] =
 	{ "UNL-SACHEN-8259A",           0,    0, CHRRAM_0,  SACHEN_8259A},
 	{ "UNL-SACHEN-8259B",           0,    0, CHRRAM_0,  SACHEN_8259B},
 	{ "BMC-190IN1",                 0,    0, CHRRAM_0,  BMC_190IN1},
-	{ "BMC-64IN1NOREPEAT",          0,    0, CHRRAM_0,  BMC_64IN1NR},       //UNIF only!
-	{ "BMC-A65AS",                  0,    0, CHRRAM_8,  BMC_A65AS},     //UNIF only!
-	{ "BMC-GS-2004",                0,    0, CHRRAM_8,  RCM_GS2004},        //UNIF only!
-	{ "BMC-GS-2013",                0,    0, CHRRAM_8,  RCM_GS2013},        //UNIF only!
-	{ "BMC-NOVELDIAMOND9999999IN1", 0,    0, CHRRAM_0,  BMC_NOVEL1},
+	{ "BMC-64IN1NOREPEAT",          0,    0, CHRRAM_0,  BMC_64IN1NR},
+	{ "BMC-A65AS",                  0,    0, CHRRAM_8,  BMC_A65AS},
+	{ "BMC-GS-2004",                0,    0, CHRRAM_8,  RCM_GS2004},
+	{ "BMC-GS-2013",                0,    0, CHRRAM_8,  RCM_GS2013},
+	{ "BMC-NOVELDIAMOND9999999IN1", 0,    0, CHRRAM_0,  BMC_21IN1},
 	{ "BMC-SUPER24IN1SC03",         8,    0, CHRRAM_8,  BMC_S24IN1SC03},
 	{ "BMC-SUPERHIK8IN1",           8,    0, CHRRAM_0,  BMC_HIK8IN1},
-	{ "BMC-T-262",                  0,    0, CHRRAM_8,  BMC_T262},      //UNIF only!
-	{ "BMC-WS",                     0,    0, CHRRAM_0,  BMC_WS},        //UNIF only!
+	{ "BMC-T-262",                  0,    0, CHRRAM_8,  BMC_T262},
+	{ "BMC-WS",                     0,    0, CHRRAM_0,  BMC_WS},
 	{ "BMC-N625092",                0,    0, CHRRAM_0,  UNL_N625092},
 	// below are boards which are not yet supported, but are used by some UNIF files. they are here as a reminder to what is missing to be added
 	{ "UNL-TEK90",                  0,    0, CHRRAM_0,  JYCOMPANY_A}, // JY Company A (is TEK90 the real PCB name?)
 	{ "UNL-KS7017",                 0,    0, CHRRAM_0,  KAISER_KS7017},
 	{ "UNL-KS7032",                 0,    0, CHRRAM_0,  KAISER_KS7032}, //  mapper 142
-	{ "UNL-603-5052",               0,    0, CHRRAM_0,  UNL_603_5052}, // mapper 238?
+	{ "UNL-603-5052",               0,    0, CHRRAM_0,  UNL_603_5052}, // mapper 238
 	{ "UNL-EDU2000",                0,   32, CHRRAM_8,  UNL_EDU2K},
 	{ "UNL-H2288",                  0,    0, CHRRAM_0,  UNL_H2288}, // mapper 123
 	{ "UNL-SHERO",                  0,    0, CHRRAM_8,  SACHEN_SHERO},
 	{ "UNL-YOKO",                   0,    0, CHRRAM_0,  YOKO_BOARD}, // similar to mapper 83, but not the same
 	{ "UNL-FS304",                  0,    8, CHRRAM_8,  WAIXING_FS304}, // used in Zelda 3 by Waixing
 	{ "UNL-43272",                  0,    0, CHRRAM_0,  UNL_43272}, // used in Gaau Hok Gwong Cheung
-	{ "BTL-MARIO1-MALEE2",          0,    0, CHRRAM_0,  UNL_MMALEE}, // mapper 55?
+	{ "BTL-MARIO1-MALEE2",          0,    0, CHRRAM_0,  UNL_MMALEE}, // mapper 55
 	{ "BMC-FK23C",                  0,    0, CHRRAM_0,  BMC_FK23C},
 	{ "BMC-FK23CA",                 0,    0, CHRRAM_0,  BMC_FK23CA},
-	{ "BMC-GHOSTBUSTERS63IN1",      0,    0, CHRRAM_8,  BMC_G63IN1 },
+	{ "BMC-GHOSTBUSTERS63IN1",      0,    0, CHRRAM_8,  BMC_76IN1 },
 	{ "BMC-BS-5",                   0,    0, CHRRAM_0,  BMC_BENSHIENG},
-	{ "BMC-810544-C-A1",            0,    0, CHRRAM_0,  BMC_810544},
+	{ "BMC-810544-C-A1",            0,    0, CHRRAM_0,  BMC_810544C},
 	{ "BMC-411120-C",               0,    0, CHRRAM_0,  BMC_411120C},
 	{ "BMC-8157",                   0,    0, CHRRAM_8,  BMC_8157},
 	{ "BMC-830118C",                0,    0, CHRRAM_0,  BMC_830118C},
-	{ "BMC-D1038",                  0,    0, CHRRAM_0,  BMC_VT5201}, // mapper 60?
+	{ "BMC-D1038",                  0,    0, CHRRAM_0,  BMC_VT5201}, // mapper 59
 	{ "BMC-SUPERVISION16IN1",       0,    0, CHRRAM_0,  SVISION16_BOARD}, // mapper 53
 	{ "BMC-NTD-03",                 0,    0, CHRRAM_0,  BMC_NTD_03},
 	{ "UNL-AC08",                   0,    0, CHRRAM_0,  UNL_AC08},
-	{ "UNL-BB",                     0,    0, CHRRAM_0,  UNL_BB},
 	{ "UNL-LH32",                   0,    0, CHRRAM_0,  UNL_LH32},
 	{ "UNL-LH53",                   0,    0, CHRRAM_0,  UNL_LH53},
 	{ "BMC-G-146",                  0,    0, CHRRAM_0,  BMC_G146},
@@ -134,9 +135,11 @@ static const unif unif_list[] =
 	{ "UNL-MALISB",                 0,    0, CHRRAM_0,  UNL_MALISB},
 	{ "UNL-TF1201",                 0,    0, CHRRAM_0,  UNL_TF1201},
 	{ "UNL-DANCE2000",              0,    8, CHRRAM_8,  SUBOR_TYPE2}, // similar to some Subor carts
+	{ "FARID_SLROM_8-IN-1",         0,    0, CHRRAM_0,  FARID_SLROM8IN1},
+	{ "FARID_UNROM_8-IN-1",         0,    0, CHRRAM_8,  FARID_UNROM8IN1},
 	{ "BMC-12-IN-1",                0,    0, CHRRAM_0,  UNSUPPORTED_BOARD},
-	{ "BMC-70IN1",                  0,    0, CHRRAM_0,  UNSUPPORTED_BOARD}, // mapper 236?
-	{ "BMC-70IN1B",                 0,    0, CHRRAM_0,  UNSUPPORTED_BOARD}, // mapper 236?
+	{ "BMC-70IN1",                  0,    0, CHRRAM_0,  UNSUPPORTED_BOARD}, // mapper 236
+	{ "BMC-70IN1B",                 0,    0, CHRRAM_0,  UNSUPPORTED_BOARD}, // mapper 236
 	{ "BMC-42IN1RESETSWITCH",       0,    0, CHRRAM_0,  UNSUPPORTED_BOARD}, // mapper 60?
 	{ "BMC-F-15",                   0,    0, CHRRAM_0,  UNSUPPORTED_BOARD}, // 150-in-1 Unchained Melody
 	{ "BMC-HP898F",                 0,    0, CHRRAM_0,  UNSUPPORTED_BOARD}, // Primasoft 9999999-in-1
@@ -157,8 +160,7 @@ static const unif unif_list[] =
 
 const unif *nes_unif_lookup( const char *board )
 {
-	int i;
-	for (i = 0; i < ARRAY_LENGTH(unif_list); i++)
+	for (int i = 0; i < std::size(unif_list); i++)
 	{
 		if (!core_stricmp(unif_list[i].board, board))
 			return &unif_list[i];
@@ -219,7 +221,7 @@ void nes_cart_slot_device::call_load_unif()
 
 	fseek(4, SEEK_SET);
 	fread(&buffer, 4);
-	unif_ver = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+	unif_ver = get_u32le(buffer);
 	logerror("Loaded game in UNIF format, version %d\n", unif_ver);
 
 	do
@@ -240,7 +242,7 @@ void nes_cart_slot_device::call_load_unif()
 				mapr_chunk_found = true;
 				logerror("[MAPR] chunk found: ");
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				if (chunk_length <= 0x20)
 					fread(&unif_mapr, chunk_length);
@@ -254,7 +256,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("Skip this chunk. We need a [MAPR] chunk before anything else.\n");
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				read_length += (chunk_length + 8);
 			}
@@ -268,7 +270,7 @@ void nes_cart_slot_device::call_load_unif()
 				/* TO DO: it would be nice to check if more than one MAPR chunk is present */
 				logerror("[MAPR] chunk found (in the 2nd run). Already loaded.\n");
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				read_length += (chunk_length + 8);
 			}
@@ -276,7 +278,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("[READ] chunk found. No support yet.\n");
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				read_length += (chunk_length + 8);
 			}
@@ -284,7 +286,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("[NAME] chunk found. No support yet.\n");
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				read_length += (chunk_length + 8);
 			}
@@ -292,7 +294,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("[WRTR] chunk found. No support yet.\n");
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				read_length += (chunk_length + 8);
 			}
@@ -300,7 +302,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("[TVCI] chunk found.\n");
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				fread(&temp_byte, 1);
 				logerror("Television Standard : %s\n", (temp_byte == 0) ? "NTSC" : (temp_byte == 1) ? "PAL" : "Does not matter");
@@ -311,7 +313,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("[TVSC] chunk found. No support yet.\n");
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				read_length += (chunk_length + 8);
 			}
@@ -319,7 +321,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("[DINF] chunk found. No support yet.\n");
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				read_length += (chunk_length + 8);
 			}
@@ -327,7 +329,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("[CTRL] chunk found. No support yet.\n");
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				read_length += (chunk_length + 8);
 			}
@@ -335,7 +337,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("[BATR] chunk found. No support yet.\n");
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				read_length += (chunk_length + 8);
 			}
@@ -343,7 +345,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("[VROR] chunk found. No support yet.\n");
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				read_length += (chunk_length + 8);
 			}
@@ -351,7 +353,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("[MIRR] chunk found.\n");
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				fread(&mirror, 1);
 
@@ -361,7 +363,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("[PCK%c] chunk found. No support yet.\n", magic2[3]);
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				read_length += (chunk_length + 8);
 			}
@@ -369,7 +371,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("[CCK%c] chunk found. No support yet.\n", magic2[3]);
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 
 				read_length += (chunk_length + 8);
 			}
@@ -377,7 +379,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("[PRG%c] chunk found. ", magic2[3]);
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 				prg_size += chunk_length;
 
 				if (chunk_length / 0x4000)
@@ -385,7 +387,7 @@ void nes_cart_slot_device::call_load_unif()
 				else
 				{
 					small_prg = true;
-					logerror("This chunk is smaller than 16K: the emulation might have issues. Please report this file to the MESS forums.\n");
+					logerror("This chunk is smaller than 16K: the emulation might have issues. Please report this file to the MAME forums.\n");
 				}
 
 				/* Read in the program chunks */
@@ -398,7 +400,7 @@ void nes_cart_slot_device::call_load_unif()
 			{
 				logerror("[CHR%c] chunk found. ", magic2[3]);
 				fread(&buffer, 4);
-				chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+				chunk_length = get_u32le(buffer);
 				vrom_size += chunk_length;
 
 				logerror("It consists of %d 8K-blocks.\n", chunk_length / 0x2000);
@@ -411,7 +413,7 @@ void nes_cart_slot_device::call_load_unif()
 			}
 			else
 			{
-				logerror("Unsupported UNIF chunk or corrupted header. Please report the problem at MESS Board.\n");
+				logerror("Unsupported UNIF chunk or corrupted header. Please report the problem at MAME Board.\n");
 				read_length = size;
 			}
 		}
@@ -424,7 +426,7 @@ void nes_cart_slot_device::call_load_unif()
 
 	if (!prg_start)
 	{
-		fatalerror("No PRG found. Please report the problem at MESS Board.\n");
+		fatalerror("No PRG found. Please report the problem at MAME Board.\n");
 	}
 
 	// SETUP step 2: getting PCB and other settings
@@ -478,35 +480,32 @@ void nes_cart_slot_device::call_load_unif()
 	// SETUP steps 5/6: allocate pointers for PRG/VROM and load the data!
 	if (prg_size == 0x4000)
 	{
-		m_cart->prg_alloc(0x8000, tag());
+		m_cart->prg_alloc(0x8000);
 		memcpy(m_cart->get_prg_base(), &temp_prg[0], 0x4000);
 		memcpy(m_cart->get_prg_base() + 0x4000, m_cart->get_prg_base(), 0x4000);
 	}
 	else
 	{
-		m_cart->prg_alloc(prg_size, tag());
+		m_cart->prg_alloc(prg_size);
 		memcpy(m_cart->get_prg_base(), &temp_prg[0], prg_size);
 	}
 
 	if (small_prg)  // This is not supported yet, so warn users about this
-		osd_printf_error("Loaded UNIF file with non-16k PRG chunk. This is not supported in MESS yet.");
+		osd_printf_error("Loaded UNIF file with non-16k PRG chunk. This is not supported in MAME yet.");
 
 	if (vrom_size)
 	{
-		m_cart->vrom_alloc(vrom_size, tag());
+		m_cart->vrom_alloc(vrom_size);
 		memcpy(m_cart->get_vrom_base(), &temp_chr[0], vrom_size);
 	}
 
 #if SPLIT_PRG
 	{
-		FILE *prgout;
-		char outname[255];
-
-		sprintf(outname, "%s.prg", filename());
-		prgout = fopen(outname, "wb");
+		auto outname  = std::string(filename()) + ".prg";
+		auto prgout = fopen(outname.c_str(), "wb");
 		if (prgout)
 		{
-			fwrite(m_cart->get_prg_base(), 1, 0x4000 * m_cart->get_prg_size(), prgout);
+			::fwrite(m_cart->get_prg_base(), 1, 0x4000 * m_cart->get_prg_size(), prgout);
 			osd_printf_error("Created PRG chunk\n");
 		}
 
@@ -517,19 +516,18 @@ void nes_cart_slot_device::call_load_unif()
 #if SPLIT_CHR
 	if (state->m_chr_chunks > 0)
 	{
-		FILE *chrout;
-		char outname[255];
-
-		sprintf(outname, "%s.chr", filename());
-		chrout= fopen(outname, "wb");
+		auto outname  = std::string(filename()) + ".chr";
+		auto chrout = fopen(outname.c_str(), "wb");
 		if (chrout)
 		{
-			fwrite(m_cart->get_vrom_base(), 1, m_cart->get_vrom_size(), chrout);
+			::fwrite(m_cart->get_vrom_base(), 1, m_cart->get_vrom_size(), chrout);
 			osd_printf_error("Created CHR chunk\n");
 		}
+
 		fclose(chrout);
 	}
 #endif
+
 	// SETUP steps 7: allocate the remaining pointer, when needed
 	if (vram_size)
 		m_cart->vram_alloc(vram_size);
@@ -565,7 +563,7 @@ const char * nes_cart_slot_device::get_default_card_unif(const uint8_t *ROM, uin
 	{
 		if ((ROM[read_length + 0] == 'M') && (ROM[read_length + 1] == 'A') && (ROM[read_length + 2] == 'P') && (ROM[read_length + 3] == 'R'))
 		{
-			chunk_length = ROM[read_length + 4] | (ROM[read_length + 5] << 8) | (ROM[read_length + 6] << 16) | (ROM[read_length + 7] << 24);
+			chunk_length = get_u32le(&ROM[read_length + 4]);
 
 			if (chunk_length <= 0x20)
 				memcpy(unif_mapr, ROM + read_length + 8, chunk_length);
@@ -574,7 +572,7 @@ const char * nes_cart_slot_device::get_default_card_unif(const uint8_t *ROM, uin
 		}
 		else
 		{
-			chunk_length = ROM[read_length + 4] | (ROM[read_length + 5] << 8) | (ROM[read_length + 6] << 16) | (ROM[read_length + 7] << 24);
+			chunk_length = get_u32le(&ROM[read_length + 4]);
 			read_length += (chunk_length + 8);
 		}
 	} while (len > read_length);

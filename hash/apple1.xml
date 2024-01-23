@@ -1,7 +1,25 @@
 <?xml version="1.0"?>
 <!DOCTYPE softwarelist SYSTEM "softwarelist.dtd">
 <!--
-license:CC0
+license:CC0-1.0
+
+To load and run a tape:
+Some programs run from the monitor prompt, while Basic programs must be loaded in the monitor and run from Basic.
+Monitor programs:
+1. Type C100R, press <Enter>. This gives the prompt A9*.
+2. Now enter the load instructions as per the usage, e.g E000.EFFFR but don't press <Enter> yet.
+3. Start the tape via the Tab menu Tape Control (NOT by pressing F2), wait for the leader tone then press <Enter>.
+4. When it's finished you are back to the \ prompt.
+5. Enter the "enter at" information, press <Return> to run the program.
+
+Basic programs:
+1. You must already have loaded and run Basic. Do a soft reset (Scroll-Lock then F3) to get back to the monitor.
+2. Now enter the load instructions as per the usage, e.g 4A.00FFR300.FFFR but don't press <Enter> yet.
+3. Start the tape via the Tab menu Tape Control (NOT by pressing F2), wait for the leader tone then press <Enter>.
+4. When it's finished you are back to the \ prompt.
+5. Go back to Basic by typing E2B3R <Enter>
+6. Now you can LIST or RUN the program.
+
 -->
 
 <softwarelist name="apple1" description="Apple 1 cassettes">
@@ -9,7 +27,7 @@ license:CC0
 	<software name="basic">
 		<description>Apple I Basic</description>
 		<year>1976</year>
-		<publisher>apple computer inc</publisher>
+		<publisher>Apple Computer Inc.</publisher>
 			<!-- P/N A1T001X-->
 		<info name="usage" value="Load at E000.EFFFR, enter at E000R" />
 		<part name="cass" interface="apple1_cass">
@@ -23,7 +41,7 @@ license:CC0
 	<software name="basica" cloneof="basic">
 		<description>Apple I Basic (Alt)</description>
 		<year>1976</year>
-		<publisher>apple computer inc</publisher>
+		<publisher>Apple Computer Inc.</publisher>
 		<info name="usage" value="Load at E000.EFFFR, enter at E000R" />
 		<part name="cass" interface="apple1_cass">
 			<dataarea name="cass" size="3663918">
@@ -35,7 +53,7 @@ license:CC0
 	<software name="adventur">
 		<description>Abandoned Farmhouse Adventure</description>
 		<year>2012</year>
-		<publisher>jeff trantor</publisher>
+		<publisher>Jeff Trantor</publisher>
 		<info name="usage" value="Load at 280.30FFR, enter at 280R" />
 		<part name="cass" interface="apple1_cass">
 			<dataarea name="cass" size="12990288">
@@ -47,7 +65,7 @@ license:CC0
 	<software name="aslite">
 		<description>Applesoft Lite</description>
 		<year>2008</year>
-		<publisher>vince briel</publisher>
+		<publisher>Vince Briel</publisher>
 		<info name="usage" value="Load at 6000.7EFFR, enter at 6000R" />
 		<part name="cass" interface="apple1_cass">
 			<dataarea name="cass" size="9679664">
@@ -59,7 +77,7 @@ license:CC0
 	<software name="apple30">
 		<description>Apple 30th</description> <!-- Graphics demo -->
 		<year>2006</year>
-		<publisher>dave schmenk</publisher>
+		<publisher>Dave Schmenk</publisher>
 		<info name="usage" value="Load at 280.FFFR, enter at 280R" />
 		<part name="cass" interface="apple1_cass">
 			<dataarea name="cass" size="5279280">
@@ -95,7 +113,7 @@ license:CC0
 	<software name="disassem">
 		<description>Dis-Assembler</description>
 		<year>1976</year>
-		<publisher>apple computer inc</publisher>
+		<publisher>Apple Computer Inc.</publisher>
 			<!-- P/N A1T008X-->
 		<info name="usage" value="Load at 800.09FFR, enter at 09F0R" />
 		<part name="cass" interface="apple1_cass">
@@ -108,7 +126,7 @@ license:CC0
 	<software name="extmon">
 		<description>Extended Monitor</description>
 		<year>1977</year>
-		<publisher>apple computer inc</publisher>
+		<publisher>Apple Computer Inc.</publisher>
 			<!-- P/N A1T009X-->
 		<info name="usage" value="Load at 0800.0FFFR, enter at 0F3DR" />
 		<part name="cass" interface="apple1_cass">
@@ -121,7 +139,7 @@ license:CC0
 	<software name="life">
 		<description>Life</description>
 		<year>1976</year>
-		<publisher>apple computer inc</publisher>
+		<publisher>Apple Computer Inc.</publisher>
 		<info name="usage" value="Load at 2000.21FFR, enter at 2000R" />
 		<part name="cass" interface="apple1_cass">
 			<dataarea name="cass" size="2283920">
@@ -133,7 +151,7 @@ license:CC0
 	<software name="llander">
 		<description>Lunar Lander</description>
 		<year>1976</year>
-		<publisher>apple computer inc</publisher>
+		<publisher>Apple Computer Inc.</publisher>
 			<!-- P/N A1T003X-->
 		<info name="usage" value="Load at 300.0A00R, enter at 0300R" />
 		<part name="cass" interface="apple1_cass">
@@ -146,7 +164,7 @@ license:CC0
 	<software name="mastmind">
 		<description>Mastermind</description>
 		<year>1976</year>
-		<publisher>apple computer inc</publisher>
+		<publisher>Apple Computer Inc.</publisher>
 			<!-- P/N A1T002X-->
 		<info name="usage" value="Load at 300.03FFR, enter at 0300R" />
 		<part name="cass" interface="apple1_cass">
@@ -159,7 +177,7 @@ license:CC0
 	<software name="microchs">
 		<description>Microchess</description>
 		<year>19??</year>
-		<publisher>&lt;unknown&gt;</publisher>
+		<publisher>Peter Jennings</publisher>
 		<info name="usage" value="Load at 1000.18FFR, enter at 1000R" />
 		<part name="cass" interface="apple1_cass">
 			<dataarea name="cass" size="4052152">
@@ -183,7 +201,7 @@ license:CC0
 	<software name="typtutor">
 		<description>TypingTutor</description>
 		<year>2011</year>
-		<publisher>jeremy rand</publisher>
+		<publisher>Jeremy Rand</publisher>
 		<info name="usage" value="Load at 280.15FFR, enter at 280R" />
 		<part name="cass" interface="apple1_cass">
 			<dataarea name="cass" size="6446872">
@@ -210,7 +228,7 @@ license:CC0
 		<description>Apple I Enhanced Checkers</description>
 			<!-- Clone of "Checkers" by Vince Briel-->
 		<year>2011</year>
-		<publisher>corey cohen</publisher>
+		<publisher>Corey Cohen</publisher>
 		<info name="usage" value="First load BASIC, then load at 4A.00FFR300.FFFR, enter at E2B3R" />
 		<part name="cass" interface="apple1_cass">
 			<dataarea name="cass" size="9179180">
@@ -222,7 +240,7 @@ license:CC0
 	<software name="blckjack">
 		<description>Blackjack</description>
 		<year>1976</year>
-		<publisher>apple computer inc</publisher>
+		<publisher>Apple Computer Inc.</publisher>
 			<!-- P/N A1T004X-->
 		<info name="usage" value="First load BASIC, then load at 4A.00FFR800.0FFFR, enter at E2B3R" />
 		<part name="cass" interface="apple1_cass">
@@ -329,14 +347,25 @@ license:CC0
 	</software>
 
 	<software name="hamurabi">
-		<description>Hamurabi</description>
+		<description>Hamurabi (Apple)</description>
 		<year>1976</year>
-		<publisher>apple computer inc</publisher>
+		<publisher>Apple Computer Inc</publisher>
 			<!-- P/N A1T005X-->
 		<info name="usage" value="First load BASIC, then load at 4A.00FFR300.FFFR, enter at E2B3R" />
 		<part name="cass" interface="apple1_cass">
 			<dataarea name="cass" size="6953140">
 				<rom name="hamurabi.wav" size="6953140" crc="9760bd93" sha1="294b57fc0970ce0844dc615ff017ead11b1ebba1"/>
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="hamurabicn">
+		<description>Hamurabi (Computerland)</description>
+		<year>197?</year>
+		<publisher>Computerland of Nashua</publisher>
+		<part name="cass" interface="apple1_cass">
+			<dataarea name="cass" size="1012780">
+				<rom name="k7_computerlandofnashua_hammurabi.wav" size="1012780" crc="9eb266ae" sha1="83c67ba97235443d1e486cf664f2cda0bd990e4f"/>
 			</dataarea>
 		</part>
 	</software>
@@ -356,7 +385,7 @@ license:CC0
 	<software name="hilo">
 		<description>HiLo</description>
 		<year>1976</year>
-		<publisher>wendell sander</publisher>
+		<publisher>Wendell Sander</publisher>
 		<info name="usage" value="First load BASIC, then load at 4A.00FFR800.FFFR, enter at E2B3R" />
 		<part name="cass" interface="apple1_cass">
 			<dataarea name="cass" size="3067904">
@@ -368,7 +397,7 @@ license:CC0
 	<software name="llandera" supported="partial">
 		<description>Lunar Lander (ASCII Graphics)</description>
 		<year>2012</year>
-		<publisher>corey cohen</publisher>
+		<publisher>Corey Cohen</publisher>
 		<info name="usage" value="First load BASIC, then load at 4A.00FFR0300.0FFFR, enter at E2B3R" />
 		<part name="cass" interface="apple1_cass">
 			<dataarea name="cass" size="9205804">
@@ -389,6 +418,17 @@ license:CC0
 		</part>
 	</software>
 
+	<software name="nightmare6">
+		<description>Nightmare #6</description>
+		<year>197?</year>
+		<publisher>Computerland of Nashua</publisher>
+		<part name="cass" interface="apple1_cass">
+			<dataarea name="cass" size="619052">
+				<rom name="k7_computerlandofnashua_nightmare6.wav" size="619052" crc="53252477" sha1="33cbb123d408ed7e171f99c712b8599e3a6b20fb"/>
+			</dataarea>
+		</part>
+	</software>
+
 	<software name="slots">
 		<description>Slots</description>
 		<year>19??</year>
@@ -404,7 +444,7 @@ license:CC0
 	<software name="startrek">
 		<description>Apple Startrek</description>
 		<year>1976</year>
-		<publisher>apple computer inc</publisher>
+		<publisher>Apple Computer Inc.</publisher>
 			<!-- P/N A1T006X "Mini-Startrek" -->
 			<!-- "Apple Startrek" from Interface Age Magazine -->
 		<info name="usage" value="First load BASIC, then load at 4A.00FFR300.FFFR, enter at E2B3R" />
@@ -418,7 +458,7 @@ license:CC0
 	<software name="start2k3">
 		<description>Star Trek 2003</description>
 		<year>2003</year>
-		<publisher>vince briel</publisher>
+		<publisher>Vince Briel</publisher>
 		<info name="usage" value="First load BASIC, then load at 4A.00FFR300.3FFFR, enter at E2B3R" />
 		<part name="cass" interface="apple1_cass">
 			<dataarea name="cass" size="18338436">
@@ -442,7 +482,7 @@ license:CC0
 	<software name="trek2">
 		<description>TREK II</description>
 		<year>1977</year>
-		<publisher>apple computer inc</publisher>
+		<publisher>Apple Computer Inc.</publisher>
 			<!-- P/N A1T007X "16K-Startrek" -->
 		<info name="usage" value="First load BASIC, then load at 4A.00FFR0300.2FFFR, enter at E2B3R" />
 		<part name="cass" interface="apple1_cass">
@@ -455,7 +495,7 @@ license:CC0
 	<software name="wordx">
 		<description>WordCross</description>
 		<year>1976</year>
-		<publisher>wendell sander</publisher>
+		<publisher>Wendell Sander</publisher>
 		<info name="usage" value="First load BASIC, then load at 4A.00FFR300.FFFR, enter at E2B3R" />
 		<part name="cass" interface="apple1_cass">
 			<dataarea name="cass" size="7294204">

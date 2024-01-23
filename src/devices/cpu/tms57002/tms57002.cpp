@@ -10,7 +10,6 @@
 
 #include "emu.h"
 #include "tms57002.h"
-#include "debugger.h"
 #include "57002dsm.h"
 
 
@@ -38,7 +37,7 @@ std::unique_ptr<util::disasm_interface> tms57002_device::create_disassembler()
 	return std::make_unique<tms57002_disassembler>();
 }
 
-WRITE_LINE_MEMBER(tms57002_device::pload_w)
+void tms57002_device::pload_w(int state)
 {
 	u8 olds = sti;
 	if (state)
@@ -57,7 +56,7 @@ WRITE_LINE_MEMBER(tms57002_device::pload_w)
 	}
 }
 
-WRITE_LINE_MEMBER(tms57002_device::cload_w)
+void tms57002_device::cload_w(int state)
 {
 	u8 olds = sti;
 	if (state)
@@ -83,6 +82,9 @@ void tms57002_device::device_reset()
 	id = 0;
 	ba0 = 0;
 	ba1 = 0;
+	sa = 0;
+	rptc = 0;
+	rptc_next = 0;
 	update_counter_tail = 0;
 	update_counter_head = 0;
 	st0 &= ~(ST0_INCS | ST0_DIRI | ST0_FI | ST0_SIM | ST0_PLRI |
@@ -183,7 +185,7 @@ u8 tms57002_device::data_r()
 	return res;
 }
 
-READ_LINE_MEMBER(tms57002_device::dready_r)
+int tms57002_device::dready_r()
 {
 	return sti & S_HOST ? 0 : 1;
 }
@@ -193,7 +195,7 @@ void tms57002_device::update_dready()
 	m_dready_callback(sti & S_HOST ? 0 : 1);
 }
 
-READ_LINE_MEMBER(tms57002_device::pc0_r)
+int tms57002_device::pc0_r()
 {
 	return pc == 0 ? 0 : 1;
 }
@@ -203,7 +205,7 @@ void tms57002_device::update_pc0()
 	m_pc0_callback(pc == 0 ? 0 : 1);
 }
 
-READ_LINE_MEMBER(tms57002_device::empty_r)
+int tms57002_device::empty_r()
 {
 	return (update_counter_head == update_counter_tail);
 }
@@ -213,7 +215,7 @@ void tms57002_device::update_empty()
 	m_empty_callback(update_counter_head == update_counter_tail);
 }
 
-WRITE_LINE_MEMBER(tms57002_device::sync_w)
+void tms57002_device::sync_w(int state)
 {
 	if (sti & (IN_PLOAD /*| IN_CLOAD*/))
 		return;
@@ -918,37 +920,23 @@ void tms57002_device::execute_run()
 		icount = 0;
 }
 
-void tms57002_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void tms57002_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
-	assert(samples == 1);
+	assert(inputs[0].samples() == 1);
+	assert(outputs[0].samples() == 1);
 
-	if (st0 & ST0_SIM)
-	{
-		si[0] = (inputs[0][0] << 8) & 0xffffff;
-		si[1] = (inputs[1][0] << 8) & 0xffffff;
-		si[2] = (inputs[2][0] << 8) & 0xffffff;
-		si[3] = (inputs[3][0] << 8) & 0xffffff;
-	}
-	else
-	{
-		si[0] = inputs[0][0] & 0xffffff;
-		si[1] = inputs[1][0] & 0xffffff;
-		si[2] = inputs[2][0] & 0xffffff;
-		si[3] = inputs[3][0] & 0xffffff;
-	}
-	outputs[0][0] = int16_t(so[0] >> 8);
-	outputs[1][0] = int16_t(so[1] >> 8);
-	outputs[2][0] = int16_t(so[2] >> 8);
-	outputs[3][0] = int16_t(so[3] >> 8);
+	stream_buffer::sample_t in_scale = 32768.0 * ((st0 & ST0_SIM) ? 256.0 : 1.0);
+	si[0] = s32(inputs[0].get(0) * in_scale) & 0xffffff;
+	si[1] = s32(inputs[1].get(0) * in_scale) & 0xffffff;
+	si[2] = s32(inputs[2].get(0) * in_scale) & 0xffffff;
+	si[3] = s32(inputs[3].get(0) * in_scale) & 0xffffff;
+
+	outputs[0].put_int(0, s32(so[0] << 8) >> 1, 32768 * 32768);
+	outputs[1].put_int(0, s32(so[1] << 8) >> 1, 32768 * 32768);
+	outputs[2].put_int(0, s32(so[2] << 8) >> 1, 32768 * 32768);
+	outputs[3].put_int(0, s32(so[3] << 8) >> 1, 32768 * 32768);
 
 	sync_w(1);
-}
-
-void tms57002_device::device_resolve_objects()
-{
-	m_dready_callback.resolve_safe();
-	m_pc0_callback.resolve_safe();
-	m_empty_callback.resolve_safe();
 }
 
 void tms57002_device::device_start()
@@ -981,8 +969,7 @@ void tms57002_device::device_start()
 	state_add(TMS57002_HOST3, "HOST3",  host[3]);
 
 	set_icountptr(icount);
-
-	stream_alloc(4, 4, STREAM_SYNC);
+	stream_alloc(4, 4, SAMPLE_RATE_INPUT_ADAPTIVE, STREAM_SYNCHRONOUS);
 
 	save_item(NAME(macc));
 	save_item(NAME(macc_read));

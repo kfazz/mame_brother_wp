@@ -2,13 +2,11 @@
 // copyright-holders:Olivier Galibert
 /*********************************************************************
 
-    formats/dmv_dsk.c
+    formats/dmv_dsk.cpp
 
     NCR Decision Mate V format
 
 *********************************************************************/
-
-#include <cassert>
 
 #include "formats/dmv_dsk.h"
 
@@ -16,17 +14,17 @@ dmv_format::dmv_format() : upd765_format(formats)
 {
 }
 
-const char *dmv_format::name() const
+const char *dmv_format::name() const noexcept
 {
 	return "dmv";
 }
 
-const char *dmv_format::description() const
+const char *dmv_format::description() const noexcept
 {
 	return "Decision Mate V disk image";
 }
 
-const char *dmv_format::extensions() const
+const char *dmv_format::extensions() const noexcept
 {
 	return "img";
 }
@@ -52,4 +50,4 @@ const dmv_format::format dmv_format::formats[] = {
 	{}
 };
 
-const floppy_format_type FLOPPY_DMV_FORMAT = &floppy_image_format_creator<dmv_format>;
+const dmv_format FLOPPY_DMV_FORMAT;

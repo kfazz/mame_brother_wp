@@ -3,7 +3,7 @@
 #include "emu.h"
 #include "dp8390.h"
 
-#define DP8390_BYTE_ORDER(w) ((m_regs.dcr & 3) == 3 ? ((data << 8) | (data >> 8)) : data)
+#define DP8390_BYTE_ORDER(w) ((m_regs.dcr & 3) == 3 ? swapendian_int16(data) : data)
 #define LOOPBACK (!(m_regs.dcr & 8) && (m_regs.tcr & 6))
 
 DEFINE_DEVICE_TYPE(DP8390D,  dp8390d_device,  "dp8390d",  "DP8390D NIC")
@@ -19,25 +19,20 @@ rtl8019a_device::rtl8019a_device(const machine_config &mconfig, const char *tag,
 {
 }
 
-dp8390_device::dp8390_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, TYPE variant, float bandwidth)
+dp8390_device::dp8390_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, TYPE variant, u32 bandwidth)
 	: device_t(mconfig, type, tag, owner, clock)
 	, device_network_interface(mconfig, *this, bandwidth)
 	, m_variant(variant)
 	, m_irq_cb(*this)
 	, m_breq_cb(*this)
-	, m_mem_read_cb(*this)
+	, m_mem_read_cb(*this, 0)
 	, m_mem_write_cb(*this)
 	, m_reset(0)
-	, m_cs(false)
 	, m_rdma_active(0)
 {
 }
 
 void dp8390_device::device_start() {
-	m_irq_cb.resolve_safe();
-	m_breq_cb.resolve_safe();
-	m_mem_read_cb.resolve_safe(0);
-	m_mem_write_cb.resolve_safe();
 }
 
 void dp8390_device::stop() {
@@ -172,33 +167,29 @@ void dp8390_device::recv_cb(uint8_t *buf, int len) {
 	if(!LOOPBACK) recv(buf, len);
 }
 
-WRITE_LINE_MEMBER(dp8390_device::dp8390_cs) {
-	m_cs = state;
-}
-
-WRITE_LINE_MEMBER(dp8390_device::dp8390_reset) {
+void dp8390_device::dp8390_reset(int state) {
 	if(!state) device_reset();
 }
 
-READ16_MEMBER(dp8390_device::dp8390_r) {
-	uint16_t data;
-	if(m_cs) {
-		uint32_t high16 = (m_regs.dcr & 4)?m_regs.rsar<<16:0;
-		if(m_regs.dcr & 1) {
-			m_regs.crda &= ~1;
-			data = m_mem_read_cb(high16 + m_regs.crda++);
-			data |= m_mem_read_cb(high16 + m_regs.crda++) << 8;
-			m_regs.rbcr -= (m_regs.rbcr < 2)?m_regs.rbcr:2;
-			check_dma_complete();
-			return DP8390_BYTE_ORDER(data);
-		} else {
-			m_regs.rbcr -= (m_regs.rbcr)?1:0;
-			data = m_mem_read_cb(high16 + m_regs.crda++);
-			check_dma_complete();
-			return data;
-		}
+uint16_t dp8390_device::remote_read() {
+	uint32_t high16 = (m_regs.dcr & 4)?m_regs.rsar<<16:0;
+	if(m_regs.dcr & 1) {
+		m_regs.crda &= ~1;
+		uint16_t data = m_mem_read_cb(high16 + m_regs.crda++);
+		data |= m_mem_read_cb(high16 + m_regs.crda++) << 8;
+		m_regs.rbcr -= (m_regs.rbcr < 2)?m_regs.rbcr:2;
+		check_dma_complete();
+		return DP8390_BYTE_ORDER(data);
+	} else {
+		m_regs.rbcr -= (m_regs.rbcr)?1:0;
+		uint16_t data = m_mem_read_cb(high16 + m_regs.crda++);
+		check_dma_complete();
+		return data;
 	}
+}
 
+uint8_t dp8390_device::cs_read(offs_t offset) {
+	uint8_t data;
 	switch((offset & 0x0f)|(m_regs.cr & 0xc0)) {
 	case 0x00:
 	case 0x40:
@@ -350,26 +341,24 @@ READ16_MEMBER(dp8390_device::dp8390_r) {
 	return data;
 }
 
-WRITE16_MEMBER(dp8390_device::dp8390_w) {
-	if(m_cs) {
-		uint32_t high16 = (m_regs.dcr & 4)?m_regs.rsar<<16:0;
-		if(m_regs.dcr & 1) {
-			data = DP8390_BYTE_ORDER(data);
-			m_regs.crda &= ~1;
-			m_mem_write_cb(high16 + m_regs.crda++, data & 0xff);
-			m_mem_write_cb(high16 + m_regs.crda++, data >> 8);
-			m_regs.rbcr -= (m_regs.rbcr < 2)?m_regs.rbcr:2;
-			check_dma_complete();
-		} else {
-			data &= 0xff;
-			m_mem_write_cb(high16 + m_regs.crda++, data);
-			m_regs.rbcr -= (m_regs.rbcr)?1:0;
-			check_dma_complete();
-		}
-		return;
+void dp8390_device::remote_write(uint16_t data) {
+	uint32_t high16 = (m_regs.dcr & 4)?m_regs.rsar<<16:0;
+	if(m_regs.dcr & 1) {
+		data = DP8390_BYTE_ORDER(data);
+		m_regs.crda &= ~1;
+		m_mem_write_cb(high16 + m_regs.crda++, data & 0xff);
+		m_mem_write_cb(high16 + m_regs.crda++, data >> 8);
+		m_regs.rbcr -= (m_regs.rbcr < 2)?m_regs.rbcr:2;
+		check_dma_complete();
+	} else {
+		data &= 0xff;
+		m_mem_write_cb(high16 + m_regs.crda++, data);
+		m_regs.rbcr -= (m_regs.rbcr)?1:0;
+		check_dma_complete();
 	}
+}
 
-	data &= 0xff;
+void dp8390_device::cs_write(offs_t offset, uint8_t data) {
 	switch((offset & 0x0f)|(m_regs.cr & 0xc0)) {
 	case 0x00:
 	case 0x40:
@@ -433,7 +422,7 @@ WRITE16_MEMBER(dp8390_device::dp8390_w) {
 	case 0x45:
 	case 0x46:
 		m_regs.par[(offset & 0x7)-1] = data;
-		set_mac((const char *)m_regs.par);
+		set_mac(m_regs.par);
 		break;
 	case 0x47:
 		m_regs.curr = data;

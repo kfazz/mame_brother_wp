@@ -22,13 +22,13 @@ const char *const lr35902_disassembler::s_mnemonic[] =
 };
 
 const uint32_t lr35902_disassembler::s_flags[] = {
-	0        ,0    ,0    ,0        ,STEP_OVER,0    ,0        ,
-	0        ,0    ,0    ,0        ,0        ,0    ,STEP_OVER,
-	0        ,0    ,0    ,0        ,0        ,0    ,0        ,
-	0        ,0    ,0    ,STEP_OUT ,STEP_OUT ,0    ,0        ,
-	0        ,0    ,0    ,0        ,0        ,0    ,STEP_OVER,
-	0        ,0    ,0    ,0        ,0        ,0    ,0        ,
-	STEP_OVER,0    ,0    ,0
+	0        ,0    ,0        ,0        ,STEP_OVER,0    ,0        ,
+	0        ,0    ,0        ,0        ,0        ,0    ,STEP_OVER,
+	0        ,0    ,STEP_COND,STEP_COND,0        ,0    ,0        ,
+	0        ,0    ,0        ,STEP_OUT ,STEP_OUT ,0    ,0        ,
+	0        ,0    ,0        ,0        ,0        ,0    ,STEP_OVER,
+	0        ,0    ,0        ,0        ,0        ,0    ,0        ,
+	STEP_OVER,0    ,0        ,0
 };
 
 const lr35902_disassembler::lr35902dasm lr35902_disassembler::mnemonic_cb[256] = {
@@ -99,11 +99,11 @@ const lr35902_disassembler::lr35902dasm lr35902_disassembler::mnemonic_cb[256] =
 };
 
 const lr35902_disassembler::lr35902dasm lr35902_disassembler::mnemonic_main[256]= {
-	{zNOP,nullptr},       {zLD,"bc,N"},   {zLD,"(bc),a"}, {zINC,"bc"},
+	{zNOP,nullptr}, {zLD,"bc,N"},   {zLD,"(bc),a"}, {zINC,"bc"},
 	{zINC,"b"},     {zDEC,"b"},     {zLD,"b,B"},    {zRLCA,nullptr},
 	{zLD,"(W),sp"}, {zADD,"hl,bc"}, {zLD,"a,(bc)"}, {zDEC,"bc"},
 	{zINC,"c"},     {zDEC,"c"},     {zLD,"c,B"},    {zRRCA,nullptr},
-	{zSTOP,nullptr},      {zLD,"de,N"},   {zLD,"(de),a"}, {zINC,"de"},
+	{zSTOP,"B"},    {zLD,"de,N"},   {zLD,"(de),a"}, {zINC,"de"},
 	{zINC,"d"},     {zDEC,"d"},     {zLD,"d,B"},    {zRLA,nullptr},
 	{zJR,"O"},      {zADD,"hl,de"}, {zLD,"a,(de)"}, {zDEC,"de"},
 	{zINC,"e"},     {zDEC,"e"},     {zLD,"e,B"},    {zRRA,nullptr},
@@ -128,7 +128,7 @@ const lr35902_disassembler::lr35902dasm lr35902_disassembler::mnemonic_main[256]
 	{zLD,"l,b"},    {zLD,"l,c"},    {zLD,"l,d"},    {zLD,"l,e"},
 	{zLD,"l,h"},    {zLD,"l,l"},    {zLD,"l,(hl)"}, {zLD,"l,a"},
 	{zLD,"(hl),b"}, {zLD,"(hl),c"}, {zLD,"(hl),d"}, {zLD,"(hl),e"},
-	{zLD,"(hl),h"}, {zLD,"(hl),l"}, {zHLT,nullptr},       {zLD,"(hl),a"},
+	{zLD,"(hl),h"}, {zLD,"(hl),l"}, {zHLT,nullptr}, {zLD,"(hl),a"},
 	{zLD,"a,b"},    {zLD,"a,c"},    {zLD,"a,d"},    {zLD,"a,e"},
 	{zLD,"a,h"},    {zLD,"a,l"},    {zLD,"a,(hl)"}, {zLD,"a,a"},
 	{zADD,"a,b"},   {zADD,"a,c"},   {zADD,"a,d"},   {zADD,"a,e"},
@@ -149,11 +149,11 @@ const lr35902_disassembler::lr35902dasm lr35902_disassembler::mnemonic_main[256]
 	{zCP,"h"},      {zCP,"l"},      {zCP,"(hl)"},   {zCP,"a"},
 	{zRET,"nz"},    {zPOP,"bc"},    {zJP,"nz,A"},   {zJP,"A"},
 	{zCALL,"nz,A"}, {zPUSH,"bc"},   {zADD,"a,B"},   {zRST,"V"},
-	{zRET,"z"},     {zRET,nullptr},       {zJP,"z,A"},    {zDB,"cb"},
+	{zRET,"z"},     {zRET,nullptr}, {zJP,"z,A"},    {zDB,"cb"},
 	{zCALL,"z,A"},  {zCALL,"A"},    {zADC,"a,B"},   {zRST,"V"},
 	{zRET,"nc"},    {zPOP,"de"},    {zJP,"nc,A"},   {zDB,"d3"},
 	{zCALL,"nc,A"}, {zPUSH,"de"},   {zSUB,"B"},     {zRST,"V"},
-	{zRET,"c"},     {zRETI,nullptr},      {zJP,"c,A"},    {zDB,"db"},
+	{zRET,"c"},     {zRETI,nullptr},{zJP,"c,A"},    {zDB,"db"},
 	{zCALL,"c,A"},  {zDB,"dd"},     {zSBC,"a,B"},   {zRST,"V"},
 	{zLD,"(F),a"},  {zPOP,"hl"},    {zLD,"(C),a"},  {zDB,"e3"},
 	{zDB,"e4"},     {zPUSH,"hl"},   {zAND,"B"},     {zRST,"V"},
@@ -195,6 +195,7 @@ offs_t lr35902_disassembler::disassemble(std::ostream &stream, offs_t pc, const 
 		d = &mnemonic_main[op];
 	}
 
+	bool comma = false;
 	if( d->arguments ) {
 		util::stream_format(stream, "%-4s ", s_mnemonic[d->mnemonic]);
 		src = d->arguments;
@@ -245,6 +246,9 @@ offs_t lr35902_disassembler::disassemble(std::ostream &stream, offs_t pc, const 
 				pos += 2;
 				util::stream_format(stream, "$%04X", ea);
 				break;
+			case ',':
+				comma = true;
+				[[fallthrough]];
 			default:
 				stream << *src;
 				break;
@@ -255,5 +259,9 @@ offs_t lr35902_disassembler::disassemble(std::ostream &stream, offs_t pc, const 
 		util::stream_format(stream, "%s", s_mnemonic[d->mnemonic]);
 	}
 
-	return (pos - pc) | s_flags[d->mnemonic] | SUPPORTED;
+	uint32_t flags = s_flags[d->mnemonic];
+	if (flags == STEP_COND && !comma)
+		flags = 0;
+
+	return (pos - pc) | flags | SUPPORTED;
 }

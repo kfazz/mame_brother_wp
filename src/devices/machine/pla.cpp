@@ -11,7 +11,7 @@
 #include "jedparse.h"
 #include "plaparse.h"
 
-#define LOG_TERMS (1 << 0U)
+#define LOG_TERMS (1U << 1)
 //#define VERBOSE (LOG_TERMS)
 #include "logmacro.h"
 
@@ -108,18 +108,22 @@ int pla_device::parse_fusemap()
 	int result = JEDERR_NONE;
 
 	// read pla file
-	switch (m_format)
+	auto file = util::ram_read(m_region->base(), m_region->bytes());
+	if (file)
 	{
+		switch (m_format)
+		{
 		case FMT::JEDBIN:
-			result = jedbin_parse(m_region->base(), m_region->bytes(), &jed);
+			result = jedbin_parse(*file, &jed);
 			break;
 
 		case FMT::BERKELEY:
-			result = pla_parse(m_region->base(), m_region->bytes(), &jed);
+			result = pla_parse(*file, &jed);
 			break;
+		}
 	}
 
-	if (result != JEDERR_NONE)
+	if (!file || result != JEDERR_NONE)
 	{
 		for (int p = 0; p < m_terms; p++)
 		{

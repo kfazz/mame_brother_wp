@@ -15,7 +15,8 @@
 #include "cpu/arm7/arm7core.h"
 #include "screen.h"
 
-#include "coreutil.h"
+#include <algorithm>
+#include <cstdarg>
 
 
 #define S3C44B0_INTCON    (0x00 / 4) // Interrupt Control
@@ -226,12 +227,12 @@ s3c44b0_device::s3c44b0_device(const machine_config &mconfig, const char *tag, d
 	: device_t(mconfig, S3C44B0, tag, owner, clock)
 	, device_video_interface(mconfig, *this)
 	, m_cpu(*this, finder_base::DUMMY_TAG)
-	, m_port_r_cb(*this)
+	, m_port_r_cb(*this, 0)
 	, m_port_w_cb(*this)
 	, m_scl_w_cb(*this)
-	, m_sda_r_cb(*this)
+	, m_sda_r_cb(*this, 0)
 	, m_sda_w_cb(*this)
-	, m_data_r_cb(*this)
+	, m_data_r_cb(*this, 0)
 	, m_data_w_cb(*this)
 {
 	memset(&m_irq, 0, sizeof(s3c44b0_irq_t));
@@ -256,27 +257,19 @@ s3c44b0_device::s3c44b0_device(const machine_config &mconfig, const char *tag, d
 
 void s3c44b0_device::device_start()
 {
-	m_port_r_cb.resolve();
-	m_port_w_cb.resolve();
-	m_scl_w_cb.resolve();
-	m_sda_r_cb.resolve();
-	m_sda_w_cb.resolve();
-	m_data_r_cb.resolve_safe(0);
-	m_data_w_cb.resolve();
+	m_cpu->space(AS_PROGRAM).cache(m_cache);
 
-	m_cache = m_cpu->space(AS_PROGRAM).cache<2, 0, ENDIANNESS_LITTLE>();
+	for (int i = 0; i < 6; i++) m_pwm.timer[i] = timer_alloc(FUNC(s3c44b0_device::pwm_timer_exp), this);
+	for (auto & elem : m_uart) elem.timer = timer_alloc(FUNC(s3c44b0_device::uart_timer_exp), this);
+	for (auto & elem : m_zdma) elem.timer = timer_alloc(FUNC(s3c44b0_device::zdma_timer_exp), this);
+	for (auto & elem : m_bdma) elem.timer = timer_alloc(FUNC(s3c44b0_device::bdma_timer_exp), this);
 
-	for (int i = 0; i < 6; i++) m_pwm.timer[i] = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(s3c44b0_device::pwm_timer_exp),this));
-	for (auto & elem : m_uart) elem.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(s3c44b0_device::uart_timer_exp),this));
-	for (auto & elem : m_zdma) elem.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(s3c44b0_device::zdma_timer_exp),this));
-	for (auto & elem : m_bdma) elem.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(s3c44b0_device::bdma_timer_exp),this));
-
-	m_lcd.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(s3c44b0_device::lcd_timer_exp),this));
-	m_wdt.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(s3c44b0_device::wdt_timer_exp),this));
-	m_sio.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(s3c44b0_device::sio_timer_exp),this));
-	m_adc.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(s3c44b0_device::adc_timer_exp),this));
-	m_iic.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(s3c44b0_device::iic_timer_exp),this));
-	m_iis.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(s3c44b0_device::iis_timer_exp),this));
+	m_lcd.timer = timer_alloc(FUNC(s3c44b0_device::lcd_timer_exp), this);
+	m_wdt.timer = timer_alloc(FUNC(s3c44b0_device::wdt_timer_exp), this);
+	m_sio.timer = timer_alloc(FUNC(s3c44b0_device::sio_timer_exp), this);
+	m_adc.timer = timer_alloc(FUNC(s3c44b0_device::adc_timer_exp), this);
+	m_iic.timer = timer_alloc(FUNC(s3c44b0_device::iic_timer_exp), this);
+	m_iis.timer = timer_alloc(FUNC(s3c44b0_device::iis_timer_exp), this);
 
 	video_start();
 
@@ -543,19 +536,19 @@ void s3c44b0_device::lcd_dma_read(int count, uint8_t *data)
 		{
 			if ((m_lcd.vramaddr_cur & 2) == 0)
 			{
-				data[0] = m_cache->read_byte(m_lcd.vramaddr_cur + 3);
-				data[1] = m_cache->read_byte(m_lcd.vramaddr_cur + 2);
+				data[0] = m_cache.read_byte(m_lcd.vramaddr_cur + 3);
+				data[1] = m_cache.read_byte(m_lcd.vramaddr_cur + 2);
 			}
 			else
 			{
-				data[0] = m_cache->read_byte(m_lcd.vramaddr_cur - 1);
-				data[1] = m_cache->read_byte(m_lcd.vramaddr_cur - 2);
+				data[0] = m_cache.read_byte(m_lcd.vramaddr_cur - 1);
+				data[1] = m_cache.read_byte(m_lcd.vramaddr_cur - 2);
 			}
 		}
 		else
 		{
-			data[0] = m_cache->read_byte(m_lcd.vramaddr_cur + 0);
-			data[1] = m_cache->read_byte(m_lcd.vramaddr_cur + 1);
+			data[0] = m_cache.read_byte(m_lcd.vramaddr_cur + 0);
+			data[1] = m_cache.read_byte(m_lcd.vramaddr_cur + 1);
 		}
 		m_lcd.vramaddr_cur += 2;
 		m_lcd.pagewidth_cur++;
@@ -696,8 +689,8 @@ uint32_t s3c44b0_device::video_update(screen_device &screen, bitmap_rgb32 &bitma
 		{
 			for (int y = 0; y < screen.height(); y++)
 			{
-				uint32_t *scanline = &bitmap.pix32(y);
-				uint8_t *vram = m_lcd.bitmap.get() + y * (m_lcd.hpos_max - m_lcd.hpos_min + 1);
+				uint32_t *scanline = &bitmap.pix(y);
+				uint8_t const *vram = m_lcd.bitmap.get() + y * (m_lcd.hpos_max - m_lcd.hpos_min + 1);
 				for (int x = 0; x < screen.width(); x++)
 				{
 					*scanline++ = rgb_t(vram[0], vram[1], vram[2]);
@@ -710,14 +703,13 @@ uint32_t s3c44b0_device::video_update(screen_device &screen, bitmap_rgb32 &bitma
 	{
 		for (int y = 0; y < screen.height(); y++)
 		{
-			uint32_t *scanline = &bitmap.pix32(y);
-			memset(scanline, 0, screen.width() * 4);
+			std::fill_n(&bitmap.pix(y), screen.width(), 0);
 		}
 	}
 	return 0;
 }
 
-READ32_MEMBER( s3c44b0_device::lcd_r )
+uint32_t s3c44b0_device::lcd_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_lcd.regs)[offset];
 	switch (offset)
@@ -820,7 +812,7 @@ void s3c44b0_device::lcd_recalc()
 		lcd_stop();
 }
 
-WRITE32_MEMBER( s3c44b0_device::lcd_w )
+void s3c44b0_device::lcd_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_lcd.regs)[offset];
 //  verboselog( *this, 9, "(LCD) %08X <- %08X\n", S3C44B0_BASE_LCD + (offset << 2), data);
@@ -851,14 +843,14 @@ uint32_t s3c44b0_device::get_mclk()
 	return (uint32_t)((double)((mdiv + 8) * clock()) / (double)((pdiv + 2) * (1 << sdiv)));
 }
 
-READ32_MEMBER( s3c44b0_device::clkpow_r )
+uint32_t s3c44b0_device::clkpow_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_clkpow.regs)[offset];
 	verboselog( *this, 9, "(CLKPOW) %08X -> %08X\n", S3C44B0_BASE_CLKPOW + (offset << 2), data);
 	return data;
 }
 
-WRITE32_MEMBER( s3c44b0_device::clkpow_w )
+void s3c44b0_device::clkpow_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	verboselog( *this, 9, "(CLKPOW) %08X <- %08X\n", S3C44B0_BASE_CLKPOW + (offset << 2), data);
 	COMBINE_DATA(&((uint32_t*)&m_clkpow.regs)[offset]);
@@ -915,12 +907,6 @@ void s3c44b0_device::check_pending_irq()
 	temp = (m_irq.regs.intpnd & ~m_irq.regs.intmsk) & m_irq.regs.intmod;
 	if (temp != 0)
 	{
-		uint32_t int_type = 0;
-		while ((temp & 1) == 0)
-		{
-			int_type++;
-			temp = temp >> 1;
-		}
 		if (m_irq.line_fiq != ASSERT_LINE)
 		{
 			m_cpu->set_input_line(ARM7_FIRQ_LINE, ASSERT_LINE);
@@ -946,17 +932,8 @@ void s3c44b0_device::request_irq(uint32_t int_type)
 
 void s3c44b0_device::check_pending_eint()
 {
-	uint32_t temp = m_gpio.regs.extintpnd;
-	if (temp != 0)
-	{
-		uint32_t int_type = 0;
-		while ((temp & 1) == 0)
-		{
-			int_type++;
-			temp = temp >> 1;
-		}
+	if (m_gpio.regs.extintpnd != 0)
 		request_irq(S3C44B0_INT_EINT4_7);
-	}
 }
 
 void s3c44b0_device::request_eint(uint32_t number)
@@ -973,14 +950,14 @@ void s3c44b0_device::request_eint(uint32_t number)
 	}
 }
 
-READ32_MEMBER( s3c44b0_device::irq_r )
+uint32_t s3c44b0_device::irq_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_irq.regs)[offset];
 	verboselog( *this, 9, "(IRQ) %08X -> %08X\n", S3C44B0_BASE_INT + (offset << 2), data);
 	return data;
 }
 
-WRITE32_MEMBER( s3c44b0_device::irq_w )
+void s3c44b0_device::irq_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	verboselog( *this, 9, "(IRQ) %08X <- %08X\n", S3C44B0_BASE_INT + (offset << 2), data);
 	COMBINE_DATA(&((uint32_t*)&m_irq.regs)[offset]);
@@ -1023,7 +1000,7 @@ uint16_t s3c44b0_device::pwm_calc_observation(int ch)
 	return cnto;
 }
 
-READ32_MEMBER( s3c44b0_device::pwm_r )
+uint32_t s3c44b0_device::pwm_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_pwm.regs)[offset];
 	switch (offset)
@@ -1178,7 +1155,7 @@ void s3c44b0_device::pwm_recalc(int timer)
 		pwm_stop(timer);
 }
 
-WRITE32_MEMBER( s3c44b0_device::pwm_w )
+void s3c44b0_device::pwm_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_pwm.regs)[offset];
 	verboselog( *this, 9, "(PWM) %08X <- %08X\n", S3C44B0_BASE_PWM + (offset << 2), data);
@@ -1235,22 +1212,17 @@ TIMER_CALLBACK_MEMBER( s3c44b0_device::pwm_timer_exp )
 
 inline void s3c44b0_device::iface_i2c_scl_w(int state)
 {
-	if (!m_scl_w_cb.isnull())
-		(m_scl_w_cb)( state);
+	m_scl_w_cb(state);
 }
 
 inline void s3c44b0_device::iface_i2c_sda_w(int state)
 {
-	if (!m_sda_w_cb.isnull())
-		(m_sda_w_cb)( state);
+	m_sda_w_cb(state);
 }
 
 inline int s3c44b0_device::iface_i2c_sda_r()
 {
-	if (!m_sda_r_cb.isnull())
-		return (m_sda_r_cb)();
-	else
-		return 0;
+	return m_sda_r_cb();
 }
 
 void s3c44b0_device::i2c_send_start()
@@ -1344,7 +1316,7 @@ void s3c44b0_device::iic_resume()
 	m_iic.timer->adjust(attotime::from_usec( 1), 0);
 }
 
-READ32_MEMBER( s3c44b0_device::iic_r )
+uint32_t s3c44b0_device::iic_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_iic.regs)[offset];
 	switch (offset)
@@ -1359,7 +1331,7 @@ READ32_MEMBER( s3c44b0_device::iic_r )
 	return data;
 }
 
-WRITE32_MEMBER( s3c44b0_device::iic_w )
+void s3c44b0_device::iic_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_iic.regs)[offset];
 	verboselog( *this, 9, "(IIC) %08X <- %08X\n", S3C44B0_BASE_IIC + (offset << 2), data);
@@ -1457,19 +1429,15 @@ TIMER_CALLBACK_MEMBER( s3c44b0_device::iic_timer_exp )
 
 inline uint32_t s3c44b0_device::iface_gpio_port_r(int port)
 {
-	if (!m_port_r_cb.isnull())
-		return (m_port_r_cb)(port);
-	else
-		return 0;
+	return m_port_r_cb(port);
 }
 
 inline void s3c44b0_device::iface_gpio_port_w(int port, uint32_t data)
 {
-	if (!m_port_w_cb.isnull())
-		(m_port_w_cb)(port, data, 0xffff);
+	m_port_w_cb(port, data, 0xffff);
 }
 
-READ32_MEMBER( s3c44b0_device::gpio_r )
+uint32_t s3c44b0_device::gpio_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_gpio.regs)[offset];
 	switch (offset)
@@ -1514,7 +1482,7 @@ READ32_MEMBER( s3c44b0_device::gpio_r )
 	return data;
 }
 
-WRITE32_MEMBER( s3c44b0_device::gpio_w )
+void s3c44b0_device::gpio_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_gpio.regs)[offset];
 	verboselog( *this, 9, "(GPIO) %08X <- %08X\n", S3C44B0_BASE_GPIO + (offset << 2), data);
@@ -1614,27 +1582,27 @@ void s3c44b0_device::uart_w(int ch, uint32_t offset, uint32_t data, uint32_t mem
 	}
 }
 
-READ32_MEMBER( s3c44b0_device::uart_0_r )
+uint32_t s3c44b0_device::uart_0_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = uart_r(0, offset);
 //  verboselog( *this, 9, "(UART 0) %08X -> %08X\n", S3C44B0_BASE_UART_0 + (offset << 2), data);
 	return data;
 }
 
-READ32_MEMBER( s3c44b0_device::uart_1_r )
+uint32_t s3c44b0_device::uart_1_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = uart_r(1, offset);
 //  verboselog( *this, 9, "(UART 1) %08X -> %08X\n", S3C44B0_BASE_UART_1 + (offset << 2), data);
 	return data;
 }
 
-WRITE32_MEMBER( s3c44b0_device::uart_0_w )
+void s3c44b0_device::uart_0_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	verboselog( *this, 9, "(UART 0) %08X <- %08X (%08X)\n", S3C44B0_BASE_UART_0 + (offset << 2), data, mem_mask);
 	uart_w(0, offset, data, mem_mask);
 }
 
-WRITE32_MEMBER( s3c44b0_device::uart_1_w )
+void s3c44b0_device::uart_1_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	verboselog( *this, 9, "(UART 1) %08X <- %08X (%08X)\n", S3C44B0_BASE_UART_1 + (offset << 2), data, mem_mask);
 	uart_w(1, offset, data, mem_mask);
@@ -1665,7 +1633,7 @@ uint16_t s3c44b0_device::wdt_calc_current_count()
 	return 0;
 }
 
-READ32_MEMBER( s3c44b0_device::wdt_r )
+uint32_t s3c44b0_device::wdt_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_wdt.regs)[offset];
 	switch (offset)
@@ -1713,7 +1681,7 @@ void s3c44b0_device::wdt_recalc()
 		wdt_stop();
 }
 
-WRITE32_MEMBER( s3c44b0_device::wdt_w )
+void s3c44b0_device::wdt_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_wdt.regs)[offset];
 	verboselog( *this, 9, "(WDT) %08X <- %08X\n", S3C44B0_BASE_WDT + (offset << 2), data);
@@ -1747,14 +1715,14 @@ TIMER_CALLBACK_MEMBER( s3c44b0_device::wdt_timer_exp )
 
 /* CPU Wrapper */
 
-READ32_MEMBER( s3c44b0_device::cpuwrap_r )
+uint32_t s3c44b0_device::cpuwrap_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_cpuwrap.regs)[offset];
 	verboselog( *this, 9, "(CPUWRAP) %08X -> %08X\n", S3C44B0_BASE_CPU_WRAPPER + (offset << 2), data);
 	return data;
 }
 
-WRITE32_MEMBER( s3c44b0_device::cpuwrap_w )
+void s3c44b0_device::cpuwrap_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	verboselog( *this, 9, "(CPUWRAP) %08X <- %08X\n", S3C44B0_BASE_CPU_WRAPPER + (offset << 2), data);
 	COMBINE_DATA(&((uint32_t*)&m_cpuwrap.regs)[offset]);
@@ -1762,7 +1730,7 @@ WRITE32_MEMBER( s3c44b0_device::cpuwrap_w )
 
 /* A/D Converter */
 
-READ32_MEMBER( s3c44b0_device::adc_r )
+uint32_t s3c44b0_device::adc_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_adc.regs)[offset];
 	verboselog( *this, 9, "(ADC) %08X -> %08X\n", S3C44B0_BASE_ADC + (offset << 2), data);
@@ -1796,7 +1764,7 @@ void s3c44b0_device::adc_recalc()
 		adc_stop();
 }
 
-WRITE32_MEMBER( s3c44b0_device::adc_w )
+void s3c44b0_device::adc_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_wdt.regs)[offset];
 	verboselog( *this, 9, "(ADC) %08X <- %08X\n", S3C44B0_BASE_ADC + (offset << 2), data);
@@ -1824,7 +1792,7 @@ TIMER_CALLBACK_MEMBER( s3c44b0_device::adc_timer_exp )
 
 /* SIO */
 
-READ32_MEMBER( s3c44b0_device::sio_r )
+uint32_t s3c44b0_device::sio_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_sio.regs)[offset];
 	verboselog( *this, 9, "(SIO) %08X -> %08X\n", S3C44B0_BASE_SIO + (offset << 2), data);
@@ -1860,7 +1828,7 @@ void s3c44b0_device::sio_recalc()
 		sio_stop();
 }
 
-WRITE32_MEMBER( s3c44b0_device::sio_w )
+void s3c44b0_device::sio_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_sio.regs)[offset];
 	verboselog( *this, 9, "(SIO) %08X <- %08X\n", S3C44B0_BASE_SIO + (offset << 2), data);
@@ -1893,10 +1861,9 @@ TIMER_CALLBACK_MEMBER( s3c44b0_device::sio_timer_exp )
 
 /* IIS */
 
-inline void s3c44b0_device::iface_i2s_data_w(address_space &space, int ch, uint16_t data)
+inline void s3c44b0_device::iface_i2s_data_w(int ch, uint16_t data)
 {
-	if (!m_data_w_cb.isnull())
-		(m_data_w_cb)(ch, data, 0);
+	m_data_w_cb(ch, data, 0);
 }
 
 void s3c44b0_device::iis_start()
@@ -1920,14 +1887,14 @@ void s3c44b0_device::iis_stop()
 	m_iis.timer->adjust(attotime::never, 0);
 }
 
-READ32_MEMBER( s3c44b0_device::iis_r )
+uint32_t s3c44b0_device::iis_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = ((uint32_t*)&m_iis.regs)[offset];
 	verboselog( *this, 9, "(IIS) %08X -> %08X\n", S3C44B0_BASE_IIS + (offset << 2), data);
 	return data;
 }
 
-WRITE32_MEMBER( s3c44b0_device::iis_w )
+void s3c44b0_device::iis_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	uint32_t old_value = ((uint32_t*)&m_iis.regs)[offset];
 	verboselog( *this, 9, "(IIS) %08X <- %08X\n", S3C44B0_BASE_IIS + (offset << 2), data);
@@ -1962,8 +1929,8 @@ WRITE32_MEMBER( s3c44b0_device::iis_w )
 			if (m_iis.fifo_index == 2)
 			{
 				m_iis.fifo_index = 0;
-				iface_i2s_data_w(space, 0, m_iis.fifo[0]);
-				iface_i2s_data_w(space, 1, m_iis.fifo[1]);
+				iface_i2s_data_w(0, m_iis.fifo[0]);
+				iface_i2s_data_w(1, m_iis.fifo[1]);
 			}
 		}
 		break;
@@ -2067,27 +2034,27 @@ void s3c44b0_device::zdma_w(int ch, uint32_t offset, uint32_t data, uint32_t mem
 	}
 }
 
-READ32_MEMBER( s3c44b0_device::zdma_0_r )
+uint32_t s3c44b0_device::zdma_0_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = zdma_r(0, offset);
 	verboselog( *this, 9, "(ZDMA 0) %08X -> %08X\n", S3C44B0_BASE_ZDMA_0 + (offset << 2), data);
 	return data;
 }
 
-READ32_MEMBER( s3c44b0_device::zdma_1_r )
+uint32_t s3c44b0_device::zdma_1_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = zdma_r(1, offset);
 	verboselog( *this, 9, "(ZDMA 1) %08X -> %08X\n", S3C44B0_BASE_ZDMA_1 + (offset << 2), data);
 	return data;
 }
 
-WRITE32_MEMBER( s3c44b0_device::zdma_0_w )
+void s3c44b0_device::zdma_0_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	verboselog( *this, 9, "(ZDMA 0) %08X <- %08X (%08X)\n", S3C44B0_BASE_ZDMA_0 + (offset << 2), data, mem_mask);
 	zdma_w(0, offset, data, mem_mask);
 }
 
-WRITE32_MEMBER( s3c44b0_device::zdma_1_w )
+void s3c44b0_device::zdma_1_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	verboselog( *this, 9, "(ZDMA 1) %08X <- %08X (%08X)\n", S3C44B0_BASE_ZDMA_1 + (offset << 2), data, mem_mask);
 	zdma_w(1, offset, data, mem_mask);
@@ -2207,27 +2174,27 @@ void s3c44b0_device::bdma_w(int ch, uint32_t offset, uint32_t data, uint32_t mem
 	}
 }
 
-READ32_MEMBER( s3c44b0_device::bdma_0_r )
+uint32_t s3c44b0_device::bdma_0_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = bdma_r(0, offset);
 	verboselog( *this, 9, "(BDMA 0) %08X -> %08X\n", S3C44B0_BASE_BDMA_0 + (offset << 2), data);
 	return data;
 }
 
-READ32_MEMBER( s3c44b0_device::bdma_1_r )
+uint32_t s3c44b0_device::bdma_1_r(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data = bdma_r(1, offset);
 	verboselog( *this, 9, "(BDMA 1) %08X -> %08X\n", S3C44B0_BASE_BDMA_1 + (offset << 2), data);
 	return data;
 }
 
-WRITE32_MEMBER( s3c44b0_device::bdma_0_w )
+void s3c44b0_device::bdma_0_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	verboselog( *this, 9, "(BDMA 0) %08X <- %08X (%08X)\n", S3C44B0_BASE_BDMA_0 + (offset << 2), data, mem_mask);
 	bdma_w(0, offset, data, mem_mask);
 }
 
-WRITE32_MEMBER( s3c44b0_device::bdma_1_w )
+void s3c44b0_device::bdma_1_w(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	verboselog( *this, 9, "(BDMA 1) %08X <- %08X (%08X)\n", S3C44B0_BASE_BDMA_1 + (offset << 2), data, mem_mask);
 	bdma_w(1, offset, data, mem_mask);

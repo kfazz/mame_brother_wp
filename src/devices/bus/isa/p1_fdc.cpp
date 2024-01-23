@@ -10,7 +10,6 @@
 #include "p1_fdc.h"
 
 #include "cpu/i86/i86.h"
-#include "formats/pc_dsk.h"
 
 
 //**************************************************************************
@@ -18,10 +17,6 @@
 //**************************************************************************
 
 DEFINE_DEVICE_TYPE(P1_FDC, p1_fdc_device, "p1_fdc", "Poisk-1 floppy B504")
-
-FLOPPY_FORMATS_MEMBER( p1_fdc_device::floppy_formats )
-	FLOPPY_PC_FORMAT
-FLOPPY_FORMATS_END
 
 static void poisk1_floppies(device_slot_interface &device)
 {
@@ -55,8 +50,8 @@ void p1_fdc_device::device_add_mconfig(machine_config &config)
 	FD1793(config, m_fdc, 16_MHz_XTAL / 16);
 	m_fdc->intrq_wr_callback().set(FUNC(p1_fdc_device::p1_fdc_irq_drq));
 	m_fdc->drq_wr_callback().set(FUNC(p1_fdc_device::p1_fdc_irq_drq));
-	FLOPPY_CONNECTOR(config, "fdc:0", poisk1_floppies, "525qd", p1_fdc_device::floppy_formats);
-	FLOPPY_CONNECTOR(config, "fdc:1", poisk1_floppies, "525qd", p1_fdc_device::floppy_formats);
+	FLOPPY_CONNECTOR(config, "fdc:0", poisk1_floppies, "525qd", floppy_image_device::default_pc_floppy_formats);
+	FLOPPY_CONNECTOR(config, "fdc:1", poisk1_floppies, "525qd", floppy_image_device::default_pc_floppy_formats);
 }
 
 //-------------------------------------------------
@@ -119,13 +114,13 @@ void p1_fdc_device::p1_wd17xx_aux_w(int data)
 	floppy1->mon_w(!(data & 8));
 }
 
-WRITE_LINE_MEMBER(p1_fdc_device::p1_fdc_irq_drq)
+void p1_fdc_device::p1_fdc_irq_drq(int state)
 {
 	if (state)
 		m_isa->set_ready(CLEAR_LINE); // deassert I/O CH RDY
 }
 
-READ8_MEMBER(p1_fdc_device::p1_fdc_r)
+uint8_t p1_fdc_device::p1_fdc_r(offs_t offset)
 {
 	uint8_t data = 0xff;
 
@@ -142,7 +137,7 @@ READ8_MEMBER(p1_fdc_device::p1_fdc_r)
 	return data;
 }
 
-WRITE8_MEMBER(p1_fdc_device::p1_fdc_w)
+void p1_fdc_device::p1_fdc_w(offs_t offset, uint8_t data)
 {
 	switch (offset)
 	{
@@ -172,9 +167,9 @@ p1_fdc_device::p1_fdc_device(const machine_config &mconfig, const char *tag, dev
 void p1_fdc_device::device_start()
 {
 	set_isa_device();
-	m_isa->install_rom(this, 0xe0000, 0xe07ff, "XXX", "p1_fdc");
+	m_isa->install_rom(this, 0xe0000, 0xe07ff, "p1_fdc");
 	m_isa->install_device(0x00c0, 0x00c3, read8sm_delegate(*m_fdc, FUNC(fd1793_device::read)), write8sm_delegate(*m_fdc, FUNC(fd1793_device::write)));
-	m_isa->install_device(0x00c4, 0x00c7, read8_delegate(*this, FUNC(p1_fdc_device::p1_fdc_r)), write8_delegate(*this, FUNC(p1_fdc_device::p1_fdc_w)));
+	m_isa->install_device(0x00c4, 0x00c7, read8sm_delegate(*this, FUNC(p1_fdc_device::p1_fdc_r)), write8sm_delegate(*this, FUNC(p1_fdc_device::p1_fdc_w)));
 }
 
 

@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <!--
-license:CC0
+license:CC0-1.0
 -->
 <mamelayout version="2">
 
-<!-- NOTE: no chesspieces simulation here, ACI GGM is a multiple boardgame console, not just chess -->
+<!-- NOTE: no chesspieces simulation here -->
 
 <!-- define elements -->
 
@@ -14,10 +14,16 @@ license:CC0
 	<element name="brown"><rect><color red="0.25" green="0.1" blue="0.05" /></rect></element>
 	<element name="yellow"><rect><color red="0.8" green="0.7" blue="0.4" /></rect></element>
 
+	<element name="brown_nb" defstate="0xf"><rect state="0"><color red="0.25" green="0.1" blue="0.05" /></rect></element>
 	<element name="red_s3" defstate="0"><rect state="3"><color red="0.8" green="0.1" blue="0.15" /></rect></element>
 	<element name="green_s3" defstate="0"><rect state="3"><color red="0.3" green="0.8" blue="0.2" /></rect></element>
 	<element name="brown_s3" defstate="0"><rect state="3"><color red="0.25" green="0.1" blue="0.05" /></rect></element>
-	<element name="brown_nb" defstate="0xf"><rect state="0"><color red="0.25" green="0.1" blue="0.05" /></rect></element>
+	<element name="brown_s4" defstate="0"><rect state="4"><color red="0.25" green="0.1" blue="0.05" /></rect></element>
+	<element name="brown_s5" defstate="0"><rect state="5"><color red="0.25" green="0.1" blue="0.05" /></rect></element>
+	<element name="yellow_s5" defstate="0"><rect state="5"><color red="0.8" green="0.7" blue="0.4" /></rect></element>
+
+	<element name="digitr" defstate="0"><led14seg><color red="0.75" green="0.1" blue="0.15" /></led14seg></element>
+	<element name="digitb" defstate="0"><led14seg><color red="0" green="0" blue="0.0" /></led14seg></element>
 
 	<element name="digit" defstate="0">
 		<led14seg><color red="0.2" green="1.0" blue="0.85" /></led14seg>
@@ -131,19 +137,51 @@ license:CC0
 	<element name="text_steinitz19" defstate="0"><text state="3" string="B/W"><color red="0.55" green="0.6" blue="0.35" /></text></element>
 	<element name="text_steinitz20" defstate="0"><text state="3" string="ENTER"><color red="0.55" green="0.6" blue="0.35" /></text></element>
 
-	<element name="digitp" defstate="9224"><led14seg><color red="0.75" green="0.1" blue="0.15" /></led14seg></element>
-	<element name="digitn" defstate="3244"><led14seg><color red="0.75" green="0.1" blue="0.15" /></led14seg></element>
-	<element name="digitb" defstate="14398"><led14seg><color red="0.75" green="0.1" blue="0.15" /></led14seg></element>
-	<element name="digitr" defstate="510"><led14seg><color red="0.75" green="0.1" blue="0.15" /></led14seg></element>
-	<element name="digitq" defstate="7132"><led14seg><color red="0.75" green="0.1" blue="0.15" /></led14seg></element>
-	<element name="digitk" defstate="7166"><led14seg><color red="0.75" green="0.1" blue="0.15" /></led14seg></element>
+	<element name="text_lasvegas01" defstate="0"><text state="4" string="TOTAL"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas02" defstate="0"><text state="4" string="7"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas03" defstate="0"><text state="4" string="8"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas04" defstate="0"><text state="4" string="9"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas05" defstate="0"><text state="4" string="CE"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas06a" defstate="0"><text state="4" string="SHUFFLE"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas06b" defstate="0"><text state="4" string="POINT"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas07" defstate="0"><text state="4" string="4"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas08" defstate="0"><text state="4" string="5"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas09" defstate="0"><text state="4" string="6"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas10a" defstate="0"><text state="4" string="TAKE"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas10b" defstate="0"><text state="4" string=" INSURANCE "><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas11" defstate="0"><text state="4" string="AUDIO"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas12" defstate="0"><text state="4" string="1"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas13" defstate="0"><text state="4" string="2"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas14" defstate="0"><text state="4" string="3"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas15a" defstate="0"><text state="4" string="STAND /" align="1"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas15b" defstate="0"><text state="4" string="DECLINE" align="1"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas16" defstate="0"><text state="4" string="SPLIT"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas17" defstate="0"><text state="4" string="0"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas18" defstate="0"><text state="4" string="DOUBLE"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas19" defstate="0"><text state="4" string="HIT"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_lasvegas20" defstate="0"><text state="4" string="ENTER"><color red="0.55" green="0.6" blue="0.35" /></text></element>
 
-	<element name="digitpi" defstate="7159"><led14seg><color red="0" green="0" blue="0.0" /></led14seg></element>
-	<element name="digitni" defstate="13139"><led14seg><color red="0" green="0" blue="0.0" /></led14seg></element>
-	<element name="digitbi" defstate="1985"><led14seg><color red="0" green="0" blue="0.0" /></led14seg></element>
-	<element name="digitri" defstate="15873"><led14seg><color red="0" green="0" blue="0.0" /></led14seg></element>
-	<element name="digitqi" defstate="9251"><led14seg><color red="0" green="0" blue="0.0" /></led14seg></element>
-	<element name="digitki" defstate="9217"><led14seg><color red="0" green="0" blue="0.0" /></led14seg></element>
+	<element name="text_odin01" defstate="0"><text state="5" string="RESTORE"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin02" defstate="0"><text state="5" string="G.7"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin03" defstate="0"><text state="5" string="H.8"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin04" defstate="0"><text state="5" string="AUDIO"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin05" defstate="0"><text state="5" string="CE"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin06" defstate="0"><text state="5" string="HINT"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin07" defstate="0"><text state="5" string="D.4"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin08" defstate="0"><text state="5" string="E.5"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin09" defstate="0"><text state="5" string="F.6"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin10" defstate="0"><text state="5" string="TIME"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin11" defstate="0"><text state="5" string="HALT"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin12" defstate="0"><text state="5" string="A.1"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin13a" defstate="0"><text state="5" string="B.2"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin13b" defstate="0"><text state="5" string="ERASE"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin14" defstate="0"><text state="5" string="C.3"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin15" defstate="0"><text state="5" string="RANK"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin16" defstate="0"><text state="5" string="LEVEL"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin17" defstate="0"><text state="5" string="FLIPS"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin18" defstate="0"><text state="5" string="PLAY"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin19" defstate="0"><text state="5" string="B/W"><color red="0.55" green="0.6" blue="0.35" /></text></element>
+	<element name="text_odin20" defstate="0"><text state="5" string="ENTER"><color red="0.55" green="0.6" blue="0.35" /></text></element>
 
 
 <!-- groups -->
@@ -159,11 +197,11 @@ license:CC0
 			<param name="ap2_x" start="10.5" increment="11" />
 			<param name="dot_x" start="3.5" increment="11" />
 
-			<bezel name="digit~i~" element="digit"><bounds x="~digit_x~" y="0" width="10" height="15" /></bezel>
-			<bezel name="~i~.15" element="seg_disk"><bounds x="~dp_x~" y="13.5" width="1.5" height="1.5" /></bezel>
-			<bezel name="~i~.14" element="seg_disk"><bounds x="~ap1_x~" y="0" width="1" height="1.6" /></bezel>
-			<bezel name="~i~.14" element="seg_rect"><bounds x="~ap2_x~" y="0" width="0.7" height="3.5" /></bezel>
-			<bezel element="disk_white"><bounds x="~dot_x~" y="17.1" width="1.9" height="1.9" /></bezel>
+			<element name="digit~i~" ref="digit"><bounds x="~digit_x~" y="0" width="10" height="15" /></element>
+			<element name="~i~.15" ref="seg_disk"><bounds x="~dp_x~" y="13.5" width="1.5" height="1.5" /></element>
+			<element name="~i~.14" ref="seg_disk"><bounds x="~ap1_x~" y="0" width="1" height="1.6" /></element>
+			<element name="~i~.14" ref="seg_rect"><bounds x="~ap2_x~" y="0" width="0.7" height="3.5" /></element>
+			<element ref="disk_white"><bounds x="~dot_x~" y="17.1" width="1.9" height="1.9" /></element>
 		</repeat>
 	</group>
 
@@ -221,19 +259,19 @@ license:CC0
 		<element ref="blackb"><bounds x="9.25" y="8.35" width="1" height="1.3" /></element>
 		<element ref="blackb"><bounds x="13.25" y="8.35" width="1" height="1.3" /></element>
 
-		<element name="digitr" ref="digitr"><bounds x="5.25" y="4.85" width="1" height="1.3" /></element>
-		<element name="digitq" ref="digitq"><bounds x="9.25" y="4.85" width="1" height="1.3" /></element>
-		<element name="digitk" ref="digitk"><bounds x="13.25" y="4.85" width="1" height="1.3" /></element>
-		<element name="digitp" ref="digitp"><bounds x="5.25" y="8.35" width="1" height="1.3" /></element>
-		<element name="digitn" ref="digitn"><bounds x="9.25" y="8.35" width="1" height="1.3" /></element>
-		<element name="digitb" ref="digitb"><bounds x="13.25" y="8.35" width="1" height="1.3" /></element>
+		<element name="fdigit1.0" ref="digitr"><bounds x="5.25" y="4.85" width="1" height="1.3" /></element>
+		<element name="fdigit1.1" ref="digitr"><bounds x="9.25" y="4.85" width="1" height="1.3" /></element>
+		<element name="fdigit1.2" ref="digitr"><bounds x="13.25" y="4.85" width="1" height="1.3" /></element>
+		<element name="fdigit1.3" ref="digitr"><bounds x="5.25" y="8.35" width="1" height="1.3" /></element>
+		<element name="fdigit1.4" ref="digitr"><bounds x="9.25" y="8.35" width="1" height="1.3" /></element>
+		<element name="fdigit1.5" ref="digitr"><bounds x="13.25" y="8.35" width="1" height="1.3" /></element>
 
-		<element name="digitri" ref="digitri"><bounds x="5.25" y="4.85" width="1" height="1.3" /></element>
-		<element name="digitqi" ref="digitqi"><bounds x="9.25" y="4.85" width="1" height="1.3" /></element>
-		<element name="digitki" ref="digitki"><bounds x="13.25" y="4.85" width="1" height="1.3" /></element>
-		<element name="digitpi" ref="digitpi"><bounds x="5.25" y="8.35" width="1" height="1.3" /></element>
-		<element name="digitni" ref="digitni"><bounds x="9.25" y="8.35" width="1" height="1.3" /></element>
-		<element name="digitbi" ref="digitbi"><bounds x="13.25" y="8.35" width="1" height="1.3" /></element>
+		<element name="fdigit0.0" ref="digitb"><bounds x="5.25" y="4.85" width="1" height="1.3" /></element>
+		<element name="fdigit0.1" ref="digitb"><bounds x="9.25" y="4.85" width="1" height="1.3" /></element>
+		<element name="fdigit0.2" ref="digitb"><bounds x="13.25" y="4.85" width="1" height="1.3" /></element>
+		<element name="fdigit0.3" ref="digitb"><bounds x="5.25" y="8.35" width="1" height="1.3" /></element>
+		<element name="fdigit0.4" ref="digitb"><bounds x="9.25" y="8.35" width="1" height="1.3" /></element>
+		<element name="fdigit0.5" ref="digitb"><bounds x="13.25" y="8.35" width="1" height="1.3" /></element>
 
 		<element ref="brown" blend="add"><bounds x="5.25" y="4.85" width="1" height="1.3" /></element>
 		<element ref="brown" blend="add"><bounds x="9.25" y="4.85" width="1" height="1.3" /></element>
@@ -242,104 +280,171 @@ license:CC0
 		<element ref="brown" blend="add"><bounds x="9.25" y="8.35" width="1" height="1.3" /></element>
 		<element ref="brown" blend="add"><bounds x="13.25" y="8.35" width="1" height="1.3" /></element>
 
-		<element ref="brown_nb" inputtag="IN.6" inputmask="0x0f" inputraw="1"><bounds x="5.25" y="4.85" width="1" height="1.3" /></element>
-		<element ref="brown_nb" inputtag="IN.6" inputmask="0x0f" inputraw="1"><bounds x="9.25" y="4.85" width="1" height="1.3" /></element>
-		<element ref="brown_nb" inputtag="IN.6" inputmask="0x0f" inputraw="1"><bounds x="13.25" y="4.85" width="1" height="1.3" /></element>
-		<element ref="brown_nb" inputtag="IN.6" inputmask="0x0f" inputraw="1"><bounds x="5.25" y="8.35" width="1" height="1.3" /></element>
-		<element ref="brown_nb" inputtag="IN.6" inputmask="0x0f" inputraw="1"><bounds x="9.25" y="8.35" width="1" height="1.3" /></element>
-		<element ref="brown_nb" inputtag="IN.6" inputmask="0x0f" inputraw="1"><bounds x="13.25" y="8.35" width="1" height="1.3" /></element>
+		<element ref="brown_nb" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="5.25" y="4.85" width="1" height="1.3" /></element>
+		<element ref="brown_nb" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="9.25" y="4.85" width="1" height="1.3" /></element>
+		<element ref="brown_nb" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="13.25" y="4.85" width="1" height="1.3" /></element>
+		<element ref="brown_nb" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="5.25" y="8.35" width="1" height="1.3" /></element>
+		<element ref="brown_nb" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="9.25" y="8.35" width="1" height="1.3" /></element>
+		<element ref="brown_nb" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="13.25" y="8.35" width="1" height="1.3" /></element>
 
 		<!-- boris overlay -->
-		<element ref="text_boris01" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.1" y="1.0" width="3.3" height="0.8" /></element>
-		<element ref="text_boris02" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="4.1" y="0.1" width="3.3" height="1.3" /></element>
-		<element ref="text_boris03" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="8.1" y="0.1" width="3.3" height="1.3" /></element>
-		<element ref="text_boris04" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="12.1" y="0.5" width="3.3" height="1.7" /></element>
-		<element ref="text_boris05" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="16.1" y="0.7" width="3.3" height="1.3" /></element>
+		<element ref="text_boris01" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="1.0" width="3.3" height="0.8" /></element>
+		<element ref="text_boris02" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="0.1" width="3.3" height="1.3" /></element>
+		<element ref="text_boris03" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="0.1" width="3.3" height="1.3" /></element>
+		<element ref="text_boris04" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="0.5" width="3.3" height="1.7" /></element>
+		<element ref="text_boris05" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="0.7" width="3.3" height="1.3" /></element>
 
-		<element ref="text_boris06a" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.9" y="4.25" width="2.8" height="0.8" /></element>
-		<element ref="text_boris06b" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.9" y="4.95" width="2.8" height="0.8" /></element>
-		<element ref="text_boris07" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="4.1" y="3.6" width="3.3" height="1.3" /></element>
-		<element ref="text_boris08" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="8.1" y="3.6" width="3.3" height="1.3" /></element>
-		<element ref="text_boris09" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="12.1" y="3.6" width="3.3" height="1.3" /></element>
-		<element ref="text_boris10" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="16.1" y="4.5" width="3.3" height="0.8" /></element>
+		<element ref="text_boris06a" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.9" y="4.25" width="2.8" height="0.8" /></element>
+		<element ref="text_boris06b" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.9" y="4.95" width="2.8" height="0.8" /></element>
+		<element ref="text_boris07" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="3.6" width="3.3" height="1.3" /></element>
+		<element ref="text_boris08" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="3.6" width="3.3" height="1.3" /></element>
+		<element ref="text_boris09" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="3.6" width="3.3" height="1.3" /></element>
+		<element ref="text_boris10" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="4.5" width="3.3" height="0.8" /></element>
 
-		<element ref="text_boris11" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.1" y="8.0" width="3.3" height="0.8" /></element>
-		<element ref="text_boris12" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="4.1" y="7.1" width="3.3" height="1.3" /></element>
-		<element ref="text_boris13" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="8.1" y="7.1" width="3.3" height="1.3" /></element>
-		<element ref="text_boris14" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="12.1" y="7.1" width="3.3" height="1.3" /></element>
-		<element ref="text_boris15" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="16.1" y="8.0" width="3.3" height="0.8" /></element>
+		<element ref="text_boris11" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="8.0" width="3.3" height="0.8" /></element>
+		<element ref="text_boris12" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="7.1" width="3.3" height="1.3" /></element>
+		<element ref="text_boris13" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="7.1" width="3.3" height="1.3" /></element>
+		<element ref="text_boris14" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="7.1" width="3.3" height="1.3" /></element>
+		<element ref="text_boris15" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="8.0" width="3.3" height="0.8" /></element>
 
-		<element ref="text_boris16" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.1" y="11.5" width="3.3" height="0.8" /></element>
-		<element ref="text_boris17" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="4.1" y="11.0" width="3.3" height="1.7" /></element>
-		<element ref="text_boris18" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="8.1" y="11.0" width="3.3" height="1.7" /></element>
-		<element ref="text_boris19" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="12.1" y="11.2" width="3.3" height="1.3" /></element>
-		<element ref="text_boris20" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="16.1" y="11.5" width="3.3" height="0.8" /></element>
+		<element ref="text_boris16" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="11.5" width="3.3" height="0.8" /></element>
+		<element ref="text_boris17" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="11.0" width="3.3" height="1.7" /></element>
+		<element ref="text_boris18" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="11.0" width="3.3" height="1.7" /></element>
+		<element ref="text_boris19" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="11.2" width="3.3" height="1.3" /></element>
+		<element ref="text_boris20" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="11.5" width="3.3" height="0.8" /></element>
 
 		<!-- morphy overlay -->
-		<element ref="text_morphy01" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.1" y="1.0" width="3.3" height="0.8" /></element>
-		<element ref="text_morphy02" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="4.1" y="0.1" width="3.3" height="1.3" /></element>
-		<element ref="text_morphy03" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="8.1" y="0.1" width="3.3" height="1.3" /></element>
-		<element ref="text_morphy04" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="12.1" y="1.0" width="3.3" height="0.8" /></element>
-		<element ref="text_morphy05" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="16.1" y="0.7" width="3.3" height="1.3" /></element>
+		<element ref="text_morphy01" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="1.0" width="3.3" height="0.8" /></element>
+		<element ref="text_morphy02" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="0.1" width="3.3" height="1.3" /></element>
+		<element ref="text_morphy03" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="0.1" width="3.3" height="1.3" /></element>
+		<element ref="text_morphy04" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="1.0" width="3.3" height="0.8" /></element>
+		<element ref="text_morphy05" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="0.7" width="3.3" height="1.3" /></element>
 
-		<element ref="text_morphy06a" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.9" y="4.25" width="2.8" height="0.8" /></element>
-		<element ref="text_morphy06b" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.9" y="4.95" width="2.8" height="0.8" /></element>
-		<element ref="text_morphy07" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="4.1" y="3.6" width="3.3" height="1.3" /></element>
-		<element ref="text_morphy08" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="8.1" y="3.6" width="3.3" height="1.3" /></element>
-		<element ref="text_morphy09" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="12.1" y="3.6" width="3.3" height="1.3" /></element>
-		<element ref="text_morphy10" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="16.1" y="4.5" width="3.3" height="0.8" /></element>
+		<element ref="text_morphy06a" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.9" y="4.25" width="2.8" height="0.8" /></element>
+		<element ref="text_morphy06b" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.9" y="4.95" width="2.8" height="0.8" /></element>
+		<element ref="text_morphy07" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="3.6" width="3.3" height="1.3" /></element>
+		<element ref="text_morphy08" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="3.6" width="3.3" height="1.3" /></element>
+		<element ref="text_morphy09" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="3.6" width="3.3" height="1.3" /></element>
+		<element ref="text_morphy10" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="4.5" width="3.3" height="0.8" /></element>
 
-		<element ref="text_morphy11" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.1" y="8.0" width="3.3" height="0.8" /></element>
-		<element ref="text_morphy12" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="4.1" y="7.1" width="3.3" height="1.3" /></element>
-		<element ref="text_morphy13" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="8.1" y="7.1" width="3.3" height="1.3" /></element>
-		<element ref="text_morphy14" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="12.1" y="7.1" width="3.3" height="1.3" /></element>
-		<element ref="text_morphy15" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="16.1" y="8.0" width="3.3" height="0.8" /></element>
+		<element ref="text_morphy11" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="8.0" width="3.3" height="0.8" /></element>
+		<element ref="text_morphy12" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="7.1" width="3.3" height="1.3" /></element>
+		<element ref="text_morphy13" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="7.1" width="3.3" height="1.3" /></element>
+		<element ref="text_morphy14" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="7.1" width="3.3" height="1.3" /></element>
+		<element ref="text_morphy15" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="8.0" width="3.3" height="0.8" /></element>
 
-		<element ref="text_morphy16" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.1" y="11.5" width="3.3" height="0.8" /></element>
-		<element ref="text_morphy17" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="4.1" y="11.0" width="3.3" height="1.7" /></element>
-		<element ref="text_morphy18" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="8.1" y="11.0" width="3.3" height="1.7" /></element>
-		<element ref="text_morphy19" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="12.1" y="11.2" width="3.3" height="1.3" /></element>
-		<element ref="text_morphy20" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="16.1" y="11.5" width="3.3" height="0.8" /></element>
+		<element ref="text_morphy16" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="11.5" width="3.3" height="0.8" /></element>
+		<element ref="text_morphy17" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="11.0" width="3.3" height="1.7" /></element>
+		<element ref="text_morphy18" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="11.0" width="3.3" height="1.7" /></element>
+		<element ref="text_morphy19" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="11.2" width="3.3" height="1.3" /></element>
+		<element ref="text_morphy20" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="11.5" width="3.3" height="0.8" /></element>
 
 		<!-- steinitz overlay -->
-		<element ref="red_s3" inputtag="IN.6" inputmask="0x0f" inputraw="1"><bounds x="16.15" y="7.15" width="3.2" height="2.7" /></element>
-		<element ref="brown_s3" inputtag="IN.6" inputmask="0x0f" inputraw="1"><bounds x="16.3" y="7.3" width="2.9" height="2.4" /></element>
+		<element ref="red_s3" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="16.15" y="7.15" width="3.2" height="2.7" /></element>
+		<element ref="brown_s3" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="16.3" y="7.3" width="2.9" height="2.4" /></element>
 
-		<element ref="green_s3" inputtag="IN.6" inputmask="0x0f" inputraw="1"><bounds x="0.15" y="10.65" width="3.2" height="2.7" /></element>
-		<element ref="brown_s3" inputtag="IN.6" inputmask="0x0f" inputraw="1"><bounds x="0.3" y="10.8" width="2.9" height="2.4" /></element>
+		<element ref="green_s3" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="0.15" y="10.65" width="3.2" height="2.7" /></element>
+		<element ref="brown_s3" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="0.3" y="10.8" width="2.9" height="2.4" /></element>
 
-		<element ref="text_steinitz01a" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.1" y="0.5" width="3.3" height="0.8" /></element>
-		<element ref="text_steinitz01b" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.1" y="1.5" width="3.3" height="0.8" /></element>
-		<element ref="text_steinitz02" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="4.1" y="0.1" width="3.3" height="1.3" /></element>
-		<element ref="text_steinitz03" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="8.1" y="0.1" width="3.3" height="1.3" /></element>
-		<element ref="text_steinitz04a" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="12.1" y="0.5" width="3.3" height="0.8" /></element>
-		<element ref="text_steinitz04b" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="12.1" y="1.5" width="3.3" height="1.1" /></element>
-		<element ref="text_steinitz05" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="16.1" y="0.7" width="3.3" height="1.3" /></element>
+		<element ref="text_steinitz01a" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="0.5" width="3.3" height="0.8" /></element>
+		<element ref="text_steinitz01b" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="1.5" width="3.3" height="0.8" /></element>
+		<element ref="text_steinitz02" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="0.1" width="3.3" height="1.3" /></element>
+		<element ref="text_steinitz03" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="0.1" width="3.3" height="1.3" /></element>
+		<element ref="text_steinitz04a" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="0.5" width="3.3" height="0.8" /></element>
+		<element ref="text_steinitz04b" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="1.5" width="3.3" height="1.1" /></element>
+		<element ref="text_steinitz05" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="0.7" width="3.3" height="1.3" /></element>
 
-		<element ref="text_steinitz06a" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.9" y="3.75" width="2.8" height="0.8" /></element>
-		<element ref="text_steinitz06b" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.9" y="4.45" width="2.8" height="0.8" /></element>
-		<element ref="text_steinitz06c" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.1" y="5.4" width="3.3" height="0.8" /></element>
-		<element ref="text_steinitz07" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="4.1" y="3.6" width="3.3" height="1.3" /></element>
-		<element ref="text_steinitz08" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="8.1" y="3.6" width="3.3" height="1.3" /></element>
-		<element ref="text_steinitz09" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="12.1" y="3.6" width="3.3" height="1.3" /></element>
-		<element ref="text_steinitz10a" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="16.1" y="4.0" width="3.3" height="0.8" /></element>
-		<element ref="text_steinitz10b" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="16.1" y="5.0" width="3.3" height="0.8" /></element>
+		<element ref="text_steinitz06a" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.9" y="3.75" width="2.8" height="0.8" /></element>
+		<element ref="text_steinitz06b" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.9" y="4.45" width="2.8" height="0.8" /></element>
+		<element ref="text_steinitz06c" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="5.4" width="3.3" height="0.8" /></element>
+		<element ref="text_steinitz07" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="3.6" width="3.3" height="1.3" /></element>
+		<element ref="text_steinitz08" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="3.6" width="3.3" height="1.3" /></element>
+		<element ref="text_steinitz09" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="3.6" width="3.3" height="1.3" /></element>
+		<element ref="text_steinitz10a" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="4.0" width="3.3" height="0.8" /></element>
+		<element ref="text_steinitz10b" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="5.0" width="3.3" height="0.8" /></element>
 
-		<element ref="text_steinitz11a" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.1" y="7.5" width="3.3" height="0.8" /></element>
-		<element ref="text_steinitz11b" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.1" y="8.5" width="3.3" height="0.8" /></element>
-		<element ref="text_steinitz12" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="4.1" y="7.1" width="3.3" height="1.3" /></element>
-		<element ref="text_steinitz13" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="8.1" y="7.1" width="3.3" height="1.3" /></element>
-		<element ref="text_steinitz14" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="12.1" y="7.1" width="3.3" height="1.3" /></element>
-		<element ref="text_steinitz15" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="16.1" y="8.0" width="3.3" height="0.8" /></element>
+		<element ref="text_steinitz11a" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="7.5" width="3.3" height="0.8" /></element>
+		<element ref="text_steinitz11b" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="8.5" width="3.3" height="0.8" /></element>
+		<element ref="text_steinitz12" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="7.1" width="3.3" height="1.3" /></element>
+		<element ref="text_steinitz13" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="7.1" width="3.3" height="1.3" /></element>
+		<element ref="text_steinitz14" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="7.1" width="3.3" height="1.3" /></element>
+		<element ref="text_steinitz15" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="8.0" width="3.3" height="0.8" /></element>
 
-		<element ref="text_steinitz16" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="0.1" y="11.0" width="3.3" height="0.8" /></element>
-		<element ref="text_steinitz17a" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="4.1" y="11.0" width="3.3" height="0.8" /></element>
-		<element ref="text_steinitz17b" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="4.1" y="12.0" width="3.3" height="1.1" /></element>
-		<element ref="text_steinitz18a" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="8.1" y="10.25" width="3.3" height="1.5" /></element>
-		<element ref="text_steinitz18b" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="8.1" y="10.8" width="3.3" height="1.5" /></element>
-		<element ref="text_steinitz18c" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="8.1" y="12.2" width="3.3" height="0.8" /></element>
-		<element ref="text_steinitz19" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="12.1" y="11.2" width="3.3" height="1.3" /></element>
-		<element ref="text_steinitz20" inputtag="IN.6" inputmask="0x0f" inputraw="1" blend="add"><bounds x="16.1" y="11.5" width="3.3" height="0.8" /></element>
+		<element ref="text_steinitz16" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="11.0" width="3.3" height="0.8" /></element>
+		<element ref="text_steinitz17a" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="11.0" width="3.3" height="0.8" /></element>
+		<element ref="text_steinitz17b" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="12.0" width="3.3" height="1.1" /></element>
+		<element ref="text_steinitz18a" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="10.25" width="3.3" height="1.5" /></element>
+		<element ref="text_steinitz18b" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="10.8" width="3.3" height="1.5" /></element>
+		<element ref="text_steinitz18c" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="12.2" width="3.3" height="0.8" /></element>
+		<element ref="text_steinitz19" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="11.2" width="3.3" height="1.3" /></element>
+		<element ref="text_steinitz20" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="11.5" width="3.3" height="0.8" /></element>
+
+		<!-- las vegas overlay -->
+		<element ref="brown_s4" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="5.25" y="4.85" width="1" height="1.3" /></element>
+		<element ref="brown_s4" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="9.25" y="4.85" width="1" height="1.3" /></element>
+		<element ref="brown_s4" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="13.25" y="4.85" width="1" height="1.3" /></element>
+		<element ref="brown_s4" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="5.25" y="8.35" width="1" height="1.3" /></element>
+		<element ref="brown_s4" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="9.25" y="8.35" width="1" height="1.3" /></element>
+		<element ref="brown_s4" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="13.25" y="8.35" width="1" height="1.3" /></element>
+
+		<element ref="text_lasvegas01" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="1.0" width="3.3" height="0.8" /></element>
+		<element ref="text_lasvegas02" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="0.5" width="3.3" height="1.7" /></element>
+		<element ref="text_lasvegas03" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="0.5" width="3.3" height="1.7" /></element>
+		<element ref="text_lasvegas04" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="0.5" width="3.3" height="1.7" /></element>
+		<element ref="text_lasvegas05" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="0.7" width="3.3" height="1.3" /></element>
+
+		<element ref="text_lasvegas06a" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="4.25" width="3.3" height="0.8" /></element>
+		<element ref="text_lasvegas06b" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="4.95" width="3.3" height="0.8" /></element>
+		<element ref="text_lasvegas07" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="4.0" width="3.3" height="1.7" /></element>
+		<element ref="text_lasvegas08" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="4.0" width="3.3" height="1.7" /></element>
+		<element ref="text_lasvegas09" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="4.0" width="3.3" height="1.7" /></element>
+		<element ref="text_lasvegas10a" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="4.25" width="3.3" height="0.8" /></element>
+		<element ref="text_lasvegas10b" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="4.95" width="3.3" height="0.8" /></element>
+
+		<element ref="text_lasvegas11" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="8.0" width="3.3" height="0.8" /></element>
+		<element ref="text_lasvegas12" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="7.5" width="3.3" height="1.7" /></element>
+		<element ref="text_lasvegas13" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="7.5" width="3.3" height="1.7" /></element>
+		<element ref="text_lasvegas14" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="7.5" width="3.3" height="1.7" /></element>
+		<element ref="text_lasvegas15a" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.45" y="7.75" width="3.0" height="0.8" /></element>
+		<element ref="text_lasvegas15b" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.45" y="8.45" width="3.0" height="0.8" /></element>
+
+		<element ref="text_lasvegas16" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="11.5" width="3.3" height="0.8" /></element>
+		<element ref="text_lasvegas17" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="11.0" width="3.3" height="1.7" /></element>
+		<element ref="text_lasvegas18" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="11.5" width="3.3" height="0.8" /></element>
+		<element ref="text_lasvegas19" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="11.2" width="3.3" height="1.3" /></element>
+		<element ref="text_lasvegas20" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="11.5" width="3.3" height="0.8" /></element>
+
+		<!-- odin overlay -->
+		<element ref="brown_s5" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="5.25" y="4.85" width="1" height="1.3" /></element>
+		<element ref="brown_s5" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="9.25" y="4.85" width="1" height="1.3" /></element>
+		<element ref="brown_s5" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="13.25" y="4.85" width="1" height="1.3" /></element>
+		<element ref="brown_s5" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="9.25" y="8.35" width="1" height="1.3" /></element>
+		<element ref="yellow_s5" inputtag="IN.6" inputmask="0x0f" inputraw="yes"><bounds x="9" y="12.5" width="1.5" height="0.15" /></element>
+
+		<element ref="text_odin01" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="1.0" width="3.3" height="0.8" /></element>
+		<element ref="text_odin02" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="0.7" width="3.3" height="1.3" /></element>
+		<element ref="text_odin03" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="0.7" width="3.3" height="1.3" /></element>
+		<element ref="text_odin04" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="1.0" width="3.3" height="0.8" /></element>
+		<element ref="text_odin05" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="0.7" width="3.3" height="1.3" /></element>
+
+		<element ref="text_odin06" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="4.5" width="3.3" height="0.8" /></element>
+		<element ref="text_odin07" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="4.2" width="3.3" height="1.3" /></element>
+		<element ref="text_odin08" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="4.2" width="3.3" height="1.3" /></element>
+		<element ref="text_odin09" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="4.2" width="3.3" height="1.3" /></element>
+		<element ref="text_odin10" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="4.5" width="3.3" height="0.8" /></element>
+
+		<element ref="text_odin11" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="8.0" width="3.3" height="0.8" /></element>
+		<element ref="text_odin12" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="7.1" width="3.3" height="1.3" /></element>
+		<element ref="text_odin13a" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="7.1" width="3.3" height="1.3" /></element>
+		<element ref="text_odin13b" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="8.6" width="3.3" height="0.8" /></element>
+		<element ref="text_odin14" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="7.1" width="3.3" height="1.3" /></element>
+		<element ref="text_odin15" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="8.0" width="3.3" height="0.8" /></element>
+
+		<element ref="text_odin16" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="0.1" y="11.5" width="3.3" height="0.8" /></element>
+		<element ref="text_odin17" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="4.1" y="11.5" width="3.3" height="0.8" /></element>
+		<element ref="text_odin18" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="8.1" y="11.0" width="3.3" height="0.8" /></element>
+		<element ref="text_odin19" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="12.1" y="11.2" width="3.3" height="1.3" /></element>
+		<element ref="text_odin20" inputtag="IN.6" inputmask="0x0f" inputraw="yes" blend="add"><bounds x="16.1" y="11.5" width="3.3" height="0.8" /></element>
 
 		<!-- input highlights -->
 		<element ref="hl" inputtag="IN.3" inputmask="0x08"><bounds x="0"  y="0" width="3.5" height="3" /><color alpha="0.22" /></element>
@@ -370,10 +475,10 @@ license:CC0
 	<group name="mem_switch">
 		<bounds x="0" y="0" width="6" height="6.4" />
 
-		<bezel element="black"><bounds x="2.5" y="2" width="1" height="2.5" /></bezel>
-		<bezel element="text_r1"><bounds x="0" y="0" width="6" height="1.8" /></bezel>
-		<bezel element="text_r2"><bounds x="0" y="4.6" width="6" height="1.8" /></bezel>
-		<bezel element="reset" inputtag="IN.4" inputmask="0x02"><bounds x="2.345" y="1.9" width="1.31" height="2.7" /></bezel>
+		<element ref="black"><bounds x="2.5" y="2" width="1" height="2.5" /></element>
+		<element ref="text_r1"><bounds x="0" y="0" width="6" height="1.8" /></element>
+		<element ref="text_r2"><bounds x="0" y="4.6" width="6" height="1.8" /></element>
+		<element ref="reset" inputtag="IN.4" inputmask="0x02"><bounds x="2.345" y="1.9" width="1.31" height="2.7" /></element>
 	</group>
 
 
@@ -382,7 +487,7 @@ license:CC0
 	<view name="Internal Layout">
 		<bounds left="-5" right="104" top="-2" bottom="93" />
 		<group ref="display"><bounds x="0" y="0" width="88" height="19" /></group>
-		<bezel element="black"><bounds x="-6" y="23" width="111" height="1.5" /></bezel>
+		<element ref="black"><bounds x="-6" y="23" width="111" height="1.5" /></element>
 
 		<group ref="buttons"><bounds x="0" y="30" width="88" height="60.92" /></group>
 		<group ref="mem_switch"><bounds x="87" y="28" width="18" height="19.2" /></group>

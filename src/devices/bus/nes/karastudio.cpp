@@ -32,7 +32,7 @@
 #include "karastudio.h"
 
 #ifdef NES_PCB_DEBUG
-#define VERBOSE 1
+#define VERBOSE (LOG_GENERAL)
 #else
 #define VERBOSE 0
 #endif
@@ -72,7 +72,7 @@ DEFINE_DEVICE_TYPE(NES_KSEXPANSION_SLOT, nes_kstudio_slot_device, "nes_ks_slot",
 
 nes_kstudio_slot_device::nes_kstudio_slot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: device_t(mconfig, NES_KSEXPANSION_SLOT, tag, owner, clock)
-	, device_image_interface(mconfig, *this)
+	, device_cartrom_image_interface(mconfig, *this)
 	, device_single_card_slot_interface<kstudio_cart_interface>(mconfig, *this)
 	, m_cart(nullptr)
 {
@@ -96,33 +96,32 @@ uint8_t nes_kstudio_slot_device::read(offs_t offset)
 		return 0xff;
 }
 
-image_init_result nes_kstudio_slot_device::call_load()
+std::pair<std::error_condition, std::string> nes_kstudio_slot_device::call_load()
 {
 	if (m_cart)
 	{
-		uint8_t *ROM = m_cart->get_cart_base();
-
+		uint8_t *const ROM = m_cart->get_cart_base();
 		if (!ROM)
-			return image_init_result::FAIL;
+			return std::make_pair(image_error::INTERNAL, std::string());
 
 		// Existing expansion carts are all 128K, so we only load files of this size
 		if (!loaded_through_softlist())
 		{
 			if (length() != 0x20000)
-				return image_init_result::FAIL;
+				return std::make_pair(image_error::INVALIDLENGTH, "Unsupported cartridge size (must be 128K)");
 
-			fread(&ROM, 0x20000);
+			fread(ROM, 0x20000);
 		}
 		else
 		{
 			if (get_software_region_length("rom") != 0x20000)
-				return image_init_result::FAIL;
+				return std::make_pair(image_error::INVALIDLENGTH, "Unsupported cartridge size (must be 128K)");
 
 			memcpy(ROM, get_software_region("rom"), 0x20000);
 		}
 	}
 
-	return image_init_result::PASS;
+	return std::make_pair(std::error_condition(), std::string());
 }
 
 
@@ -198,7 +197,6 @@ void nes_karaokestudio_device::device_start()
 
 void nes_karaokestudio_device::pcb_reset()
 {
-	m_chr_source = m_vrom_chunks ? CHRROM : CHRRAM;
 	prg16_89ab(0);
 	prg16_cdef((m_prg_chunks - 1) ^ 0x08);
 	chr8(0, m_chr_source);

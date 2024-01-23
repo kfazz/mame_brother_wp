@@ -73,10 +73,10 @@ private:
 	uint8_t m_pia_porta;
 	uint8_t m_pia_portb;
 
-	DECLARE_READ8_MEMBER(pia_a_r);
-	DECLARE_READ8_MEMBER(pia_b_r);
-	DECLARE_WRITE8_MEMBER(pia_a_w);
-	DECLARE_WRITE8_MEMBER(pia_b_w);
+	uint8_t pia_a_r();
+	uint8_t pia_b_r();
+	void pia_a_w(uint8_t data);
+	void pia_b_w(uint8_t data);
 
 };
 
@@ -93,7 +93,7 @@ void ss50_piaide_device::device_start()
 
 void ss50_piaide_device::device_add_mconfig(machine_config &config)
 {
-	PIA6821(config, m_pia, 0);
+	PIA6821(config, m_pia);
 	m_pia->readpa_handler().set(FUNC(ss50_piaide_device::pia_a_r));
 	m_pia->readpb_handler().set(FUNC(ss50_piaide_device::pia_b_r));
 	m_pia->writepa_handler().set(FUNC(ss50_piaide_device::pia_a_w));
@@ -123,22 +123,22 @@ void ss50_piaide_device::register_write(offs_t offset, uint8_t data)
 /******* MC6821 PIA on IDE Board *******/
 /* Read/Write handlers for pia ide */
 
-READ8_MEMBER( ss50_piaide_device::pia_a_r )
+uint8_t ss50_piaide_device::pia_a_r()
 {
 	return m_pia_porta;
 }
 
-READ8_MEMBER( ss50_piaide_device::pia_b_r )
+uint8_t ss50_piaide_device::pia_b_r()
 {
 	return m_pia_portb;
 }
 
-WRITE8_MEMBER( ss50_piaide_device::pia_a_w )
+void ss50_piaide_device::pia_a_w(uint8_t data)
 {
 	m_pia_porta = data;
 }
 
-WRITE8_MEMBER( ss50_piaide_device::pia_b_w )
+void ss50_piaide_device::pia_b_w(uint8_t data)
 {
 	uint16_t tempidedata;
 

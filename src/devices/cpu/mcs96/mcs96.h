@@ -57,6 +57,7 @@ protected:
 
 	// device_memory_interface overrides
 	virtual space_config_vector memory_space_config() const override;
+	virtual bool memory_translate(int spacenum, int intention, offs_t &address, address_space *&target_space) override;
 
 	// device_state_interface overrides
 	virtual void state_import(const device_state_entry &entry) override;
@@ -65,6 +66,8 @@ protected:
 
 	address_space_config program_config, regs_config;
 	address_space *program, *regs;
+	memory_access<16, 0, 0, ENDIANNESS_LITTLE>::cache m_cache8;
+	memory_access<16, 1, 0, ENDIANNESS_LITTLE>::cache m_cache16;
 	std::function<u8 (offs_t address)> m_pr8;
 	required_shared_ptr<u16> register_file;
 

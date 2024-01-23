@@ -11,9 +11,19 @@
 #ifndef MAME_LIB_UTIL_OPTIONS_H
 #define MAME_LIB_UTIL_OPTIONS_H
 
-#include "corefile.h"
+#include "strformat.h"
+
+#include <algorithm>
+#include <exception>
+#include <functional>
+#include <iosfwd>
+#include <memory>
 #include <unordered_map>
 #include <sstream>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 
 //**************************************************************************
@@ -33,6 +43,7 @@ const int OPTION_PRIORITY_MAXIMUM   = 255;          // maximum priority
 //**************************************************************************
 
 struct options_entry;
+namespace util { class core_file; }
 
 // exception thrown by core_options when an illegal request is made
 class options_exception : public std::exception
@@ -93,7 +104,9 @@ public:
 		BOOLEAN,         // boolean option
 		INTEGER,         // integer option
 		FLOAT,           // floating-point option
-		STRING           // string option
+		STRING,          // string option
+		PATH,            // single path option
+		MULTIPATH        // semicolon-delimited paths option
 	};
 
 	// information about a single entry in the options
@@ -117,6 +130,7 @@ public:
 		const std::vector<std::string> &names() const noexcept { return m_names; }
 		const std::string &name() const noexcept { return m_names[0]; }
 		virtual const char *value() const noexcept;
+		virtual const char *value_unsubstituted() const noexcept;
 		int priority() const noexcept { return m_priority; }
 		void set_priority(int priority) noexcept { m_priority = priority; }
 		option_type type() const noexcept { return m_type; }
@@ -127,19 +141,21 @@ public:
 		bool has_range() const noexcept;
 
 		// mutators
-		void set_value(std::string &&newvalue, int priority, bool always_override = false);
+		void copy_from(const entry &that, bool always_override);
+		void set_value(std::string &&newvalue, int priority, bool always_override = false, bool perform_substitutions = false);
 		virtual void set_default_value(std::string &&newvalue);
 		void set_description(const char *description) { m_description = description; }
 		void set_value_changed_handler(std::function<void(const char *)> &&handler) { m_value_changed_handler = std::move(handler); }
 		virtual void revert(int priority_hi, int priority_lo) { }
 
 	protected:
-		virtual void internal_set_value(std::string &&newvalue) = 0;
+		virtual void internal_set_value(std::string &&newvalue, bool perform_substitutions) = 0;
+		virtual bool internal_copy_value(const entry &that);
 
-	private:
 		void validate(const std::string &value);
 
-		std::vector<std::string>                    m_names;
+	private:
+		const std::vector<std::string>              m_names;
 		int                                         m_priority;
 		core_options::option_type                   m_type;
 		const char *                                m_description;
@@ -157,10 +173,10 @@ public:
 	// getters
 	const std::string &command() const noexcept { return m_command; }
 	const std::vector<std::string> &command_arguments() const noexcept { assert(!m_command.empty()); return m_command_arguments; }
-	entry::shared_const_ptr get_entry(const std::string &name) const noexcept;
-	entry::shared_ptr get_entry(const std::string &name) noexcept;
+	entry::shared_const_ptr get_entry(std::string_view name) const noexcept;
+	entry::shared_ptr get_entry(std::string_view name) noexcept;
 	const std::vector<entry::shared_ptr> &entries() const noexcept { return m_entries; }
-	bool exists(const std::string &name) const noexcept { return get_entry(name) != nullptr; }
+	bool exists(std::string_view name) const noexcept { return get_entry(name) != nullptr; }
 	bool header_exists(const char *description) const noexcept;
 
 	// configuration
@@ -169,10 +185,12 @@ public:
 	void add_entry(std::vector<std::string> &&names, const char *description, option_type type, std::string &&default_value = "", std::string &&minimum = "", std::string &&maximum = "");
 	void add_header(const char *description);
 	void add_entries(const options_entry *entrylist, bool override_existing = false);
-	void set_default_value(const char *name, const char *defvalue);
-	void set_description(const char *name, const char *description);
+	void set_default_value(std::string_view name, std::string &&defvalue);
+	void set_default_value(std::string_view name, std::string_view defvalue) { set_default_value(name, std::string(defvalue)); }
+	void set_default_value(std::string_view name, const char *defvalue) { set_default_value(name, std::string(defvalue)); }
+	void set_description(std::string_view name, const char *description);
 	void remove_entry(entry &delentry);
-	void set_value_changed_handler(const std::string &name, std::function<void(const char *)> &&handler);
+	void set_value_changed_handler(std::string_view name, std::function<void(const char *)> &&handler);
 	void revert(int priority_hi = OPTION_PRIORITY_MAXIMUM, int priority_lo = OPTION_PRIORITY_DEFAULT);
 
 	// parsing/input
@@ -185,17 +203,18 @@ public:
 	std::string output_help() const;
 
 	// reading
-	const char *value(const char *option) const noexcept;
-	const char *description(const char *option) const noexcept;
-	bool bool_value(const char *option) const { return int_value(option) != 0; }
-	int int_value(const char *option) const;
-	float float_value(const char *option) const;
+	const char *value(std::string_view option) const noexcept;
+	const char *description(std::string_view option) const noexcept;
+	bool bool_value(std::string_view option) const { return int_value(option) != 0; }
+	int int_value(std::string_view option) const;
+	float float_value(std::string_view option) const;
 
 	// setting
-	void set_value(const std::string &name, const std::string &value, int priority);
-	void set_value(const std::string &name, std::string &&value, int priority);
-	void set_value(const std::string &name, int value, int priority);
-	void set_value(const std::string &name, float value, int priority);
+	void set_value(std::string_view name, std::string_view value, int priority);
+	void set_value(std::string_view name, const char *value, int priority);
+	void set_value(std::string_view name, std::string &&value, int priority);
+	void set_value(std::string_view name, int value, int priority);
+	void set_value(std::string_view name, float value, int priority);
 
 	// misc
 	static const char *unadorned(int x = 0) noexcept { return s_option_unadorned[std::min(x, MAX_UNADORNED_OPTIONS - 1)]; }
@@ -217,6 +236,7 @@ private:
 
 		// getters
 		virtual const char *value() const noexcept override;
+		virtual const char *value_unsubstituted() const noexcept override;
 		virtual const char *minimum() const noexcept override;
 		virtual const char *maximum() const noexcept override;
 		virtual const std::string &default_value() const noexcept override;
@@ -225,14 +245,19 @@ private:
 		virtual void set_default_value(std::string &&newvalue) override;
 
 	protected:
-		virtual void internal_set_value(std::string &&newvalue) override;
+		virtual void internal_set_value(std::string &&newvalue, bool perform_substitutions) override;
+		virtual bool internal_copy_value(const entry &that) override;
 
 	private:
 		// internal state
 		std::string             m_data;             // data for this item
+		std::string             m_data_unsubst;     // data for this item, prior to any substitution
 		std::string             m_defdata;          // default data for this item
+		std::string             m_defdata_unsubst;  // default data for this item, prior to any substitution
 		std::string             m_minimum;          // minimum value
 		std::string             m_maximum;          // maximum value
+
+		std::string type_specific_substitutions(std::string_view s) const noexcept;
 	};
 
 	// used internally in core_options
@@ -244,13 +269,13 @@ private:
 	};
 
 	// internal helpers
-	void add_to_entry_map(std::string &&name, entry::shared_ptr &entry);
-	void do_set_value(entry &curentry, std::string &&data, int priority, std::ostream &error_stream, condition_type &condition);
+	void add_to_entry_map(const std::string &name, entry::shared_ptr &entry);
+	void do_set_value(entry &curentry, std::string_view data, int priority, std::ostream &error_stream, condition_type &condition, bool perform_substitutions);
 	void throw_options_exception_if_appropriate(condition_type condition, std::ostringstream &error_stream);
 
 	// internal state
 	std::vector<entry::shared_ptr>                      m_entries;              // canonical list of entries
-	std::unordered_map<std::string, entry::weak_ptr>    m_entrymap;             // map for fast lookup
+	std::unordered_map<std::string_view, entry::weak_ptr> m_entrymap;           // map for fast lookup
 	std::string                                         m_command;              // command found
 	std::vector<std::string>                            m_command_arguments;    // command arguments
 	static const char *const                            s_option_unadorned[];   // array of unadorned option "names"
@@ -265,15 +290,5 @@ struct options_entry
 	core_options::option_type   type;               // type of option
 	const char *                description;        // description for -showusage
 };
-
-// legacy option types
-const core_options::option_type OPTION_INVALID = core_options::option_type::INVALID;
-const core_options::option_type OPTION_HEADER = core_options::option_type::HEADER;
-const core_options::option_type OPTION_COMMAND = core_options::option_type::COMMAND;
-const core_options::option_type OPTION_BOOLEAN = core_options::option_type::BOOLEAN;
-const core_options::option_type OPTION_INTEGER = core_options::option_type::INTEGER;
-const core_options::option_type OPTION_FLOAT = core_options::option_type::FLOAT;
-const core_options::option_type OPTION_STRING = core_options::option_type::STRING;
-
 
 #endif // MAME_LIB_UTIL_OPTIONS_H

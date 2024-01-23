@@ -75,9 +75,9 @@ c64_bn1541_device::c64_bn1541_device(const machine_config &mconfig, const char *
 
 void c64_bn1541_device::device_start()
 {
-	for (device_t &device : device_iterator(machine().root_device()))
+	for (device_t &device : device_enumerator(machine().root_device()))
 	{
-		for (device_t &subdevice : device_iterator(device))
+		for (device_t &subdevice : device_enumerator(device))
 		{
 			if (subdevice.interface(m_other) && &subdevice != this)
 			{
@@ -140,7 +140,7 @@ void c64_bn1541_device::update_output()
 //  input_8 - CIA2 PC write
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER(c64_bn1541_device::input_8)
+void c64_bn1541_device::input_8(int state)
 {
 	if (LOG) logerror("C64 parallel strobe %u\n", state);
 

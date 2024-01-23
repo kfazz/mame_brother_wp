@@ -18,29 +18,29 @@
 
 uint8_t sc61860_device::READ_OP()
 {
-	return m_cache->read_byte(m_pc++);
+	return m_cache.read_byte(m_pc++);
 }
 
 uint8_t sc61860_device::READ_OP_ARG()
 {
-	return m_cache->read_byte(m_pc++);
+	return m_cache.read_byte(m_pc++);
 }
 
 uint16_t sc61860_device::READ_OP_ARG_WORD()
 {
-	uint16_t t=m_cache->read_byte(m_pc++)<<8;
-	t|=m_cache->read_byte(m_pc++);
+	uint16_t t=m_cache.read_byte(m_pc++)<<8;
+	t|=m_cache.read_byte(m_pc++);
 	return t;
 }
 
 uint8_t sc61860_device::READ_BYTE(uint16_t adr)
 {
-	return m_program->read_byte(adr);
+	return m_program.read_byte(adr);
 }
 
 void sc61860_device::WRITE_BYTE(uint16_t a, uint8_t v)
 {
-	m_program->write_byte(a, v);
+	m_program.write_byte(a, v);
 }
 
 uint8_t sc61860_device::READ_RAM(int r)
@@ -468,9 +468,9 @@ void sc61860_device::sc61860_test_special()
 	int t=0;
 	if (m_timer.t512ms) t|=1;
 	if (m_timer.t2ms) t|=2;
-	if (!m_brk.isnull()&&m_brk()) t|=8;
-	if (!m_reset.isnull()&&m_reset()) t|=0x40;
-	if (!m_x.isnull()&&m_x()) t|=0x80;
+	if (!m_brk.isunset()&&m_brk()) t|=8;
+	if (!m_reset.isunset()&&m_reset()) t|=0x40;
+	if (!m_x.isunset()&&m_x()) t|=0x80;
 
 	m_zero=(t&READ_OP())==0;
 }
@@ -748,7 +748,7 @@ void sc61860_device::sc61860_wait_x(int level)
 	int c;
 	m_zero=level;
 
-	if (!m_x.isnull()) {
+	if (!m_x.isunset()) {
 		for (c=READ_RAM(I); c>=0; c--) {
 			uint8_t t = (READ_RAM(m_p)+1)&0x7f;
 			WRITE_RAM(m_p, t);

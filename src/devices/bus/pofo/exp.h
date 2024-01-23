@@ -48,13 +48,6 @@
 
 
 //**************************************************************************
-//  CONSTANTS
-//**************************************************************************
-
-#define PORTFOLIO_EXPANSION_SLOT_TAG      "exp"
-
-
-//**************************************************************************
 //  TYPE DEFINITIONS
 //**************************************************************************
 
@@ -75,11 +68,11 @@ public:
 	virtual uint8_t nrdi_r(offs_t offset, uint8_t data, bool iom, bool bcom, bool ncc1) { return data; }
 	virtual void nwri_w(offs_t offset, uint8_t data, bool iom, bool bcom, bool ncc1) { }
 
-	virtual WRITE_LINE_MEMBER( iint_w ) { }
+	virtual void iint_w(int state) { }
 
-	DECLARE_WRITE_LINE_MEMBER( eint_w );
-	DECLARE_WRITE_LINE_MEMBER( nmio_w );
-	DECLARE_WRITE_LINE_MEMBER( wake_w );
+	void eint_w(int state);
+	void nmio_w(int state);
+	void wake_w(int state);
 
 protected:
 	// construction/destruction
@@ -116,18 +109,18 @@ public:
 	bool pdet_r() { return (m_card != nullptr) ? m_card->pdet() : 0; }
 	bool cdet_r() { return (m_card != nullptr) ? m_card->cdet() : 1; }
 
-	uint8_t iack_r() { return (m_card != nullptr) ? m_card->iack_r() : 0xff; };
-	uint8_t eack_r() { return (m_card != nullptr) ? m_card->eack_r() : 0xff; };
+	uint8_t iack_r() { return (m_card != nullptr) ? m_card->iack_r() : 0xff; }
+	uint8_t eack_r() { return (m_card != nullptr) ? m_card->eack_r() : 0xff; }
 
 	uint8_t nrdi_r(offs_t offset, uint8_t data, bool iom, bool bcom, bool ncc1) { return (m_card != nullptr) ? m_card->nrdi_r(offset, data, iom, bcom, ncc1) : data; }
 	void nwri_w(offs_t offset, uint8_t data, bool iom, bool bcom, bool ncc1) { if (m_card != nullptr) m_card->nwri_w(offset, data, iom, bcom, ncc1); }
 
-	WRITE_LINE_MEMBER( iint_w ) { if (m_card != nullptr) m_card->iint_w(state); }
+	void iint_w(int state) { if (m_card != nullptr) m_card->iint_w(state); }
 
 	// peripheral interface
-	WRITE_LINE_MEMBER( eint_w ) { m_write_eint(state); }
-	WRITE_LINE_MEMBER( nmio_w ) { m_write_nmio(state); }
-	WRITE_LINE_MEMBER( wake_w ) { m_write_wake(state); }
+	void eint_w(int state) { m_write_eint(state); }
+	void nmio_w(int state) { m_write_nmio(state); }
+	void wake_w(int state) { m_write_wake(state); }
 
 protected:
 	// device-level overrides

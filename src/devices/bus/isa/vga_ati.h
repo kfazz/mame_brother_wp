@@ -1,11 +1,9 @@
 // license:BSD-3-Clause
 // copyright-holders:Barry Rodewald
 /*
- * isa_vga_ati.h
+ * isa/vga_ati.h
  *
  *  Header for ATi Graphics Ultra/Graphics Ultra Pro ISA video cards
- *
- *  Created on: 9/09/2012
  */
 #ifndef MAME_BUS_ISA_VGA_ATI_H
 #define MAME_BUS_ISA_VGA_ATI_H
@@ -13,8 +11,11 @@
 #pragma once
 
 #include "isa.h"
-#include "video/pc_vga.h"
-#include "mach32.h"
+
+#include "video/ati_mach32.h"
+#include "video/ati_mach8.h"
+#include "video/pc_vga_ati.h"
+
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -30,7 +31,7 @@ public:
 	// construction/destruction
 	isa16_vga_gfxultra_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(input_port_0_r);
+	uint8_t input_port_0_r();
 
 protected:
 	// device-level overrides
@@ -40,6 +41,8 @@ protected:
 	// optional information overrides
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual const tiny_rom_entry *device_rom_region() const override;
+
+	void io_isa_map(address_map &map);
 
 private:
 	required_device<ati_vga_device> m_vga;
@@ -54,7 +57,7 @@ public:
 	// construction/destruction
 	isa16_vga_gfxultrapro_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(input_port_0_r);
+	uint8_t input_port_0_r();
 
 protected:
 	// device-level overrides
@@ -64,6 +67,8 @@ protected:
 	// optional information overrides
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual const tiny_rom_entry *device_rom_region() const override;
+
+	void io_isa_map(address_map &map);
 
 private:
 	required_device<mach32_device> m_vga;
@@ -77,7 +82,7 @@ public:
 	// construction/destruction
 	isa16_vga_mach64_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(input_port_0_r);
+	uint8_t input_port_0_r();
 
 protected:
 	// device-level overrides
@@ -88,6 +93,7 @@ protected:
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual const tiny_rom_entry *device_rom_region() const override;
 
+	void io_isa_map(address_map &map);
 private:
 	required_device<mach64_device> m_vga;
 };

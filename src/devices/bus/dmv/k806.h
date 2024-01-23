@@ -40,9 +40,9 @@ protected:
 	virtual void io_write(int ifsel, offs_t offset, uint8_t data) override;
 
 private:
-	DECLARE_READ_LINE_MEMBER(portt1_r);
-	DECLARE_READ8_MEMBER(port1_r);
-	DECLARE_WRITE8_MEMBER(port2_w);
+	int portt1_r();
+	uint8_t port1_r();
+	void port2_w(uint8_t data);
 
 	TIMER_DEVICE_CALLBACK_MEMBER(mouse_timer);
 

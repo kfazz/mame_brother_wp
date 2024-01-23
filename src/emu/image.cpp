@@ -6,17 +6,24 @@
 
     Core image functions and definitions.
 
-
 ***************************************************************************/
 
-#include <cctype>
-
 #include "emu.h"
-#include "emuopts.h"
 #include "image.h"
+
 #include "config.h"
-#include "xmlfile.h"
+#include "drivenum.h"
+#include "emuopts.h"
+#include "fileio.h"
+#include "main.h"
 #include "softlist.h"
+
+// lib/util
+#include "corestr.h"
+#include "xmlfile.h"
+#include "zippath.h"
+
+#include <cctype>
 
 
 //**************************************************************************
@@ -31,8 +38,11 @@ image_manager::image_manager(running_machine &machine)
 	: m_machine(machine)
 {
 	// make sure that any required devices have been allocated
-	for (device_image_interface &image : image_interface_iterator(machine.root_device()))
+	for (device_image_interface &image : image_interface_enumerator(machine.root_device()))
 	{
+		// see if region-based chds are available
+		image.check_preset_images();
+
 		// ignore things not user loadable
 		if (!image.user_loadable())
 			continue;
@@ -44,27 +54,32 @@ image_manager::image_manager(running_machine &machine)
 		if (!startup_image.empty())
 		{
 			// we do have a startup image specified - load it
-			image_init_result result = image_init_result::FAIL;
+			std::pair<std::error_condition, std::string> result(image_error::UNSPECIFIED, std::string());
 
 			// try as a softlist
 			if (software_name_parse(startup_image))
+			{
+				osd_printf_verbose("%s: attempting to load software item %s\n", image.device().tag(), startup_image);
 				result = image.load_software(startup_image);
+			}
 
 			// failing that, try as an image
-			if (result != image_init_result::PASS)
+			if (result.first)
+			{
+				osd_printf_verbose("%s: attempting to load media image %s\n", image.device().tag(), startup_image);
 				result = image.load(startup_image);
+			}
 
 			// failing that, try creating it (if appropriate)
-			if (result != image_init_result::PASS && image.support_command_line_image_creation())
+			if (result.first && image.support_command_line_image_creation())
+			{
+				osd_printf_verbose("%s: attempting to create media image %s\n", image.device().tag(), startup_image);
 				result = image.create(startup_image);
+			}
 
 			// did the image load fail?
-			if (result != image_init_result::PASS)
+			if (result.first)
 			{
-				// retrieve image error message
-				std::string image_err = std::string(image.error());
-				std::string startup_image_name = startup_image;
-
 				// unload the bad image
 				image.unload();
 
@@ -73,16 +88,26 @@ image_manager::image_manager(running_machine &machine)
 				if (machine.options().write_config())
 					write_config(machine.options(), nullptr, &machine.system());
 
-				throw emu_fatalerror(EMU_ERR_DEVICE, "Device %s load (-%s %s) failed: %s",
+				// retrieve image error message
+				throw emu_fatalerror(EMU_ERR_DEVICE,
+						!result.second.empty()
+							? "Device %1$s load (-%2$s %3$s) failed: %4$s (%5$s:%6$d %7$s)"
+							: "Device %1$s load (-%2$s %3$s) failed: %7$s (%5$s:%6$d)",
 						image.device().name(),
 						image.instance_name(),
-						startup_image_name,
-						image_err);
+						startup_image,
+						result.second,
+						result.first.category().name(),
+						result.first.value(),
+						result.first.message());
 			}
 		}
 	}
 
-	machine.configuration().config_register("image_directories", config_load_delegate(&image_manager::config_load, this), config_save_delegate(&image_manager::config_save, this));
+	machine.configuration().config_register(
+			"image_directories",
+			configuration_manager::load_delegate(&image_manager::config_load, this),
+			configuration_manager::save_delegate(&image_manager::config_save, this));
 }
 
 //-------------------------------------------------
@@ -94,16 +119,16 @@ void image_manager::unload_all()
 	// extract the options
 	options_extract();
 
-	for (device_image_interface &image : image_interface_iterator(machine().root_device()))
+	for (device_image_interface &image : image_interface_enumerator(machine().root_device()))
 	{
 		// unload this image
 		image.unload();
 	}
 }
 
-void image_manager::config_load(config_type cfg_type, util::xml::data_node const *parentnode)
+void image_manager::config_load(config_type cfg_type, config_level cfg_level, util::xml::data_node const *parentnode)
 {
-	if ((cfg_type == config_type::GAME) && (parentnode != nullptr))
+	if ((cfg_type == config_type::SYSTEM) && parentnode)
 	{
 		for (util::xml::data_node const *node = parentnode->get_child("device"); node; node = node->get_next_sibling("device"))
 		{
@@ -111,13 +136,13 @@ void image_manager::config_load(config_type cfg_type, util::xml::data_node const
 
 			if ((dev_instance != nullptr) && (dev_instance[0] != '\0'))
 			{
-				for (device_image_interface &image : image_interface_iterator(machine().root_device()))
+				for (device_image_interface &image : image_interface_enumerator(machine().root_device()))
 				{
 					if (!strcmp(dev_instance, image.instance_name().c_str()))
 					{
 						const char *const working_directory = node->get_attribute_string("directory", nullptr);
 						if (working_directory != nullptr)
-							image.set_working_directory(working_directory);
+							image.set_working_directory(std::string_view(working_directory));
 					}
 				}
 			}
@@ -132,10 +157,10 @@ void image_manager::config_load(config_type cfg_type, util::xml::data_node const
 
 void image_manager::config_save(config_type cfg_type, util::xml::data_node *parentnode)
 {
-	/* only care about game-specific data */
-	if (cfg_type == config_type::GAME)
+	// only save system-specific data
+	if (cfg_type == config_type::SYSTEM)
 	{
-		for (device_image_interface &image : image_interface_iterator(machine().root_device()))
+		for (device_image_interface &image : image_interface_enumerator(machine().root_device()))
 		{
 			const char *const dev_instance = image.instance_name().c_str();
 
@@ -166,11 +191,11 @@ int image_manager::write_config(emu_options &options, const char *filename, cons
 	}
 
 	emu_file file(options.ini_path(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE);
-	osd_file::error filerr = file.open(filename);
-	if (filerr == osd_file::error::NONE)
+	std::error_condition const filerr = file.open(filename);
+	if (!filerr)
 	{
 		std::string inistring = options.output_ini();
-		file.puts(inistring.c_str());
+		file.puts(inistring);
 		retval = 0;
 	}
 	return retval;
@@ -183,7 +208,7 @@ int image_manager::write_config(emu_options &options, const char *filename, cons
 
 void image_manager::options_extract()
 {
-	for (device_image_interface &image : image_interface_iterator(machine().root_device()))
+	for (device_image_interface &image : image_interface_enumerator(machine().root_device()))
 	{
 		// There are two scenarios where we want to extract the option:
 		//
@@ -231,15 +256,16 @@ void image_manager::options_extract()
 void image_manager::postdevice_init()
 {
 	/* make sure that any required devices have been allocated */
-	for (device_image_interface &image : image_interface_iterator(machine().root_device()))
+	for (device_image_interface &image : image_interface_enumerator(machine().root_device()))
 	{
-		image_init_result result = image.finish_load();
+		auto [result, image_err] = image.finish_load();
 
 		/* did the image load fail? */
-		if (result != image_init_result::PASS)
+		if (result)
 		{
 			/* retrieve image error message */
-			std::string image_err = std::string(image.error());
+			if (image_err.empty())
+				image_err = result.message();
 
 			/* unload all images */
 			unload_all();
@@ -251,4 +277,86 @@ void image_manager::postdevice_init()
 	}
 	/* add a callback for when we shut down */
 	machine().add_notifier(MACHINE_NOTIFY_EXIT, machine_notify_delegate(&image_manager::unload_all, this));
+}
+
+
+//**************************************************************************
+//  WORKING DIRECTORIES
+//**************************************************************************
+
+//-------------------------------------------------
+//  try_change_working_directory - tries to change
+//  the working directory, but only if the directory
+//  actually exists
+//-------------------------------------------------
+
+bool image_manager::try_change_working_directory(std::string &working_directory, const std::string &subdir)
+{
+	bool success = false;
+
+	auto directory = osd::directory::open(working_directory);
+	if (directory)
+	{
+		const osd::directory::entry *entry;
+		bool done = false;
+		while (!done && (entry = directory->read()) != nullptr)
+		{
+			if (!core_stricmp(subdir.c_str(), entry->name))
+			{
+				done = true;
+				success = entry->type == osd::directory::entry::entry_type::DIR;
+			}
+		}
+
+		directory.reset();
+	}
+
+	// did we successfully identify the directory?
+	if (success)
+		working_directory = util::zippath_combine(working_directory, subdir);
+
+	return success;
+}
+
+
+//-------------------------------------------------
+//  setup_working_directory - sets up the working
+//  directory according to a few defaults
+//-------------------------------------------------
+
+std::string image_manager::setup_working_directory()
+{
+	bool success = false;
+	// get user-specified directory and make sure it exists
+	std::string working_directory = machine().options().sw_path();
+	// if multipath, get first
+	size_t i = working_directory.find_first_of(';');
+	if (i != std::string::npos)
+		working_directory.resize(i);
+	// validate directory
+	if (!working_directory.empty())
+		if (osd::directory::open(working_directory))
+			success = true;
+
+	// if not exist, use previous method
+	if (!success)
+	{
+		// first set up the working directory to be the starting directory
+		osd_get_full_path(working_directory, ".");
+		// now try browsing down to "software"
+		if (try_change_working_directory(working_directory, "software"))
+			success = true;
+	}
+
+	if (success)
+	{
+		// now down to a directory for this computer
+		int gamedrv = driver_list::find(machine().system());
+		while(gamedrv != -1 && !try_change_working_directory(working_directory, driver_list::driver(gamedrv).name))
+		{
+			gamedrv = driver_list::compatible_with(gamedrv);
+		}
+	}
+
+	return working_directory;
 }

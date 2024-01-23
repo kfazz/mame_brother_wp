@@ -4,9 +4,6 @@
 
     Poisk-1 sound card
 
-    Copyright MESS Team.
-    Visit http://mamedev.org for licensing and usage restrictions.
-
 **********************************************************************/
 
 #ifndef MAME_BUS_P1_SOUND_H
@@ -33,15 +30,15 @@ public:
 	// construction/destruction
 	p1_sound_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(d14_r);
-	DECLARE_READ8_MEMBER(d16_r);
-	DECLARE_READ8_MEMBER(d17_r);
-	DECLARE_WRITE8_MEMBER(d14_w);
-	DECLARE_WRITE8_MEMBER(d16_w);
-	DECLARE_WRITE8_MEMBER(d17_w);
+	uint8_t d14_r(offs_t offset);
+	uint8_t d16_r(offs_t offset);
+	uint8_t d17_r(offs_t offset);
+	void d14_w(offs_t offset, uint8_t data);
+	void d16_w(offs_t offset, uint8_t data);
+	void d17_w(offs_t offset, uint8_t data);
 
-	DECLARE_READ8_MEMBER(adc_r);
-	DECLARE_WRITE8_MEMBER(dac_w);
+	uint8_t adc_r(offs_t offset);
+	void dac_w(offs_t offset, uint8_t data);
 
 protected:
 	// device-level overrides
@@ -52,7 +49,7 @@ protected:
 	virtual void device_add_mconfig(machine_config &config) override;
 
 private:
-	DECLARE_WRITE_LINE_MEMBER(sampler_sync);
+	void sampler_sync(int state);
 
 	uint8_t m_dac_data[16];
 	int m_dac_ptr;

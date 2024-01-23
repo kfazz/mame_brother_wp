@@ -24,7 +24,6 @@
 ***************************************************************************/
 
 #include "emu.h"
-#include "debugger.h"
 #include "mips3com.h"
 #include "mips3fe.h"
 #include "mips3dsm.h"
@@ -32,6 +31,11 @@
 #include "cpu/drcfe.h"
 #include "cpu/drcuml.h"
 #include "cpu/drcumlsh.h"
+
+
+/* Use with STRICT_VERIFY to print debug info to console for extra validation checks */
+/* Set to 1 to activate and use MIPS3DRC_STRICT_VERIFY in the drc options */
+#define DEBUG_STRICT_VERIFY 0
 
 
 /***************************************************************************
@@ -120,7 +124,7 @@ inline void mips3_device::load_fast_iregs(drcuml_block &block)
 {
 	int regnum;
 
-	for (regnum = 0; regnum < ARRAY_LENGTH(m_regmap); regnum++)
+	for (regnum = 0; regnum < std::size(m_regmap); regnum++)
 		if (m_regmap[regnum].is_int_register())
 			UML_DMOV(block, ireg(m_regmap[regnum].ireg() - REG_I0), mem(&m_core->r[regnum]));
 }
@@ -135,7 +139,7 @@ inline void mips3_device::save_fast_iregs(drcuml_block &block)
 {
 	int regnum;
 
-	for (regnum = 0; regnum < ARRAY_LENGTH(m_regmap); regnum++)
+	for (regnum = 0; regnum < std::size(m_regmap); regnum++)
 		if (m_regmap[regnum].is_int_register())
 			UML_DMOV(block, mem(&m_core->r[regnum]), ireg(m_regmap[regnum].ireg() - REG_I0));
 }
@@ -157,6 +161,15 @@ void mips3_device::mips3drc_set_options(uint32_t options)
 }
 
 /*-------------------------------------------------
+    mips3drc_get_options - return current DRC options
+-------------------------------------------------*/
+
+uint32_t mips3_device::mips3drc_get_options()
+{
+	return m_drcoptions;
+}
+
+/*-------------------------------------------------
     mips3drc_clears_fastram - clears fastram
     region starting at index select_start
 -------------------------------------------------*/
@@ -174,7 +187,7 @@ void mips3_device::clear_fastram(uint32_t select_start)
 
 void mips3_device::add_fastram(offs_t start, offs_t end, uint8_t readonly, void *base)
 {
-	if (m_fastram_select < ARRAY_LENGTH(m_fastram))
+	if (m_fastram_select < std::size(m_fastram))
 	{
 		m_fastram[m_fastram_select].start = start;
 		m_fastram[m_fastram_select].end = end;
@@ -197,7 +210,7 @@ void mips3_device::add_fastram(offs_t start, offs_t end, uint8_t readonly, void 
 void mips3_device::mips3drc_add_hotspot(offs_t pc, uint32_t opcode, uint32_t cycles)
 {
 	if (!allow_drc()) return;
-	if (m_hotspot_select < ARRAY_LENGTH(m_hotspot))
+	if (m_hotspot_select < std::size(m_hotspot))
 	{
 		m_hotspot[m_hotspot_select].pc = pc;
 		m_hotspot[m_hotspot_select].opcode = opcode;
@@ -283,13 +296,16 @@ void mips3_device::code_compile_block(uint8_t mode, offs_t pc)
 {
 	compiler_state compiler = { 0 };
 	const opcode_desc *seqhead, *seqlast;
+	const opcode_desc *codelast;
 	const opcode_desc *desclist;
 	bool override = false;
 
-	g_profiler.start(PROFILER_DRC_COMPILE);
+	auto profile = g_profiler.start(PROFILER_DRC_COMPILE);
 
 	/* get a description of this sequence */
 	desclist = m_drcfe->describe_code(pc);
+	/* get last instruction of the code (potentially used in generate_checksum) */
+	codelast = m_drcfe->get_last();
 	if (m_drcuml->logging() || m_drcuml->logging_native())
 		log_opcode_desc(desclist, 0);
 
@@ -341,7 +357,7 @@ void mips3_device::code_compile_block(uint8_t mode, offs_t pc)
 
 				/* validate this code block if we're not pointing into ROM */
 				if (m_program->get_write_ptr(seqhead->physpc) != nullptr)
-					generate_checksum_block(block, compiler, seqhead, seqlast);
+					generate_checksum_block(block, compiler, seqhead, seqlast, codelast);
 
 				/* label this instruction, if it may be jumped to locally */
 				if (seqhead->flags & OPFLAG_IS_BRANCH_TARGET)
@@ -379,7 +395,6 @@ void mips3_device::code_compile_block(uint8_t mode, offs_t pc)
 
 			/* end the sequence */
 			block.end();
-			g_profiler.stop();
 			succeeded = true;
 		}
 		catch (drcuml_block::abort_compilation &)
@@ -687,9 +702,9 @@ void mips3_device::static_generate_tlb_mismatch()
 		UML_MOV(block, mem(&m_core->arg1), I1);                                 // mov     [arg1],i1
 		UML_CALLC(block, cfunc_printf_debug, this);                             // callc   printf_debug
 	}
-	UML_TEST(block, I1, VTLB_FETCH_ALLOWED);                                    // test    i1,VTLB_FETCH_ALLOWED
+	UML_TEST(block, I1, FETCH_ALLOWED);                                    // test    i1,FETCH_ALLOWED
 	UML_JMPc(block, COND_NZ, 1);                                                // jmp     1,nz
-	UML_TEST(block, I1, VTLB_FLAG_FIXED);                                       // test    i1,VTLB_FLAG_FIXED
+	UML_TEST(block, I1, FLAG_FIXED);                                       // test    i1,FLAG_FIXED
 	UML_EXHc(block, COND_NZ, *m_exception[EXCEPTION_TLBLOAD], I0);              // exh     exception[TLBLOAD],i0,nz
 	UML_EXH(block, *m_exception[EXCEPTION_TLBLOAD_FILL], I0);                   // exh     exception[TLBLOAD_FILL],i0
 	UML_LABEL(block, 1);                                                        // 1:
@@ -741,7 +756,7 @@ void mips3_device::static_generate_exception(uint8_t exception, int recover, con
 		UML_MOV(block, CPR032(COP0_BadVAddr), I0);                              // mov     [BadVAddr],i0
 	}
 
-	if (exception == EXCEPTION_TLBLOAD || exception == EXCEPTION_TLBSTORE)
+	if (exception == EXCEPTION_TLBMOD || exception == EXCEPTION_TLBLOAD || exception == EXCEPTION_TLBSTORE)
 	{
 		/* set the upper bits of EntryHi and the lower bits of Context to the fault page */
 		UML_ROLINS(block, CPR032(COP0_EntryHi), I0, 0, 0xffffe000); // rolins  [EntryHi],i0,0,0xffffe000
@@ -813,120 +828,106 @@ void mips3_device::static_generate_exception(uint8_t exception, int recover, con
 
 
 /*------------------------------------------------------------------
-    static_generate_memory_accessor
+    static_generate_memory_mode_checks
 ------------------------------------------------------------------*/
 
-void mips3_device::static_generate_memory_accessor(int mode, int size, int iswrite, int ismasked, const char *name, uml::code_handle *&handleptr)
+void mips3_device::static_generate_memory_mode_checks(drcuml_block &block, uml::code_handle &exception_addrerr, int &label, int mode)
 {
-	/* on entry, address is in I0; data for writes is in I1; mask for accesses is in I2 */
-	/* on exit, read result is in I0 */
-	/* routine trashes I0-I3 */
-	uml::code_handle &exception_tlb = *m_exception[iswrite ? EXCEPTION_TLBSTORE : EXCEPTION_TLBLOAD];
-	uml::code_handle &exception_tlbfill = *m_exception[iswrite ? EXCEPTION_TLBSTORE_FILL : EXCEPTION_TLBLOAD_FILL];
-	uml::code_handle &exception_addrerr = *m_exception[iswrite ? EXCEPTION_ADDRSTORE : EXCEPTION_ADDRLOAD];
-	int tlbmiss = 0;
-	int label = 1;
-	int ramnum;
-
-	/* begin generating */
-	drcuml_block &block(m_drcuml->begin_block(1024));
-
-	/* add a global entry for this */
-	alloc_handle(*m_drcuml, handleptr, name);
-	UML_HANDLE(block, *handleptr);                                              // handle  handleptr
-
 	/* user mode? generate address exception if top bit is set */
 	if (mode == MODE_USER)
 	{
-		UML_TEST(block, I0, 0x80000000);                                        // test    i0,0x80000000
-		UML_EXHc(block, COND_NZ, exception_addrerr, I0);                        // exh     addrerr,i0,nz
+		UML_TEST(block, I0, 0x80000000);                                            // test    i0,0x80000000
+		UML_EXHc(block, COND_NZ, exception_addrerr, I0);                            // exh     addrerr,i0,nz
 	}
 
 	/* supervisor mode? generate address exception if not in user space or in $C0000000-DFFFFFFF */
 	if (mode == MODE_SUPER)
 	{
 		int addrok;
-		UML_TEST(block, I0, 0x80000000);                                    // test    i0,0x80000000
+		UML_TEST(block, I0, 0x80000000);                                            // test    i0,0x80000000
 		UML_JMPc(block, COND_Z, addrok = label++);                                  // jz      addrok
-		UML_SHR(block, I3, I0, 29);                                 // shr     i3,i0,29
-		UML_CMP(block, I3, 6);                                          // cmp     i3,6
+		UML_SHR(block, I3, I0, 29);                                                 // shr     i3,i0,29
+		UML_CMP(block, I3, 6);                                                      // cmp     i3,6
 		UML_EXHc(block, COND_NE, exception_addrerr, I0);                            // exh     addrerr,i0,ne
-		UML_LABEL(block, addrok);                                               // addrok:
+		UML_LABEL(block, addrok);                                                   // addrok:
 	}
+}
 
-	/* general case: assume paging and perform a translation */
-	UML_SHR(block, I3, I0, 12);                                     // shr     i3,i0,12
-	UML_LOAD(block, I3, (void *)vtlb_table(), I3, SIZE_DWORD, SCALE_x4);// load    i3,[vtlb_table],i3,dword
-	UML_TEST(block, I3, iswrite ? VTLB_WRITE_ALLOWED : VTLB_READ_ALLOWED);// test    i3,iswrite ? VTLB_WRITE_ALLOWED : VTLB_READ_ALLOWED
-	UML_JMPc(block, COND_Z, tlbmiss = label++);                                     // jmp     tlbmiss,z
-	UML_ROLINS(block, I0, I3, 0, 0xfffff000);                   // rolins  i0,i3,0,0xfffff000
 
+/*------------------------------------------------------------------
+    static_generate_fastram_accessor
+------------------------------------------------------------------*/
+
+void mips3_device::static_generate_fastram_accessor(drcuml_block &block, int &label, int size, bool iswrite, bool ismasked)
+{
 	if ((machine().debug_flags & DEBUG_FLAG_ENABLED) == 0)
-		for (ramnum = 0; ramnum < m_fastram_select; ramnum++)
+	{
+		for (int ramnum = 0; ramnum < m_fastram_select; ramnum++)
+		{
 			if (!(iswrite && m_fastram[ramnum].readonly))
 			{
 				void *fastbase = (uint8_t *)m_fastram[ramnum].base - m_fastram[ramnum].start;
 				uint32_t skip = label++;
 				if (m_fastram[ramnum].end != 0xffffffff)
 				{
-					UML_CMP(block, I0, m_fastram[ramnum].end);   // cmp     i0,end
-					UML_JMPc(block, COND_A, skip);                                      // ja      skip
+					UML_CMP(block, I0, m_fastram[ramnum].end);                      // cmp     i0,end
+					UML_JMPc(block, COND_A, skip);                                  // ja      skip
 				}
 				if (m_fastram[ramnum].start != 0x00000000)
 				{
-					UML_CMP(block, I0, m_fastram[ramnum].start);// cmp     i0,fastram_start
-					UML_JMPc(block, COND_B, skip);                                      // jb      skip
+					UML_CMP(block, I0, m_fastram[ramnum].start);                    // cmp     i0,fastram_start
+					UML_JMPc(block, COND_B, skip);                                  // jb      skip
 				}
 				if (!iswrite)
 				{
 					if (size == 1)
 					{
 						UML_XOR(block, I0, I0, m_bigendian ? BYTE4_XOR_BE(0) : BYTE4_XOR_LE(0));
-																						// xor     i0,i0,bytexor
-						UML_LOAD(block, I0, fastbase, I0, SIZE_BYTE, SCALE_x1);             // load    i0,fastbase,i0,byte
+																					// xor     i0,i0,bytexor
+						UML_LOAD(block, I0, fastbase, I0, SIZE_BYTE, SCALE_x1);     // load    i0,fastbase,i0,byte
 					}
 					else if (size == 2)
 					{
 						UML_XOR(block, I0, I0, m_bigendian ? WORD_XOR_BE(0) : WORD_XOR_LE(0));
-																						// xor     i0,i0,wordxor
-						UML_LOAD(block, I0, fastbase, I0, SIZE_WORD, SCALE_x1);         // load    i0,fastbase,i0,word_x1
+																					// xor     i0,i0,wordxor
+						UML_LOAD(block, I0, fastbase, I0, SIZE_WORD, SCALE_x1);     // load    i0,fastbase,i0,word_x1
 					}
 					else if (size == 4)
 					{
-						UML_LOAD(block, I0, fastbase, I0, SIZE_DWORD, SCALE_x1);            // load    i0,fastbase,i0,dword_x1
+						UML_LOAD(block, I0, fastbase, I0, SIZE_DWORD, SCALE_x1);    // load    i0,fastbase,i0,dword_x1
 					}
 					else if (size == 8)
 					{
-						UML_DLOAD(block, I0, fastbase, I0, SIZE_QWORD, SCALE_x1);           // dload   i0,fastbase,i0,qword_x1
+						UML_DLOAD(block, I0, fastbase, I0, SIZE_QWORD, SCALE_x1);   // dload   i0,fastbase,i0,qword_x1
 						UML_DROR(block, I0, I0, 32 * (m_bigendian ? BYTE_XOR_BE(0) : BYTE_XOR_LE(0)));
-																						// dror    i0,i0,32*bytexor
+																					// dror    i0,i0,32*bytexor
 					}
-					UML_RET(block);                                                     // ret
+					UML_RET(block);                                                 // ret
 				}
 				else
 				{
 					if (size == 1)
 					{
 						UML_XOR(block, I0, I0, m_bigendian ? BYTE4_XOR_BE(0) : BYTE4_XOR_LE(0));
-																						// xor     i0,i0,bytexor
-						UML_STORE(block, fastbase, I0, I1, SIZE_BYTE, SCALE_x1);// store   fastbase,i0,i1,byte
+																					// xor     i0,i0,bytexor
+						UML_STORE(block, fastbase, I0, I1, SIZE_BYTE, SCALE_x1);    // store   fastbase,i0,i1,byte
 					}
 					else if (size == 2)
 					{
 						UML_XOR(block, I0, I0, m_bigendian ? WORD_XOR_BE(0) : WORD_XOR_LE(0));
-																						// xor     i0,i0,wordxor
-						UML_STORE(block, fastbase, I0, I1, SIZE_WORD, SCALE_x1);// store   fastbase,i0,i1,word_x1
+																					// xor     i0,i0,wordxor
+						UML_STORE(block, fastbase, I0, I1, SIZE_WORD, SCALE_x1);    // store   fastbase,i0,i1,word_x1
 					}
 					else if (size == 4)
 					{
 						if (ismasked)
 						{
-							UML_LOAD(block, I3, fastbase, I0, SIZE_DWORD, SCALE_x1);        // load    i3,fastbase,i0,dword_x1
-							UML_ROLINS(block, I3, I1, 0, I2);       // rolins  i3,i1,0,i2
-							UML_STORE(block, fastbase, I0, I3, SIZE_DWORD, SCALE_x1);       // store   fastbase,i0,i3,dword_x1
+							UML_LOAD(block, I3, fastbase, I0, SIZE_DWORD, SCALE_x1);    // load    i3,fastbase,i0,dword_x1
+							UML_ROLINS(block, I3, I1, 0, I2);                           // rolins  i3,i1,0,i2
+							UML_STORE(block, fastbase, I0, I3, SIZE_DWORD, SCALE_x1);   // store   fastbase,i0,i3,dword_x1
 						}
 						else
-							UML_STORE(block, fastbase, I0, I1, SIZE_DWORD, SCALE_x1);       // store   fastbase,i0,i1,dword_x1
+							UML_STORE(block, fastbase, I0, I1, SIZE_DWORD, SCALE_x1);   // store   fastbase,i0,i1,dword_x1
 					}
 					else if (size == 8)
 					{
@@ -936,8 +937,8 @@ void mips3_device::static_generate_memory_accessor(int mode, int size, int iswri
 						{
 							UML_DROR(block, I2, I2, 32 * (m_bigendian ? BYTE_XOR_BE(0) : BYTE_XOR_LE(0)));
 																						// dror    i2,i2,32*bytexor
-							UML_DLOAD(block, I3, fastbase, I0, SIZE_QWORD, SCALE_x1);       // dload   i3,fastbase,i0,qword_x1
-							UML_DROLINS(block, I3, I1, 0, I2);      // drolins i3,i1,0,i2
+							UML_DLOAD(block, I3, fastbase, I0, SIZE_QWORD, SCALE_x1);   // dload   i3,fastbase,i0,qword_x1
+							UML_DROLINS(block, I3, I1, 0, I2);                          // drolins i3,i1,0,i2
 							UML_DSTORE(block, fastbase, I0, I3, SIZE_QWORD, SCALE_x1);  // dstore  fastbase,i0,i3,qword_x1
 						}
 						else
@@ -946,9 +947,19 @@ void mips3_device::static_generate_memory_accessor(int mode, int size, int iswri
 					UML_RET(block);                                                     // ret
 				}
 
-				UML_LABEL(block, skip);                                             // skip:
+				UML_LABEL(block, skip);                                                 // skip:
 			}
+		}
+	}
+}
 
+
+/*------------------------------------------------------------------
+    static_generate_memory_rw
+------------------------------------------------------------------*/
+
+void mips3_device::static_generate_memory_rw(drcuml_block &block, int size, bool iswrite, bool ismasked)
+{
 	switch (size)
 	{
 		case 1:
@@ -969,9 +980,9 @@ void mips3_device::static_generate_memory_accessor(int mode, int size, int iswri
 			if (iswrite)
 			{
 				if (!ismasked)
-					UML_WRITE(block, I0, I1, SIZE_DWORD, SPACE_PROGRAM);                // write   i0,i1,program_dword
+					UML_WRITE(block, I0, I1, SIZE_DWORD, SPACE_PROGRAM);            // write   i0,i1,program_dword
 				else
-					UML_WRITEM(block, I0, I1, I2, SIZE_DWORD, SPACE_PROGRAM);   // writem  i0,i1,i2,program_dword
+					UML_WRITEM(block, I0, I1, I2, SIZE_DWORD, SPACE_PROGRAM);       // writem  i0,i1,i2,program_dword
 			}
 			else
 			{
@@ -986,38 +997,104 @@ void mips3_device::static_generate_memory_accessor(int mode, int size, int iswri
 			if (iswrite)
 			{
 				if (!ismasked)
-					UML_DWRITE(block, I0, I1, SIZE_QWORD, SPACE_PROGRAM);               // dwrite  i0,i1,program_qword
+					UML_DWRITE(block, I0, I1, SIZE_QWORD, SPACE_PROGRAM);           // dwrite  i0,i1,program_qword
 				else
-					UML_DWRITEM(block, I0, I1, I2, SIZE_QWORD, SPACE_PROGRAM);  // dwritem i0,i1,i2,program_qword
+					UML_DWRITEM(block, I0, I1, I2, SIZE_QWORD, SPACE_PROGRAM);      // dwritem i0,i1,i2,program_qword
 			}
 			else
 			{
 				if (!ismasked)
-					UML_DREAD(block, I0, I0, SIZE_QWORD, SPACE_PROGRAM);                // dread   i0,i0,program_qword
+					UML_DREAD(block, I0, I0, SIZE_QWORD, SPACE_PROGRAM);            // dread   i0,i0,program_qword
 				else
-					UML_DREADM(block, I0, I0, I2, SIZE_QWORD, SPACE_PROGRAM);   // dreadm  i0,i0,i2,program_qword
+					UML_DREADM(block, I0, I0, I2, SIZE_QWORD, SPACE_PROGRAM);       // dreadm  i0,i0,i2,program_qword
 			}
 			break;
 	}
 	UML_RET(block);                                                                 // ret
+}
+
+
+/*------------------------------------------------------------------
+    static_generate_memory_accessor
+------------------------------------------------------------------*/
+
+void mips3_device::static_generate_memory_accessor(int mode, int size, bool iswrite, bool ismasked, const char *name, uml::code_handle *&handleptr)
+{
+	/* on entry, address is in I0; data for writes is in I1; mask for accesses is in I2 */
+	/* on exit, read result is in I0 */
+	/* routine trashes I0-I3 */
+	uml::code_handle &exception_tlb = *m_exception[iswrite ? EXCEPTION_TLBSTORE : EXCEPTION_TLBLOAD];
+	uml::code_handle &exception_tlbfill = *m_exception[iswrite ? EXCEPTION_TLBSTORE_FILL : EXCEPTION_TLBLOAD_FILL];
+	uml::code_handle &exception_addrerr = *m_exception[iswrite ? EXCEPTION_ADDRSTORE : EXCEPTION_ADDRLOAD];
+	int tlbmiss = 0;
+	int label = 1;
+
+	/* begin generating */
+	drcuml_block &block(m_drcuml->begin_block(1024));
+
+	/* add a global entry for this */
+	alloc_handle(*m_drcuml, handleptr, name);
+	UML_HANDLE(block, *handleptr);                                                  // handle  handleptr
+
+	static_generate_memory_mode_checks(block, exception_addrerr, label, mode);
+
+	/* general case: assume paging and perform a translation */
+	UML_SHR(block, I3, I0, 12);                                                     // shr     i3,i0,12
+	UML_LOAD(block, I3, (void *)vtlb_table(), I3, SIZE_DWORD, SCALE_x4);            // load    i3,[vtlb_table],i3,dword
+	UML_TEST(block, I3, iswrite ? WRITE_ALLOWED : READ_ALLOWED);                    // test    i3,iswrite ? WRITE_ALLOWED : READ_ALLOWED
+	UML_JMPc(block, COND_Z, tlbmiss = label++);                                     // jmp     tlbmiss,z
+	UML_ROLINS(block, I0, I3, 0, 0xfffff000);                                       // rolins  i0,i3,0,0xfffff000
+
+	static_generate_fastram_accessor(block, label, size, iswrite, ismasked);
+	static_generate_memory_rw(block, size, iswrite, ismasked);
 
 	if (tlbmiss != 0)
 	{
-		UML_LABEL(block, tlbmiss);                                              // tlbmiss:
+		UML_LABEL(block, tlbmiss);                                                  // tlbmiss:
 		if (iswrite)
 		{
-			UML_TEST(block, I3, VTLB_READ_ALLOWED);                     // test    i3,VTLB_READ_ALLOWED
-			UML_EXHc(block, COND_NZ, *m_exception[EXCEPTION_TLBMOD], I0);
-																					// exh     tlbmod,i0,nz
+			UML_TEST(block, I3, READ_ALLOWED);                                      // test    i3,READ_ALLOWED
+			UML_EXHc(block, COND_NZ, *m_exception[EXCEPTION_TLBMOD], I0);           // exh     tlbmod,i0,nz
 		}
-		UML_TEST(block, I3, VTLB_FLAG_FIXED);                               // test    i3,VTLB_FLAG_FIXED
+		UML_TEST(block, I3, FLAG_FIXED);                                            // test    i3,FLAG_FIXED
 		UML_EXHc(block, COND_NZ, exception_tlb, I0);                                // exh     tlb,i0,nz
-		UML_EXH(block, exception_tlbfill, I0);                                  // exh     tlbfill,i0
+		UML_EXH(block, exception_tlbfill, I0);                                      // exh     tlbfill,i0
 	}
 
 	block.end();
 }
 
+void r4650_device::static_generate_memory_accessor(int mode, int size, bool iswrite, bool ismasked, const char *name, uml::code_handle *&handleptr)
+{
+	/* on entry, address is in I0; data for writes is in I1; mask for accesses is in I2 */
+	/* on exit, read result is in I0 */
+	/* routine trashes I0-I3 */
+	uml::code_handle &exception_addrerr = *m_exception[iswrite ? EXCEPTION_ADDRSTORE : EXCEPTION_ADDRLOAD];
+	int label = 1;
+
+	/* begin generating */
+	drcuml_block &block(m_drcuml->begin_block(1024));
+
+	/* add a global entry for this */
+	alloc_handle(*m_drcuml, handleptr, name);
+	UML_HANDLE(block, *handleptr);                                                  // handle  handleptr
+
+	static_generate_memory_mode_checks(block, exception_addrerr, label, mode);
+
+	if (mode == MODE_USER)
+	{
+		int addrok;
+		UML_CMP(block, I0, CPR032(COP0_R4650_DBound));                              // cmp     i0,CPR0[DBound]
+		UML_JMPc(block, COND_LE, addrok = label++);                                 // jle     addrok
+		UML_EXHc(block, COND_G, exception_addrerr, I0);                             // exh     addrerr,i0,ne
+		UML_LABEL(block, addrok);                                                   // addrok:
+		UML_ADD(block, I0, I0, CPR032(COP0_R4650_DBase));                           // add     i0,i0,CPR0[DBase]
+	}
+
+	static_generate_fastram_accessor(block, label, size, iswrite, ismasked);
+	static_generate_memory_rw(block, size, iswrite, ismasked);
+	block.end();
+}
 
 
 /***************************************************************************
@@ -1098,7 +1175,7 @@ void mips3_device::generate_update_cycles(drcuml_block &block, compiler_state &c
     validate a sequence of opcodes
 -------------------------------------------------*/
 
-void mips3_device::generate_checksum_block(drcuml_block &block, compiler_state &compiler, const opcode_desc *seqhead, const opcode_desc *seqlast)
+void mips3_device::generate_checksum_block(drcuml_block &block, compiler_state &compiler, const opcode_desc *seqhead, const opcode_desc *seqlast, const opcode_desc *codelast)
 {
 	const opcode_desc *curdesc;
 	if (m_drcuml->logging())
@@ -1147,35 +1224,130 @@ void mips3_device::generate_checksum_block(drcuml_block &block, compiler_state &
 #else
 		uint32_t sum = 0;
 		const void *base = m_prptr(seqhead->physpc);
-		uint32_t low_bits = (seqhead->physpc & (m_data_bits == 64 ? 4 : 0)) ^ m_dword_xor;
+		const uint32_t data_bits_mask = (m_data_bits == 64 ? 4 : 0);
+		const uint32_t last_physpc = codelast->physpc;
+		uint32_t low_bits = (seqhead->physpc & data_bits_mask) ^ m_dword_xor;
 		UML_LOAD(block, I0, base, low_bits, SIZE_DWORD, SCALE_x1);             // load    i0,base,0,dword
 		sum += seqhead->opptr.l[0];
-		for (curdesc = seqhead->next(); curdesc != seqlast->next(); curdesc = curdesc->next())
+		if ((m_drcoptions & MIPS3DRC_EXTRA_INSTR_CHECK) && !(codelast->flags & OPFLAG_VIRTUAL_NOOP) && last_physpc != seqhead->physpc)
 		{
-			if (!(curdesc->flags & OPFLAG_VIRTUAL_NOOP))
+			base = m_prptr(last_physpc);
+			assert(base != nullptr);
+			low_bits = (last_physpc & data_bits_mask) ^ m_dword_xor;
+			UML_LOAD(block, I1, base, low_bits, SIZE_DWORD, SCALE_x1);     // load    i1,base,dword
+			UML_ADD(block, I0, I0, I1);                         // add     i0,i0,i1
+			sum += codelast->opptr.l[0];
+		}
+		if (!(m_drcoptions & MIPS3DRC_EXTRA_INSTR_CHECK))
+		{
+			for (curdesc = seqhead->next(); curdesc != seqlast->next(); curdesc = curdesc->next())
 			{
-				base = m_prptr(curdesc->physpc);
-				assert(base != nullptr);
-				uint32_t low_bits = (curdesc->physpc & (m_data_bits == 64 ? 4 : 0)) ^ m_dword_xor;
-				UML_LOAD(block, I1, base, low_bits, SIZE_DWORD, SCALE_x1);     // load    i1,base,dword
-				UML_ADD(block, I0, I0, I1);                         // add     i0,i0,i1
-				sum += curdesc->opptr.l[0];
-
-				if (curdesc->delay.first() != nullptr
-					&& !(curdesc->delay.first()->flags & OPFLAG_VIRTUAL_NOOP)
-					&& (curdesc == seqlast || (curdesc->next() != nullptr && curdesc->next()->physpc != curdesc->delay.first()->physpc)))
+				if (!(curdesc->flags & OPFLAG_VIRTUAL_NOOP))
 				{
-					base = m_prptr(curdesc->delay.first()->physpc);
+					base = m_prptr(curdesc->physpc);
 					assert(base != nullptr);
-					uint32_t low_bits = (curdesc->delay.first()->physpc & (m_data_bits == 64 ? 4 : 0)) ^ m_dword_xor;
-					UML_LOAD(block, I1, base, low_bits, SIZE_DWORD, SCALE_x1); // load    i1,base,dword
-					UML_ADD(block, I0, I0, I1);                     // add     i0,i0,i1
-					sum += curdesc->delay.first()->opptr.l[0];
+					low_bits = (curdesc->physpc & data_bits_mask) ^ m_dword_xor;
+					UML_LOAD(block, I1, base, low_bits, SIZE_DWORD, SCALE_x1);     // load    i1,base,dword
+					UML_ADD(block, I0, I0, I1);                         // add     i0,i0,i1
+					sum += curdesc->opptr.l[0];
+
+					if (curdesc->delay.first() != nullptr
+						&& !(curdesc->delay.first()->flags & OPFLAG_VIRTUAL_NOOP)
+						&& (curdesc == seqlast || (curdesc->next() != nullptr && curdesc->next()->physpc != curdesc->delay.first()->physpc)))
+					{
+						base = m_prptr(curdesc->delay.first()->physpc);
+						assert(base != nullptr);
+						low_bits = (curdesc->delay.first()->physpc & data_bits_mask) ^ m_dword_xor;
+						UML_LOAD(block, I1, base, low_bits, SIZE_DWORD, SCALE_x1); // load    i1,base,dword
+						UML_ADD(block, I0, I0, I1);                     // add     i0,i0,i1
+						sum += curdesc->delay.first()->opptr.l[0];
+					}
+				}
+			}
+		}
+		else
+		{
+			for (curdesc = seqhead->next(); curdesc != seqlast->next(); curdesc = curdesc->next())
+			{
+				if (!(curdesc->flags & OPFLAG_VIRTUAL_NOOP))
+				{
+					// Skip the last if it was already included above
+					if (curdesc->physpc != last_physpc)
+					{
+						base = m_prptr(curdesc->physpc);
+						assert(base != nullptr);
+						low_bits = (curdesc->physpc & data_bits_mask) ^ m_dword_xor;
+						UML_LOAD(block, I1, base, low_bits, SIZE_DWORD, SCALE_x1);     // load    i1,base,dword
+						UML_ADD(block, I0, I0, I1);                         // add     i0,i0,i1
+						sum += curdesc->opptr.l[0];
+					}
+
+					if (curdesc->delay.first() != nullptr
+						&& !(curdesc->delay.first()->flags & OPFLAG_VIRTUAL_NOOP)
+						&& (curdesc == seqlast || (curdesc->next() != nullptr && curdesc->next()->physpc != curdesc->delay.first()->physpc)))
+					{
+						base = m_prptr(curdesc->delay.first()->physpc);
+						assert(base != nullptr);
+						low_bits = (curdesc->delay.first()->physpc & data_bits_mask) ^ m_dword_xor;
+						UML_LOAD(block, I1, base, low_bits, SIZE_DWORD, SCALE_x1); // load    i1,base,dword
+						UML_ADD(block, I0, I0, I1);                     // add     i0,i0,i1
+						sum += curdesc->delay.first()->opptr.l[0];
+					}
 				}
 			}
 		}
 		UML_CMP(block, I0, sum);                                            // cmp     i0,sum
 		UML_EXHc(block, COND_NE, *m_nocode, epc(seqhead));           // exne    nocode,seqhead->pc
+		if (DEBUG_STRICT_VERIFY)
+		{
+			// This code will do additional checks on the last instruction and last delay slot and indicate if the check failed
+			uml::code_label check_second = compiler.labelnum++;
+			uml::code_label check_failed = compiler.labelnum++;
+			uml::code_label check_passed = compiler.labelnum++;
+			// Check the last instruction
+			if (!(codelast->flags & OPFLAG_VIRTUAL_NOOP) && last_physpc != seqhead->physpc)
+			{
+				base = m_prptr(last_physpc);
+				assert(base != nullptr);
+				low_bits = (last_physpc & (m_data_bits == 64 ? 4 : 0)) ^ m_dword_xor;
+				UML_LOAD(block, I0, base, low_bits, SIZE_DWORD, SCALE_x1);     // load    i1,base,dword
+				sum = codelast->opptr.l[0];
+				UML_CMP(block, I0, sum);                                            // cmp     i0,sum
+				UML_JMPc(block, COND_E, check_second);
+				static const char text[] = "Last instr validation fail seq: %08X end: %08x\n";
+				UML_DMOV(block, mem(&m_core->format), (uintptr_t)text);          // mov     [format],text
+				UML_MOV(block, mem(&m_core->arg0), seqhead->pc);
+				UML_MOV(block, mem(&m_core->arg1), last_physpc);              // mov     [arg0],desc->pc
+				UML_CALLC(block, cfunc_printf_debug, this);                            // callc   printf_debug
+				//UML_CALLC(block, cfunc_debug_break, this);
+				// Skip delay slot check
+				UML_JMP(block, check_failed);
+				// Check the last instruction delay slot
+				UML_LABEL(block, check_second);
+				if (codelast->delay.first() != nullptr && !(codelast->delay.first()->flags & OPFLAG_VIRTUAL_NOOP)
+					&& last_physpc != seqhead->physpc)
+				{
+					base = m_prptr(codelast->delay.first()->physpc);
+					assert(base != nullptr);
+					low_bits = (codelast->delay.first()->physpc & (m_data_bits == 64 ? 4 : 0)) ^ m_dword_xor;
+					UML_LOAD(block, I0, base, low_bits, SIZE_DWORD, SCALE_x1); // load    i1,base,dword
+					sum = codelast->delay.first()->opptr.l[0];
+					UML_CMP(block, I0, sum);                                            // cmp     i0,sum
+					UML_JMPc(block, COND_E, check_passed);
+					static const char text[] = "Last delay slot validation fail seq: %08X end: %08x\n";
+					UML_DMOV(block, mem(&m_core->format), (uintptr_t)text);          // mov     [format],text
+					UML_MOV(block, mem(&m_core->arg0), seqhead->pc);
+					UML_MOV(block, mem(&m_core->arg1), last_physpc);              // mov     [arg0],desc->pc
+					UML_CALLC(block, cfunc_printf_debug, this);                            // callc   printf_debug
+					//UML_CALLC(block, cfunc_debug_break, this);
+					UML_JMP(block, check_failed);
+				}
+			}
+			UML_JMP(block, check_passed);
+			UML_LABEL(block, check_failed);
+			UML_EXH(block, *m_nocode, epc(seqhead));           // exne    nocode,seqhead->pc
+			UML_LABEL(block, check_passed);
+		}
 #endif
 	}
 }
@@ -1188,22 +1360,19 @@ void mips3_device::generate_checksum_block(drcuml_block &block, compiler_state &
 
 void mips3_device::generate_sequence_instruction(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc)
 {
-	offs_t expc;
-	int hotnum;
-
 	/* add an entry for the log */
 	if (m_drcuml->logging() && !(desc->flags & OPFLAG_VIRTUAL_NOOP))
 		log_add_disasm_comment(block, desc->pc, desc->opptr.l[0]);
 
 	/* set the PC map variable */
-	expc = (desc->flags & OPFLAG_IN_DELAY_SLOT) ? desc->pc - 3 : desc->pc;
+	offs_t expc = (desc->flags & OPFLAG_IN_DELAY_SLOT) ? desc->pc - 3 : desc->pc;
 	UML_MAPVAR(block, MAPVAR_PC, expc);                                             // mapvar  PC,expc
 
 	/* accumulate total cycles */
 	compiler.cycles += desc->cycles;
 
 	/* is this a hotspot? */
-	for (hotnum = 0; hotnum < MIPS3_MAX_HOTSPOTS; hotnum++)
+	for (int hotnum = 0; hotnum < MIPS3_MAX_HOTSPOTS; hotnum++)
 		if (m_hotspot[hotnum].pc != 0 && desc->pc == m_hotspot[hotnum].pc && desc->opptr.l[0] == m_hotspot[hotnum].opcode)
 		{
 			compiler.cycles += m_hotspot[hotnum].cycles;
@@ -1247,6 +1416,8 @@ void mips3_device::generate_sequence_instruction(drcuml_block &block, compiler_s
 			UML_CALLC(block, cfunc_printf_debug, this);                            // callc   printf_debug
 		}
 		UML_EXH(block, *m_tlb_mismatch, 0);                      // exh     tlb_mismatch,0
+		// Unconditional tlb exception, no point going further
+		return;
 	}
 
 	/* validate our TLB entry at this PC; if we fail, we need to handle it */
@@ -1255,7 +1426,7 @@ void mips3_device::generate_sequence_instruction(drcuml_block &block, compiler_s
 		const vtlb_entry *tlbtable = vtlb_table();
 
 		/* if we currently have a valid TLB read entry, we just verify */
-		if (tlbtable[desc->pc >> 12] & VTLB_FETCH_ALLOWED)
+		if (tlbtable[desc->pc >> 12] & FETCH_ALLOWED)
 		{
 			if (PRINTF_MMU)
 			{
@@ -1280,6 +1451,8 @@ void mips3_device::generate_sequence_instruction(drcuml_block &block, compiler_s
 				UML_CALLC(block, cfunc_printf_debug, this);                        // callc   printf_debug
 			}
 			UML_EXH(block, *m_tlb_mismatch, 0);                  // exh     tlb_mismatch,0
+			// Unconditional tlb exception, no point going further
+			return;
 		}
 	}
 
@@ -1331,7 +1504,7 @@ void mips3_device::generate_delay_slot_and_branch(drcuml_block &block, compiler_
 	if (desc->targetpc != BRANCH_TARGET_DYNAMIC)
 	{
 		generate_update_cycles(block, compiler_temp, desc->targetpc, true); // <subtract cycles>
-		if (desc->flags & OPFLAG_INTRABLOCK_BRANCH)
+		if (!(m_drcoptions & MIPS3DRC_DISABLE_INTRABLOCK) && (desc->flags & OPFLAG_INTRABLOCK_BRANCH))
 		{
 			UML_JMP(block, desc->targetpc | 0x80000000);                            // jmp     desc->targetpc | 0x80000000
 		}
@@ -2456,6 +2629,11 @@ bool mips3_device::generate_set_cop0_reg(drcuml_block &block, compiler_state &co
 			return true;
 
 		case COP0_Count:
+			// don't count the cycle for this instruction yet; we need a non-zero cycle
+			// count in case we are in a delay slot, otherwise the test for negative cycles
+			// won't be generated (due to compiler.cycles == 0); see the loop during early
+			// boot of gauntdl, @BFC01A24
+			compiler.cycles--;
 			generate_update_cycles(block, compiler, desc->pc, !in_delay_slot);  // <subtract cycles>
 			UML_MOV(block, CPR032(COP0_Count), I0);                             // mov     [Count],i0
 			UML_CALLC(block, cfunc_get_cycles, this);                           // callc   cfunc_get_cycles,mips3
@@ -2464,6 +2642,7 @@ bool mips3_device::generate_set_cop0_reg(drcuml_block &block, compiler_state &co
 			UML_DSUB(block, mem(&m_core->count_zero_time), mem(&m_core->numcycles), I0);
 																				// dsub    [count_zero_time],[m_numcycles],i0
 			UML_CALLC(block, cfunc_mips3com_update_cycle_counting, this);       // callc   mips3com_update_cycle_counting,mips.core
+			compiler.cycles++;
 			return true;
 
 		case COP0_Compare:
@@ -2509,12 +2688,18 @@ bool mips3_device::generate_get_cop0_reg(drcuml_block &block, compiler_state &co
 	switch (reg)
 	{
 		case COP0_Count:
+			// don't count the cycle for this instruction yet; we need a non-zero cycle
+			// count in case we are in a delay slot, otherwise the test for negative cycles
+			// won't be generated (due to compiler.cycles == 0); see the loop during early
+			// boot of gauntdl, @BFC01A24
+			compiler.cycles--;
 			generate_update_cycles(block, compiler, desc->pc, false);           // <subtract cycles>
 			UML_CALLC(block, cfunc_get_cycles, this);                           // callc   cfunc_get_cycles,mips3
 			UML_DSUB(block, I0, mem(&m_core->numcycles), mem(&m_core->count_zero_time));
 																				// dsub    i0,[numcycles],[count_zero_time]
 			UML_DSHR(block, I0, I0, 1);                                         // dshr    i0,i0,1
 			UML_DSEXT(block, I0, I0, SIZE_DWORD);                               // dsext   i0,i0,dword
+			compiler.cycles++;
 			return true;
 
 		case COP0_Random:

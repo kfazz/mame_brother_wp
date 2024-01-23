@@ -13,6 +13,8 @@
 
 #pragma once
 
+#include "ppc_dasm.h"
+
 #include "cpu/drcfe.h"
 #include "cpu/drcuml.h"
 #include "cpu/drcumlsh.h"
@@ -212,7 +214,10 @@ public:
 	void set_bus_frequency(uint32_t bus_frequency) { c_bus_frequency = bus_frequency; }
 	void set_bus_frequency(const XTAL &xtal) { set_bus_frequency(xtal.value()); }
 
-	void ppc_set_dcstore_callback(write32_delegate callback);
+	void set_serial_clock(uint32_t serial_clock) { c_serial_clock = serial_clock; }
+	void set_serial_clock(const XTAL &xtal) { set_serial_clock(xtal.value()); }
+
+	void ppc_set_dcstore_callback(write32sm_delegate callback);
 
 	void ppcdrc_set_options(uint32_t options);
 	void ppcdrc_add_fastram(offs_t start, offs_t end, uint8_t readonly, void *base);
@@ -258,7 +263,7 @@ protected:
 
 	// device_memory_interface overrides
 	virtual space_config_vector memory_space_config() const override;
-	virtual bool memory_translate(int spacenum, int intention, offs_t &address) override;
+	virtual bool memory_translate(int spacenum, int intention, offs_t &address, address_space *&target_space) override;
 
 	// device_state_interface overrides
 	virtual void state_export(const device_state_entry &entry) override;
@@ -292,7 +297,10 @@ protected:
 
 	address_space_config m_program_config;
 	address_space *m_program;
+	memory_access<32, 2, 0, ENDIANNESS_BIG>::cache m_cache32;
+	memory_access<32, 3, 0, ENDIANNESS_BIG>::cache m_cache64;
 	uint32_t c_bus_frequency;
+	uint32_t c_serial_clock;
 
 	struct internal_ppc_state
 	{
@@ -477,7 +485,7 @@ protected:
 		emu_timer *     timer;
 		uint8_t           rxbuffer[256];
 		uint32_t          rxin, rxout;
-		write8_delegate tx_cb;
+		write8smo_delegate tx_cb;
 	};
 
 	ppc4xx_spu_state m_spu;
@@ -495,17 +503,19 @@ protected:
 
 	uint32_t          m_system_clock;
 	uint32_t          m_cpu_clock;
+	uint32_t          m_serial_clock;
 	uint64_t          m_tb_zero_cycles;
 	uint64_t          m_dec_zero_cycles;
 	emu_timer *     m_decrementer_int_timer;
 
-	read32_delegate  m_dcr_read_func;
-	write32_delegate m_dcr_write_func;
 
-	write32_delegate m_dcstore_cb;
+	read32sm_delegate  m_dcr_read_func;
+	write32sm_delegate m_dcr_write_func;
+
+	write32sm_delegate m_dcstore_cb;
 
 	read32_delegate::array<4> m_ext_dma_read_cb;
-	write32_delegate::array<4> m_ext_dma_write_cb;
+	write32sm_delegate::array<4> m_ext_dma_write_cb;
 
 	/* PowerPC function pointers for memory accesses/exceptions */
 #ifdef PPC_H_INCLUDED_FROM_PPC_C
@@ -625,7 +635,7 @@ protected:
 	void set_timebase(uint64_t newtb);
 	uint32_t get_decrementer();
 	void set_decrementer(uint32_t newdec);
-	uint32_t ppccom_translate_address_internal(int intention, offs_t &address);
+	uint32_t ppccom_translate_address_internal(int intention, bool debug, offs_t &address);
 	void ppc4xx_set_irq_line(uint32_t bitmask, int state);
 	int ppc4xx_get_irq_line(uint32_t bitmask);
 	void ppc4xx_dma_update_irq_states();
@@ -674,6 +684,8 @@ protected:
 	void log_register_list(const char *string, const uint32_t *reglist, const uint32_t *regnostarlist);
 	void log_opcode_desc(const opcode_desc *desclist, int indent);
 
+private:
+	powerpc_disassembler m_dasm;
 };
 
 
@@ -745,17 +757,28 @@ public:
 	ppc604_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 };
 
+class ppc740_device : public ppc_device
+{
+public:
+	ppc740_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+};
+
+class ppc750_device : public ppc_device
+{
+public:
+	ppc750_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+};
 
 class ppc4xx_device : public ppc_device
 {
 public:
-	void ppc4xx_spu_set_tx_handler(write8_delegate callback);
+	void ppc4xx_spu_set_tx_handler(write8smo_delegate callback);
 	void ppc4xx_spu_receive_byte(uint8_t byteval);
 
 	void ppc4xx_set_dma_read_handler(int channel, read32_delegate callback, int rate);
-	void ppc4xx_set_dma_write_handler(int channel, write32_delegate callback, int rate);
-	void ppc4xx_set_dcr_read_handler(read32_delegate dcr_read_func);
-	void ppc4xx_set_dcr_write_handler(write32_delegate dcr_write_func);
+	void ppc4xx_set_dma_write_handler(int channel, write32sm_delegate callback, int rate);
+	void ppc4xx_set_dcr_read_handler(read32sm_delegate dcr_read_func);
+	void ppc4xx_set_dcr_write_handler(write32sm_delegate dcr_write_func);
 
 	uint8_t ppc4xx_spu_r(offs_t offset);
 	void ppc4xx_spu_w(offs_t offset, uint8_t data);
@@ -800,5 +823,7 @@ DECLARE_DEVICE_TYPE(MPC8240,   mpc8240_device)
 DECLARE_DEVICE_TYPE(PPC403GA,  ppc403ga_device)
 DECLARE_DEVICE_TYPE(PPC403GCX, ppc403gcx_device)
 DECLARE_DEVICE_TYPE(PPC405GP,  ppc405gp_device)
+DECLARE_DEVICE_TYPE(PPC740,    ppc740_device)
+DECLARE_DEVICE_TYPE(PPC750,    ppc750_device)
 
 #endif  // MAME_CPU_POWERPC_PPC_H

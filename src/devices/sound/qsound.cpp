@@ -9,7 +9,7 @@
 
     The key components are a DSP16A, a TDA1543 dual 16-bit DAC with I2S
     input, and a TC9185P electronic volume control.  The TDA1543 is
-    simulated here; no attempt is being made to emulate theTC9185P.
+    simulated here; no attempt is being made to emulate the TC9185P.
 
     Commands work by writing an address/data word pair to be written to
     DSP's internal RAM.  In theory it's possible to write anywhere in
@@ -26,7 +26,7 @@
     is needed because DSP16 has latent PIO reads in active mode).  I've
     assumed that reading PIO with PSEL low when INT is asserted will
     return the address and cause INT to be de-asserted, and reading PIO
-    with PSEL low when int is not asserted will return the data word.
+    with PSEL low when INT is not asserted will return the data word.
     The DSP program will only respond to one external interrupt per
     sample interval (i.e. the maximum command rate is the same as the
     sample rate).
@@ -102,7 +102,6 @@
 #include <algorithm>
 #include <fstream>
 
-#define LOG_GENERAL     (1U << 0)
 #define LOG_COMMAND     (1U << 1)
 #define LOG_SAMPLE      (1U << 2)
 
@@ -133,7 +132,7 @@ ROM_END
 qsound_device::qsound_device(machine_config const &mconfig, char const *tag, device_t *owner, u32 clock)
 	: device_t(mconfig, QSOUND, tag, owner, clock)
 	, device_sound_interface(mconfig, *this)
-	, device_rom_interface(mconfig, *this, 24)
+	, device_rom_interface(mconfig, *this)
 	, m_dsp(*this, "dsp"), m_stream(nullptr)
 	, m_rom_bank(0U), m_rom_offset(0U), m_cmd_addr(0U), m_cmd_data(0U), m_new_data(0U), m_cmd_pending(0U), m_dsp_ready(1U)
 	, m_samples{ 0, 0 }, m_sr(0U), m_fsr(0U), m_ock(1U), m_old(1U), m_ready(0U), m_channel(0U)
@@ -141,7 +140,7 @@ qsound_device::qsound_device(machine_config const &mconfig, char const *tag, dev
 }
 
 
-WRITE8_MEMBER(qsound_device::qsound_w)
+void qsound_device::qsound_w(offs_t offset, u8 data)
 {
 	switch (offset)
 	{
@@ -169,7 +168,7 @@ WRITE8_MEMBER(qsound_device::qsound_w)
 }
 
 
-READ8_MEMBER(qsound_device::qsound_r)
+u8 qsound_device::qsound_r()
 {
 	return m_dsp_ready ? 0x80 : 0x00;
 }
@@ -254,18 +253,19 @@ void qsound_device::device_reset()
 //  sound_stream_update - handle a stream update
 //-------------------------------------------------
 
-void qsound_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void qsound_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
-	std::fill_n(outputs[0], samples, m_samples[0]);
-	std::fill_n(outputs[1], samples, m_samples[1]);
+	outputs[0].fill(stream_buffer::sample_t(m_samples[0]) * (1.0 / 32768.0));
+	outputs[1].fill(stream_buffer::sample_t(m_samples[1]) * (1.0 / 32768.0));
 }
 
 
 //-------------------------------------------------
-//  rom_bank_updated - the rom bank has changed
+//  rom_bank_post_change - called after the ROM
+//  bank is changed
 //-------------------------------------------------
 
-void qsound_device::rom_bank_updated()
+void qsound_device::rom_bank_post_change()
 {
 	machine().scheduler().synchronize();
 }
@@ -279,7 +279,7 @@ void qsound_device::dsp_io_map(address_map &map)
 }
 
 
-READ16_MEMBER(qsound_device::dsp_sample_r)
+u16 qsound_device::dsp_sample_r(offs_t offset)
 {
 	// on CPS2, bit 0-7 of external ROM data is tied to ground
 	u8 const byte(read_byte((u32(m_rom_bank) << 16) | m_rom_offset));
@@ -288,7 +288,7 @@ READ16_MEMBER(qsound_device::dsp_sample_r)
 	return u16(byte) << 8;
 }
 
-WRITE_LINE_MEMBER(qsound_device::dsp_ock_w)
+void qsound_device::dsp_ock_w(int state)
 {
 	// detect active edge
 	if (bool(state) == bool(m_ock))
@@ -330,7 +330,7 @@ WRITE_LINE_MEMBER(qsound_device::dsp_ock_w)
 	m_old = old;
 }
 
-WRITE16_MEMBER(qsound_device::dsp_pio_w)
+void qsound_device::dsp_pio_w(offs_t offset, u16 data)
 {
 	// PDX0 is used for QSound ROM offset, and PDX1 is used for ADPCM ROM offset
 	// this prevents spurious PSEL transitions between sending samples to the DAC
@@ -340,7 +340,7 @@ WRITE16_MEMBER(qsound_device::dsp_pio_w)
 }
 
 
-READ16_MEMBER(qsound_device::dsp_pio_r)
+u16 qsound_device::dsp_pio_r()
 {
 	LOGCOMMAND(
 			"QSound: DSP PIO read returning %s = %04X\n",
@@ -358,12 +358,12 @@ READ16_MEMBER(qsound_device::dsp_pio_r)
 	}
 }
 
-void qsound_device::set_dsp_ready(void *ptr, s32 param)
+void qsound_device::set_dsp_ready(s32 param)
 {
 	m_dsp_ready = 1U;
 }
 
-void qsound_device::set_cmd(void *ptr, s32 param)
+void qsound_device::set_cmd(s32 param)
 {
 	/*
 	 *  I don't believe the data word is actually double-buffered in

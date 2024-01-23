@@ -106,10 +106,16 @@ Notes:
         0704: rr   a
         0706: call $073F
 
+        There is an alternate format function in the controller firmware that allows to set a secret byte which is stored in the sector header.
+        Copy protected software checks the secret byte read from the sector header and refuses to start if the disk has not been appropriately formatted.
+
 */
 
 #include "emu.h"
 #include "lux10828.h"
+
+#include "formats/abc800_dsk.h"
+#include "formats/abc800i_dsk.h"
 
 
 
@@ -197,17 +203,17 @@ void luxor_55_10828_device::luxor_55_10828_io(address_map &map)
 //  Z80PIO
 //-------------------------------------------------
 
-READ8_MEMBER( luxor_55_10828_device::pio_pa_r )
+uint8_t luxor_55_10828_device::pio_pa_r()
 {
 	return m_data;
 }
 
-WRITE8_MEMBER( luxor_55_10828_device::pio_pa_w )
+void luxor_55_10828_device::pio_pa_w(uint8_t data)
 {
 	m_data = data;
 }
 
-READ8_MEMBER( luxor_55_10828_device::pio_pb_r )
+uint8_t luxor_55_10828_device::pio_pb_r()
 {
 	/*
 
@@ -228,13 +234,13 @@ READ8_MEMBER( luxor_55_10828_device::pio_pb_r )
 
 	// single/double sided drive
 	uint8_t sw1 = m_sw1->read() & 0x0f;
-	bool ds0 = m_sel0 ? BIT(sw1, 0) : 1;
-	bool ds1 = m_sel1 ? BIT(sw1, 1) : 1;
+	bool ds0 = BIT(m_sel, 0) ? BIT(sw1, 0) : 1;
+	bool ds1 = BIT(m_sel, 1) ? BIT(sw1, 1) : 1;
 	data |= !(ds0 && ds1);
 
 	// single/double density drive
-	bool dd0 = m_sel0 ? BIT(sw1, 2) : 1;
-	bool dd1 = m_sel1 ? BIT(sw1, 3) : 1;
+	bool dd0 = BIT(m_sel, 0) ? BIT(sw1, 2) : 1;
+	bool dd1 = BIT(m_sel, 1) ? BIT(sw1, 3) : 1;
 	data |= !(dd0 && dd1) << 1;
 
 	// TODO ULA output
@@ -252,7 +258,7 @@ READ8_MEMBER( luxor_55_10828_device::pio_pb_r )
 	return data;
 }
 
-WRITE8_MEMBER( luxor_55_10828_device::pio_pb_w )
+void luxor_55_10828_device::pio_pb_w(uint8_t data)
 {
 	/*
 
@@ -296,11 +302,14 @@ static void abc_floppies(device_slot_interface &device)
 	device.option_add("8dsdd", FLOPPY_8_DSDD);
 }
 
-FLOPPY_FORMATS_MEMBER( luxor_55_10828_device::floppy_formats )
-	FLOPPY_ABC800_FORMAT
-FLOPPY_FORMATS_END
+void luxor_55_10828_device::floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_ABC800I_FORMAT);
+	fr.add(FLOPPY_ABC800_FORMAT);
+}
 
-WRITE_LINE_MEMBER( luxor_55_10828_device::fdc_intrq_w )
+void luxor_55_10828_device::fdc_intrq_w(int state)
 {
 	m_fdc_irq = state;
 	m_pio->port_b_write(state << 7);
@@ -308,7 +317,7 @@ WRITE_LINE_MEMBER( luxor_55_10828_device::fdc_intrq_w )
 	//if (state) m_maincpu->wait_w(CLEAR_LINE);
 }
 
-WRITE_LINE_MEMBER( luxor_55_10828_device::fdc_drq_w )
+void luxor_55_10828_device::fdc_drq_w(int state)
 {
 	m_fdc_drq = state;
 
@@ -338,8 +347,8 @@ void luxor_55_10828_device::device_add_mconfig(machine_config &config)
 	m_fdc->intrq_wr_callback().set(FUNC(luxor_55_10828_device::fdc_intrq_w));
 	m_fdc->drq_wr_callback().set(FUNC(luxor_55_10828_device::fdc_drq_w));
 
-	FLOPPY_CONNECTOR(config, m_floppy0, abc_floppies, "525ssdd", luxor_55_10828_device::floppy_formats);
-	FLOPPY_CONNECTOR(config, m_floppy1, abc_floppies, "525ssdd", luxor_55_10828_device::floppy_formats);
+	FLOPPY_CONNECTOR(config, m_floppy[0], abc_floppies, "525ssdd", luxor_55_10828_device::floppy_formats).enable_sound(true);
+	FLOPPY_CONNECTOR(config, m_floppy[1], abc_floppies, "525ssdd", luxor_55_10828_device::floppy_formats).enable_sound(true);
 }
 
 
@@ -367,12 +376,12 @@ INPUT_PORTS_START( luxor_55_10828 )
 	PORT_DIPSETTING(    0x00, "44 (ABC 832/834/850)" )
 	PORT_DIPSETTING(    0x01, "45 (ABC 830)" )
 
-	PORT_START("S2,S3")
+	PORT_START("S2_S3")
 	PORT_DIPNAME( 0x01, 0x01, "Shift Clock" )
 	PORT_DIPSETTING(    0x00, "2 MHz" )
 	PORT_DIPSETTING(    0x01, "4 MHz" )
 
-	PORT_START("S4,S5")
+	PORT_START("S4_S5")
 	PORT_DIPNAME( 0x01, 0x01, "Write Precompensation" )
 	PORT_DIPSETTING(    0x00, "Always On" )
 	PORT_DIPSETTING(    0x01, "Programmable" )
@@ -404,8 +413,7 @@ luxor_55_10828_device::luxor_55_10828_device(const machine_config &mconfig, cons
 	m_maincpu(*this, Z80_TAG),
 	m_pio(*this, Z80PIO_TAG),
 	m_fdc(*this, MB8876_TAG),
-	m_floppy0(*this, MB8876_TAG":0"),
-	m_floppy1(*this, MB8876_TAG":1"),
+	m_floppy(*this, MB8876_TAG":%u", 0U),
 	m_sw1(*this, "SW1"),
 	m_s1(*this, "S1"),
 	m_cs(false),
@@ -414,8 +422,7 @@ luxor_55_10828_device::luxor_55_10828_device(const machine_config &mconfig, cons
 	m_fdc_irq(0),
 	m_fdc_drq(0),
 	m_wait_enable(0),
-	m_sel0(0),
-	m_sel1(0)
+	m_sel(0)
 {
 }
 
@@ -433,8 +440,7 @@ void luxor_55_10828_device::device_start()
 	save_item(NAME(m_fdc_irq));
 	save_item(NAME(m_fdc_drq));
 	save_item(NAME(m_wait_enable));
-	save_item(NAME(m_sel0));
-	save_item(NAME(m_sel1));
+	save_item(NAME(m_sel));
 
 	// patch out protection checks (bioses basf6106/mpi02)
 	uint8_t *rom = memregion(Z80_TAG)->base();
@@ -455,8 +461,7 @@ void luxor_55_10828_device::device_reset()
 {
 	m_cs = false;
 
-	address_space &space = m_maincpu->space(AS_PROGRAM);
-	ctrl_w(space, 0, 0);
+	ctrl_w(0);
 
 	m_data = 0;
 }
@@ -574,7 +579,7 @@ void luxor_55_10828_device::abcbus_c3(uint8_t data)
 //  ctrl_w -
 //-------------------------------------------------
 
-WRITE8_MEMBER( luxor_55_10828_device::ctrl_w )
+void luxor_55_10828_device::ctrl_w(uint8_t data)
 {
 	/*
 
@@ -595,13 +600,12 @@ WRITE8_MEMBER( luxor_55_10828_device::ctrl_w )
 		return;
 
 	// drive selection
-	m_sel0 = BIT(data, 0);
-	m_sel1 = BIT(data, 1);
+	m_sel = data & 0x03;
 
 	floppy_image_device *floppy = nullptr;
 
-	if (m_sel0) floppy = m_floppy0->get_device();
-	if (m_sel1) floppy = m_floppy1->get_device();
+	if (BIT(m_sel, 0)) floppy = m_floppy[0]->get_device();
+	if (BIT(m_sel, 1)) floppy = m_floppy[1]->get_device();
 
 	m_fdc->set_floppy(floppy);
 
@@ -626,7 +630,7 @@ WRITE8_MEMBER( luxor_55_10828_device::ctrl_w )
 //  status_w -
 //-------------------------------------------------
 
-WRITE8_MEMBER( luxor_55_10828_device::status_w )
+void luxor_55_10828_device::status_w(uint8_t data)
 {
 	/*
 
@@ -657,7 +661,7 @@ WRITE8_MEMBER( luxor_55_10828_device::status_w )
 //  fdc_r -
 //-------------------------------------------------
 
-READ8_MEMBER( luxor_55_10828_device::fdc_r )
+uint8_t luxor_55_10828_device::fdc_r(offs_t offset)
 {
 	if (machine().side_effects_disabled())
 		return 0xff;
@@ -685,7 +689,7 @@ READ8_MEMBER( luxor_55_10828_device::fdc_r )
 //  fdc_w -
 //-------------------------------------------------
 
-WRITE8_MEMBER( luxor_55_10828_device::fdc_w )
+void luxor_55_10828_device::fdc_w(offs_t offset, uint8_t data)
 {
 	if (machine().side_effects_disabled())
 		return;

@@ -9,6 +9,8 @@
 
 #include "machine/dp8390.h"
 
+#include "multibyte.h"
+
 
 //**************************************************************************
 //  DEVICE DEFINITIONS
@@ -39,22 +41,23 @@ x68k_neptune_device::x68k_neptune_device(const machine_config &mconfig, const ch
 
 void x68k_neptune_device::device_start()
 {
-	char mac[7];
+	uint8_t mac[6];
 	uint32_t num = machine().rand();
 	m_slot = dynamic_cast<x68k_expansion_slot_device *>(owner());
 	memset(m_prom, 0x57, 16);
-	sprintf(mac+2, "\x1b%c%c%c", (num >> 16) & 0xff, (num >> 8) & 0xff, num & 0xff);
+	mac[2] = 0x1b;
+	put_u24be(mac+3, num);
 	mac[0] = 0; mac[1] = 0;  // avoid gcc warning
 	memcpy(m_prom, mac, 6);
 	m_dp8390->set_mac(mac);
-	m_slot->space().install_readwrite_handler(0xece000,0xece3ff, read16_delegate(*this, FUNC(x68k_neptune_device::x68k_neptune_port_r)), write16_delegate(*this, FUNC(x68k_neptune_device::x68k_neptune_port_w)), 0xffffffff);
+	m_slot->space().install_readwrite_handler(0xece000,0xece3ff, read16s_delegate(*this, FUNC(x68k_neptune_device::x68k_neptune_port_r)), write16s_delegate(*this, FUNC(x68k_neptune_device::x68k_neptune_port_w)), 0xffffffff);
 }
 
 void x68k_neptune_device::device_reset() {
 	memcpy(m_prom, m_dp8390->get_mac(), 6);
 }
 
-READ16_MEMBER(x68k_neptune_device::x68k_neptune_port_r)
+uint16_t x68k_neptune_device::x68k_neptune_port_r(offs_t offset, uint16_t mem_mask)
 {
 	uint16_t data;
 
@@ -62,17 +65,15 @@ READ16_MEMBER(x68k_neptune_device::x68k_neptune_port_r)
 		return 0xffff;
 	if(offset < 0x100+16)
 	{
-		m_dp8390->dp8390_cs(CLEAR_LINE);
-		return (m_dp8390->dp8390_r(space, offset, 0xff) << 8)|
-				m_dp8390->dp8390_r(space, offset+1, 0xff);
+		return (m_dp8390->cs_read(offset) << 8)|
+				m_dp8390->cs_read(offset+1);
 	}
 	//if(mem_mask == 0x00ff) offset++;
 	switch(offset)
 	{
 	case 0x100+16:
-		m_dp8390->dp8390_cs(ASSERT_LINE);
-		data = m_dp8390->dp8390_r(space, offset, mem_mask);
-		data = ((data & 0x00ff) << 8) | ((data & 0xff00) >> 8);
+		data = m_dp8390->remote_read();
+		data = swapendian_int16(data);
 		return data;
 	case 0x100+31:
 		m_dp8390->dp8390_reset(CLEAR_LINE);
@@ -83,29 +84,26 @@ READ16_MEMBER(x68k_neptune_device::x68k_neptune_port_r)
 	return 0;
 }
 
-WRITE16_MEMBER(x68k_neptune_device::x68k_neptune_port_w)
+void x68k_neptune_device::x68k_neptune_port_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	if(offset >= 0x100+32 || offset < 0x100)
 		return;
 	if(offset < 0x100+16)
 	{
-		m_dp8390->dp8390_cs(CLEAR_LINE);
 		if(mem_mask == 0x00ff)
 		{
 			data <<= 8;
 			offset++;
 		}
-		m_dp8390->dp8390_w(space, offset, data>>8, 0xff);
-		if(mem_mask == 0xffff) m_dp8390->dp8390_w(space, offset+1, data & 0xff, 0xff);
+		m_dp8390->cs_write(offset, data>>8);
+		if(mem_mask == 0xffff) m_dp8390->cs_write(offset+1, data & 0xff);
 		return;
 	}
 	//if(mem_mask == 0x00ff) offset++;
 	switch(offset)
 	{
 	case 0x100+16:
-		m_dp8390->dp8390_cs(ASSERT_LINE);
-		data = ((data & 0x00ff) << 8) | ((data & 0xff00) >> 8);
-		m_dp8390->dp8390_w(space, offset, data, mem_mask);
+		m_dp8390->remote_write(swapendian_int16(data));
 		return;
 	case 0x100+31:
 		m_dp8390->dp8390_reset(ASSERT_LINE);
@@ -116,7 +114,7 @@ WRITE16_MEMBER(x68k_neptune_device::x68k_neptune_port_w)
 	return;
 }
 
-READ8_MEMBER(x68k_neptune_device::x68k_neptune_mem_read)
+uint8_t x68k_neptune_device::x68k_neptune_mem_read(offs_t offset)
 {
 	if(offset < 32) return m_prom[offset>>1];
 	if((offset < (16*1024)) || (offset >= (32*1024)))
@@ -127,7 +125,7 @@ READ8_MEMBER(x68k_neptune_device::x68k_neptune_mem_read)
 	return m_board_ram[offset - (16*1024)];
 }
 
-WRITE8_MEMBER(x68k_neptune_device::x68k_neptune_mem_write)
+void x68k_neptune_device::x68k_neptune_mem_write(offs_t offset, uint8_t data)
 {
 	if((offset < (16*1024)) || (offset >= (32*1024)))
 	{
@@ -137,7 +135,7 @@ WRITE8_MEMBER(x68k_neptune_device::x68k_neptune_mem_write)
 	m_board_ram[offset - (16*1024)] = data;
 }
 
-WRITE_LINE_MEMBER(x68k_neptune_device::x68k_neptune_irq_w)
+void x68k_neptune_device::x68k_neptune_irq_w(int state)
 {
 	m_slot->irq2_w(state);
 	logerror("Neptune: IRQ2 set to %i\n",state);

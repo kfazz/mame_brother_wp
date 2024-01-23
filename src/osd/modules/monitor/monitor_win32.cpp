@@ -5,7 +5,6 @@
  *
  */
 
-#include "emu.h"
 #include "modules/osdmodule.h"
 #include "monitor_module.h"
 
@@ -15,6 +14,7 @@
 #include <windows.h>
 #undef interface
 
+#include "osdcore.h"
 #include "strconv.h"
 #include "windows/video.h"
 #include "window.h"
@@ -96,7 +96,7 @@ protected:
 		{
 			for (const auto &monitor : list())
 			{
-				osd_printf_verbose("Video: Monitor %I64u = \"%s\" %s\n", monitor->oshandle(), monitor->devicename(), monitor->is_primary() ? "(primary)" : "");
+				osd_printf_verbose("Video: Monitor %u = \"%s\" %s\n", monitor->oshandle(), monitor->devicename(), monitor->is_primary() ? "(primary)" : "");
 			}
 		}
 

@@ -38,7 +38,6 @@ protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// optional information overrides
 	virtual const tiny_rom_entry *device_rom_region() const override;
@@ -46,14 +45,14 @@ protected:
 	virtual ioport_constructor device_input_ports() const override;
 
 private:
-	inline void serial_output(int state);
-	inline void serial_clock();
-	inline void key_down(int state);
+	void serial_output(int state);
+	TIMER_CALLBACK_MEMBER(serial_clock);
+	void key_down(int state);
 
-	DECLARE_READ8_MEMBER( kb_p1_r );
-	DECLARE_WRITE8_MEMBER( kb_p1_w );
-	DECLARE_WRITE8_MEMBER( kb_p2_w );
-	DECLARE_READ_LINE_MEMBER( kb_t1_r );
+	uint8_t kb_p1_r();
+	void kb_p1_w(uint8_t data);
+	void kb_p2_w(uint8_t data);
+	int kb_t1_r();
 
 	required_device<i8048_device> m_maincpu;
 	required_ioport_array<12> m_x;

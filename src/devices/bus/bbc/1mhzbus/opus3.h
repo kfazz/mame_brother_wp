@@ -14,8 +14,6 @@
 #include "imagedev/floppy.h"
 #include "machine/ram.h"
 #include "machine/wd_fdc.h"
-#include "formats/acorn_dsk.h"
-#include "formats/fsd_dsk.h"
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -45,17 +43,12 @@ protected:
 	virtual void jim_w(offs_t offset, uint8_t data) override;
 
 private:
-	DECLARE_FLOPPY_FORMATS(floppy_formats);
-
-	DECLARE_WRITE_LINE_MEMBER(fdc_drq_w);
+	static void floppy_formats(format_registration &fr);
 
 	required_device<ram_device> m_ramdisk;
 	required_device<wd1770_device> m_fdc;
-	required_device<floppy_connector> m_floppy0;
-	optional_device<floppy_connector> m_floppy1;
+	required_device_array<floppy_connector, 2> m_floppy;
 
-	int m_fdc_ie;
-	int m_fdc_drq;
 	uint16_t m_ramdisk_page;
 };
 

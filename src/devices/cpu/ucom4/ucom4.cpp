@@ -23,7 +23,6 @@
 #include "emu.h"
 #include "ucom4.h"
 #include "ucom4d.h"
-#include "debugger.h"
 
 
 // uCOM-43 products: 2000x8 ROM, 96x4 RAM, supports full instruction set
@@ -65,52 +64,46 @@ void ucom4_cpu_device::data_96x4(address_map &map)
 
 
 // device definitions
-ucom4_cpu_device::ucom4_cpu_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock, int family, int stack_levels, int prgwidth, address_map_constructor program, int datawidth, address_map_constructor data)
-	: cpu_device(mconfig, type, tag, owner, clock)
-	, m_program_config("program", ENDIANNESS_BIG, 8, prgwidth, 0, program)
-	, m_data_config("data", ENDIANNESS_BIG, 8, datawidth, 0, data)
-	, m_prgwidth(prgwidth)
-	, m_datawidth(datawidth)
-	, m_family(family)
-	, m_stack_levels(stack_levels)
-	, m_read_a(*this)
-	, m_read_b(*this)
-	, m_read_c(*this)
-	, m_read_d(*this)
-	, m_write_c(*this)
-	, m_write_d(*this)
-	, m_write_e(*this)
-	, m_write_f(*this)
-	, m_write_g(*this)
-	, m_write_h(*this)
-	, m_write_i(*this)
-{
-}
+ucom4_cpu_device::ucom4_cpu_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock, int family, int stack_levels, int prgwidth, address_map_constructor program, int datawidth, address_map_constructor data) :
+	cpu_device(mconfig, type, tag, owner, clock),
+	m_program_config("program", ENDIANNESS_BIG, 8, prgwidth, 0, program),
+	m_data_config("data", ENDIANNESS_BIG, 8, datawidth, 0, data),
+	m_prgwidth(prgwidth),
+	m_datawidth(datawidth),
+	m_family(family),
+	m_stack_levels(stack_levels),
+	m_read_a(*this, 0),
+	m_read_b(*this, 0),
+	m_read_c(*this, 0),
+	m_read_d(*this, 0),
+	m_write_c(*this),
+	m_write_d(*this),
+	m_write_e(*this),
+	m_write_f(*this),
+	m_write_g(*this),
+	m_write_h(*this),
+	m_write_i(*this)
+{ }
 
-upd546_cpu_device::upd546_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
-	: ucom4_cpu_device(mconfig, NEC_D546, tag, owner, clock, NEC_UCOM43, 3 /* stack levels */, 11 /* prg width */, address_map_constructor(FUNC(upd546_cpu_device::program_2k), this), 7 /* data width */, address_map_constructor(FUNC(upd546_cpu_device::data_96x4), this))
-{
-}
+upd546_cpu_device::upd546_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock) :
+	ucom4_cpu_device(mconfig, NEC_D546, tag, owner, clock, NEC_UCOM43, 3 /* stack levels */, 11 /* prg width */, address_map_constructor(FUNC(upd546_cpu_device::program_2k), this), 7 /* data width */, address_map_constructor(FUNC(upd546_cpu_device::data_96x4), this))
+{ }
 
-upd553_cpu_device::upd553_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
-	: ucom4_cpu_device(mconfig, NEC_D553, tag, owner, clock, NEC_UCOM43, 3, 11, address_map_constructor(FUNC(upd553_cpu_device::program_2k), this), 7, address_map_constructor(FUNC(upd553_cpu_device::data_96x4), this))
-{
-}
+upd553_cpu_device::upd553_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock) :
+	ucom4_cpu_device(mconfig, NEC_D553, tag, owner, clock, NEC_UCOM43, 3, 11, address_map_constructor(FUNC(upd553_cpu_device::program_2k), this), 7, address_map_constructor(FUNC(upd553_cpu_device::data_96x4), this))
+{ }
 
-upd557l_cpu_device::upd557l_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
-	: ucom4_cpu_device(mconfig, NEC_D557L, tag, owner, clock, NEC_UCOM43, 3, 11, address_map_constructor(FUNC(upd557l_cpu_device::program_2k), this), 7, address_map_constructor(FUNC(upd557l_cpu_device::data_96x4), this))
-{
-}
+upd557l_cpu_device::upd557l_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock) :
+	ucom4_cpu_device(mconfig, NEC_D557L, tag, owner, clock, NEC_UCOM43, 3, 11, address_map_constructor(FUNC(upd557l_cpu_device::program_2k), this), 7, address_map_constructor(FUNC(upd557l_cpu_device::data_96x4), this))
+{ }
 
-upd650_cpu_device::upd650_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
-	: ucom4_cpu_device(mconfig, NEC_D650, tag, owner, clock, NEC_UCOM43, 3, 11, address_map_constructor(FUNC(upd650_cpu_device::program_2k), this), 7, address_map_constructor(FUNC(upd650_cpu_device::data_96x4), this))
-{
-}
+upd650_cpu_device::upd650_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock) :
+	ucom4_cpu_device(mconfig, NEC_D650, tag, owner, clock, NEC_UCOM43, 3, 11, address_map_constructor(FUNC(upd650_cpu_device::program_2k), this), 7, address_map_constructor(FUNC(upd650_cpu_device::data_96x4), this))
+{ }
 
-upd552_cpu_device::upd552_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
-	: ucom4_cpu_device(mconfig, NEC_D552, tag, owner, clock, NEC_UCOM44, 1, 10, address_map_constructor(FUNC(upd552_cpu_device::program_1k), this), 6, address_map_constructor(FUNC(upd552_cpu_device::data_64x4), this))
-{
-}
+upd552_cpu_device::upd552_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock) :
+	ucom4_cpu_device(mconfig, NEC_D552, tag, owner, clock, NEC_UCOM44, 1, 10, address_map_constructor(FUNC(upd552_cpu_device::program_1k), this), 6, address_map_constructor(FUNC(upd552_cpu_device::data_64x4), this))
+{ }
 
 device_memory_interface::space_config_vector ucom4_cpu_device::memory_space_config() const
 {
@@ -151,12 +144,6 @@ std::unique_ptr<util::disasm_interface> ucom4_cpu_device::create_disassembler()
 //  device_start - device-specific startup
 //-------------------------------------------------
 
-enum
-{
-	UCOM4_PC=1, UCOM4_DPL, UCOM4_DPH,
-	UCOM4_ACC
-};
-
 void ucom4_cpu_device::device_start()
 {
 	assert(PORTA == 0);
@@ -167,21 +154,7 @@ void ucom4_cpu_device::device_start()
 	m_datamask = (1 << m_datawidth) - 1;
 	m_dph_mask = m_datamask >> 4;
 
-	m_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(ucom4_cpu_device::simple_timer_cb), this));
-
-	// resolve callbacks
-	m_read_a.resolve_safe(0);
-	m_read_b.resolve_safe(0);
-	m_read_c.resolve_safe(0);
-	m_read_d.resolve_safe(0);
-
-	m_write_c.resolve_safe();
-	m_write_d.resolve_safe();
-	m_write_e.resolve_safe();
-	m_write_f.resolve_safe();
-	m_write_g.resolve_safe();
-	m_write_h.resolve_safe();
-	m_write_i.resolve_safe();
+	m_timer = timer_alloc(FUNC(ucom4_cpu_device::simple_timer_cb), this);
 
 	// zerofill
 	memset(m_stack, 0, sizeof(m_stack));
@@ -219,14 +192,15 @@ void ucom4_cpu_device::device_start()
 	save_item(NAME(m_int_line));
 
 	// register state for debugger
-	state_add(UCOM4_PC, "PC",  m_pc).formatstr("%04X");
-	state_add(UCOM4_DPL, "DPL", m_dpl).formatstr("%01X");
-	state_add(UCOM4_DPH, "DPH", m_dph).formatstr("%01X");
-	state_add(UCOM4_ACC, "ACC", m_acc).formatstr("%01X");
-
 	state_add(STATE_GENPC, "GENPC", m_pc).formatstr("%04X").noshow();
 	state_add(STATE_GENPCBASE, "CURPC", m_pc).formatstr("%04X").noshow();
 	state_add(STATE_GENFLAGS, "GENFLAGS", m_carry_f).formatstr("%5s").noshow(); // dummy
+
+	m_state_count = 0;
+	state_add(++m_state_count, "PC", m_pc).formatstr("%04X"); // 1
+	state_add(++m_state_count, "DPL", m_dpl).formatstr("%01X"); // 2
+	state_add(++m_state_count, "DPH", m_dph).formatstr("%01X"); // 3
+	state_add(++m_state_count, "ACC", m_acc).formatstr("%01X"); // 4
 
 	set_icountptr(m_icount);
 }
@@ -277,7 +251,7 @@ u8 ucom4_cpu_device::input_r(int index)
 		case PORTD: inp = m_read_d(index, 0xff) | m_port_out[index]; break;
 
 		default:
-			logerror("%s read from unknown port %c at $%03X\n", tag(), 'A' + index, m_prev_pc);
+			logerror("read from unknown port %c at $%03X\n", 'A' + index, m_prev_pc);
 			break;
 	}
 
@@ -300,7 +274,7 @@ void ucom4_cpu_device::output_w(int index, u8 data)
 		case PORTI: m_write_i(index, data & 7, 0xff); break;
 
 		default:
-			logerror("%s write to unknown port %c = $%X at $%03X\n", tag(), 'A' + index, data, m_prev_pc);
+			logerror("write to unknown port %c = $%X at $%03X\n", 'A' + index, data, m_prev_pc);
 			break;
 	}
 
@@ -315,7 +289,7 @@ u8 upd557l_cpu_device::input_r(int index)
 	index &= 0xf;
 
 	if (index == PORTB)
-		logerror("%s read from unknown port %c at $%03X\n", tag(), 'A' + index, m_prev_pc);
+		logerror("read from unknown port %c at $%03X\n", 'A' + index, m_prev_pc);
 	else
 		return ucom4_cpu_device::input_r(index);
 
@@ -328,7 +302,7 @@ void upd557l_cpu_device::output_w(int index, u8 data)
 	data &= 0xf;
 
 	if (index == PORTH || index == PORTI)
-		logerror("%s write to unknown port %c = $%X at $%03X\n", tag(), 'A' + index, data, m_prev_pc);
+		logerror("write to unknown port %c = $%X at $%03X\n", 'A' + index, data, m_prev_pc);
 	else
 	{
 		// only G0 for port G
@@ -364,13 +338,13 @@ void ucom4_cpu_device::execute_set_input(int line, int state)
 
 void ucom4_cpu_device::do_interrupt()
 {
+	standard_irq_callback(0, m_pc);
+
 	m_icount--;
 	push_stack();
 	m_pc = 0xf << 2;
 	m_int_f = 0;
 	m_inte_f = (m_family == NEC_UCOM43) ? 0 : 1;
-
-	standard_irq_callback(0);
 }
 
 
@@ -409,7 +383,8 @@ void ucom4_cpu_device::execute_run()
 		m_prev_pc = m_pc;
 
 		// fetch next opcode
-		debugger_instruction_hook(m_pc);
+		if (!m_skip)
+			debugger_instruction_hook(m_pc);
 		m_icount--;
 		m_op = m_program->read_byte(m_pc);
 		m_bitmask = 1 << (m_op & 0x03);

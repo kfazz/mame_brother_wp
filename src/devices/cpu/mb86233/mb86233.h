@@ -19,7 +19,8 @@ public:
 		REG_R, REG_C0, REG_C1,
 		REG_B0, REG_B1, REG_X0, REG_X1, REG_I0, REG_I1,
 		REG_SFT, REG_VSM, REG_MASK, REG_M,
-		REG_PCS0, REG_PCS1, REG_PCS2, REG_PCS3
+		REG_PCS0, REG_PCS1, REG_PCS2, REG_PCS3,
+		REG_SP
 	};
 
 	enum st_flags {
@@ -61,10 +62,10 @@ public:
 
 	void stall() { m_stall = true; }
 
-	DECLARE_WRITE_LINE_MEMBER(gpio0_w);
-	DECLARE_WRITE_LINE_MEMBER(gpio1_w);
-	DECLARE_WRITE_LINE_MEMBER(gpio2_w);
-	DECLARE_WRITE_LINE_MEMBER(gpio3_w);
+	void gpio0_w(int state);
+	void gpio1_w(int state);
+	void gpio2_w(int state);
+	void gpio3_w(int state);
 
 protected:
 	mb86233_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
@@ -88,8 +89,12 @@ private:
 	address_space_config m_io_config;
 	address_space_config m_rf_config;
 
-	address_space        *m_program, *m_data, *m_io, *m_rf;
-	memory_access_cache<2, -2, ENDIANNESS_LITTLE> *m_cache;
+	memory_access<16, 2, -2, ENDIANNESS_LITTLE>::cache m_cache;
+	memory_access<16, 2, -2, ENDIANNESS_LITTLE>::specific m_program;
+	memory_access<16, 2, -2, ENDIANNESS_LITTLE>::specific m_data;
+	memory_access<16, 2, -2, ENDIANNESS_LITTLE>::specific m_io;
+	memory_access< 4, 2, -2, ENDIANNESS_LITTLE>::specific m_rf;
+
 	int m_icount;
 
 	u32 m_st, m_a, m_b, m_d, m_p;
@@ -100,7 +105,6 @@ private:
 
 	bool m_stall;
 
-	static s32 s24_32(u32 val);
 	static u32 set_exp(u32 val, u32 exp);
 	static u32 set_mant(u32 val, u32 mant);
 	static u32 get_exp(u32 val);
@@ -116,6 +120,8 @@ private:
 	void ea_post_1(u32 r);
 	void pcs_push();
 	void pcs_pop();
+	inline void stset_set_sz_int(u32 val);
+	inline void stset_set_sz_fp(u32 val);
 
 	u32 read_reg(u32 r);
 	void write_reg(u32 r, u32 v);

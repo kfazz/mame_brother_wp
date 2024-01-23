@@ -24,18 +24,19 @@ public:
 	auto write_irq_callback() { return m_irq_cb.bind(); }
 	auto channel_irq_callback() { return m_ch_irq_cb.bind(); }
 
-	DECLARE_READ16_MEMBER(audio_r);
-	virtual DECLARE_WRITE16_MEMBER(audio_w);
-	DECLARE_READ16_MEMBER(audio_ctrl_r);
-	DECLARE_WRITE16_MEMBER(audio_ctrl_w);
-	DECLARE_READ16_MEMBER(audio_phase_r);
-	DECLARE_WRITE16_MEMBER(audio_phase_w);
+	uint16_t audio_r(offs_t offset);
+	virtual void audio_w(offs_t offset, uint16_t data);
+	uint16_t audio_ctrl_r(offs_t offset);
+	void audio_ctrl_w(offs_t offset, uint16_t data);
+	uint16_t audio_phase_r(offs_t offset);
+	void audio_phase_w(offs_t offset, uint16_t data);
 
 protected:
 	// sound stream update overrides
-	virtual void sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples) override;
+	virtual void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
 
-	void audio_beat_tick();
+	TIMER_CALLBACK_MEMBER(irq_tick);
+	TIMER_CALLBACK_MEMBER(audio_beat_tick);
 	void audio_rampdown_tick(const uint32_t channel);
 	bool audio_envelope_tick(const uint32_t channel);
 	inline uint32_t get_rampdown_frame_count(const uint32_t channel);
@@ -329,15 +330,11 @@ protected:
 		int16_t m_prevsamp[2];
 	};
 
-	static const device_timer_id TIMER_BEAT = 3;
-	static const device_timer_id TIMER_IRQ = 4;
-
 	void check_irqs(const uint16_t changed);
 
 	virtual void device_start() override;
 	virtual void device_reset() override;
 	virtual void device_stop() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	uint16_t read_space(offs_t offset);
 
@@ -386,7 +383,7 @@ class spg110_audio_device : public spg2xx_audio_device
 public:
 	spg110_audio_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	virtual DECLARE_WRITE16_MEMBER(audio_w) override;
+	virtual void audio_w(offs_t offset, uint16_t data) override;
 
 	// these either come from somewhere else on spg110 or are hardcoded
 	virtual uint16_t get_16bit_bit(const offs_t channel) const override { return 1; }
@@ -400,8 +397,8 @@ class sunplus_gcm394_audio_device : public spg2xx_audio_device
 public:
 	sunplus_gcm394_audio_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ16_MEMBER(control_r);
-	DECLARE_WRITE16_MEMBER(control_w);
+	uint16_t control_r(offs_t offset);
+	void control_w(offs_t offset, uint16_t data);
 
 	virtual void device_start() override;
 

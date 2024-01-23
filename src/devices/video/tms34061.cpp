@@ -32,8 +32,8 @@
 
 DEFINE_DEVICE_TYPE(TMS34061, tms34061_device, "tms34061", "TI TMS34061 VSC")
 
-tms34061_device::tms34061_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
-	: device_t(mconfig, TMS34061, tag, owner, clock),
+tms34061_device::tms34061_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock) :
+	device_t(mconfig, TMS34061, tag, owner, clock),
 	device_video_interface(mconfig, *this),
 	m_rowshift(0),
 	m_vramsize(0),
@@ -57,21 +57,18 @@ tms34061_device::tms34061_device(const machine_config &mconfig, const char *tag,
 
 void tms34061_device::device_start()
 {
-	/* resolve callbak */
-	m_interrupt_cb.resolve();
-
 	/* reset the data */
 	m_vrammask = m_vramsize - 1;
 
 	/* allocate memory for VRAM */
-	m_vram = auto_alloc_array_clear(machine(), u8, m_vramsize + 256 * 2);
+	m_vram_alloc = std::make_unique<u8[]>(m_vramsize + 256 * 2);
 
 	/* allocate memory for latch RAM */
-	m_latchram = auto_alloc_array_clear(machine(), u8, m_vramsize + 256 * 2);
+	m_latchram_alloc = std::make_unique<u8[]>(m_vramsize + 256 * 2);
 
 	/* add some buffer space for VRAM and latch RAM */
-	m_vram += 256;
-	m_latchram += 256;
+	m_vram = &m_vram_alloc[256];
+	m_latchram = &m_latchram_alloc[256];
 
 	/* point the shift register to the base of VRAM for now */
 	m_shiftreg = m_vram;
@@ -97,7 +94,7 @@ void tms34061_device::device_start()
 	m_regs[TMS34061_VERCOUNTER]   = 0x0000;
 
 	/* start vertical interrupt timer */
-	m_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(tms34061_device::interrupt), this));
+	m_timer = timer_alloc(FUNC(tms34061_device::interrupt), this);
 
 	save_item(NAME(m_regs));
 	save_item(NAME(m_xmask));
@@ -139,15 +136,11 @@ static const char *const regnames[] =
 
 void tms34061_device::update_interrupts()
 {
-	/* if we have a callback, process it */
-	if (!m_interrupt_cb.isnull())
-	{
-		/* if the status bit is set, and ints are enabled, turn it on */
-		if ((m_regs[TMS34061_STATUS] & 0x0001) && (m_regs[TMS34061_CONTROL1] & 0x0400))
-			m_interrupt_cb(ASSERT_LINE);
-		else
-			m_interrupt_cb(CLEAR_LINE);
-	}
+	/* if the status bit is set, and ints are enabled, turn it on */
+	if ((m_regs[TMS34061_STATUS] & 0x0001) && (m_regs[TMS34061_CONTROL1] & 0x0400))
+		m_interrupt_cb(ASSERT_LINE);
+	else
+		m_interrupt_cb(CLEAR_LINE);
 }
 
 
@@ -182,7 +175,7 @@ void tms34061_device::register_w(offs_t offset, u8 data)
 		screen().update_partial(screen().vpos());
 
 	/* store the hi/lo half */
-	if (regnum < ARRAY_LENGTH(m_regs))
+	if (regnum < std::size(m_regs))
 	{
 		if (offset & 0x02)
 			m_regs[regnum] = (m_regs[regnum] & 0x00ff) | (data << 8);
@@ -248,7 +241,7 @@ u8 tms34061_device::register_r(offs_t offset)
 	u16 result;
 
 	/* extract the correct portion of the register */
-	if (regnum < ARRAY_LENGTH(m_regs))
+	if (regnum < std::size(m_regs))
 		result = m_regs[regnum];
 	else
 		result = 0xffff;

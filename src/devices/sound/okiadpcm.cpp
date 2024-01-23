@@ -2,7 +2,7 @@
 // copyright-holders:Andrew Gardner,Aaron Giles
 /***************************************************************************
 
-    okiadpcm.h
+    okiadpcm.cpp
 
     OKI ADPCM emulation.
 
@@ -17,6 +17,7 @@
     Application JP,1995-104333 (Unexamined Publication JP,H08-307371,A) (Not examined or registered) https://patents.google.com/patent/JPH08307371A/en <- something unrelated to adpcm, wireless transmission error detection related?
     Application JP,1995-162009 (Unexamined Publication JP,H09-018425,A) (Not examined or registered) https://patents.google.com/patent/JPH0918425A/en <- looks like ADPCM2 maybe?
         Application JP,1988-176215 (Unexamined Publication JP,H02-026426,A) (Not examined or registered) https://patents.google.com/patent/JPH0226426A/en <- Fujitsu variant on (G.726/727?) SB-ADPCM, cited by above
+
 ***************************************************************************/
 
 #include "emu.h"
@@ -39,14 +40,15 @@ int oki_adpcm_state::s_diff_lookup[49*16];
 void oki_adpcm_state::reset()
 {
 	// reset the signal/step
-	m_signal = -2;
-	m_step = 0;
+	m_signal = m_loop_signal = 0;
+	m_step = m_loop_step = 0;
+	m_saved = false;
 }
 
 
 //-------------------------------------------------
-//  device_clock_changed - called if the clock
-//  changes
+//  clock - decode single nibble and update
+//  ADPCM output
 //-------------------------------------------------
 
 int16_t oki_adpcm_state::clock(uint8_t nibble)
@@ -69,6 +71,33 @@ int16_t oki_adpcm_state::clock(uint8_t nibble)
 
 	// return the signal
 	return m_signal;
+}
+
+
+//-------------------------------------------------
+//  save - save current ADPCM state to buffer
+//-------------------------------------------------
+
+void oki_adpcm_state::save()
+{
+	if (!m_saved)
+	{
+		m_loop_signal = m_signal;
+		m_loop_step = m_step;
+		m_saved = true;
+	}
+}
+
+
+//-------------------------------------------------
+//  restore - restore previous ADPCM state
+//  from buffer
+//-------------------------------------------------
+
+void oki_adpcm_state::restore()
+{
+	m_signal = m_loop_signal;
+	m_step = m_loop_step;
 }
 
 
@@ -103,7 +132,7 @@ void oki_adpcm_state::compute_tables()
 		for (int nib = 0; nib < 16; nib++)
 		{
 			s_diff_lookup[step*16 + nib] = nbl2bit[nib][0] *
-				(stepval   * nbl2bit[nib][1] +
+					(stepval * nbl2bit[nib][1] +
 					stepval/2 * nbl2bit[nib][2] +
 					stepval/4 * nbl2bit[nib][3] +
 					stepval/8);
@@ -128,14 +157,15 @@ int oki_adpcm2_state::s_diff_lookup[49*16];
 void oki_adpcm2_state::reset()
 {
 	// reset the signal/step
-	m_signal = -2;
-	m_step = 0;
+	m_signal = m_loop_signal = -2;
+	m_step = m_loop_step = 0;
+	m_saved = false;
 }
 
 
 //-------------------------------------------------
-//  device_clock_changed - called if the clock
-//  changes
+//  clock - decode single nibble and update
+//  ADPCM output
 //-------------------------------------------------
 
 int16_t oki_adpcm2_state::clock(uint8_t nibble)
@@ -158,6 +188,33 @@ int16_t oki_adpcm2_state::clock(uint8_t nibble)
 
 	// return the signal
 	return m_signal;
+}
+
+
+//-------------------------------------------------
+//  save - save current ADPCM state to buffer
+//-------------------------------------------------
+
+void oki_adpcm2_state::save()
+{
+	if (!m_saved)
+	{
+		m_loop_signal = m_signal;
+		m_loop_step = m_step;
+		m_saved = true;
+	}
+}
+
+
+//-------------------------------------------------
+//  restore - restore previous ADPCM state
+//  from buffer
+//-------------------------------------------------
+
+void oki_adpcm2_state::restore()
+{
+	m_signal = m_loop_signal;
+	m_step = m_loop_step;
 }
 
 
@@ -194,7 +251,7 @@ void oki_adpcm2_state::compute_tables()
 		for (int nib = 0; nib < 16; nib++)
 		{
 			s_diff_lookup[step*16 + nib] = nbl2bit[nib][0] *
-				(stepval   * nbl2bit[nib][1] +
+					(stepval * nbl2bit[nib][1] +
 					stepval/2 * nbl2bit[nib][2] +
 					stepval/4 * nbl2bit[nib][3] +
 					stepval/8);

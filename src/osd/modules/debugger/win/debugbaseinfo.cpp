@@ -10,6 +10,8 @@
 #include "debugbaseinfo.h"
 
 
+namespace osd::debugger::win {
+
 debugbase_info::debugbase_info(debugger_windows_interface &debugger) :
 	m_debugger(debugger),
 	m_machine(debugger.machine()),
@@ -21,12 +23,10 @@ debugbase_info::debugbase_info(debugger_windows_interface &debugger) :
 
 void debugbase_info::smart_set_window_bounds(HWND wnd, HWND parent, RECT const &bounds)
 {
-	RECT curbounds;
-	int flags = 0;
-
 	// first get the current bounds, relative to the parent
+	RECT curbounds;
 	GetWindowRect(wnd, &curbounds);
-	if (parent != nullptr)
+	if (parent)
 	{
 		RECT parentbounds;
 		GetWindowRect(parent, &parentbounds);
@@ -37,6 +37,7 @@ void debugbase_info::smart_set_window_bounds(HWND wnd, HWND parent, RECT const &
 	}
 
 	// if the position matches, don't change it
+	int flags = 0;
 	if (curbounds.top == bounds.top && curbounds.left == bounds.left)
 		flags |= SWP_NOMOVE;
 	if ((curbounds.bottom - curbounds.top) == (bounds.bottom - bounds.top) &&
@@ -45,17 +46,21 @@ void debugbase_info::smart_set_window_bounds(HWND wnd, HWND parent, RECT const &
 
 	// if we need to, reposition the window
 	if (flags != (SWP_NOMOVE | SWP_NOSIZE))
-		SetWindowPos(wnd, nullptr,
-					bounds.left, bounds.top,
-					bounds.right - bounds.left, bounds.bottom - bounds.top,
-					SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER | flags);
+	{
+		SetWindowPos(
+				wnd, nullptr,
+				bounds.left, bounds.top,
+				bounds.right - bounds.left, bounds.bottom - bounds.top,
+				SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER | flags);
+	}
 }
-
 
 
 void debugbase_info::smart_show_window(HWND wnd, bool show)
 {
-	BOOL const visible = IsWindowVisible(wnd);
-	if ((visible && !show) || (!visible && show))
+	bool const visible = bool(IsWindowVisible(wnd));
+	if (visible != show)
 		ShowWindow(wnd, show ? SW_SHOW : SW_HIDE);
 }
+
+} // namespace osd::debugger::win

@@ -41,7 +41,8 @@ OP_HANDLER( illegl3 )
 OP_HANDLER( trap )
 {
 	logerror("m6800: illegal opcode: address %04X, op %02X\n",PC-1,(int) M_RDOP_ARG(PC-1)&0xFF);
-	TAKE_TRAP();
+	PC--;
+	take_trap();
 }
 
 /* $00 ILLEGAL */
@@ -80,7 +81,7 @@ OP_HANDLER( tap )
 {
 	CC=A;
 	ONE_MORE_INSN();
-	CHECK_IRQ_LINES(); /* HJB 990417 */
+	check_irq_lines();
 }
 
 /* $07 TPA inherent ----- */
@@ -132,7 +133,7 @@ OP_HANDLER( cli )
 {
 	CLI;
 	ONE_MORE_INSN();
-	CHECK_IRQ_LINES(); /* HJB 990417 */
+	check_irq_lines();
 }
 
 /* $0f SEI */
@@ -140,7 +141,7 @@ OP_HANDLER( sei )
 {
 	SEI;
 	ONE_MORE_INSN();
-	CHECK_IRQ_LINES(); /* HJB 990417 */
+	check_irq_lines();
 }
 
 /* $10 SBA inherent -**** */
@@ -191,7 +192,7 @@ OP_HANDLER( tba )
 	CLR_NZV; SET_NZ8(A);
 }
 
-/* $18 XGDX inherent ----- */ /* HD63701YO only */
+/* $18 XGDX inherent ----- */ /* HD63701Y0 only */
 OP_HANDLER( xgdx )
 {
 	uint16_t t = X;
@@ -205,9 +206,9 @@ OP_HANDLER( daa )
 	uint8_t msn, lsn;
 	uint16_t t, cf = 0;
 	msn=A & 0xf0; lsn=A & 0x0f;
-	if( lsn>0x09 || CC&0x20 ) cf |= 0x06;
-	if( msn>0x80 && lsn>0x09 ) cf |= 0x60;
-	if( msn>0x90 || CC&0x01 ) cf |= 0x60;
+	if (lsn>0x09 || CC&0x20) cf |= 0x06;
+	if (msn>0x80 && lsn>0x09) cf |= 0x60;
+	if (msn>0x90 || CC&0x01) cf |= 0x60;
 	t = cf + A;
 	CLR_NZV; /* keep carry from previous operation */
 	SET_NZ8((uint8_t)t); SET_C8(t);
@@ -216,12 +217,12 @@ OP_HANDLER( daa )
 
 /* $1a ILLEGAL */
 
-/* $1a SLP */ /* HD63701YO only */
+/* $1a SLP */ /* HD63701Y0 only */
 OP_HANDLER( slp )
 {
 	/* wait for next IRQ (same as waiting of wai) */
 	m_wai_state |= M6800_SLP;
-	EAT_CYCLES();
+	eat_cycles();
 }
 
 /* $1b ABA inherent ***** */
@@ -427,7 +428,7 @@ OP_HANDLER( rti )
 	PULLBYTE(A);
 	PULLWORD(pX);
 	PULLWORD(pPC);
-	CHECK_IRQ_LINES(); /* HJB 990417 */
+	check_irq_lines();
 }
 
 /* $3c PSHX inherent ----- */
@@ -442,7 +443,7 @@ OP_HANDLER( mul )
 	uint16_t t;
 	t=A*B;
 	CLR_C;
-	if(t&0x80) SEC;
+	if (t & 0x80) SEC;
 	D=t;
 }
 
@@ -459,8 +460,8 @@ OP_HANDLER( wai )
 	PUSHBYTE(A);
 	PUSHBYTE(B);
 	PUSHBYTE(CC);
-	CHECK_IRQ_LINES();
-	if (m_wai_state & M6800_WAI) EAT_CYCLES();
+	check_irq_lines();
+	if (m_wai_state & M6800_WAI) eat_cycles();
 }
 
 /* $3f SWI absolute indirect ----- */
@@ -682,7 +683,7 @@ OP_HANDLER( neg_ix )
 	WM(EAD,r);
 }
 
-/* $61 AIM --**0- */ /* HD63701YO only */
+/* $61 AIM --**0- */ /* HD63701Y0 only */
 OP_HANDLER( aim_ix )
 {
 	uint8_t t, r;
@@ -693,7 +694,7 @@ OP_HANDLER( aim_ix )
 	WM(EAD,r);
 }
 
-/* $62 OIM --**0- */ /* HD63701YO only */
+/* $62 OIM --**0- */ /* HD63701Y0 only */
 OP_HANDLER( oim_ix )
 {
 	uint8_t t, r;
@@ -723,7 +724,7 @@ OP_HANDLER( lsr_ix )
 	WM(EAD,t);
 }
 
-/* $65 EIM --**0- */ /* HD63701YO only */
+/* $65 EIM --**0- */ /* HD63701Y0 only */
 OP_HANDLER( eim_ix )
 {
 	uint8_t t, r;
@@ -783,7 +784,7 @@ OP_HANDLER( dec_ix )
 	WM(EAD,t);
 }
 
-/* $6b TIM --**0- */ /* HD63701YO only */
+/* $6b TIM --**0- */ /* HD63701Y0 only */
 OP_HANDLER( tim_ix )
 {
 	uint8_t t, r;
@@ -831,7 +832,7 @@ OP_HANDLER( neg_ex )
 	WM(EAD,r);
 }
 
-/* $71 AIM --**0- */ /* HD63701YO only */
+/* $71 AIM --**0- */ /* HD63701Y0 only */
 OP_HANDLER( aim_di )
 {
 	uint8_t t, r;
@@ -842,7 +843,7 @@ OP_HANDLER( aim_di )
 	WM(EAD,r);
 }
 
-/* $72 OIM --**0- */ /* HD63701YO only */
+/* $72 OIM --**0- */ /* HD63701Y0 only */
 OP_HANDLER( oim_di )
 {
 	uint8_t t, r;
@@ -875,7 +876,7 @@ OP_HANDLER( lsr_ex )
 	WM(EAD,t);
 }
 
-/* $75 EIM --**0- */ /* HD63701YO only */
+/* $75 EIM --**0- */ /* HD63701Y0 only */
 OP_HANDLER( eim_di )
 {
 	uint8_t t, r;
@@ -935,7 +936,7 @@ OP_HANDLER( dec_ex )
 	WM(EAD,t);
 }
 
-/* $7b TIM --**0- */ /* HD63701YO only */
+/* $7b TIM --**0- */ /* HD63701Y0 only */
 OP_HANDLER( tim_di )
 {
 	uint8_t t, r;

@@ -20,12 +20,11 @@
 
 
 #ifdef NES_PCB_DEBUG
-#define VERBOSE 1
+#define VERBOSE (LOG_GENERAL)
 #else
-#define VERBOSE 0
+#define VERBOSE (0)
 #endif
-
-#define LOG_MMC(x) do { if (VERBOSE) logerror x; } while (0)
+#include "logmacro.h"
 
 
 //-------------------------------------------------
@@ -59,23 +58,10 @@ nes_ffe8_device::nes_ffe8_device(const machine_config &mconfig, const char *tag,
 
 
 
-void nes_ffe3_device::device_start()
-{
-	common_start();
-}
-
-void nes_ffe3_device::pcb_reset()
-{
-	m_chr_source = m_vrom_chunks ? CHRROM : CHRRAM;
-	prg32(0);
-	chr8(0, m_chr_source);
-}
-
-
 void nes_ffe4_device::device_start()
 {
 	common_start();
-	irq_timer = timer_alloc(TIMER_IRQ);
+	irq_timer = timer_alloc(FUNC(nes_ffe4_device::irq_timer_tick), this);
 	irq_timer->adjust(attotime::zero, 0, clocks_to_attotime(1));
 
 	save_item(NAME(m_exram));
@@ -89,7 +75,6 @@ void nes_ffe4_device::device_start()
 
 void nes_ffe4_device::pcb_reset()
 {
-	m_chr_source = m_vrom_chunks ? CHRROM : CHRRAM;
 	prg16_89ab(0);
 	prg16_cdef(7);
 	chr8(0, m_chr_source);
@@ -105,7 +90,6 @@ void nes_ffe4_device::pcb_reset()
 
 void nes_ffe8_device::pcb_reset()
 {
-	m_chr_source = m_vrom_chunks ? CHRROM : CHRRAM;
 	prg16_89ab(0);
 	prg16_cdef(0xff);
 	chr8(0, m_chr_source);
@@ -132,13 +116,13 @@ void nes_ffe8_device::pcb_reset()
  Known Boards: FFE3 Copier Board
  Games: Hacked versions of games
 
- In MESS: Supported? (I have no games to test this)
+ In MAME: Supported? (I have no games to test this)
 
  -------------------------------------------------*/
 
 void nes_ffe3_device::write_h(offs_t offset, uint8_t data)
 {
-	LOG_MMC(("mapper8 write_h, offset: %04x, data: %02x\n", offset, data));
+	LOG("mapper8 write_h, offset: %04x, data: %02x\n", offset, data);
 
 	chr8(data & 0x07, CHRROM);
 	prg16_89ab(data >> 3);
@@ -151,32 +135,29 @@ void nes_ffe3_device::write_h(offs_t offset, uint8_t data)
  Known Boards: FFE4 Copier Board
  Games: Hacked versions of games
 
- In MESS: Supported? Not sure if we could also have ExRAM or not...
+ In MAME: Supported? Not sure if we could also have ExRAM or not...
  However, priority is pretty low for this mapper.
 
  -------------------------------------------------*/
 
-void nes_ffe4_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(nes_ffe4_device::irq_timer_tick)
 {
-	if (id == TIMER_IRQ)
+	if (m_irq_enable)
 	{
-		if (m_irq_enable)
+		if (m_irq_count == 0xffff)
 		{
-			if (m_irq_count == 0xffff)
-			{
-				set_irq_line(ASSERT_LINE);
-				m_irq_count = 0;
-				m_irq_enable = 0;
-			}
-			else
-				m_irq_count++;
+			set_irq_line(ASSERT_LINE);
+			m_irq_count = 0;
+			m_irq_enable = 0;
 		}
+		else
+			m_irq_count++;
 	}
 }
 
 void nes_ffe4_device::write_l(offs_t offset, uint8_t data)
 {
-	LOG_MMC(("mapper6 write_l, offset: %04x, data: %02x\n", offset, data));
+	LOG("mapper6 write_l, offset: %04x, data: %02x\n", offset, data);
 
 	switch (offset)
 	{
@@ -224,7 +205,7 @@ uint8_t nes_ffe4_device::chr_r(offs_t offset)
 
 void nes_ffe4_device::write_h(offs_t offset, uint8_t data)
 {
-	LOG_MMC(("mapper6 write_h, offset: %04x, data: %02x\n", offset, data));
+	LOG("mapper6 write_h, offset: %04x, data: %02x\n", offset, data);
 
 	if (!m_latch)  // when in "FFE mode" we are forced to use CHRRAM/EXRAM bank?
 	{
@@ -253,13 +234,13 @@ void nes_ffe4_device::write_h(offs_t offset, uint8_t data)
  Known Boards: FFE8 Copier Board
  Games: Hacked versions of games
 
- In MESS: Partially Supported.
+ In MAME: Partially Supported.
 
  -------------------------------------------------*/
 
 void nes_ffe8_device::write_l(offs_t offset, uint8_t data)
 {
-	LOG_MMC(("mapper17 write_l, offset: %04x, data: %02x\n", offset, data));
+	LOG("mapper17 write_l, offset: %04x, data: %02x\n", offset, data);
 
 	switch (offset)
 	{

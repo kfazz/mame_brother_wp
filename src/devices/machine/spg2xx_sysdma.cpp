@@ -11,7 +11,7 @@
 
 DEFINE_DEVICE_TYPE(SPG2XX_SYSDMA, spg2xx_sysdma_device, "spg2xx_sysdma", "SPG240-series System-on-a-Chip System DMA")
 
-#define LOG_DMA             (1U << 9)
+#define LOG_DMA             (1U << 1)
 #define LOG_ALL             (LOG_DMA)
 
 #define VERBOSE             (0)
@@ -39,7 +39,7 @@ void spg2xx_sysdma_device::device_reset()
 *    Machine Hardware    *
 *************************/
 
-READ16_MEMBER(spg2xx_sysdma_device::dma_r)
+uint16_t spg2xx_sysdma_device::dma_r(offs_t offset)
 {
 	offset &= 0x3;
 
@@ -68,7 +68,7 @@ READ16_MEMBER(spg2xx_sysdma_device::dma_r)
 	return val;
 }
 
-WRITE16_MEMBER(spg2xx_sysdma_device::dma_w)
+void spg2xx_sysdma_device::dma_w(offs_t offset, uint16_t data)
 {
 	offset &= 0x3;
 

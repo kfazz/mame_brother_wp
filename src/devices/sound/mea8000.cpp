@@ -130,14 +130,12 @@ mea8000_device::mea8000_device(const machine_config &mconfig, const char *tag, d
 
 void mea8000_device::device_start()
 {
-	m_write_req.resolve_safe();
-
 	init_tables();
 
 	m_stream = stream_alloc(0, 1, clock() / 60);
 	save_item(NAME(m_output));
 
-	m_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(mea8000_device::timer_expire),this));
+	m_timer = timer_alloc(FUNC(mea8000_device::timer_expire), this);
 
 	save_item(NAME(m_state));
 	save_item(NAME(m_buf));
@@ -422,12 +420,9 @@ void mea8000_device::stop_frame()
 
 
 
-void mea8000_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void mea8000_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
-	for (int samp = 0; samp < samples; samp++)
-	{
-		outputs[0][samp] = m_output;
-	}
+	outputs[0].fill(stream_buffer::sample_t(m_output) * (1.0 / 32768.0));
 }
 
 /* next sample in frame, sampling at 64 kHz */

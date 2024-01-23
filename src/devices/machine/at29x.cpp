@@ -40,22 +40,17 @@
 #include "emu.h"
 #include "at29x.h"
 
-#define LOG_DETAIL      (1U<<1)     // More detail
-#define LOG_WARN        (1U<<2)     // Warning
-#define LOG_PRG         (1U<<3)     // Programming
-#define LOG_READ        (1U<<4)     // Reading
-#define LOG_WRITE       (1U<<5)     // Writing
-#define LOG_CONFIG      (1U<<6)     // Configuration
-#define LOG_STATE       (1U<<7)     // State machine
+#define LOG_DETAIL      (1U << 1)     // More detail
+#define LOG_WARN        (1U << 2)     // Warning
+#define LOG_PRG         (1U << 3)     // Programming
+#define LOG_READ        (1U << 4)     // Reading
+#define LOG_WRITE       (1U << 5)     // Writing
+#define LOG_CONFIG      (1U << 6)     // Configuration
+#define LOG_STATE       (1U << 7)     // State machine
 
-#define VERBOSE ( LOG_GENERAL | LOG_WARN )
+#define VERBOSE (LOG_GENERAL | LOG_WARN)
 
 #include "logmacro.h"
-
-enum
-{
-	PRGTIMER = 1
-};
 
 /*
     Constructor for all variants
@@ -114,9 +109,10 @@ void at29x_device::nvram_default()
 //  .nv file
 //-------------------------------------------------
 
-void at29x_device::nvram_read(emu_file &file)
+bool at29x_device::nvram_read(util::read_stream &file)
 {
-	file.read(m_eememory.get(), m_memory_size+2);
+	size_t actual;
+	return !file.read(m_eememory.get(), m_memory_size+2, actual) && actual == m_memory_size+2;
 }
 
 //-------------------------------------------------
@@ -124,18 +120,20 @@ void at29x_device::nvram_read(emu_file &file)
 //  .nv file
 //-------------------------------------------------
 
-void at29x_device::nvram_write(emu_file &file)
+bool at29x_device::nvram_write(util::write_stream &file)
 {
 	// If we don't write (because there were no changes), the file will be wiped
 	LOGMASKED(LOG_PRG, "Write to NVRAM file\n");
 	m_eememory[0] = m_version;
-	file.write(m_eememory.get(), m_memory_size+2);
+
+	size_t actual;
+	return !file.write(m_eememory.get(), m_memory_size+2, actual) && actual == m_memory_size+2;
 }
 
 /*
     Programming timer callback
 */
-void at29x_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(at29x_device::step_programming)
 {
 	switch (m_pgm)
 	{
@@ -479,7 +477,7 @@ void at29x_device::device_start()
 {
 	m_programming_buffer = std::make_unique<uint8_t[]>(m_sector_size);
 	m_eememory = std::make_unique<uint8_t[]>(m_memory_size+2);
-	m_programming_timer = timer_alloc(PRGTIMER);
+	m_programming_timer = timer_alloc(FUNC(at29x_device::step_programming), this);
 
 	// TODO: Complete 16-bit handling
 	m_address_mask = m_memory_size/(m_word_width/8) - 1;

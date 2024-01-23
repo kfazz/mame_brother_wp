@@ -43,7 +43,6 @@
 
 #include <cmath>
 
-#define LOG_GENERAL (1U << 0)
 #define LOG_LINES   (1U << 1)
 #define LOG_CRU     (1U << 2)
 #define LOG_DETAIL  (1U << 3)
@@ -54,7 +53,6 @@
 #define VERBOSE (LOG_ERROR)
 #include "logmacro.h"
 
-#define LOGGENERAL(...)     LOGMASKED(LOG_GENERAL, __VA_ARGS__)
 #define LOGLINES(...)       LOGMASKED(LOG_LINES, __VA_ARGS__)
 #define LOGCRU(...)         LOGMASKED(LOG_CRU, __VA_ARGS__)
 #define LOGDETAIL(...)      LOGMASKED(LOG_DETAIL, __VA_ARGS__)
@@ -62,13 +60,6 @@
 #define LOGERROR(...)       LOGMASKED(LOG_ERROR, __VA_ARGS__)
 #define LOGSETTING(...)     LOGMASKED(LOG_SETTING, __VA_ARGS__)
 
-
-enum
-{
-	DECTIMER,
-	RECVTIMER,
-	SENDTIMER
-};
 
 // Polling frequency. We use a much higher value to allow for line state changes
 // happening between character transmissions (which happen in parallel in real
@@ -254,39 +245,36 @@ void tms9902_device::rcv_break(bool value)
 //------------------------------------------------
 
 /*
-    Timer callback
+    Timer callbacks
 */
-void tms9902_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
-{
-	switch (id)
-	{
-	// This call-back is called by the MESS timer system when the decrementer
-	// reaches 0.
-	case DECTIMER:
-		m_TIMERR = m_TIMELP;
-		m_TIMELP = true;
-		field_interrupts();
-		break;
 
+TIMER_CALLBACK_MEMBER(tms9902_device::decrementer_expired)
+{
+	// This call-back is called when the decrementer reaches 0.
+	m_TIMERR = m_TIMELP;
+	m_TIMELP = true;
+	field_interrupts();
+}
+
+TIMER_CALLBACK_MEMBER(tms9902_device::recv_tick)
+{
 	//  Callback for the autonomous operations of the chip. This is normally
 	//  controlled by an external clock of 3-4 MHz, internally divided by 3 or 4,
 	//  depending on CLK4M. With this timer, reception of characters becomes
 	//  possible.
-	case RECVTIMER:
-		m_rcv_cb(ASSERT_LINE);
-		break;
+	m_rcv_cb(ASSERT_LINE);
+}
 
-	case SENDTIMER:
-		// Byte has been sent
-		m_XSRE = true;
+TIMER_CALLBACK_MEMBER(tms9902_device::send_tick)
+{
+	// Byte has been sent
+	m_XSRE = true;
 
-		// In the meantime, the CPU may have pushed a new byte into the XBR
-		// so we loop until all data are transferred
-		if (!m_XBRE && m_CTSin)
-		{
-			initiate_transmit();
-		}
-		break;
+	// In the meantime, the CPU may have pushed a new byte into the XBR
+	// so we loop until all data are transferred
+	if (!m_XBRE && m_CTSin)
+	{
+		initiate_transmit();
 	}
 }
 
@@ -297,10 +285,8 @@ void tms9902_device::reload_interval_timer()
 {
 	if (m_TMR)
 	{   /* reset clock interval */
-		m_dectimer->adjust(
-						attotime::from_double((double) m_TMR / (m_clock_rate / ((m_CLK4M) ? 4. : 3.) / 64.)),
-						0,
-						attotime::from_double((double) m_TMR / (m_clock_rate / ((m_CLK4M) ? 4. : 3.) / 64.)));
+		attotime rate = attotime::from_double((double) m_TMR / (m_clock_rate / ((m_CLK4M) ? 4. : 3.) / 64.));
+		m_dectimer->adjust(rate, 0, rate);
 	}
 	else
 	{   /* clock interval == 0 -> no timer */
@@ -920,14 +906,9 @@ void tms9902_device::device_start()
 {
 	m_clock_rate = clock();
 
-	m_int_cb.resolve_safe();
-	m_rcv_cb.resolve_safe();
-	m_xmit_cb.resolve_safe();
-	m_ctrl_cb.resolve_safe();
-
-	m_dectimer = timer_alloc(DECTIMER);
-	m_recvtimer = timer_alloc(RECVTIMER);
-	m_sendtimer = timer_alloc(SENDTIMER);
+	m_dectimer = timer_alloc(FUNC(tms9902_device::decrementer_expired), this);
+	m_recvtimer = timer_alloc(FUNC(tms9902_device::recv_tick), this);
+	m_sendtimer = timer_alloc(FUNC(tms9902_device::send_tick), this);
 
 	save_item(NAME(m_LDCTRL));
 	save_item(NAME(m_LDIR));

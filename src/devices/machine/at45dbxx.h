@@ -26,10 +26,10 @@ class at45db041_device : public device_t,
 public:
 	at45db041_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_WRITE_LINE_MEMBER(cs_w);
-	DECLARE_WRITE_LINE_MEMBER(sck_w);
-	DECLARE_WRITE_LINE_MEMBER(si_w);
-	DECLARE_READ_LINE_MEMBER(so_r);
+	void cs_w(int state);
+	void sck_w(int state);
+	void si_w(int state);
+	int so_r();
 
 	uint8_t *get_ptr() {  return &m_data[0];  }
 
@@ -44,8 +44,8 @@ protected:
 
 	// device_nvram_interface overrides
 	virtual void nvram_default() override;
-	virtual void nvram_read(emu_file &file) override;
-	virtual void nvram_write(emu_file &file) override;
+	virtual bool nvram_read(util::read_stream &file) override;
+	virtual bool nvram_write(util::write_stream &file) override;
 
 	virtual int num_pages() const { return 2048; }
 	virtual int page_size() const { return 264; }

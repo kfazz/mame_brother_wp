@@ -112,10 +112,10 @@ void z80ctc_device::write(offs_t offset, uint8_t data)
 //  trigger
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( z80ctc_device::trg0 ) { m_channel[0]->trigger(state != 0); }
-WRITE_LINE_MEMBER( z80ctc_device::trg1 ) { m_channel[1]->trigger(state != 0); }
-WRITE_LINE_MEMBER( z80ctc_device::trg2 ) { m_channel[2]->trigger(state != 0); }
-WRITE_LINE_MEMBER( z80ctc_device::trg3 ) { m_channel[3]->trigger(state != 0); }
+void z80ctc_device::trg0(int state) { m_channel[0]->trigger(state != 0); }
+void z80ctc_device::trg1(int state) { m_channel[1]->trigger(state != 0); }
+void z80ctc_device::trg2(int state) { m_channel[2]->trigger(state != 0); }
+void z80ctc_device::trg3(int state) { m_channel[3]->trigger(state != 0); }
 
 
 //-------------------------------------------------
@@ -132,20 +132,6 @@ void z80ctc_device::device_add_mconfig(machine_config &config)
 		// assign channel index
 		m_channel[ch]->m_index = ch;
 	}
-}
-
-
-//-------------------------------------------------
-//  device_resolve_objects - resolve objects that
-//  may be needed for other devices to set
-//  initial conditions at start time
-//-------------------------------------------------
-
-void z80ctc_device::device_resolve_objects()
-{
-	// resolve callbacks
-	m_intr_cb.resolve_safe();
-	m_zc_cb.resolve_all_safe();
 }
 
 
@@ -295,7 +281,8 @@ z80ctc_channel_device::z80ctc_channel_device(const machine_config &mconfig, cons
 		m_down(0),
 		m_extclk(0),
 		m_timer(nullptr),
-		m_int_state(0)
+		m_int_state(0),
+		m_zc_to_timer(nullptr)
 {
 }
 
@@ -307,7 +294,8 @@ z80ctc_channel_device::z80ctc_channel_device(const machine_config &mconfig, cons
 void z80ctc_channel_device::device_start()
 {
 	// initialize state
-	m_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(z80ctc_channel_device::timer_callback), this));
+	m_timer = timer_alloc(FUNC(z80ctc_channel_device::timer_callback), this);
+	m_zc_to_timer = timer_alloc(FUNC(z80ctc_channel_device::zc_to_callback), this);
 
 	// register for save states
 	save_item(NAME(m_mode));
@@ -495,7 +483,7 @@ void z80ctc_channel_device::trigger(bool state)
 			{
 				// if we hit zero, do the same thing as for a timer interrupt
 				if (--m_down == 0)
-					timer_callback(nullptr,0);
+					timer_callback(0);
 			}
 		}
 	}
@@ -529,10 +517,15 @@ TIMER_CALLBACK_MEMBER(z80ctc_channel_device::timer_callback)
 		m_device->interrupt_check();
 	}
 
-	// generate the clock pulse (FIXME: pulse width is based on bus clock)
+	// generate the clock pulse
 	m_device->m_zc_cb[m_index](1);
-	m_device->m_zc_cb[m_index](0);
+	m_zc_to_timer->adjust(m_device->clocks_to_attotime(1));
 
 	// reset the down counter
 	m_down = m_tconst;
+}
+
+TIMER_CALLBACK_MEMBER(z80ctc_channel_device::zc_to_callback)
+{
+	m_device->m_zc_cb[m_index](0);
 }

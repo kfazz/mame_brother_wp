@@ -10,7 +10,7 @@
 
 #include "emu.h"
 #include "picture.h"
-#include "png.h"
+#include "rendutil.h"
 
 /***************************************************************************
     TYPE DEFINITIONS
@@ -25,8 +25,7 @@ DEFINE_DEVICE_TYPE(IMAGE_PICTURE, picture_image_device, "picture_image", "Still 
 
 picture_image_device::picture_image_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, IMAGE_PICTURE, tag, owner, clock),
-	device_image_interface(mconfig, *this),
-	m_picture(nullptr)
+	device_image_interface(mconfig, *this)
 {
 }
 
@@ -36,11 +35,6 @@ picture_image_device::picture_image_device(const machine_config &mconfig, const 
 
 picture_image_device::~picture_image_device()
 {
-	if (m_picture)
-	{
-		delete m_picture;
-		m_picture = nullptr;
-	}
 }
 
 
@@ -48,26 +42,37 @@ void picture_image_device::device_start()
 {
 }
 
-image_init_result picture_image_device::call_load()
+std::pair<std::error_condition, std::string> picture_image_device::call_load()
 {
-	m_picture = new bitmap_argb32;
-	if (png_read_bitmap(image_core_file(), *m_picture) != PNGERR_NONE)
+	switch (render_detect_image(image_core_file()))
 	{
-		delete m_picture;
-		m_picture = nullptr;
+	case RENDUTIL_IMGFORMAT_PNG:
+		render_load_png(m_picture, image_core_file());
+		if (!m_picture.valid())
+			return std::make_pair(image_error::INVALIDIMAGE, "Invalid or unsupported PNG file");
+		break;
 
-		// todo: try JPEG here.
-		return image_init_result::FAIL;
+	case RENDUTIL_IMGFORMAT_JPEG:
+		render_load_jpeg(m_picture, image_core_file());
+		if (!m_picture.valid())
+			return std::make_pair(image_error::INVALIDIMAGE, "Invalid or unsupported JPEG file");
+		break;
+
+	case RENDUTIL_IMGFORMAT_MSDIB:
+		render_load_msdib(m_picture, image_core_file());
+		if (!m_picture.valid())
+			return std::make_pair(image_error::INVALIDIMAGE, "Invalid or unsupported Microsoft DIB (BMP) file");
+		break;
+
+	default:
+		m_picture.reset();
+		return std::make_pair(image_error::INVALIDIMAGE, "Unsupported image file format");
 	}
 
-	return image_init_result::PASS;
+	return std::make_pair(std::error_condition(), std::string());
 }
 
 void picture_image_device::call_unload()
 {
-	if (m_picture)
-	{
-		delete m_picture;
-		m_picture = nullptr;
-	}
+	m_picture.reset();
 }

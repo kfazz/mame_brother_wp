@@ -12,6 +12,7 @@
 
 #include "exp.h"
 #include "machine/6522via.h"
+#include "machine/input_merger.h"
 #include "bus/electron/cart/slot.h"
 #include "bus/bbc/userport/userport.h"
 #include "bus/generic/slot.h"
@@ -30,7 +31,7 @@ public:
 	electron_plus2_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
 protected:
-	// device-level overrides
+	// device_t implementation
 	virtual void device_start() override;
 
 	// optional information overrides
@@ -40,11 +41,12 @@ protected:
 	virtual void expbus_w(offs_t offset, uint8_t data) override;
 
 private:
-	image_init_result load_rom(device_image_interface &image, generic_slot_device *slot);
+	std::pair<std::error_condition, std::string> load_rom(device_image_interface &image, generic_slot_device *slot);
 	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(rom1_load) { return load_rom(image, m_rom[0]); }
 	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(rom2_load) { return load_rom(image, m_rom[1]); }
 	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(rom3_load) { return load_rom(image, m_rom[2]); }
 
+	required_device<input_merger_device> m_irqs;
 	required_device<electron_expansion_slot_device> m_exp;
 	required_device<via6522_device> m_via;
 	required_device_array<generic_slot_device, 3> m_rom;

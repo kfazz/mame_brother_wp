@@ -18,7 +18,6 @@
 #include "mufdc.h"
 
 #include "formats/naslite_dsk.h"
-#include "formats/pc_dsk.h"
 
 
 //**************************************************************************
@@ -28,10 +27,11 @@
 DEFINE_DEVICE_TYPE(ISA8_FDC344, fdc344_device, "fdc344", "Ably-Tech FDC-344")
 DEFINE_DEVICE_TYPE(ISA8_FDCMAG, fdcmag_device, "fdcmag", "Magitronic Multi Floppy Controller Card")
 
-FLOPPY_FORMATS_MEMBER( mufdc_device::floppy_formats )
-	FLOPPY_PC_FORMAT,
-	FLOPPY_NASLITE_FORMAT
-FLOPPY_FORMATS_END
+void mufdc_device::floppy_formats(format_registration &fr)
+{
+	fr.add_pc_formats();
+	fr.add(FLOPPY_NASLITE_FORMAT);
+}
 
 static void drives(device_slot_interface &device)
 {
@@ -160,7 +160,7 @@ void mufdc_device::device_start()
 
 void mufdc_device::device_reset()
 {
-	m_isa->install_rom(this, 0xc8000, 0xc9fff, shortname(), "option");
+	m_isa->install_rom(this, 0xc8000, 0xc9fff, "option");
 	m_isa->install_device(0x3f0, 0x3f7, *m_fdc, &mcs3201_device::map);
 	m_isa->set_dma_channel(2, this, true);
 }
@@ -170,17 +170,17 @@ void mufdc_device::device_reset()
 //  FDC INTERFACE
 //**************************************************************************
 
-READ8_MEMBER( mufdc_device::fdc_input_r )
+uint8_t mufdc_device::fdc_input_r()
 {
 	return ~m_config->read();
 }
 
-WRITE_LINE_MEMBER( mufdc_device::fdc_irq_w )
+void mufdc_device::fdc_irq_w(int state)
 {
 	m_isa->irq6_w(state ? ASSERT_LINE : CLEAR_LINE);
 }
 
-WRITE_LINE_MEMBER( mufdc_device::fdc_drq_w )
+void mufdc_device::fdc_drq_w(int state)
 {
 	m_isa->drq2_w(state ? ASSERT_LINE : CLEAR_LINE);
 }

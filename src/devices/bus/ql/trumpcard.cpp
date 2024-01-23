@@ -9,6 +9,7 @@
 #include "emu.h"
 #include "trumpcard.h"
 
+#include "formats/ql_dsk.h"
 
 
 //**************************************************************************
@@ -77,9 +78,11 @@ static void ql_trump_card_floppies(device_slot_interface &device)
 //  FLOPPY_FORMATS( floppy_formats )
 //-------------------------------------------------
 
-FLOPPY_FORMATS_MEMBER( ql_trump_card_device::floppy_formats )
-	FLOPPY_QL_FORMAT
-FLOPPY_FORMATS_END
+void ql_trump_card_device::floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_QL_FORMAT);
+}
 
 
 //-------------------------------------------------
@@ -89,8 +92,8 @@ FLOPPY_FORMATS_END
 void ql_trump_card_device::device_add_mconfig(machine_config &config)
 {
 	WD1772(config, m_fdc, 8000000);
-	FLOPPY_CONNECTOR(config, m_floppy0, ql_trump_card_floppies, "35dd", ql_trump_card_device::floppy_formats);
-	FLOPPY_CONNECTOR(config, m_floppy1, ql_trump_card_floppies, nullptr, ql_trump_card_device::floppy_formats);
+	FLOPPY_CONNECTOR(config, m_floppy[0], ql_trump_card_floppies, "35dd", ql_trump_card_device::floppy_formats);
+	FLOPPY_CONNECTOR(config, m_floppy[1], ql_trump_card_floppies, nullptr, ql_trump_card_device::floppy_formats);
 }
 
 
@@ -111,10 +114,9 @@ ql_trump_card_device::ql_trump_card_device(const machine_config &mconfig, device
 	device_t(mconfig, type, tag, owner, clock),
 	device_ql_expansion_card_interface(mconfig, *this),
 	m_fdc(*this, WD1772_TAG),
-	m_floppy0(*this, WD1772_TAG":0"),
-	m_floppy1(*this, WD1772_TAG":1"),
+	m_floppy(*this, WD1772_TAG":%u", 0U),
 	m_rom(*this, "rom"),
-	m_ram(*this, "ram"),
+	m_ram(*this, "ram", ram_size, ENDIANNESS_BIG),
 	m_ram_size(ram_size),
 	m_rom_en(false)
 {
@@ -142,9 +144,6 @@ ql_trump_card_768k_device::ql_trump_card_768k_device(const machine_config &mconf
 
 void ql_trump_card_device::device_start()
 {
-	// allocate memory
-	m_ram.allocate(m_ram_size);
-
 	// state saving
 	save_item(NAME(m_rom_en));
 }
@@ -248,11 +247,11 @@ void ql_trump_card_device::write(offs_t offset, uint8_t data)
 
 		if (BIT(data, 1))
 		{
-			floppy = m_floppy0->get_device();
+			floppy = m_floppy[0]->get_device();
 		}
 		else if (BIT(data, 0))
 		{
-			floppy = m_floppy1->get_device();
+			floppy = m_floppy[1]->get_device();
 		}
 
 		m_fdc->set_floppy(floppy);

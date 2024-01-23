@@ -7,8 +7,6 @@
 #include <cstdio>
 
 
-static constexpr int TIMER_POLL = 1;
-
 pseudo_terminal_device::pseudo_terminal_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, PSEUDO_TERMINAL, tag, owner, clock),
 	device_serial_interface(mconfig, *this),
@@ -16,19 +14,22 @@ pseudo_terminal_device::pseudo_terminal_device(const machine_config &mconfig, co
 	device_pty_interface(mconfig, *this),
 	m_rs232_txbaud(*this, "RS232_TXBAUD"),
 	m_rs232_rxbaud(*this, "RS232_RXBAUD"),
-	m_rs232_startbits(*this, "RS232_STARTBITS"),
 	m_rs232_databits(*this, "RS232_DATABITS"),
 	m_rs232_parity(*this, "RS232_PARITY"),
 	m_rs232_stopbits(*this, "RS232_STOPBITS"),
+	m_flow(*this, "FLOW_CONTROL"),
 	m_input_count(0),
 	m_input_index(0),
-	m_timer_poll(nullptr)
+	m_timer_poll(nullptr),
+	m_rts(0),
+	m_dtr(0),
+	m_xoff(0)
 {
 }
 
-WRITE_LINE_MEMBER(pseudo_terminal_device::update_serial)
+void pseudo_terminal_device::update_serial(int state)
 {
-	int startbits = convert_startbits(m_rs232_startbits->read());
+	int startbits = 1;
 	int databits = convert_databits(m_rs232_databits->read());
 	parity_t parity = convert_parity(m_rs232_parity->read());
 	stop_bits_t stopbits = convert_stopbits(m_rs232_stopbits->read());
@@ -47,15 +48,23 @@ WRITE_LINE_MEMBER(pseudo_terminal_device::update_serial)
 	output_dcd(0);
 	output_dsr(0);
 	output_cts(0);
+
+	m_xoff = 0;
 }
 
 static INPUT_PORTS_START(pseudo_terminal)
 	PORT_RS232_BAUD("RS232_TXBAUD", RS232_BAUD_9600, "TX Baud", pseudo_terminal_device, update_serial)
 	PORT_RS232_BAUD("RS232_RXBAUD", RS232_BAUD_9600, "RX Baud", pseudo_terminal_device, update_serial)
-	PORT_RS232_STARTBITS("RS232_STARTBITS", RS232_STARTBITS_1, "Start Bits", pseudo_terminal_device, update_serial)
 	PORT_RS232_DATABITS("RS232_DATABITS", RS232_DATABITS_8, "Data Bits", pseudo_terminal_device, update_serial)
 	PORT_RS232_PARITY("RS232_PARITY", RS232_PARITY_NONE, "Parity", pseudo_terminal_device, update_serial)
 	PORT_RS232_STOPBITS("RS232_STOPBITS", RS232_STOPBITS_1, "Stop Bits", pseudo_terminal_device, update_serial)
+
+	PORT_START("FLOW_CONTROL")
+	PORT_CONFNAME(0x07, 0x00, "Flow Control")
+	PORT_CONFSETTING(   0x00, DEF_STR(Off))
+	PORT_CONFSETTING(   0x01, "RTS")
+	PORT_CONFSETTING(   0x02, "DTR")
+	PORT_CONFSETTING(   0x04, "XON/XOFF")
 INPUT_PORTS_END
 
 ioport_constructor pseudo_terminal_device::device_input_ports() const
@@ -65,7 +74,7 @@ ioport_constructor pseudo_terminal_device::device_input_ports() const
 
 void pseudo_terminal_device::device_start()
 {
-	m_timer_poll = timer_alloc(TIMER_POLL);
+	m_timer_poll = timer_alloc(FUNC(pseudo_terminal_device::update_queue), this);
 
 	open();
 }
@@ -78,20 +87,7 @@ void pseudo_terminal_device::device_stop()
 void pseudo_terminal_device::device_reset()
 {
 	update_serial(0);
-	queue();
-}
-
-void pseudo_terminal_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
-{
-	switch (id)
-	{
-	case TIMER_POLL:
-		queue();
-		break;
-
-	default:
-		break;
-	}
+	update_queue(0);
 }
 
 void pseudo_terminal_device::tra_callback()
@@ -101,41 +97,65 @@ void pseudo_terminal_device::tra_callback()
 
 void pseudo_terminal_device::tra_complete()
 {
-	queue();
+	update_queue(0);
 }
 
 void pseudo_terminal_device::rcv_complete()
 {
 	receive_register_extract();
-	write(get_received_char());
+
+	uint8_t const data = get_received_char();
+	if (m_flow->read() != 4)
+	{
+		write(data);
+	}
+	else
+	{
+		switch (data)
+		{
+		case 0x13: // XOFF
+			m_xoff = 1;
+			return;
+
+		case 0x11: // XON
+			m_xoff = 0;
+			return;
+
+		default:
+			break;
+		}
+		write(data);
+	}
 }
 
-void pseudo_terminal_device::queue(void)
+TIMER_CALLBACK_MEMBER(pseudo_terminal_device::update_queue)
 {
 	if (is_transmit_register_empty())
 	{
 		if (m_input_index == m_input_count)
 		{
 			m_input_index = 0;
-			int tmp = read(m_input_buffer , sizeof(m_input_buffer));
-			if (tmp > 0) {
+			int const tmp = read(m_input_buffer, sizeof(m_input_buffer));
+			if (tmp > 0)
 				m_input_count = tmp;
-			} else {
+			else
 				m_input_count = 0;
-			}
 		}
 
 		if (m_input_count != 0)
 		{
-			transmit_register_setup(m_input_buffer[ m_input_index++ ]);
+			uint8_t const fc = m_flow->read();
 
-			m_timer_poll->adjust(attotime::never);
+			if (fc == 0 || (fc == 1 && m_rts == 0) || (fc == 2 && m_dtr == 0) || (fc == 4 && m_xoff == 0))
+			{
+				transmit_register_setup(m_input_buffer[m_input_index++]);
+				m_timer_poll->adjust(attotime::never);
+				return;
+			}
 		}
-		else
-		{
-			int txbaud = convert_baud(m_rs232_txbaud->read());
-			m_timer_poll->adjust(attotime::from_hz(txbaud));
-		}
+
+		int const txbaud = convert_baud(m_rs232_txbaud->read());
+		m_timer_poll->adjust(attotime::from_hz(txbaud));
 	}
 }
 

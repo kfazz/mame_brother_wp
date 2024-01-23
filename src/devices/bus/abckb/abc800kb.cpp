@@ -158,7 +158,7 @@ INPUT_PORTS_START( abc800_keyboard )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNUSED ) // 86
 
 	PORT_START("X3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("4 \xC2\xA4") PORT_CODE(KEYCODE_4) PORT_CHAR('4') PORT_CHAR(0x00A4)
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_4) PORT_CHAR('4') PORT_CHAR(U'¤')
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_E) PORT_CHAR('e') PORT_CHAR('E')
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_D) PORT_CHAR('d') PORT_CHAR('D')
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_C) PORT_CHAR('c') PORT_CHAR('C')
@@ -204,7 +204,7 @@ INPUT_PORTS_START( abc800_keyboard )
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_M) PORT_CHAR('m') PORT_CHAR('M')
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("PF1") PORT_CODE(KEYCODE_F1) PORT_CHAR(UCHAR_MAMEKEY(F1))
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("RETURN") PORT_CODE(KEYCODE_ENTER) PORT_CHAR('\r')
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_LEFT) PORT_CODE(KEYCODE_BACKSPACE) PORT_CHAR(8)
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(u8"\u2190") PORT_CODE(KEYCODE_BACKSPACE) PORT_CHAR(8) // U+2190 = ←
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("PF7") PORT_CODE(KEYCODE_F7) PORT_CHAR(UCHAR_MAMEKEY(F7))
 
 	PORT_START("X8")
@@ -213,24 +213,24 @@ INPUT_PORTS_START( abc800_keyboard )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_K) PORT_CHAR('k') PORT_CHAR('K')
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_COMMA) PORT_CHAR(',') PORT_CHAR(';')
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_BACKSLASH) PORT_CHAR('<') PORT_CHAR('>')
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(u_UMLAUT " " U_UMLAUT) PORT_CODE(KEYCODE_CLOSEBRACE) PORT_CHAR(0x00FC) PORT_CHAR(0x00DC)
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_CLOSEBRACE) PORT_CHAR(U'ü') PORT_CHAR(U'Ü')
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_BACKSLASH2) PORT_CHAR('\'') PORT_CHAR('*')
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_RIGHT) PORT_CODE(KEYCODE_TAB) PORT_CHAR(UCHAR_MAMEKEY(TAB))
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(u8"\u2192") PORT_CODE(KEYCODE_TAB) PORT_CHAR(UCHAR_MAMEKEY(TAB)) // U+2192 = →
 
 	PORT_START("X9")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_0) PORT_CHAR('0') PORT_CHAR('=')
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_O) PORT_CHAR('o') PORT_CHAR('O')
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_L) PORT_CHAR('l') PORT_CHAR('L')
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_STOP) PORT_CHAR('.') PORT_CHAR(':')
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(e_ACUTE " " E_ACUTE) PORT_CODE(KEYCODE_EQUALS) PORT_CHAR(0x00E9) PORT_CHAR(0x00C9)
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(a_RING " " A_RING) PORT_CODE(KEYCODE_OPENBRACE) PORT_CHAR(0x00E5) PORT_CHAR(0x00C5)
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(a_UMLAUT " " A_UMLAUT) PORT_CODE(KEYCODE_QUOTE) PORT_CHAR(0x00E4) PORT_CHAR(0x00C4)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_EQUALS) PORT_CHAR(U'é') PORT_CHAR(U'É')
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_OPENBRACE) PORT_CHAR(U'å') PORT_CHAR(U'Å')
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_QUOTE) PORT_CHAR(U'ä') PORT_CHAR(U'Ä')
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Right SHIFT") PORT_CODE(KEYCODE_RSHIFT)
 
 	PORT_START("X10")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_MINUS) PORT_CHAR('+') PORT_CHAR('?')
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_P) PORT_CHAR('p') PORT_CHAR('P')
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(o_UMLAUT " " O_UMLAUT) PORT_CODE(KEYCODE_COLON) PORT_CHAR(0x00F6) PORT_CHAR(0x00D6)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_COLON) PORT_CHAR(U'ö') PORT_CHAR(U'Ö')
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_SLASH) PORT_CHAR('-') PORT_CHAR('_')
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNUSED ) // 87
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNUSED ) // 88
@@ -268,7 +268,7 @@ ioport_constructor abc800_keyboard_device::device_input_ports() const
 //  serial_output -
 //-------------------------------------------------
 
-inline void abc800_keyboard_device::serial_output(int state)
+void abc800_keyboard_device::serial_output(int state)
 {
 	if (m_txd != state)
 	{
@@ -283,7 +283,7 @@ inline void abc800_keyboard_device::serial_output(int state)
 //  serial_clock -
 //-------------------------------------------------
 
-inline void abc800_keyboard_device::serial_clock()
+TIMER_CALLBACK_MEMBER(abc800_keyboard_device::serial_clock)
 {
 	m_clk = !m_clk;
 
@@ -295,7 +295,7 @@ inline void abc800_keyboard_device::serial_clock()
 //  keydown -
 //-------------------------------------------------
 
-inline void abc800_keyboard_device::key_down(int state)
+void abc800_keyboard_device::key_down(int state)
 {
 	if (m_keydown != state)
 	{
@@ -337,7 +337,7 @@ abc800_keyboard_device::abc800_keyboard_device(const machine_config &mconfig, co
 void abc800_keyboard_device::device_start()
 {
 	// allocate timers
-	m_serial_timer = timer_alloc();
+	m_serial_timer = timer_alloc(FUNC(abc800_keyboard_device::serial_clock), this);
 	m_serial_timer->adjust(attotime::from_hz(XTAL(5'990'400)/(3*5)/20), 0, attotime::from_hz(XTAL(5'990'400)/(3*5)/20)); // ???
 
 	// state saving
@@ -358,15 +358,6 @@ void abc800_keyboard_device::device_reset()
 }
 
 
-//-------------------------------------------------
-//  device_timer - handler timer events
-//-------------------------------------------------
-
-void abc800_keyboard_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
-{
-	serial_clock();
-}
-
 
 //-------------------------------------------------
 //  txd_w -
@@ -382,7 +373,7 @@ void abc800_keyboard_device::txd_w(int state)
 //  kb_p1_r - keyboard column data read
 //-------------------------------------------------
 
-READ8_MEMBER( abc800_keyboard_device::kb_p1_r )
+uint8_t abc800_keyboard_device::kb_p1_r()
 {
 	uint8_t data = 0xff;
 
@@ -402,7 +393,7 @@ READ8_MEMBER( abc800_keyboard_device::kb_p1_r )
 //  kb_p1_w - keyboard row write
 //-------------------------------------------------
 
-WRITE8_MEMBER( abc800_keyboard_device::kb_p1_w )
+void abc800_keyboard_device::kb_p1_w(uint8_t data)
 {
 	/*
 
@@ -431,7 +422,7 @@ WRITE8_MEMBER( abc800_keyboard_device::kb_p1_w )
 //  kb_p2_w - keyboard control write
 //-------------------------------------------------
 
-WRITE8_MEMBER( abc800_keyboard_device::kb_p2_w )
+void abc800_keyboard_device::kb_p2_w(uint8_t data)
 {
 	/*
 
@@ -463,7 +454,7 @@ WRITE8_MEMBER( abc800_keyboard_device::kb_p2_w )
 //  kb_t1_r - keyboard T1 timer read
 //-------------------------------------------------
 
-READ_LINE_MEMBER( abc800_keyboard_device::kb_t1_r )
+int abc800_keyboard_device::kb_t1_r()
 {
 	return m_clk;
 }

@@ -109,6 +109,14 @@ enum
 DEFINE_DEVICE_TYPE(RP5C15, rp5c15_device, "rp5c15", "Ricoh RP5C15 RTC")
 
 
+// x68k wants an epoch base (1980-2079) on init, mz2500 do not ("print date$" under basicv2)
+// megast_* tbd
+void rp5c15_device::set_current_time(const system_time &systime)
+{
+	const system_time::full_time &time = m_use_utc ? systime.utc_time : systime.local_time;
+	set_time(true, time.year + m_year_offset, time.month + 1, time.mday, time.weekday + 1,
+		time.hour, time.minute, time.second);
+}
 
 //**************************************************************************
 //  INLINE HELPERS
@@ -202,18 +210,14 @@ rp5c15_device::rp5c15_device(const machine_config &mconfig, const char *tag, dev
 
 void rp5c15_device::device_start()
 {
-	// resolve callbacks
-	m_out_alarm_cb.resolve_safe();
-	m_out_clkout_cb.resolve_safe();
-
 	// allocate timers
-	m_clock_timer = timer_alloc(TIMER_CLOCK);
+	m_clock_timer = timer_alloc(FUNC(rp5c15_device::advance_1hz_clock), this);
 	m_clock_timer->adjust(attotime::from_hz(clock() / 16384), 0, attotime::from_hz(clock() / 16384));
 
-	m_16hz_timer = timer_alloc(TIMER_16HZ);
+	m_16hz_timer = timer_alloc(FUNC(rp5c15_device::advance_16hz_clock), this);
 	m_16hz_timer->adjust(attotime::from_hz(clock() / 1024), 0, attotime::from_hz(clock() / 1024));
 
-	m_clkout_timer = timer_alloc(TIMER_CLKOUT);
+	m_clkout_timer = timer_alloc(FUNC(rp5c15_device::advance_output_clock), this);
 
 	memset(m_reg, 0, sizeof(m_reg));
 	memset(m_ram, 0, sizeof(m_ram));
@@ -239,33 +243,40 @@ void rp5c15_device::device_start()
 
 
 //-------------------------------------------------
-//  device_timer - handler timer events
+//  advance_1hz_clock -
 //-------------------------------------------------
 
-void rp5c15_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(rp5c15_device::advance_1hz_clock)
 {
-	switch (id)
+	if (m_1hz && (m_mode & MODE_TIMER_EN))
 	{
-	case TIMER_CLOCK:
-		if (m_1hz && (m_mode & MODE_TIMER_EN))
-		{
-			advance_seconds();
-		}
-
-		m_1hz = !m_1hz;
-		set_alarm_line();
-		break;
-
-	case TIMER_16HZ:
-		m_16hz = !m_16hz;
-		set_alarm_line();
-		break;
-
-	case TIMER_CLKOUT:
-		m_clkout = !m_clkout;
-		m_out_clkout_cb(m_clkout);
-		break;
+		advance_seconds();
 	}
+
+	m_1hz = !m_1hz;
+	set_alarm_line();
+}
+
+
+//-------------------------------------------------
+//  advance_16hz_clock -
+//-------------------------------------------------
+
+TIMER_CALLBACK_MEMBER(rp5c15_device::advance_16hz_clock)
+{
+	m_16hz = !m_16hz;
+	set_alarm_line();
+}
+
+
+//-------------------------------------------------
+//  advance_output_clock -
+//-------------------------------------------------
+
+TIMER_CALLBACK_MEMBER(rp5c15_device::advance_output_clock)
+{
+	m_clkout = !m_clkout;
+	m_out_clkout_cb(m_clkout);
 }
 
 

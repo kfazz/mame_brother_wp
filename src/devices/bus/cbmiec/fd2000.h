@@ -13,7 +13,6 @@
 
 #include "cbmiec.h"
 #include "cpu/m6502/m65c02.h"
-#include "formats/d81_dsk.h"
 #include "imagedev/floppy.h"
 #include "machine/6522via.h"
 #include "machine/upd765.h"
@@ -33,12 +32,12 @@ public:
 	// construction/destruction
 	fd2000_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER( via_pa_r );
-	DECLARE_WRITE8_MEMBER( via_pa_w );
-	DECLARE_READ8_MEMBER( via_pb_r );
-	DECLARE_WRITE8_MEMBER( via_pb_w );
+	uint8_t via_pa_r();
+	void via_pa_w(uint8_t data);
+	uint8_t via_pb_r();
+	void via_pb_w(uint8_t data);
 
-	//DECLARE_FLOPPY_FORMATS( floppy_formats );
+	//static void floppy_formats(format_registration &fr);
 
 protected:
 	fd2000_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);

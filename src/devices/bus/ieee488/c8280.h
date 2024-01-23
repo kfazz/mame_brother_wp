@@ -12,10 +12,8 @@
 #pragma once
 
 #include "ieee488.h"
-#include "cpu/m6502/m6502.h"
-#include "formats/c8280_dsk.h"
 #include "imagedev/floppy.h"
-#include "machine/mos6530n.h"
+#include "machine/mos6530.h"
 #include "machine/wd_fdc.h"
 
 
@@ -49,29 +47,28 @@ protected:
 private:
 	inline void update_ieee_signals();
 
-	DECLARE_READ8_MEMBER( dio_r );
-	DECLARE_WRITE8_MEMBER( dio_w );
-	DECLARE_READ8_MEMBER( riot1_pa_r );
-	DECLARE_WRITE8_MEMBER( riot1_pa_w );
-	DECLARE_READ8_MEMBER( riot1_pb_r );
-	DECLARE_WRITE8_MEMBER( riot1_pb_w );
-	DECLARE_READ8_MEMBER( fk5_r );
-	DECLARE_WRITE8_MEMBER( fk5_w );
+	uint8_t dio_r();
+	void dio_w(uint8_t data);
+	uint8_t riot1_pa_r();
+	void riot1_pa_w(uint8_t data);
+	uint8_t riot1_pb_r();
+	void riot1_pb_w(uint8_t data);
+	uint8_t fk5_r();
+	void fk5_w(uint8_t data);
 
 	void c8280_fdc_mem(address_map &map);
 	void c8280_main_mem(address_map &map);
 
-	DECLARE_FLOPPY_FORMATS( floppy_formats );
+	static void floppy_formats(format_registration &fr);
 
 	required_device<cpu_device> m_maincpu;
 	required_device<cpu_device> m_fdccpu;
-	required_device<mos6532_new_device> m_riot0;
-	required_device<mos6532_new_device> m_riot1;
+	required_device<mos6532_device> m_riot0;
+	required_device<mos6532_device> m_riot1;
 	required_device<fd1797_device> m_fdc;
-	required_device<floppy_connector> m_floppy0;
-	required_device<floppy_connector> m_floppy1;
+	required_device_array<floppy_connector, 2> m_floppy;
 	required_ioport m_address;
-	floppy_image_device *m_floppy;
+	floppy_image_device *m_selected_floppy;
 	output_finder<4> m_leds;
 
 	// IEEE-488 bus

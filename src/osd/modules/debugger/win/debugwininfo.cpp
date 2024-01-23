@@ -2,7 +2,7 @@
 // copyright-holders:Aaron Giles, Vas Crabb
 //============================================================
 //
-//  debugwininfo.c - Win32 debug window handling
+//  debugwininfo.cpp - Win32 debug window handling
 //
 //============================================================
 
@@ -12,13 +12,21 @@
 #include "debugviewinfo.h"
 
 #include "debugger.h"
+#include "debug/debugcon.h"
 #include "debug/debugcpu.h"
+
+#include "util/xmlfile.h"
+
 #include "window.h"
 #include "winutf8.h"
-
 #include "winutil.h"
+
 #include "modules/lib/osdobj_common.h"
 
+#include <cstring>
+
+
+namespace osd::debugger::win {
 
 bool debugwin_info::s_window_class_registered = false;
 
@@ -36,9 +44,14 @@ debugwin_info::debugwin_info(debugger_windows_interface &debugger, bool is_main_
 {
 	register_window_class();
 
-	m_wnd = win_create_window_ex_utf8(DEBUG_WINDOW_STYLE_EX, "MAMEDebugWindow", title, DEBUG_WINDOW_STYLE,
-			0, 0, 100, 100, std::static_pointer_cast<win_window_info>(osd_common_t::s_window_list.front())->platform_window(), create_standard_menubar(), GetModuleHandleUni(), this);
-	if (m_wnd == nullptr)
+	m_wnd = win_create_window_ex_utf8(
+			DEBUG_WINDOW_STYLE_EX, "MAMEDebugWindow", title, DEBUG_WINDOW_STYLE,
+			0, 0, 100, 100,
+			dynamic_cast<win_window_info &>(*osd_common_t::window_list().front()).platform_window(),
+			create_standard_menubar(),
+			GetModuleHandleUni(),
+			this);
+	if (!m_wnd)
 		return;
 
 	RECT work_bounds;
@@ -50,6 +63,12 @@ debugwin_info::debugwin_info(debugger_windows_interface &debugger, bool is_main_
 
 debugwin_info::~debugwin_info()
 {
+}
+
+
+void debugwin_info::redraw()
+{
+	RedrawWindow(m_wnd, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
 
 
@@ -250,6 +269,89 @@ bool debugwin_info::handle_key(WPARAM wparam, LPARAM lparam)
 }
 
 
+void debugwin_info::save_configuration(util::xml::data_node &parentnode)
+{
+	util::xml::data_node *const node = parentnode.add_child(NODE_WINDOW, nullptr);
+	if (node)
+		save_configuration_to_node(*node);
+}
+
+
+void debugwin_info::restore_configuration_from_node(util::xml::data_node const &node)
+{
+	// get current size to use for defaults
+	RECT bounds;
+	POINT origin;
+	origin.x = 0;
+	origin.y = 0;
+	if (!GetClientRect(window(), &bounds) && ClientToScreen(window(), &origin))
+		return;
+
+	// get saved size and adjust for window chrome
+	RECT desired;
+	desired.left = node.get_attribute_int(ATTR_WINDOW_POSITION_X, origin.x);
+	desired.top = node.get_attribute_int(ATTR_WINDOW_POSITION_Y, origin.y);
+	desired.right = desired.left + node.get_attribute_int(ATTR_WINDOW_WIDTH, bounds.right);
+	desired.bottom = desired.top + node.get_attribute_int(ATTR_WINDOW_HEIGHT, bounds.bottom);
+	// TODO: sanity checks...
+	if (!AdjustWindowRectEx(&desired, DEBUG_WINDOW_STYLE, GetMenu(window()) ? TRUE : FALSE, DEBUG_WINDOW_STYLE_EX))
+		return;
+
+	// actually move the window
+	MoveWindow(
+			window(),
+			desired.left,
+			desired.top,
+			desired.right - desired.left,
+			desired.bottom - desired.top,
+			TRUE);
+
+	// restrict to one monitor and avoid toolbars
+	HMONITOR const nearest_monitor = MonitorFromWindow(window(), MONITOR_DEFAULTTONEAREST);
+	if (nearest_monitor)
+	{
+		MONITORINFO info;
+		std::memset(&info, 0, sizeof(info));
+		info.cbSize = sizeof(info);
+		if (GetMonitorInfo(nearest_monitor, &info))
+		{
+			if (desired.right > info.rcWork.right)
+			{
+				desired.left -= desired.right - info.rcWork.right;
+				desired.right = info.rcWork.right;
+			}
+			if (desired.bottom > info.rcWork.bottom)
+			{
+				desired.top -= desired.bottom - info.rcWork.bottom;
+				desired.bottom = info.rcWork.bottom;
+			}
+			if (desired.left < info.rcWork.left)
+			{
+				desired.right += info.rcWork.left - desired.left;
+				desired.left = info.rcWork.left;
+			}
+			if (desired.top < info.rcWork.top)
+			{
+				desired.bottom += info.rcWork.top - desired.top;
+				desired.top = info.rcWork.top;
+			}
+			desired.bottom = std::min(info.rcWork.bottom, desired.bottom);
+			desired.right = std::min(info.rcWork.right, desired.right);
+			MoveWindow(
+					window(),
+					desired.left,
+					desired.top,
+					desired.right - desired.left,
+					desired.bottom - desired.top,
+					TRUE);
+		}
+	}
+
+	// sort out contents
+	recompute_children();
+}
+
+
 void debugwin_info::recompute_children()
 {
 	if (m_views[0] != nullptr)
@@ -299,39 +401,40 @@ bool debugwin_info::handle_command(WPARAM wparam, LPARAM lparam)
 
 		case ID_RUN_AND_HIDE:
 			debugger().hide_all();
+			[[fallthrough]];
 		case ID_RUN:
-			machine().debugger().cpu().get_visible_cpu()->debug()->go();
+			machine().debugger().console().get_visible_cpu()->debug()->go();
 			return true;
 
 		case ID_NEXT_CPU:
-			machine().debugger().cpu().get_visible_cpu()->debug()->go_next_device();
+			machine().debugger().console().get_visible_cpu()->debug()->go_next_device();
 			return true;
 
 		case ID_RUN_VBLANK:
-			machine().debugger().cpu().get_visible_cpu()->debug()->go_vblank();
+			machine().debugger().console().get_visible_cpu()->debug()->go_vblank();
 			return true;
 
 		case ID_RUN_IRQ:
-			machine().debugger().cpu().get_visible_cpu()->debug()->go_interrupt();
+			machine().debugger().console().get_visible_cpu()->debug()->go_interrupt();
 			return true;
 
 		case ID_STEP:
-			machine().debugger().cpu().get_visible_cpu()->debug()->single_step();
+			machine().debugger().console().get_visible_cpu()->debug()->single_step();
 			return true;
 
 		case ID_STEP_OVER:
-			machine().debugger().cpu().get_visible_cpu()->debug()->single_step_over();
+			machine().debugger().console().get_visible_cpu()->debug()->single_step_over();
 			return true;
 
 		case ID_STEP_OUT:
-			machine().debugger().cpu().get_visible_cpu()->debug()->single_step_out();
+			machine().debugger().console().get_visible_cpu()->debug()->single_step_out();
 			return true;
 
 		case ID_REWIND_STEP:
 			machine().rewind_step();
 
 			// clear all PC & memory tracks
-			for (device_t &device : device_iterator(machine().root_device()))
+			for (device_t &device : device_enumerator(machine().root_device()))
 			{
 				device.debug()->track_pc_data_clear();
 				device.debug()->track_mem_data_clear();
@@ -348,7 +451,7 @@ bool debugwin_info::handle_command(WPARAM wparam, LPARAM lparam)
 
 		case ID_SOFT_RESET:
 			machine().schedule_soft_reset();
-			machine().debugger().cpu().get_visible_cpu()->debug()->go();
+			machine().debugger().console().get_visible_cpu()->debug()->go();
 			return true;
 
 		case ID_EXIT:
@@ -387,6 +490,22 @@ void debugwin_info::draw_border(HDC dc, RECT &bounds)
 	ScreenToClient(m_wnd, &((POINT *)&bounds)[1]);
 	InflateRect(&bounds, EDGE_WIDTH, EDGE_WIDTH);
 	DrawEdge(dc, &bounds, EDGE_SUNKEN, BF_RECT);
+}
+
+
+void debugwin_info::save_configuration_to_node(util::xml::data_node &node)
+{
+	RECT bounds;
+	POINT origin;
+	origin.x = 0;
+	origin.y = 0;
+	if (GetClientRect(window(), &bounds) && ClientToScreen(window(), &origin))
+	{
+		node.set_attribute_int(ATTR_WINDOW_POSITION_X, origin.x);
+		node.set_attribute_int(ATTR_WINDOW_POSITION_Y, origin.y);
+		node.set_attribute_int(ATTR_WINDOW_WIDTH, bounds.right);
+		node.set_attribute_int(ATTR_WINDOW_HEIGHT, bounds.bottom);
+	}
 }
 
 
@@ -507,7 +626,7 @@ LRESULT debugwin_info::window_proc(UINT message, WPARAM wparam, LPARAM lparam)
 		if (m_is_main_console)
 		{
 			debugger().hide_all();
-			machine().debugger().cpu().get_visible_cpu()->debug()->go();
+			machine().debugger().console().get_visible_cpu()->debug()->go();
 		}
 		else
 		{
@@ -618,3 +737,5 @@ void debugwin_info::register_window_class()
 		s_window_class_registered = true;
 	}
 }
+
+} // namespace osd::debugger::win

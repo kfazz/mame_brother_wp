@@ -131,13 +131,16 @@
  */
 
 #include "emu.h"
-#include "debugger.h"
 #include "mcs51.h"
 #include "mcs51dasm.h"
 
-#define VERBOSE 0
+#define LOG_RX (1U << 1)
+#define LOG_TX (1U << 2)
 
-#define LOG(x)  do { if (VERBOSE) logerror x; } while (0)
+#define VERBOSE (0)
+
+#include "logmacro.h"
+
 
 /***************************************************************************
     CONSTANTS
@@ -224,6 +227,22 @@ enum
 	V_PFI   = 0x02b     /* Power Failure Interrupt */
 };
 
+enum serial_state : u8
+{
+	SIO_IDLE,
+	SIO_START_LE,
+	SIO_START,
+	SIO_DATA0,
+	SIO_DATA1,
+	SIO_DATA2,
+	SIO_DATA3,
+	SIO_DATA4,
+	SIO_DATA5,
+	SIO_DATA6,
+	SIO_DATA7,
+	SIO_DATA8,
+	SIO_STOP,
+};
 
 DEFINE_DEVICE_TYPE(I8031, i8031_device, "i8031", "Intel 8031")
 DEFINE_DEVICE_TYPE(I8032, i8032_device, "i8032", "Intel 8032")
@@ -238,10 +257,15 @@ DEFINE_DEVICE_TYPE(I87C51, i87c51_device, "i87c51", "Intel 87C51")
 DEFINE_DEVICE_TYPE(I80C32, i80c32_device, "i80c32", "Intel 80C32")
 DEFINE_DEVICE_TYPE(I80C52, i80c52_device, "i80c52", "Intel 80C52")
 DEFINE_DEVICE_TYPE(I87C52, i87c52_device, "i87c52", "Intel 87C52")
+DEFINE_DEVICE_TYPE(I87C51FA, i87c51fa_device, "i87c51fa", "Intel 87C51FA")
 DEFINE_DEVICE_TYPE(I80C51GB, i80c51gb_device, "i80c51gb", "Intel 80C51GB")
 DEFINE_DEVICE_TYPE(AT89C52, at89c52_device, "at89c52", "Atmel AT89C52")
 DEFINE_DEVICE_TYPE(AT89S52, at89s52_device, "at89s52", "Atmel AT89S52")
 DEFINE_DEVICE_TYPE(AT89C4051, at89c4051_device, "at89c4051", "Atmel AT89C4051")
+DEFINE_DEVICE_TYPE(DS80C320, ds80c320_device, "ds80c320", "Dallas DS80C320 HSM")
+DEFINE_DEVICE_TYPE(SAB80C535, sab80c535_device, "sab80c535", "Siemens SAB80C535")
+DEFINE_DEVICE_TYPE(I8344, i8344_device, "i8344", "Intel 8344AH RUPI-44")
+DEFINE_DEVICE_TYPE(I8744, i8744_device, "i8744", "Intel 8744H RUPI-44")
 DEFINE_DEVICE_TYPE(DS5002FP, ds5002fp_device, "ds5002fp", "Dallas DS5002FP")
 
 
@@ -263,10 +287,10 @@ void mcs51_cpu_device::data_internal(address_map &map)
 
 
 
-mcs51_cpu_device::mcs51_cpu_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, int program_width, int data_width, uint8_t features)
+mcs51_cpu_device::mcs51_cpu_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, address_map_constructor program_map, address_map_constructor data_map, int program_width, int data_width, uint8_t features)
 	: cpu_device(mconfig, type, tag, owner, clock)
-	, m_program_config("program", ENDIANNESS_LITTLE, 8, 16, 0, address_map_constructor(FUNC(mcs51_cpu_device::program_internal), this))
-	, m_data_config("data", ENDIANNESS_LITTLE, 8, 9, 0, address_map_constructor(FUNC(mcs51_cpu_device::data_internal), this))
+	, m_program_config("program", ENDIANNESS_LITTLE, 8, 16, 0, program_map)
+	, m_data_config("data", ENDIANNESS_LITTLE, 8, 9, 0, data_map)
 	, m_io_config("io", ENDIANNESS_LITTLE, 8, (features & FEATURE_DS5002FP) ? 17 : 16, 0)
 	, m_pc(0)
 	, m_features(features)
@@ -275,10 +299,8 @@ mcs51_cpu_device::mcs51_cpu_device(const machine_config &mconfig, device_type ty
 	, m_num_interrupts(5)
 	, m_sfr_ram(*this, "sfr_ram")
 	, m_scratchpad(*this, "scratchpad")
-	, m_port_in_cb(*this)
+	, m_port_in_cb(*this, 0xff)
 	, m_port_out_cb(*this)
-	, m_serial_tx_cb(*this)
-	, m_serial_rx_cb(*this)
 	, m_rtemp(0)
 {
 	m_ds5002fp.mcon = 0;
@@ -286,9 +308,14 @@ mcs51_cpu_device::mcs51_cpu_device(const machine_config &mconfig, device_type ty
 	m_ds5002fp.crc = 0;
 
 	/* default to standard cmos interfacing */
-
 	for (auto & elem : m_forced_inputs)
 		elem = 0;
+}
+
+
+mcs51_cpu_device::mcs51_cpu_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, int program_width, int data_width, uint8_t features)
+	: mcs51_cpu_device(mconfig, type, tag, owner, clock, address_map_constructor(FUNC(mcs51_cpu_device::program_internal), this), address_map_constructor(FUNC(mcs51_cpu_device::data_internal), this), program_width, data_width, features)
+{
 }
 
 
@@ -375,8 +402,18 @@ i87c52_device::i87c52_device(const machine_config &mconfig, const char *tag, dev
 {
 }
 
+i87c51fa_device::i87c51fa_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, int program_width, int data_width, uint8_t features)
+	: i80c52_device(mconfig, type, tag, owner, clock, program_width, data_width, features)
+{
+}
+
+i87c51fa_device::i87c51fa_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: i87c51fa_device(mconfig, I87C51FA, tag, owner, clock, 13, 8)
+{
+}
+
 i80c51gb_device::i80c51gb_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: i80c52_device(mconfig, I80C51GB, tag, owner, clock, 0, 8)
+	: i87c51fa_device(mconfig, I80C51GB, tag, owner, clock, 0, 8)
 {
 }
 
@@ -392,6 +429,26 @@ at89s52_device::at89s52_device(const machine_config &mconfig, const char *tag, d
 
 at89c4051_device::at89c4051_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: i80c51_device(mconfig, AT89C4051, tag, owner, clock, 12, 7)
+{
+}
+
+ds80c320_device::ds80c320_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: i80c52_device(mconfig, DS80C320, tag, owner, clock, 0, 8)
+{
+}
+
+sab80c535_device::sab80c535_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: i80c51_device(mconfig, SAB80C535, tag, owner, clock, 0, 8)
+{
+}
+
+i8344_device::i8344_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: mcs51_cpu_device(mconfig, I8344, tag, owner, clock, 0, 8)
+{
+}
+
+i8744_device::i8744_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: mcs51_cpu_device(mconfig, I8744, tag, owner, clock, 12, 8)
 {
 }
 
@@ -418,15 +475,15 @@ device_memory_interface::space_config_vector mcs51_cpu_device::memory_space_conf
 ***************************************************************************/
 
 /* Read Opcode/Opcode Arguments from Program Code */
-#define ROP(pc)         m_cache->read_byte(pc)
-#define ROP_ARG(pc)     m_cache->read_byte(pc)
+#define ROP(pc)         m_program.read_byte(pc)
+#define ROP_ARG(pc)     m_program.read_byte(pc)
 
 /* Read a byte from External Code Memory (Usually Program Rom(s) Space) */
-#define CODEMEM_R(a)    (uint8_t)m_program->read_byte(a)
+#define CODEMEM_R(a)    (uint8_t)m_program.read_byte(a)
 
 /* Read/Write a byte from/to External Data Memory (Usually RAM or other I/O) */
-#define DATAMEM_R(a)    (uint8_t)m_io->read_byte(a)
-#define DATAMEM_W(a,v)  m_io->write_byte(a, v)
+#define DATAMEM_R(a)    (uint8_t)m_io.read_byte(a)
+#define DATAMEM_W(a,v)  m_io.write_byte(a, v)
 
 /* Read/Write a byte from/to the Internal RAM */
 
@@ -435,8 +492,8 @@ device_memory_interface::space_config_vector mcs51_cpu_device::memory_space_conf
 
 /* Read/Write a byte from/to the Internal RAM indirectly */
 /* (called from indirect addressing)                     */
-uint8_t mcs51_cpu_device::iram_iread(offs_t a) { return (a <= m_ram_mask) ? m_data->read_byte(a) : 0xff; }
-void mcs51_cpu_device::iram_iwrite(offs_t a, uint8_t d) { if (a <= m_ram_mask) m_data->write_byte(a, d); }
+uint8_t mcs51_cpu_device::iram_iread(offs_t a) { return (a <= m_ram_mask) ? m_data.read_byte(a) : 0xff; }
+void mcs51_cpu_device::iram_iwrite(offs_t a, uint8_t d) { if (a <= m_ram_mask) m_data.write_byte(a, d); }
 
 #define IRAM_IR(a)      iram_iread(a)
 #define IRAM_IW(a, d)   iram_iwrite(a, d)
@@ -758,7 +815,7 @@ void mcs51_cpu_device::clear_current_irq()
 		m_cur_irq_prio = 0;
 	else
 		m_cur_irq_prio = -1;
-	LOG(("New: %d %02x\n", m_cur_irq_prio, m_irq_active));
+	LOG("New: %d %02x\n", m_cur_irq_prio, m_irq_active);
 }
 
 uint8_t mcs51_cpu_device::r_acc() { return SFR_A(ADDR_ACC); }
@@ -829,13 +886,13 @@ offs_t mcs51_cpu_device::external_ram_iaddr(offs_t offset, offs_t mem_mask)
 
 uint8_t mcs51_cpu_device::iram_read(size_t offset)
 {
-	return (((offset) < 0x80) ? m_data->read_byte(offset) : sfr_read(offset));
+	return (((offset) < 0x80) ? m_data.read_byte(offset) : sfr_read(offset));
 }
 
 void mcs51_cpu_device::iram_write(size_t offset, uint8_t data)
 {
 	if ((offset) < 0x80)
-		m_data->write_byte(offset, data);
+		m_data.write_byte(offset, data);
 	else
 		sfr_write(offset, data);
 }
@@ -958,19 +1015,65 @@ void mcs51_cpu_device::do_sub_flags(uint8_t a, uint8_t data, uint8_t c)
 	SET_OV((result1 < -128 || result1 > 127));
 }
 
+void mcs51_cpu_device::transmit(int state)
+{
+	if (BIT(SFR_A(ADDR_P3), 1) != state)
+	{
+		if (state)
+			SFR_A(ADDR_P3) |= 1U << 1;
+		else
+			SFR_A(ADDR_P3) &= ~(1U << 1);
+
+		m_port_out_cb[3](SFR_A(ADDR_P3));
+	}
+}
+
 void mcs51_cpu_device::transmit_receive(int source)
 {
 	int mode = (GET_SM0<<1) | GET_SM1;
 
 	if (source == 1) /* timer1 */
-		m_uart.smod_div = (m_uart.smod_div + 1) & (2-GET_SMOD);
+		m_uart.smod_div = (m_uart.smod_div + 1) & (1-GET_SMOD);
 
 	switch(mode) {
-		//8 bit shifter ( + start,stop bit ) - baud set by clock freq / 12
+		// 8 bit shifter - rate set by clock freq / 12
 		case 0:
-			m_uart.rx_clk += (source == 0) ? 16 : 0; /* clock / 12 */
-			m_uart.tx_clk += (source == 0) ? 16 : 0; /* clock / 12 */
-			break;
+			if (source == 0)
+			{
+				// TODO: mode 0 serial input is unemulated
+				// FIXME: output timing is highly simplified and incorrect
+				switch (m_uart.txbit)
+				{
+				case SIO_IDLE:
+					break;
+				case SIO_START:
+					SFR_A(ADDR_P3) |= 0x03;
+					m_port_out_cb[3](SFR_A(ADDR_P3));
+					m_uart.txbit = SIO_DATA0;
+					break;
+				case SIO_DATA0: case SIO_DATA1: case SIO_DATA2: case SIO_DATA3:
+				case SIO_DATA4: case SIO_DATA5: case SIO_DATA6: case SIO_DATA7:
+					SFR_A(ADDR_P3) &= ~0x03;
+					if (BIT(m_uart.data_out, m_uart.txbit - SIO_DATA0))
+						SFR_A(ADDR_P3) |= 1U << 0;
+					m_port_out_cb[3](SFR_A(ADDR_P3));
+
+					if (m_uart.txbit == SIO_DATA7)
+					{
+						SET_TI(1);
+						m_uart.txbit = SIO_STOP;
+					}
+					else
+						m_uart.txbit++;
+					break;
+				case SIO_STOP:
+					SFR_A(ADDR_P3) |= 0x03;
+					m_port_out_cb[3](SFR_A(ADDR_P3));
+					m_uart.txbit = SIO_IDLE;
+					break;
+				}
+			}
+			return;
 		//8 bit uart ( + start,stop bit ) - baud set by timer1 or timer2
 		case 1:
 		case 3:
@@ -991,39 +1094,139 @@ void mcs51_cpu_device::transmit_receive(int source)
 			m_uart.tx_clk += (source == 0) ? (GET_SMOD ? 6 : 3) : 0; /* clock / 12 */
 			break;
 	}
-	/* transmit ? */
+
+	// transmit
 	if (m_uart.tx_clk >= 16)
 	{
 		m_uart.tx_clk &= 0x0f;
-		if(m_uart.bits_to_send)
-		{
-			m_uart.bits_to_send--;
-			if(m_uart.bits_to_send == 0) {
-				//Call the callback function
-				m_serial_tx_cb(*m_io, 0, m_uart.data_out, 0xff);
-				//Set Interrupt Flag
-				SET_TI(1);
-			}
-		}
 
+		switch (m_uart.txbit)
+		{
+		case SIO_IDLE:
+			transmit(1);
+			break;
+		case SIO_START:
+			LOGMASKED(LOG_TX, "tx start bit (%s)\n", machine().time().to_string());
+			transmit(0);
+			m_uart.txbit = SIO_DATA0;
+			break;
+		case SIO_DATA0: case SIO_DATA1: case SIO_DATA2: case SIO_DATA3:
+		case SIO_DATA4: case SIO_DATA5: case SIO_DATA6: case SIO_DATA7:
+			LOGMASKED(LOG_TX, "tx bit %d data %d (%s)\n", m_uart.txbit - SIO_DATA0, BIT(m_uart.data_out, m_uart.txbit - SIO_DATA0), machine().time().to_string());
+			transmit(BIT(m_uart.data_out, m_uart.txbit - SIO_DATA0));
+
+			// mode 1 has no data8/parity bit
+			if (mode == 1 && m_uart.txbit == SIO_DATA7)
+				m_uart.txbit = SIO_STOP;
+			else
+				m_uart.txbit++;
+			break;
+		case SIO_DATA8: // data8/parity bit
+			LOGMASKED(LOG_TX, "tx bit %d data %d (%s)\n", m_uart.txbit - SIO_DATA0, GET_TB8, machine().time().to_string());
+			transmit(GET_TB8);
+			m_uart.txbit = SIO_STOP;
+			break;
+		case SIO_STOP:
+			LOGMASKED(LOG_TX, "tx stop bit (%s)\n", machine().time().to_string());
+			transmit(1);
+			SET_TI(1);
+			m_uart.txbit = SIO_IDLE;
+			break;
+		}
 	}
-	/* receive */
-	if (m_uart.rx_clk >= 16)
+
+	// receive
+	if (m_uart.rx_clk >= 16 || m_uart.rxbit < SIO_START)
 	{
 		m_uart.rx_clk &= 0x0f;
-		if (m_uart.delay_cycles>0)
+
+		if (GET_REN)
 		{
-			m_uart.delay_cycles--;
-			if (m_uart.delay_cycles == 0)
+			// directly read RXD input
+			int const data = BIT(m_port_in_cb[3](), 0);
+
+			switch (m_uart.rxbit)
 			{
-				int data = 0;
-				//Call our callball function to retrieve the data
-				data = m_serial_rx_cb(*m_io, 0, 0xff);
-				LOG(("RX Deliver %d\n", data));
-				SET_SBUF(data);
-				//Flag the IRQ
-				SET_RI(1);
-				SET_RB8(1); // HACK force 2nd stop bit
+			case SIO_IDLE:
+				if (data)
+					m_uart.rxbit = SIO_START_LE;
+				break;
+			case SIO_START_LE: // start bit leading edge
+				if (!data)
+				{
+					LOGMASKED(LOG_RX, "rx start leading edge (%s)\n", machine().time().to_string());
+					m_uart.rxbit = SIO_START;
+					m_uart.rx_clk = 8;
+				}
+				break;
+			case SIO_START:
+				if (!data)
+				{
+					LOGMASKED(LOG_RX, "rx start bit (%s)\n", machine().time().to_string());
+
+					m_uart.data_in = 0;
+					m_uart.rxbit = SIO_DATA0;
+				}
+				else
+					// false start bit
+					m_uart.rxbit = SIO_START_LE;
+				break;
+			case SIO_DATA0: case SIO_DATA1: case SIO_DATA2: case SIO_DATA3:
+			case SIO_DATA4: case SIO_DATA5: case SIO_DATA6: case SIO_DATA7:
+				LOGMASKED(LOG_RX, "rx bit %d data %d (%s)\n", m_uart.rxbit - SIO_DATA0, data, machine().time().to_string());
+				if (data)
+					m_uart.data_in |= 1U << (m_uart.rxbit - SIO_DATA0);
+
+				// mode 1 has no data8/parity bit
+				if (mode == 1 && m_uart.rxbit == SIO_DATA7)
+					m_uart.rxbit = SIO_STOP;
+				else
+					m_uart.rxbit++;
+				break;
+			case SIO_DATA8: // data8/parity bit
+				LOGMASKED(LOG_RX, "rx bit %d data %d (%s)\n", m_uart.rxbit - SIO_DATA0, data, machine().time().to_string());
+				m_uart.rxb8 = data;
+				m_uart.rxbit = SIO_STOP;
+				break;
+			case SIO_STOP:
+				if (!GET_RI)
+				{
+					switch (mode)
+					{
+					case 1:
+						LOGMASKED(LOG_RX, "rx byte 0x%02x stop %d (%s)\n", m_uart.data_in, data, machine().time().to_string());
+						SET_SBUF(m_uart.data_in);
+						if (!GET_SM2)
+						{
+							// RB8 contains stop bit
+							SET_RB8(data);
+							SET_RI(1);
+						}
+						else if (data)
+							// RI if valid stop bit
+							SET_RI(1);
+						break;
+					case 2:
+					case 3:
+						LOGMASKED(LOG_RX, "rx byte 0x%02x RB8 %d stop %d (%s)\n", m_uart.data_in, m_uart.rxb8, data, machine().time().to_string());
+						SET_SBUF(m_uart.data_in);
+						SET_RB8(m_uart.rxb8);
+
+						// no RI if SM2 && !RB8
+						if (!GET_SM2 || GET_RB8)
+							SET_RI(1);
+						break;
+					}
+				}
+				else
+					LOGMASKED(LOG_RX, "rx overrun discarding data 0x%02x\n", m_uart.data_in);
+
+				// next state depends on stop bit validity
+				if (data)
+					m_uart.rxbit = SIO_START_LE;
+				else
+					m_uart.rxbit = SIO_IDLE;
+				break;
 			}
 		}
 	}
@@ -1286,56 +1489,6 @@ void mcs51_cpu_device::update_timers(int cycles)
 	}
 }
 
-//Set up to transmit data out of serial port
-//NOTE: Enable Serial Port Interrupt bit is NOT required to send/receive data!
-
-void mcs51_cpu_device::serial_transmit(uint8_t data)
-{
-	int mode = (GET_SM0<<1) | GET_SM1;
-
-	//Flag that we're sending data
-	m_uart.data_out = data;
-	LOG(("serial_transmit: %x %x\n", mode, data));
-	switch(mode) {
-		//8 bit shifter ( + start,stop bit ) - baud set by clock freq / 12
-		case 0:
-			m_uart.bits_to_send = 8+2;
-			break;
-		//8 bit uart ( + start,stop bit ) - baud set by timer1 or timer2
-		case 1:
-			m_uart.bits_to_send = 8+2;
-			break;
-		//9 bit uart
-		case 2:
-		case 3:
-			m_uart.bits_to_send = 8+3;
-			break;
-	}
-}
-
-void mcs51_cpu_device::serial_receive()
-{
-	int mode = (GET_SM0<<1) | GET_SM1;
-
-	if (GET_REN) {
-		switch(mode) {
-			//8 bit shifter ( + start,stop bit ) - baud set by clock freq / 12
-			case 0:
-				m_uart.delay_cycles = 8+2;
-				break;
-			//8 bit uart ( + start,stop bit ) - baud set by timer1 or timer2
-			case 1:
-				m_uart.delay_cycles = 8+2;
-				break;
-			//9 bit uart
-			case 2:
-			case 3:
-				m_uart.delay_cycles = 8+3;
-				break;
-		}
-	}
-}
-
 /* Check and update status of serial port */
 void mcs51_cpu_device::update_serial(int cycles)
 {
@@ -1346,8 +1499,7 @@ void mcs51_cpu_device::update_serial(int cycles)
 /* Check and update status of serial port */
 void mcs51_cpu_device::update_irq_prio(uint8_t ipl, uint8_t iph)
 {
-	int i;
-	for (i=0; i<8; i++)
+	for (int i=0; i<8; i++)
 		m_irq_prio[i] = ((ipl >> i) & 1) | (((iph >>i ) & 1) << 1);
 }
 
@@ -1732,9 +1884,8 @@ void mcs51_cpu_device::check_irqs()
 	uint8_t int_vec = 0;
 	uint8_t int_mask;
 	int priority_request = -1;
-	int i;
 
-	//If All Inerrupts Disabled or no pending abort..
+	//If All Interrupts Disabled or no pending abort..
 	int_mask = (GET_EA ? IE : 0x00);
 
 	if (m_features & FEATURE_I8052)
@@ -1755,7 +1906,7 @@ void mcs51_cpu_device::check_irqs()
 
 	if (!ints)  return;
 
-	/* CLear IDL - got enabled interrupt */
+	/* Clear IDL - got enabled interrupt */
 	if (m_features & FEATURE_CMOS)
 	{
 		/* any interrupt terminates idle mode */
@@ -1767,7 +1918,7 @@ void mcs51_cpu_device::check_irqs()
 				SET_PD(0);
 	}
 
-	for (i=0; i<m_num_interrupts; i++)
+	for (int i=0; i<m_num_interrupts; i++)
 	{
 		if (ints & (1<<i))
 		{
@@ -1782,17 +1933,28 @@ void mcs51_cpu_device::check_irqs()
 	/* Skip the interrupt request if currently processing interrupt
 	 * and the new request does not have a higher priority
 	 */
-
-	LOG(("Request: %d\n", priority_request));
+	LOG("Request: %d\n", priority_request);
 	if (m_irq_active && (priority_request <= m_cur_irq_prio))
 	{
-		LOG(("higher or equal priority irq (%u) in progress already, skipping ...\n", m_cur_irq_prio));
+		LOG("higher or equal priority irq (%u) in progress already, skipping ...\n", m_cur_irq_prio);
 		return;
 	}
 
-	// Hack to work around polling latency issue with JB INT0/INT1
-	if (m_last_op == 0x20 && ((int_vec == V_IE0 && m_last_bit == 0xb2) || (int_vec == V_IE1 && m_last_bit == 0xb3)))
-		PC = PPC + 3;
+	// indicate we took the external IRQ
+	if (int_vec == V_IE0)
+	{
+		// Hack to work around polling latency issue with JB INT0
+		if (m_last_op == 0x20 && m_last_bit == 0xb2)
+			PC = PPC + 3;
+		standard_irq_callback(0, PC);
+	}
+	else if (int_vec == V_IE1)
+	{
+		// Hack to work around polling latency issue with JB INT1
+		if (m_last_op == 0x20 && m_last_bit == 0xb3)
+			PC = PPC + 3;
+		standard_irq_callback(1, PC);
+	}
 
 	//Save current pc to stack, set pc to new interrupt vector
 	push_pc();
@@ -1805,7 +1967,7 @@ void mcs51_cpu_device::check_irqs()
 	m_cur_irq_prio = priority_request;
 	m_irq_active |= (1 << priority_request);
 
-	LOG(("Take: %d %02x\n", m_cur_irq_prio, m_irq_active));
+	LOG("Take: %d %02x\n", m_cur_irq_prio, m_irq_active);
 
 	//Clear any interrupt flags that should be cleared since we're servicing the irq!
 	switch(int_vec) {
@@ -1813,10 +1975,6 @@ void mcs51_cpu_device::check_irqs()
 			//External Int Flag only cleared when configured as Edge Triggered..
 			if(GET_IT0)  /* for some reason having this, breaks alving dmd games */
 				SET_IE0(0);
-
-			/* indicate we took the external IRQ */
-			standard_irq_callback(0);
-
 			break;
 		case V_TF0:
 			//Timer 0 - Always clear Flag
@@ -1826,9 +1984,6 @@ void mcs51_cpu_device::check_irqs()
 			//External Int Flag only cleared when configured as Edge Triggered..
 			if(GET_IT1)  /* for some reason having this, breaks alving dmd games */
 				SET_IE1(0);
-			/* indicate we took the external IRQ */
-			standard_irq_callback(1);
-
 			break;
 		case V_TF1:
 			//Timer 1 - Always clear Flag
@@ -1846,7 +2001,6 @@ void mcs51_cpu_device::check_irqs()
 		 *  no flags are cleared, PFW is reset by software
 		 *  This has the same vector as V_TF2.
 		 */
-
 	}
 }
 
@@ -1954,14 +2108,6 @@ void mcs51_cpu_device::execute_set_input(int irqline, int state)
 				fatalerror("mcs51: Trying to set T2EX_LINE on a non I8052 type cpu.\n");
 			break;
 
-		case MCS51_RX_LINE: /* Serial Port Receive */
-			/* Is the enable flags for this interrupt set? */
-			if (state != CLEAR_LINE)
-			{
-				serial_receive();
-			}
-			break;
-
 		/* Power Fail Interrupt */
 		case DS5002FP_PFI_LINE:
 			if (m_features & FEATURE_DS5002FP)
@@ -2012,7 +2158,7 @@ void mcs51_cpu_device::execute_run()
 		/* Read next opcode */
 		PPC = PC;
 		debugger_instruction_hook(PC);
-		op = m_cache->read_byte(PC++);
+		op = m_program.read_byte(PC++);
 
 		/* process opcode and count cycles */
 		m_inst_cycles = mcs51_cycles[op];
@@ -2029,7 +2175,12 @@ void mcs51_cpu_device::execute_run()
 
 		/* decrement the timed access window */
 		if (m_features & FEATURE_DS5002FP)
+		{
 			m_ds5002fp.ta_window = (m_ds5002fp.ta_window ? (m_ds5002fp.ta_window - 1) : 0x00);
+
+			if (m_ds5002fp.rnr_delay > 0)
+				m_ds5002fp.rnr_delay-=m_inst_cycles;
+		}
 
 		/* If the chip entered in idle mode, end the loop */
 		if ((m_features & FEATURE_CMOS) && GET_IDL)
@@ -2054,12 +2205,14 @@ void mcs51_cpu_device::sfr_write(size_t offset, uint8_t data)
 		case ADDR_P1:   m_port_out_cb[1](data);             break;
 		case ADDR_P2:   m_port_out_cb[2](data);             break;
 		case ADDR_P3:   m_port_out_cb[3](data);             break;
-		case ADDR_SBUF: serial_transmit(data);         break;
+		case ADDR_SBUF:
+			LOGMASKED(LOG_TX, "tx byte 0x%02x\n", data);
+			m_uart.data_out = data;
+			m_uart.txbit = SIO_START;
+			break;
 		case ADDR_PSW:  SET_PARITY();                       break;
 		case ADDR_ACC:  SET_PARITY();                       break;
 		case ADDR_IP:   update_irq_prio(data, 0);  break;
-		/* R_SBUF = data;        //This register is used only for "Receiving data coming in!" */
-
 		case ADDR_B:
 		case ADDR_SP:
 		case ADDR_DPL:
@@ -2072,14 +2225,22 @@ void mcs51_cpu_device::sfr_write(size_t offset, uint8_t data)
 		case ADDR_TL1:
 		case ADDR_TH0:
 		case ADDR_TH1:
+			break;
 		case ADDR_SCON:
+			if (!GET_REN && BIT(data, 4))
+			{
+				LOGMASKED(LOG_RX, "rx enabled SCON 0x%02x\n", data);
+				if (!BIT(data, 6, 2))
+					logerror("mode 0 serial input is not emulated\n");
+				m_uart.rxbit = SIO_IDLE;
+			}
 			break;
 		default:
-			LOG(("mcs51 '%s': attemping to write to an invalid/non-implemented SFR address: %x at 0x%04x, data=%x\n", tag(), (uint32_t)offset,PC,data));
+			LOG("attemping to write to an invalid/non-implemented SFR address: %x at 0x%04x, data=%x\n", (uint32_t)offset,PC,data);
 			/* no write in this case according to manual */
 			return;
 	}
-	m_data->write_byte((size_t)offset | 0x100, data);
+	m_data.write_byte((size_t)offset | 0x100, data);
 }
 
 uint8_t mcs51_cpu_device::sfr_read(size_t offset)
@@ -2114,10 +2275,10 @@ uint8_t mcs51_cpu_device::sfr_read(size_t offset)
 		case ADDR_SBUF:
 		case ADDR_IE:
 		case ADDR_IP:
-			return m_data->read_byte((size_t) offset | 0x100);
+			return m_data.read_byte((size_t) offset | 0x100);
 		/* Illegal or non-implemented sfr */
 		default:
-			LOG(("mcs51 '%s': attemping to read an invalid/non-implemented SFR address: %x at 0x%04x\n", tag(), (uint32_t)offset,PC));
+			LOG("attemping to read an invalid/non-implemented SFR address: %x at 0x%04x\n", (uint32_t)offset,PC);
 			/* according to the manual, the read may return random bits */
 			return 0xff;
 	}
@@ -2126,18 +2287,11 @@ uint8_t mcs51_cpu_device::sfr_read(size_t offset)
 
 void mcs51_cpu_device::device_start()
 {
-	m_program = &space(AS_PROGRAM);
-	m_cache = m_program->cache<0, 0, ENDIANNESS_LITTLE>();
-	m_data = &space(AS_DATA);
-	m_io = &space(AS_IO);
-
-	m_port_in_cb.resolve_all_safe(0xff);
-	m_port_out_cb.resolve_all_safe();
-	m_serial_rx_cb.resolve_safe(0);
-	m_serial_tx_cb.resolve_safe();
+	space(AS_PROGRAM).cache(m_program);
+	space(AS_DATA).specific(m_data);
+	space(AS_IO).specific(m_io);
 
 	/* Save states */
-
 	save_item(NAME(m_ppc));
 	save_item(NAME(m_pc));
 	save_item(NAME(m_last_op));
@@ -2154,13 +2308,13 @@ void mcs51_cpu_device::device_start()
 	save_item(NAME(m_irq_active) );
 	save_item(NAME(m_ds5002fp.previous_ta) );
 	save_item(NAME(m_ds5002fp.ta_window) );
+	save_item(NAME(m_ds5002fp.rnr_delay) );
 	save_item(NAME(m_ds5002fp.range) );
 	save_item(NAME(m_uart.data_out));
-	save_item(NAME(m_uart.bits_to_send));
+	save_item(NAME(m_uart.data_in));
 	save_item(NAME(m_uart.smod_div));
 	save_item(NAME(m_uart.rx_clk));
 	save_item(NAME(m_uart.tx_clk));
-	save_item(NAME(m_uart.delay_cycles));
 
 	state_add( MCS51_PC,  "PC", m_pc).formatstr("%04X");
 	state_add( MCS51_SP,  "SP", SP).formatstr("%02X");
@@ -2226,6 +2380,7 @@ void mcs51_cpu_device::device_reset()
 	m_t1_cnt = 0;
 	m_t2_cnt = 0;
 	m_t2ex_cnt = 0;
+
 	/* Flag as NO IRQ in Progress */
 	m_irq_active = 0;
 	m_cur_irq_prio = -1;
@@ -2233,6 +2388,8 @@ void mcs51_cpu_device::device_reset()
 	m_last_bit = 0;
 
 	/* these are all defined reset states */
+	RWM = 0;
+	PPC = PC;
 	PC = 0;
 	SP = 0x7;
 	SET_PSW(0);
@@ -2251,6 +2408,7 @@ void mcs51_cpu_device::device_reset()
 	TH0 = 0;
 	TL1 = 0;
 	TL0 = 0;
+
 	/* set the port configurations to all 1's */
 	SET_P3(0xff);
 	SET_P2(0xff);
@@ -2294,13 +2452,16 @@ void mcs51_cpu_device::device_reset()
 		m_ds5002fp.previous_ta = 0;
 		m_ds5002fp.ta_window = 0;
 		m_ds5002fp.range = (GET_RG1 << 1) | GET_RG0;
+		m_ds5002fp.rnr_delay = 160;
 	}
 
 	m_uart.data_out = 0;
+	m_uart.data_in = 0;
 	m_uart.rx_clk = 0;
 	m_uart.tx_clk = 0;
-	m_uart.bits_to_send = 0;
-	m_uart.delay_cycles = 0;
+	m_uart.txbit = SIO_IDLE;
+	m_uart.rxbit = SIO_IDLE;
+	m_uart.rxb8 = 0;
 	m_uart.smod_div = 0;
 
 	m_recalc_parity = 0;
@@ -2321,7 +2482,7 @@ void i8052_device::sfr_write(size_t offset, uint8_t data)
 		case ADDR_RCAP2H:
 		case ADDR_TL2:
 		case ADDR_TH2:
-			m_data->write_byte((size_t) offset | 0x100, data);
+			m_data.write_byte((size_t) offset | 0x100, data);
 			break;
 
 		default:
@@ -2339,7 +2500,7 @@ uint8_t i8052_device::sfr_read(size_t offset)
 		case ADDR_RCAP2H:
 		case ADDR_TL2:
 		case ADDR_TH2:
-			return m_data->read_byte((size_t) offset | 0x100);
+			return m_data.read_byte((size_t) offset | 0x100);
 		default:
 			return mcs51_cpu_device::sfr_read(offset);
 	}
@@ -2369,7 +2530,7 @@ void i80c52_device::sfr_write(size_t offset, uint8_t data)
 			i8052_device::sfr_write(offset, data);
 			return;
 	}
-	m_data->write_byte((size_t) offset | 0x100, data);
+	m_data.write_byte((size_t) offset | 0x100, data);
 }
 
 uint8_t i80c52_device::sfr_read(size_t offset)
@@ -2380,7 +2541,7 @@ uint8_t i80c52_device::sfr_read(size_t offset)
 		case ADDR_IPH:
 		case ADDR_SADDR:
 		case ADDR_SADEN:
-			return m_data->read_byte((size_t) offset | 0x100);
+			return m_data.read_byte((size_t) offset | 0x100);
 		default:
 			return i8052_device::sfr_read(offset);
 	}
@@ -2392,8 +2553,8 @@ uint8_t i80c52_device::sfr_read(size_t offset)
  ****************************************************************************/
 
 
-#define DS5_LOGW(a, d)  LOG(("ds5002fp '%s': write to  " # a " register at 0x%04x, data=%x\n", tag(), PC, d))
-#define DS5_LOGR(a, d)  LOG(("ds5002fp '%s': read from " # a " register at 0x%04x\n", tag(), PC))
+#define DS5_LOGW(a, d)  LOG("write to  " # a " register at 0x%04x, data=%x\n", PC, d)
+#define DS5_LOGR(a, d)  LOG("read from " # a " register at 0x%04x\n", PC)
 
 uint8_t mcs51_cpu_device::ds5002fp_protected(size_t offset, uint8_t data, uint8_t ta_mask, uint8_t mask)
 {
@@ -2418,7 +2579,7 @@ void ds5002fp_device::sfr_write(size_t offset, uint8_t data)
 			if ((data == 0xaa) && (m_ds5002fp.ta_window == 0))
 			{
 				m_ds5002fp.ta_window = 6; /* 4*12 + 2*12 */
-				LOG(("ds5002fp '%s': TA window initiated at 0x%04x\n", tag(), PC));
+				LOG("TA window initiated at 0x%04x\n", PC);
 			}
 			break;
 		case ADDR_MCON:     data = ds5002fp_protected(ADDR_MCON, data, 0x0f, 0xf7);    DS5_LOGW(MCON, data); break;
@@ -2434,7 +2595,27 @@ void ds5002fp_device::sfr_write(size_t offset, uint8_t data)
 			mcs51_cpu_device::sfr_write(offset, data);
 			return;
 	}
-	m_data->write_byte((size_t) offset | 0x100, data);
+	m_data.write_byte((size_t) offset | 0x100, data);
+}
+
+
+uint8_t ds5002fp_device::handle_rnr()
+{
+	if (m_ds5002fp.rnr_delay <= 0)
+	{
+		m_ds5002fp.rnr_delay = 160; // delay before another random number can be read
+		return machine().rand();
+	}
+	else
+		return 0x00;
+}
+
+bool ds5002fp_device::is_rnr_ready()
+{
+	if (m_ds5002fp.rnr_delay <= 0)
+		return true;
+	else
+		return false;
 }
 
 uint8_t ds5002fp_device::sfr_read(size_t offset)
@@ -2446,8 +2627,10 @@ uint8_t ds5002fp_device::sfr_read(size_t offset)
 		case ADDR_CRCH:     DS5_LOGR(CRCH, data);       break;
 		case ADDR_MCON:     DS5_LOGR(MCON, data);       break;
 		case ADDR_TA:       DS5_LOGR(TA, data);         break;
-		case ADDR_RNR:      DS5_LOGR(RNR, data);        break;
-		case ADDR_RPCTL:    DS5_LOGR(RPCTL, data); return 0x80; break; /* touchgo stalls unless bit 7 is set, why? documentation is unclear */
+		case ADDR_RNR:      DS5_LOGR(RNR, data);
+			return handle_rnr();
+		case ADDR_RPCTL:    DS5_LOGR(RPCTL, data);  /* touchgo stalls unless bit 7 is set, RNR status (Random Number status) */
+			return (is_rnr_ready() ? 0x80 : 0x00);  /* falling through to sfr_read for the remaining bits stops high score data loading? */
 		case ADDR_RPS:      DS5_LOGR(RPS, data);        break;
 		case ADDR_PCON:
 			SET_PFW(0);     /* reset PFW flag */
@@ -2455,7 +2638,7 @@ uint8_t ds5002fp_device::sfr_read(size_t offset)
 		default:
 			return mcs51_cpu_device::sfr_read(offset);
 	}
-	return m_data->read_byte((size_t) offset | 0x100);
+	return m_data.read_byte((size_t) offset | 0x100);
 }
 
 /*
@@ -2490,16 +2673,24 @@ void ds5002fp_device::nvram_default()
 	}
 }
 
-void ds5002fp_device::nvram_read( emu_file &file )
+bool ds5002fp_device::nvram_read( util::read_stream &file )
 {
-	file.read( m_scratchpad, 0x80 );
-	file.read( m_sfr_ram, 0x80 );
+	size_t actual;
+	if (file.read( m_scratchpad, 0x80, actual ) || actual != 0x80)
+		return false;
+	if (file.read( m_sfr_ram, 0x80, actual ) || actual != 0x80)
+		return false;
+	return true;
 }
 
-void ds5002fp_device::nvram_write( emu_file &file )
+bool ds5002fp_device::nvram_write( util::write_stream &file )
 {
-	file.write( m_scratchpad, 0x80 );
-	file.write( m_sfr_ram, 0x80 );
+	size_t actual;
+	if (file.write( m_scratchpad, 0x80, actual ) || actual != 0x80)
+		return false;
+	if (file.write( m_sfr_ram, 0x80, actual ) || actual != 0x80)
+		return false;
+	return true;
 }
 
 std::unique_ptr<util::disasm_interface> mcs51_cpu_device::create_disassembler()
@@ -2527,9 +2718,34 @@ std::unique_ptr<util::disasm_interface> i80c52_device::create_disassembler()
 	return std::make_unique<i80c52_disassembler>();
 }
 
+std::unique_ptr<util::disasm_interface> i87c51fa_device::create_disassembler()
+{
+	return std::make_unique<i8xc51fx_disassembler>();
+}
+
 std::unique_ptr<util::disasm_interface> i80c51gb_device::create_disassembler()
 {
 	return std::make_unique<i8xc51gb_disassembler>();
+}
+
+std::unique_ptr<util::disasm_interface> ds80c320_device::create_disassembler()
+{
+	return std::make_unique<ds80c320_disassembler>();
+}
+
+std::unique_ptr<util::disasm_interface> sab80c535_device::create_disassembler()
+{
+	return std::make_unique<sab80c515_disassembler>();
+}
+
+std::unique_ptr<util::disasm_interface> i8344_device::create_disassembler()
+{
+	return std::make_unique<rupi44_disassembler>();
+}
+
+std::unique_ptr<util::disasm_interface> i8744_device::create_disassembler()
+{
+	return std::make_unique<rupi44_disassembler>();
 }
 
 std::unique_ptr<util::disasm_interface> ds5002fp_device::create_disassembler()

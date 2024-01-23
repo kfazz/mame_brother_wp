@@ -141,10 +141,19 @@ arm_iomd_device::arm_iomd_device(const machine_config &mconfig, device_type type
 	, m_host_cpu(*this, finder_base::DUMMY_TAG)
 	, m_vidc(*this, finder_base::DUMMY_TAG)
 	, m_kbdc(*this, finder_base::DUMMY_TAG)
-	, m_iocr_read_od_cb(*this)
+	, m_iocr_read_od_cb(*this, 1)
 	, m_iocr_write_od_cb(*this)
-	, m_iocr_read_id_cb(*this)
+	, m_iocr_read_id_cb(*this, 1)
 	, m_iocr_write_id_cb(*this)
+	, m_sndcur(0)
+	, m_sndend(0)
+	, m_sndcur_reg{ 0, 0 }
+	, m_sndend_reg{ 0, 0 }
+	, m_sndstop_reg{ false, false }
+	, m_sndlast_reg{ false, false }
+	, m_sndbuffer_ok{ false, false }
+	, m_sound_dma_on(false)
+	, m_sndcur_buffer(0)
 {
 }
 
@@ -197,7 +206,7 @@ void arm7500fe_iomd_device::map(address_map &map)
 
 arm7500fe_iomd_device::arm7500fe_iomd_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
 	: arm_iomd_device(mconfig, ARM7500FE_IOMD, tag, owner, clock)
-	, m_iolines_read_cb(*this)
+	, m_iolines_read_cb(*this, 0xff)
 	, m_iolines_write_cb(*this)
 {
 	m_id = 0xaa7c;
@@ -230,11 +239,6 @@ void arm7500fe_iomd_device::device_add_mconfig(machine_config &config)
 
 void arm_iomd_device::device_start()
 {
-	m_iocr_read_od_cb.resolve_all_safe(1);
-	m_iocr_write_od_cb.resolve_all_safe();
-	m_iocr_read_id_cb.resolve_safe(1);
-	m_iocr_write_id_cb.resolve_safe();
-
 	save_item(NAME(m_iocr_ddr));
 	save_item(NAME(m_video_enable));
 	save_item(NAME(m_vidinita));
@@ -243,30 +247,28 @@ void arm_iomd_device::device_start()
 	save_item(NAME(m_videqual));
 	save_item(NAME(m_cursor_enable));
 	save_item(NAME(m_cursinit));
-	save_pointer(NAME(m_irq_mask), IRQ_SOURCES_SIZE);
-	save_pointer(NAME(m_irq_status), IRQ_SOURCES_SIZE);
+	save_pointer(NAME(m_irq_mask), std::size(m_irq_mask));
+	save_pointer(NAME(m_irq_status), std::size(m_irq_status));
 
 	m_host_space = &m_host_cpu->space(AS_PROGRAM);
 
-	m_timer[0] = timer_alloc(T0_TIMER);
-	m_timer[1] = timer_alloc(T1_TIMER);
-	save_pointer(NAME(m_timer_in), timer_ch_size);
-	save_pointer(NAME(m_timer_out), timer_ch_size);
-	save_pointer(NAME(m_timer_counter), timer_ch_size);
-	save_pointer(NAME(m_timer_readinc), timer_ch_size);
+	m_timer[0] = timer_alloc(FUNC(arm_iomd_device::timer_elapsed), this);
+	m_timer[1] = timer_alloc(FUNC(arm_iomd_device::timer_elapsed), this);
+	save_pointer(NAME(m_timer_in), std::size(m_timer_in));
+	save_pointer(NAME(m_timer_out), std::size(m_timer_out));
+	save_pointer(NAME(m_timer_counter), std::size(m_timer_counter));
+	save_pointer(NAME(m_timer_readinc), std::size(m_timer_readinc));
 
 	save_item(NAME(m_sndcur));
 	save_item(NAME(m_sndend));
 	save_item(NAME(m_sound_dma_on));
 	save_item(NAME(m_sndcur_buffer));
-	save_item(NAME(m_snd_overrun));
-	save_item(NAME(m_snd_int));
 
-	save_pointer(NAME(m_sndcur_reg), sounddma_ch_size);
-	save_pointer(NAME(m_sndend_reg), sounddma_ch_size);
-	save_pointer(NAME(m_sndstop_reg), sounddma_ch_size);
-	save_pointer(NAME(m_sndlast_reg), sounddma_ch_size);
-	save_pointer(NAME(m_sndbuffer_ok), sounddma_ch_size);
+	save_pointer(NAME(m_sndcur_reg), std::size(m_sndcur_reg));
+	save_pointer(NAME(m_sndend_reg), std::size(m_sndend_reg));
+	save_pointer(NAME(m_sndstop_reg), std::size(m_sndstop_reg));
+	save_pointer(NAME(m_sndlast_reg), std::size(m_sndlast_reg));
+	save_pointer(NAME(m_sndbuffer_ok), std::size(m_sndbuffer_ok));
 
 	// TODO: jumps to EASI space at $0c0016xx for RiscPC if POR is on?
 }
@@ -275,8 +277,6 @@ void arm7500fe_iomd_device::device_start()
 {
 	arm_iomd_device::device_start();
 
-	m_iolines_read_cb.resolve_safe(0xff);
-	m_iolines_write_cb.resolve_safe();
 	save_item(NAME(m_iolines_ddr));
 
 	save_item(NAME(m_cpuclk_divider));
@@ -290,25 +290,27 @@ void arm7500fe_iomd_device::device_start()
 
 void arm_iomd_device::device_reset()
 {
-	int i;
 	m_iocr_ddr = 0x0b;
 	m_video_enable = false;
 	// TODO: defaults for these
 	m_vidinita = 0;
 	m_vidend = 0;
 
-	for (i=0; i<IRQ_SOURCES_SIZE; i++)
-	{
-		m_irq_status[i] = 0;
-		m_irq_mask[i] = 0;
-	}
+	std::fill_n(m_irq_status, std::size(m_irq_status), 0);
+	std::fill_n(m_irq_mask, std::size(m_irq_mask), 0);
 
-	for (i=0; i<timer_ch_size; i++)
+	for (int i = 0; i < std::size(m_timer); i++)
 		m_timer[i]->adjust(attotime::never);
 
+	m_sndcur = 0;
+	m_sndend = 0;
+	std::fill_n(m_sndcur_reg, std::size(m_sndcur_reg), 0);
+	std::fill_n(m_sndend_reg, std::size(m_sndend_reg), 0);
+	std::fill_n(m_sndstop_reg, std::size(m_sndstop_reg), false);
+	std::fill_n(m_sndlast_reg, std::size(m_sndlast_reg), false);
+	std::fill_n(m_sndbuffer_ok, std::size(m_sndbuffer_ok), false);
 	m_sound_dma_on = false;
-	for (i=0; i<sounddma_ch_size; i++)
-		m_sndbuffer_ok[i] = false;
+	m_sndcur_buffer = 0;
 
 	// ...
 }
@@ -323,15 +325,9 @@ void arm7500fe_iomd_device::device_reset()
 	m_iolines_ddr = 0xff;
 }
 
-void arm_iomd_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(arm_iomd_device::timer_elapsed)
 {
-	switch(id)
-	{
-		case T0_TIMER:
-		case T1_TIMER:
-			trigger_irq<IRQA>(id == T1_TIMER ? 0x40 : 0x20);
-			break;
-	}
+	trigger_irq<IRQA>((uint8_t)param);
 }
 
 //**************************************************************************
@@ -339,7 +335,7 @@ void arm_iomd_device::device_timer(emu_timer &timer, device_timer_id id, int par
 //**************************************************************************
 
 // TODO: nINT1
-READ32_MEMBER( arm_iomd_device::iocr_r )
+u32 arm_iomd_device::iocr_r()
 {
 	u8 res = 0;
 
@@ -350,7 +346,7 @@ READ32_MEMBER( arm_iomd_device::iocr_r )
 	return (m_vidc->flyback_r() << 7) | 0x34 | (res & m_iocr_ddr);
 }
 
-WRITE32_MEMBER( arm_iomd_device::iocr_w )
+void arm_iomd_device::iocr_w(u32 data)
 {
 	m_iocr_ddr = (data & 0x0b);
 	m_iocr_write_id_cb(BIT(m_iocr_ddr,3));
@@ -358,7 +354,7 @@ WRITE32_MEMBER( arm_iomd_device::iocr_w )
 	m_iocr_write_od_cb[0](BIT(m_iocr_ddr,0));
 }
 
-READ32_MEMBER( arm_iomd_device::kbddat_r )
+u32 arm_iomd_device::kbddat_r()
 {
 	if (m_kbdc.found())
 		return m_kbdc->data_r();
@@ -367,7 +363,7 @@ READ32_MEMBER( arm_iomd_device::kbddat_r )
 	return 0xff;
 }
 
-READ32_MEMBER( arm_iomd_device::kbdcr_r )
+u32 arm_iomd_device::kbdcr_r()
 {
 	if (m_kbdc.found())
 		return m_kbdc->status_r();
@@ -376,7 +372,7 @@ READ32_MEMBER( arm_iomd_device::kbdcr_r )
 	return 0xff;
 }
 
-WRITE32_MEMBER( arm_iomd_device::kbddat_w )
+void arm_iomd_device::kbddat_w(u32 data)
 {
 	if (m_kbdc.found())
 	{
@@ -387,7 +383,7 @@ WRITE32_MEMBER( arm_iomd_device::kbddat_w )
 	logerror("%s attempted to write %02x on kbddat with no controller\n", this->tag(),data & 0xff);
 }
 
-WRITE32_MEMBER( arm_iomd_device::kbdcr_w )
+void arm_iomd_device::kbdcr_w(u32 data)
 {
 	if (m_kbdc.found())
 	{
@@ -398,23 +394,23 @@ WRITE32_MEMBER( arm_iomd_device::kbdcr_w )
 	logerror("%s attempted to write %02x on kbdcr with no controller\n", this->tag(),data & 0xff);
 }
 
-READ32_MEMBER( arm7500fe_iomd_device::msecr_r )
+u32 arm7500fe_iomd_device::msecr_r()
 {
 	// a7000p wants a TX empty otherwise it outright refuses to boot.
 	return 0x80;
 }
 
-WRITE32_MEMBER( arm7500fe_iomd_device::msecr_w )
+void arm7500fe_iomd_device::msecr_w(u32 data)
 {
 	// ...
 }
 
-READ32_MEMBER( arm7500fe_iomd_device::iolines_r )
+u32 arm7500fe_iomd_device::iolines_r()
 {
 	return m_iolines_read_cb() & m_iolines_ddr;
 }
 
-WRITE32_MEMBER( arm7500fe_iomd_device::iolines_w )
+void arm7500fe_iomd_device::iolines_w(u32 data)
 {
 	m_iolines_ddr = data;
 	m_iolines_write_cb(m_iolines_ddr);
@@ -440,22 +436,22 @@ template <unsigned Which> inline void arm_iomd_device::trigger_irq(u8 irq_type)
 	flush_irq(Which);
 }
 
-template <unsigned Which> READ32_MEMBER( arm_iomd_device::irqst_r )
+template <unsigned Which> u32 arm_iomd_device::irqst_r()
 {
 	return m_irq_status[Which];
 }
 
-template <unsigned Which> READ32_MEMBER( arm_iomd_device::irqrq_r )
+template <unsigned Which> u32 arm_iomd_device::irqrq_r()
 {
 	return m_irq_status[Which] & m_irq_mask[Which];
 }
 
-template <unsigned Which> READ32_MEMBER( arm_iomd_device::irqmsk_r )
+template <unsigned Which> u32 arm_iomd_device::irqmsk_r()
 {
 	return m_irq_mask[Which];
 }
 
-template <unsigned Which> WRITE32_MEMBER( arm_iomd_device::irqrq_w )
+template <unsigned Which> void arm_iomd_device::irqrq_w(u32 data)
 {
 	u8 res = m_irq_status[Which] & ~data;
 	if (Which == IRQA)
@@ -464,7 +460,7 @@ template <unsigned Which> WRITE32_MEMBER( arm_iomd_device::irqrq_w )
 	flush_irq(Which);
 }
 
-template <unsigned Which> WRITE32_MEMBER( arm_iomd_device::irqmsk_w )
+template <unsigned Which> void arm_iomd_device::irqmsk_w(u32 data)
 {
 	m_irq_mask[Which] = data & 0xff;
 	flush_irq(Which);
@@ -476,12 +472,12 @@ inline void arm7500fe_iomd_device::refresh_host_cpu_clocks()
 	m_host_cpu->set_unscaled_clock(this->clock() >> (m_cpuclk_divider == false));
 }
 
-READ32_MEMBER( arm7500fe_iomd_device::clkctl_r )
+u32 arm7500fe_iomd_device::clkctl_r()
 {
 	return (m_cpuclk_divider << 2) | (m_memclk_divider << 1) | (m_ioclk_divider);
 }
 
-WRITE32_MEMBER( arm7500fe_iomd_device::clkctl_w )
+void arm7500fe_iomd_device::clkctl_w(u32 data)
 {
 	m_cpuclk_divider = BIT(data, 2);
 	m_memclk_divider = BIT(data, 1);
@@ -499,37 +495,37 @@ inline void arm_iomd_device::trigger_timer(unsigned Which)
 	if(val==0)
 		m_timer[Which]->adjust(attotime::never);
 	else
-		m_timer[Which]->adjust(attotime::from_usec(val), 0, attotime::from_usec(val));
+		m_timer[Which]->adjust(attotime::from_usec(val), Which ? 0x40 : 0x20, attotime::from_usec(val));
 }
 
 // TODO: live updates aren't really supported here
-template <unsigned Which> READ32_MEMBER( arm_iomd_device::tNlow_r )
+template <unsigned Which> u32 arm_iomd_device::tNlow_r()
 {
 	return m_timer_out[Which] & 0xff;
 }
 
-template <unsigned Which> READ32_MEMBER( arm_iomd_device::tNhigh_r )
+template <unsigned Which> u32 arm_iomd_device::tNhigh_r()
 {
 	return (m_timer_out[Which] >> 8) & 0xff;
 }
 
-template <unsigned Which> WRITE32_MEMBER( arm_iomd_device::tNlow_w )
+template <unsigned Which> void arm_iomd_device::tNlow_w(u32 data)
 {
 	m_timer_in[Which] = (m_timer_in[Which] & 0xff00) | (data & 0xff);
 }
 
-template <unsigned Which> WRITE32_MEMBER( arm_iomd_device::tNhigh_w )
+template <unsigned Which> void arm_iomd_device::tNhigh_w(u32 data)
 {
 	m_timer_in[Which] = (m_timer_in[Which] & 0x00ff) | ((data & 0xff) << 8);
 }
 
-template <unsigned Which> WRITE32_MEMBER( arm_iomd_device::tNgo_w )
+template <unsigned Which> void arm_iomd_device::tNgo_w(u32 data)
 {
 	m_timer_counter[Which] = m_timer_in[Which];
 	trigger_timer(Which);
 }
 
-template <unsigned Which> WRITE32_MEMBER( arm_iomd_device::tNlatch_w )
+template <unsigned Which> void arm_iomd_device::tNlatch_w(u32 data)
 {
 	m_timer_readinc[Which] ^=1;
 	m_timer_out[Which] = m_timer_counter[Which];
@@ -542,41 +538,40 @@ template <unsigned Which> WRITE32_MEMBER( arm_iomd_device::tNlatch_w )
 }
 
 // device identifiers
-template <unsigned Nibble> READ32_MEMBER( arm_iomd_device::id_r )
+template <unsigned Nibble> u32 arm_iomd_device::id_r()
 {
 	return (m_id >> (Nibble*8)) & 0xff;
 }
 
-READ32_MEMBER( arm_iomd_device::version_r )
+u32 arm_iomd_device::version_r()
 {
 	return m_version;
 }
 
-DECLARE_READ32_MEMBER( version_r );
-
 // sound DMA
 
-template <unsigned Which> READ32_MEMBER( arm_iomd_device::sdcur_r ) { return m_sndcur_reg[Which]; }
-template <unsigned Which> WRITE32_MEMBER( arm_iomd_device::sdcur_w ) { COMBINE_DATA(&m_sndcur_reg[Which]); }
-template <unsigned Which> READ32_MEMBER( arm_iomd_device::sdend_r )
+template <unsigned Which> u32 arm_iomd_device::sdcur_r() { return m_sndcur_reg[Which]; }
+template <unsigned Which> void arm_iomd_device::sdcur_w(offs_t offset, u32 data, u32 mem_mask) { COMBINE_DATA(&m_sndcur_reg[Which]); }
+template <unsigned Which> u32 arm_iomd_device::sdend_r()
 {
 	return (m_sndstop_reg[Which] << 31) | (m_sndlast_reg[Which] << 30) | (m_sndend_reg[Which] & 0x00fffff0);
 }
 
-template <unsigned Which> WRITE32_MEMBER( arm_iomd_device::sdend_w )
+template <unsigned Which> void arm_iomd_device::sdend_w(offs_t offset, u32 data, u32 mem_mask)
 {
 	COMBINE_DATA(&m_sndend_reg[Which]);
 	m_sndend_reg[Which] &= 0x00fffff0;
 	m_sndstop_reg[Which] = BIT(data, 31);
 	m_sndlast_reg[Which] = BIT(data, 30);
+	m_sndbuffer_ok[Which] = true;
 }
 
-READ32_MEMBER( arm_iomd_device::sdcr_r )
+u32 arm_iomd_device::sdcr_r()
 {
 	return (m_sound_dma_on << 5) | dmaid_size;
 }
 
-WRITE32_MEMBER( arm_iomd_device::sdcr_w )
+void arm_iomd_device::sdcr_w(u32 data)
 {
 	m_sound_dma_on = BIT(data, 5);
 
@@ -591,21 +586,28 @@ WRITE32_MEMBER( arm_iomd_device::sdcr_w )
 		// ...
 	}
 
-	// TODO: bit 7 resets sound DMA
+	// TODO: sound DMA reset
+	// eats samples in ppcar
+//  if (BIT(data, 7))
+//      m_sndbuffer_ok[0] = m_sndbuffer_ok[1] = false;
 }
 
-READ32_MEMBER( arm_iomd_device::sdst_r )
+u32 arm_iomd_device::sdst_r()
 {
-	return (m_snd_overrun << 2) | (m_snd_int << 1) | m_sndcur_buffer;
+	// TODO: confirm implementation
+	bool sound_overrun = m_sndbuffer_ok[0] == false && m_sndbuffer_ok[1] == false;
+	bool sound_int = m_sndbuffer_ok[0] == false || m_sndbuffer_ok[1] == false;
+
+	return (sound_overrun << 2) | (sound_int << 1) | m_sndcur_buffer;
 }
 
 // video DMA
-READ32_MEMBER( arm_iomd_device::cursinit_r )
+u32 arm_iomd_device::cursinit_r()
 {
 	return m_cursinit;
 }
 
-WRITE32_MEMBER( arm_iomd_device::cursinit_w )
+void arm_iomd_device::cursinit_w(offs_t offset, u32 data, u32 mem_mask)
 {
 	COMBINE_DATA(&m_cursinit);
 	m_cursinit &= 0x1ffffff0;
@@ -613,14 +615,14 @@ WRITE32_MEMBER( arm_iomd_device::cursinit_w )
 	m_vidc->set_cursor_enable(m_cursor_enable);
 }
 
-READ32_MEMBER( arm_iomd_device::vidcr_r )
+u32 arm_iomd_device::vidcr_r()
 {
 	// bit 6: DRAM mode
 	// bits 4-0: qword transfer
 	return 0x40 | (m_video_enable << 5) | dmaid_size;
 }
 
-WRITE32_MEMBER( arm_iomd_device::vidcr_w )
+void arm_iomd_device::vidcr_w(u32 data)
 {
 	m_video_enable = BIT(data, 5);
 	if (m_video_enable == false)
@@ -633,23 +635,23 @@ WRITE32_MEMBER( arm_iomd_device::vidcr_w )
 		throw emu_fatalerror("%s VIDCR LCD dual panel mode enabled", this->tag());
 }
 
-READ32_MEMBER( arm_iomd_device::vidend_r )
+u32 arm_iomd_device::vidend_r()
 {
 	return (m_vidend & 0x00fffff0);
 }
 
-WRITE32_MEMBER( arm_iomd_device::vidend_w )
+void arm_iomd_device::vidend_w(offs_t offset, u32 data, u32 mem_mask)
 {
 	COMBINE_DATA(&m_vidend);
 	m_vidend &= 0x00fffff0;
 }
 
-READ32_MEMBER( arm_iomd_device::vidinita_r )
+u32 arm_iomd_device::vidinita_r()
 {
 	return (m_vidlast << 30) | (m_videqual << 29) | (m_vidinita & 0x1ffffff0);
 }
 
-WRITE32_MEMBER( arm_iomd_device::vidinita_w )
+void arm_iomd_device::vidinita_w(offs_t offset, u32 data, u32 mem_mask)
 {
 	COMBINE_DATA(&m_vidinita);
 	m_vidinita &= 0x1ffffff0;
@@ -662,7 +664,7 @@ WRITE32_MEMBER( arm_iomd_device::vidinita_w )
 //  IRQ/DRQ/Reset signals
 //**************************************************************************
 
-WRITE_LINE_MEMBER( arm_iomd_device::vblank_irq )
+void arm_iomd_device::vblank_irq(int state)
 {
 	if (!state)
 		return;
@@ -703,35 +705,31 @@ inline void arm_iomd_device::sounddma_swap_buffer()
 {
 	m_sndcur = m_sndcur_reg[m_sndcur_buffer];
 	m_sndend = m_sndcur + (m_sndend_reg[m_sndcur_buffer] + 0x10);
-	m_sndbuffer_ok[m_sndcur_buffer] = true;
-
-	// TODO: actual condition for int
-	m_snd_overrun = false;
-	m_snd_int = false;
+//  m_sndbuffer_ok[m_sndcur_buffer] = true;
 }
 
-WRITE_LINE_MEMBER( arm_iomd_device::sound_drq )
+void arm_iomd_device::sound_drq(int state)
 {
 	if (!state)
 		return;
 
 	if (m_vidc->get_dac_mode() == true)
 	{
-		for (int ch=0;ch<2;ch++)
+		if (!m_sndbuffer_ok[m_sndcur_buffer])
+			return;
+
+		for (int ch = 0; ch < 2; ch++)
 			m_vidc->write_dac32(ch, (m_host_space->read_word(m_sndcur + ch*2)));
 
 		m_sndcur += 4;
 
 		if (m_sndcur >= m_sndend)
 		{
-			// TODO: interrupt bit
-
 			m_vidc->update_sound_mode(m_sound_dma_on);
 			if (m_sound_dma_on)
 			{
 				m_sndbuffer_ok[m_sndcur_buffer] = false;
 				m_sndcur_buffer ^= 1;
-				m_snd_overrun = (m_sndbuffer_ok[m_sndcur_buffer] == false);
 				sounddma_swap_buffer();
 			}
 			else
@@ -746,7 +744,7 @@ WRITE_LINE_MEMBER( arm_iomd_device::sound_drq )
 	}
 }
 
-WRITE_LINE_MEMBER( arm_iomd_device::keyboard_irq )
+void arm_iomd_device::keyboard_irq(int state)
 {
 	printf("IRQ %d\n",state);
 	if (!state)
@@ -755,7 +753,7 @@ WRITE_LINE_MEMBER( arm_iomd_device::keyboard_irq )
 	trigger_irq<IRQB>(0x80);
 }
 
-WRITE_LINE_MEMBER( arm_iomd_device::keyboard_reset )
+void arm_iomd_device::keyboard_reset(int state)
 {
 	printf("RST %d\n",state);
 }

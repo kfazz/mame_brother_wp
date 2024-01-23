@@ -1,4 +1,4 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
 
 #ifndef NLID_FOURTERM_H_
@@ -8,11 +8,12 @@
 /// \file nlid_fourterm.h
 ///
 
-#include "netlist/nl_base.h"
+#include "nl_base.h"
+
 #include "plib/putil.h"
 
-namespace netlist {
-namespace analog {
+namespace netlist::analog
+{
 
 	// ----------------------------------------------------------------------------------------
 	// nld_VCCS
@@ -33,23 +34,27 @@ namespace analog {
 	//
 	//   RI = 1 / NETLIST_GMIN
 	//
-	NETLIB_OBJECT(VCCS)
+	class nld_VCCS : public base_device_t
 	{
 	public:
-		NETLIB_CONSTRUCTOR_EX(VCCS, nl_fptype ari = nlconst::magic(1e9))
+		nld_VCCS(constructor_param_t data, nl_fptype ri = nlconst::magic(1e9))
+		: base_device_t(data)
 		, m_G(*this, "G", nlconst::one())
-		, m_RI(*this, "RI", ari)
-		, m_OP(*this, "OP", &m_IP)
-		, m_ON(*this, "ON", &m_IP)
-		, m_IP(*this, "IP", &m_IN)   // <= this should be NULL and terminal be filtered out prior to solving...
-		, m_IN(*this, "IN", &m_IP)   // <= this should be NULL and terminal be filtered out prior to solving...
-		, m_OP1(*this, "_OP1", &m_IN)
-		, m_ON1(*this, "_ON1", &m_IN)
+		, m_RI(*this, "RI", ri)
+		, m_OP(*this, "OP", &m_IP, {&m_ON, &m_IN},
+			   NETLIB_DELEGATE(terminal_handler))
+		, m_ON(*this, "ON", &m_IP, {&m_OP, &m_IN},
+			   NETLIB_DELEGATE(terminal_handler))
+		, m_IP(*this, "IP", &m_IN, {&m_OP, &m_ON},
+			   NETLIB_DELEGATE(terminal_handler))
+		, m_IN(*this, "IN", &m_IP, {&m_OP, &m_ON},
+			   NETLIB_DELEGATE(terminal_handler))
+		, m_OP1(*this, "_OP1", &m_IN, NETLIB_DELEGATE(terminal_handler))
+		, m_ON1(*this, "_ON1", &m_IN, NETLIB_DELEGATE(terminal_handler))
 		, m_gfac(nlconst::one())
 		{
 			connect(m_OP, m_OP1);
 			connect(m_ON, m_ON1);
-			m_gfac = nlconst::one();
 		}
 
 		NETLIB_RESETI();
@@ -58,12 +63,12 @@ namespace analog {
 		param_fp_t m_RI;
 
 	protected:
-		NETLIB_UPDATEI();
-		NETLIB_UPDATE_PARAMI()
-		{
-			NETLIB_NAME(VCCS)::reset();
-		}
+		NETLIB_HANDLERI(terminal_handler);
+		NETLIB_UPDATE_PARAMI() { NETLIB_NAME(VCCS)::reset(); }
 
+		void set_gfac(nl_fptype g) noexcept { m_gfac = g; }
+
+		nl_fptype get_gfac() const noexcept { return m_gfac; }
 
 		terminal_t m_OP;
 		terminal_t m_ON;
@@ -74,15 +79,17 @@ namespace analog {
 		terminal_t m_OP1;
 		terminal_t m_ON1;
 
+	private:
 		nl_fptype m_gfac;
 	};
 
 	// Limited Current source
 
-	NETLIB_OBJECT_DERIVED(LVCCS, VCCS)
+	class nld_LVCCS : public nld_VCCS
 	{
 	public:
-		NETLIB_CONSTRUCTOR_DERIVED(LVCCS, VCCS)
+		nld_LVCCS(constructor_param_t data)
+		: nld_VCCS(data)
 		, m_cur_limit(*this, "CURLIM", nlconst::magic(1000.0))
 		, m_vi(nlconst::zero())
 		{
@@ -91,14 +98,13 @@ namespace analog {
 		NETLIB_IS_DYNAMIC(true)
 
 	protected:
-		//NETLIB_UPDATEI();
 		NETLIB_RESETI();
 		NETLIB_UPDATE_PARAMI();
 		NETLIB_UPDATE_TERMINALSI();
 
 	private:
 		param_fp_t m_cur_limit; // current limit
-		nl_fptype m_vi;
+		nl_fptype  m_vi;
 	};
 
 	// ----------------------------------------------------------------------------------------
@@ -111,7 +117,7 @@ namespace analog {
 	//   IP ---+           +------> OP
 	//         |           |
 	//         RI          I
-	//         RI => G =>  I    IOut = (V(IP)-V(IN)) / RI  * G
+	//         RI => G =>  I    IOut = -(V(IP)-V(IN)) / RI  * G
 	//         RI          I
 	//         |           |
 	//   IN ---+           +------< ON
@@ -120,24 +126,25 @@ namespace analog {
 	//
 	//   RI = 1
 	//
+	//   If current flows from IP to IN than output current flows from OP to ON
+	//
 	//   This needs high levels of accuracy to work with 1 Ohm RI.
 	//
 
-	NETLIB_OBJECT_DERIVED(CCCS, VCCS)
+	class nld_CCCS : public nld_VCCS
 	{
 	public:
-		NETLIB_CONSTRUCTOR_DERIVED_PASS(CCCS, VCCS, nlconst::one())
+		nld_CCCS(constructor_param_t data)
+		: nld_VCCS(data, nlconst::one())
 		{
-			m_gfac = plib::reciprocal(m_RI());
+			set_gfac(-plib::reciprocal(m_RI()));
 		}
 
 		NETLIB_RESETI();
 
 	protected:
-		//NETLIB_UPDATEI();
 		NETLIB_UPDATE_PARAMI();
 	};
-
 
 	// ----------------------------------------------------------------------------------------
 	// nld_VCVS
@@ -165,13 +172,14 @@ namespace analog {
 	//   Internal GI = G / RO
 	//
 
-	NETLIB_OBJECT_DERIVED(VCVS, VCCS)
+	class nld_VCVS : public nld_VCCS
 	{
 	public:
-		NETLIB_CONSTRUCTOR_DERIVED(VCVS, VCCS)
+		nld_VCVS(constructor_param_t data)
+		: nld_VCCS(data)
 		, m_RO(*this, "RO", nlconst::one())
-		, m_OP2(*this, "_OP2", &m_ON2)
-		, m_ON2(*this, "_ON2", &m_OP2)
+		, m_OP2(*this, "_OP2", &m_ON2, NETLIB_DELEGATE(terminal_handler))
+		, m_ON2(*this, "_ON2", &m_OP2, NETLIB_DELEGATE(terminal_handler))
 		{
 			connect(m_OP2, m_OP1);
 			connect(m_ON2, m_ON1);
@@ -182,13 +190,14 @@ namespace analog {
 		param_fp_t m_RO;
 
 	private:
-		//NETLIB_UPDATEI();
-		//NETLIB_UPDATE_PARAMI();
+		// NETLIB_UPDATE_PARAMI();
+		NETLIB_HANDLERI(terminal_handler)
+		{
+			NETLIB_NAME(VCCS)::terminal_handler();
+		}
 
 		terminal_t m_OP2;
 		terminal_t m_ON2;
-
-
 	};
 
 	// ----------------------------------------------------------------------------------------
@@ -205,7 +214,7 @@ namespace analog {
 	//   IP ---+           +--+---- OP
 	//         |           |  |
 	//         RI          I  RO
-	//         RI => G =>  I  RO              V(OP) - V(ON) = (V(IP)-V(IN)) / RI * G
+	//         RI => G =>  I  RO   V(OP) - V(ON) = (V(IP)-V(IN)) / RI * G
 	//         RI          I  RO
 	//         |           |  |
 	//   IN ---+           +--+---- ON
@@ -217,13 +226,14 @@ namespace analog {
 	//   Internal GI = G / RO
 	//
 
-	NETLIB_OBJECT_DERIVED(CCVS, VCCS)
+	class nld_CCVS : public nld_VCCS
 	{
 	public:
-		NETLIB_CONSTRUCTOR_DERIVED_PASS(CCVS, VCCS, nlconst::one())
+		nld_CCVS(constructor_param_t data)
+		: nld_VCCS(data, nlconst::one())
 		, m_RO(*this, "RO", nlconst::one())
-		, m_OP2(*this, "_OP2", &m_ON2)
-		, m_ON2(*this, "_ON2", &m_OP2)
+		, m_OP2(*this, "_OP2", &m_ON2, NETLIB_DELEGATE(terminal_handler))
+		, m_ON2(*this, "_ON2", &m_OP2, NETLIB_DELEGATE(terminal_handler))
 		{
 			connect(m_OP2, m_OP1);
 			connect(m_ON2, m_ON1);
@@ -234,15 +244,17 @@ namespace analog {
 		param_fp_t m_RO;
 
 	private:
-		//NETLIB_UPDATEI();
-		//NETLIB_UPDATE_PARAMI();
+		// NETLIB_UPDATE_PARAMI();
+
+		NETLIB_HANDLERI(terminal_handler)
+		{
+			NETLIB_NAME(VCCS)::terminal_handler();
+		}
 
 		terminal_t m_OP2;
 		terminal_t m_ON2;
 	};
 
-
-} // namespace analog
-} // namespace netlist
+} // namespace netlist::analog
 
 #endif // NLD_FOURTERM_H_

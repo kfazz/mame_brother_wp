@@ -9,6 +9,8 @@
 #include "emu.h"
 #include "isbc_218a.h"
 
+#include "formats/flopimg.h"
+
 
 //**************************************************************************
 //  MACROS / CONSTANTS
@@ -24,29 +26,21 @@
 
 DEFINE_DEVICE_TYPE(ISBC_218A, isbc_218a_device, "isbc_218a", "ISBX 218a for ISBC")
 
-
-//-------------------------------------------------
-//  floppy_format_type floppy_formats
-//-------------------------------------------------
-
-WRITE_LINE_MEMBER( isbc_218a_device::fdc_irq )
+void isbc_218a_device::fdc_irq(int state)
 {
 	m_slot->mintr1_w(state);
 }
 
-WRITE_LINE_MEMBER( isbc_218a_device::fdc_drq )
+void isbc_218a_device::fdc_drq(int state)
 {
 	m_slot->mdrqt_w(state);
 }
-
-FLOPPY_FORMATS_MEMBER( isbc_218a_device::floppy_formats )
-	FLOPPY_PC_FORMAT
-FLOPPY_FORMATS_END
 
 static void isbc_218a_floppies(device_slot_interface &device)
 {
 	device.option_add("8dd", FLOPPY_8_DSDD);
 	device.option_add("525dd", FLOPPY_525_DD);
+	device.option_add("525qd", FLOPPY_525_QD);
 }
 
 
@@ -59,7 +53,7 @@ void isbc_218a_device::device_add_mconfig(machine_config &config)
 	I8272A(config, m_fdc, 8_MHz_XTAL, true);
 	m_fdc->intrq_wr_callback().set(FUNC(isbc_218a_device::fdc_irq));
 	m_fdc->drq_wr_callback().set(FUNC(isbc_218a_device::fdc_drq));
-	FLOPPY_CONNECTOR(config, m_floppy0, isbc_218a_floppies, "525dd", isbc_218a_device::floppy_formats);
+	FLOPPY_CONNECTOR(config, m_floppy0, isbc_218a_floppies, "525dd", floppy_image_device::default_pc_floppy_formats);
 }
 
 

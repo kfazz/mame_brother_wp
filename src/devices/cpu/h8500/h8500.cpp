@@ -12,12 +12,11 @@
 #include "h8500.h"
 #include "h8500dasm.h"
 
-h8500_device::h8500_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock, int addrbits, int buswidth, int ramsize, address_map_constructor map)
+h8500_device::h8500_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock, int addrbits, int buswidth, int ramsize, int defmode, address_map_constructor map)
 	: cpu_device(mconfig, type, tag, owner, clock)
 	, m_program_config("program", ENDIANNESS_BIG, buswidth, addrbits, 0, map)
-	, m_ram_config("internal RAM", ENDIANNESS_BIG, 16, ramsize, 0, address_map_constructor(FUNC(h8500_device::ram_map), this))
-	, m_program(nullptr)
-	, m_ram_cache(nullptr)
+	, m_ram_config("intram", ENDIANNESS_BIG, 16, ramsize, 0, address_map_constructor(FUNC(h8500_device::ram_map), this))
+	, m_mode_control(defmode)
 	, m_pc(0)
 	, m_ppc(0)
 	, m_sr(0)
@@ -68,7 +67,7 @@ void h8500_device::device_start()
 {
 	m_program = &space(AS_PROGRAM);
 	if (has_space(AS_DATA))
-		m_ram_cache = space(AS_DATA).cache<1, 0, ENDIANNESS_BIG>();
+		space(AS_DATA).cache(m_ram_cache);
 
 	set_icountptr(m_icount);
 

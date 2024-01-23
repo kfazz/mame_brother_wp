@@ -30,7 +30,7 @@
 #include "emu.h"
 #include "v5x.h"
 
-#include "necpriv.h"
+#include "necpriv.ipp"
 
 #define VERBOSE 0
 #include "logmacro.h"
@@ -40,12 +40,22 @@ DEFINE_DEVICE_TYPE(V50,  v50_device,  "v50",  "NEC V50")
 DEFINE_DEVICE_TYPE(V53,  v53_device,  "v53",  "NEC V53")
 DEFINE_DEVICE_TYPE(V53A, v53a_device, "v53a", "NEC V53A")
 
+u8 device_v5x_interface::SULA_r()
+{
+	return m_SULA;
+}
+
 void device_v5x_interface::SULA_w(u8 data)
 {
 	if (VERBOSE)
 		device().logerror("SULA_w %02x\n", data);
 	m_SULA = data;
 	install_peripheral_io();
+}
+
+u8 device_v5x_interface::TULA_r()
+{
+	return m_TULA;
 }
 
 void device_v5x_interface::TULA_w(u8 data)
@@ -56,6 +66,11 @@ void device_v5x_interface::TULA_w(u8 data)
 	install_peripheral_io();
 }
 
+u8 device_v5x_interface::IULA_r()
+{
+	return m_IULA;
+}
+
 void device_v5x_interface::IULA_w(u8 data)
 {
 	if (VERBOSE)
@@ -64,12 +79,22 @@ void device_v5x_interface::IULA_w(u8 data)
 	install_peripheral_io();
 }
 
+u8 device_v5x_interface::DULA_r()
+{
+	return m_DULA;
+}
+
 void device_v5x_interface::DULA_w(u8 data)
 {
 	if (VERBOSE)
 		device().logerror("DULA_w %02x\n", data);
 	m_DULA = data;
 	install_peripheral_io();
+}
+
+u8 device_v5x_interface::OPHA_r()
+{
+	return m_OPHA;
 }
 
 void device_v5x_interface::OPHA_w(u8 data)
@@ -83,12 +108,22 @@ void device_v5x_interface::OPHA_w(u8 data)
 	m_OPHA = data;
 }
 
+u8 device_v5x_interface::OPSEL_r()
+{
+	return m_OPSEL;
+}
+
 void device_v5x_interface::OPSEL_w(u8 data)
 {
 	if (VERBOSE)
 		device().logerror("OPSEL_w %02x\n", data);
-	m_OPSEL = data;
+	m_OPSEL = data & 0x0f;
 	install_peripheral_io();
+}
+
+u8 device_v5x_interface::TCKS_r()
+{
+	return m_TCKS;
 }
 
 void device_v5x_interface::TCKS_w(u8 data)
@@ -97,7 +132,7 @@ void device_v5x_interface::TCKS_w(u8 data)
 	tcu_clock_update();
 }
 
-void device_v5x_interface::interface_clock_changed()
+void device_v5x_interface::interface_clock_changed(bool sync_on_new_clock_domain)
 {
 	tcu_clock_update();
 }
@@ -108,7 +143,7 @@ void device_v5x_interface::tcu_clock_update()
 		m_tcu->set_clockin(i, BIT(m_TCKS, i + 2) ? m_tclk : device().clock() / double(4 << (m_TCKS & 3)));
 }
 
-WRITE_LINE_MEMBER(device_v5x_interface::tclk_w)
+void device_v5x_interface::tclk_w(int state)
 {
 	if (BIT(m_TCKS, 2))
 		m_tcu->write_clk0(state);
@@ -169,7 +204,7 @@ void device_v5x_interface::v5x_set_input(int irqline, int state)
 }
 
 // for hooking the interrupt controller output up to the core
-WRITE_LINE_MEMBER(device_v5x_interface::internal_irq_w)
+void device_v5x_interface::internal_irq_w(int state)
 {
 	downcast<nec_common_device &>(device()).set_int_line(state);
 }
@@ -265,20 +300,37 @@ void v50_base_device::io_write_word(offs_t a, u16 v)
 }
 
 
+u8 v50_base_device::OPCN_r()
+{
+	return m_OPCN;
+}
+
 void v50_base_device::OPCN_w(u8 data)
 {
 	// bit 7: unused
 	// bit 6: unused
 	// bit 5: unused
 	// bit 4: unused
-	// bit 3: IRSW
-	// bit 2: IRSW
-	// bit 1: PF
-	// bit 0: PF
+	// bit 3: IRSW (INT2 source select)
+	// bit 2: IRSW (INT1 source select)
+	// bit 1: PF (DMA3/SCU I/O select)
+	// bit 0: PF (INTAK/SRDY/TOUT1 output select)
 
 	LOG("OPCN_w %02x\n", data);
-	m_OPCN = data;
-	install_peripheral_io();
+	m_OPCN = data & 0x0f;
+
+	m_tout1_callback((data & 0x03) == 0x03 ? m_tout1 : 1);
+	m_icu->ir1_w(BIT(data, 2) ? 0 : m_intp1);
+	m_icu->ir2_w(BIT(data, 3) ? m_tout1 : m_intp2);
+}
+
+void v50_base_device::tout1_w(int state)
+{
+	m_tout1 = state;
+	if ((m_OPCN & 0x03) == 0x01)
+		m_tout1_callback(state);
+	if (BIT(m_OPCN, 3))
+		m_icu->ir2_w(state);
 }
 
 void v50_base_device::device_reset()
@@ -286,6 +338,7 @@ void v50_base_device::device_reset()
 	nec_common_device::device_reset();
 
 	m_OPCN = 0;
+	m_tout1_callback(1);
 }
 
 void v50_base_device::device_start()
@@ -296,6 +349,9 @@ void v50_base_device::device_start()
 	set_irq_acknowledge_callback(*m_icu, FUNC(v5x_icu_device::inta_cb));
 
 	save_item(NAME(m_OPCN));
+	save_item(NAME(m_tout1));
+	save_item(NAME(m_intp1));
+	save_item(NAME(m_intp2));
 }
 
 void v40_device::install_peripheral_io()
@@ -398,7 +454,7 @@ void v50_device::install_peripheral_io()
 
 void v50_base_device::internal_port_map(address_map &map)
 {
-	map(0xfff0, 0xfff0).w(FUNC(v50_base_device::TCKS_w));
+	map(0xfff0, 0xfff0).rw(FUNC(v50_base_device::TCKS_r), FUNC(v50_base_device::TCKS_w));
 
 	map(0xfff2, 0xfff2).w(FUNC(v50_base_device::RFC_w));
 
@@ -406,17 +462,32 @@ void v50_base_device::internal_port_map(address_map &map)
 	map(0xfff5, 0xfff5).w(FUNC(v50_base_device::WCY1_w));
 	map(0xfff6, 0xfff6).w(FUNC(v50_base_device::WCY2_w));
 
-	map(0xfff8, 0xfff8).w(FUNC(v50_base_device::SULA_w));
-	map(0xfff9, 0xfff9).w(FUNC(v50_base_device::TULA_w));
-	map(0xfffa, 0xfffa).w(FUNC(v50_base_device::IULA_w));
-	map(0xfffb, 0xfffb).w(FUNC(v50_base_device::DULA_w));
-	map(0xfffc, 0xfffc).w(FUNC(v50_base_device::OPHA_w));
-	map(0xfffd, 0xfffd).w(FUNC(v50_base_device::OPSEL_w));
-	map(0xfffe, 0xfffe).w(FUNC(v50_base_device::OPCN_w));
+	map(0xfff8, 0xfff8).rw(FUNC(v50_base_device::SULA_r), FUNC(v50_base_device::SULA_w));
+	map(0xfff9, 0xfff9).rw(FUNC(v50_base_device::TULA_r), FUNC(v50_base_device::TULA_w));
+	map(0xfffa, 0xfffa).rw(FUNC(v50_base_device::IULA_r), FUNC(v50_base_device::IULA_w));
+	map(0xfffb, 0xfffb).rw(FUNC(v50_base_device::DULA_r), FUNC(v50_base_device::DULA_w));
+	map(0xfffc, 0xfffc).rw(FUNC(v50_base_device::OPHA_r), FUNC(v50_base_device::OPHA_w));
+	map(0xfffd, 0xfffd).rw(FUNC(v50_base_device::OPSEL_r), FUNC(v50_base_device::OPSEL_w));
+	map(0xfffe, 0xfffe).rw(FUNC(v50_base_device::OPCN_r), FUNC(v50_base_device::OPCN_w));
 }
 
 void v50_base_device::execute_set_input(int irqline, int state)
 {
+	switch (irqline)
+	{
+	case INPUT_LINE_IRQ1:
+		m_intp1 = state;
+		if (BIT(m_OPCN, 2))
+			return;
+		break;
+
+	case INPUT_LINE_IRQ2:
+		m_intp2 = state;
+		if (BIT(m_OPCN, 3))
+			return;
+		break;
+	}
+
 	v5x_set_input(irqline, state);
 }
 
@@ -424,8 +495,13 @@ void v50_base_device::device_add_mconfig(machine_config &config)
 {
 	v5x_add_mconfig(config);
 
-	// V50 timer 0 is internally connected to INT0
+	// Timer 0 is internally connected to INT0
 	m_tcu->out_handler<0>().set(m_icu, FUNC(pic8259_device::ir0_w));
+
+	// Timer 1 is internally connected to RxC/TxC
+	m_tcu->out_handler<1>().set(m_scu, FUNC(v5x_scu_device::write_rxc));
+	m_tcu->out_handler<1>().append(m_scu, FUNC(v5x_scu_device::write_txc));
+	m_tcu->out_handler<1>().append(FUNC(v50_base_device::tout1_w));
 }
 
 device_memory_interface::space_config_vector v50_base_device::memory_space_config() const
@@ -441,6 +517,12 @@ device_memory_interface::space_config_vector v50_base_device::memory_space_confi
 v50_base_device::v50_base_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock, bool is_16bit, u8 prefetch_size, u8 prefetch_cycles, u32 chip_type)
 	: nec_common_device(mconfig, type, tag, owner, clock, is_16bit, prefetch_size, prefetch_cycles, chip_type, address_map_constructor(FUNC(v50_base_device::internal_port_map), this))
 	, device_v5x_interface(mconfig, *this, is_16bit)
+	, m_tout1_callback(*this)
+	, m_icu_slave_ack(*this, 0)
+	, m_OPCN(0)
+	, m_tout1(false)
+	, m_intp1(false)
+	, m_intp2(false)
 {
 }
 
@@ -507,6 +589,11 @@ void v53_device::io_write_word(offs_t a, u16 v)
 }
 
 
+u8 v53_device::SCTL_r()
+{
+	return m_SCTL;
+}
+
 void v53_device::SCTL_w(u8 data)
 {
 	// bit 7: unused
@@ -519,7 +606,7 @@ void v53_device::SCTL_w(u8 data)
 	// bit 0: Onboard pripheral I/O maps to 8-bit boundaries? (otherwise 16-bit)
 
 	LOG("SCTL_w %02x\n", data);
-	m_SCTL = data;
+	m_SCTL = data & 0x1f;
 	install_peripheral_io();
 }
 
@@ -639,7 +726,7 @@ void v53_device::install_peripheral_io()
 	}
 }
 
-WRITE_LINE_MEMBER(v53_device::hack_w)
+void v53_device::hack_w(int state)
 {
 	if (!(m_SCTL & 0x02))
 		m_dmau->hack_w(state);
@@ -660,7 +747,7 @@ void v53_device::internal_port_map(address_map &map)
 	map(0xffec, 0xffec).w(FUNC(v53_device::WCY0_w));  // waitstate control
 	map(0xffed, 0xffed).w(FUNC(v53_device::WAC_w));   // waitstate control
 	// 0xffee-0xffef reserved
-	map(0xfff0, 0xfff0).w(FUNC(v53_device::TCKS_w));  // timer clocks
+	map(0xfff0, 0xfff0).rw(FUNC(v53_device::TCKS_r), FUNC(v53_device::TCKS_w));  // timer clocks
 	map(0xfff1, 0xfff1).w(FUNC(v53_device::SBCR_w));  // internal clock divider, halt behavior etc.
 	map(0xfff2, 0xfff2).w(FUNC(v53_device::RFC_w));   // ram refresh control
 	map(0xfff3, 0xfff3).w(FUNC(v53_device::WMB1_w));  // waitstate control
@@ -668,13 +755,13 @@ void v53_device::internal_port_map(address_map &map)
 	map(0xfff5, 0xfff5).w(FUNC(v53_device::WCY3_w));  // waitstate control
 	map(0xfff6, 0xfff6).w(FUNC(v53_device::WCY4_w));  // waitstate control
 	// 0xfff6 reserved
-	map(0xfff8, 0xfff8).w(FUNC(v53_device::SULA_w));  // scu mapping
-	map(0xfff9, 0xfff9).w(FUNC(v53_device::TULA_w));  // tcu mapping
-	map(0xfffa, 0xfffa).w(FUNC(v53_device::IULA_w));  // icu mapping
-	map(0xfffb, 0xfffb).w(FUNC(v53_device::DULA_w));  // dmau mapping
-	map(0xfffc, 0xfffc).w(FUNC(v53_device::OPHA_w));  // peripheral mapping (upper bits, common)
-	map(0xfffd, 0xfffd).w(FUNC(v53_device::OPSEL_w)); // peripheral enabling
-	map(0xfffe, 0xfffe).w(FUNC(v53_device::SCTL_w));  // peripheral configuration (& byte / word mapping)
+	map(0xfff8, 0xfff8).rw(FUNC(v53_device::SULA_r), FUNC(v53_device::SULA_w));  // scu mapping
+	map(0xfff9, 0xfff9).rw(FUNC(v53_device::TULA_r), FUNC(v53_device::TULA_w));  // tcu mapping
+	map(0xfffa, 0xfffa).rw(FUNC(v53_device::IULA_r), FUNC(v53_device::IULA_w));  // icu mapping
+	map(0xfffb, 0xfffb).rw(FUNC(v53_device::DULA_r), FUNC(v53_device::DULA_w));  // dmau mapping
+	map(0xfffc, 0xfffc).rw(FUNC(v53_device::OPHA_r), FUNC(v53_device::OPHA_w));  // peripheral mapping (upper bits, common)
+	map(0xfffd, 0xfffd).rw(FUNC(v53_device::OPSEL_r), FUNC(v53_device::OPSEL_w)); // peripheral enabling
+	map(0xfffe, 0xfffe).rw(FUNC(v53_device::SCTL_r), FUNC(v53_device::SCTL_w));  // peripheral configuration (& byte / word mapping)
 	// 0xffff reserved
 }
 

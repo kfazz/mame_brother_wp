@@ -3,6 +3,8 @@
 #include "emu.h"
 #include "cr589.h"
 
+#include "multibyte.h"
+
 
 static constexpr int identity_offset = 0x3ab;
 static constexpr char download_identity[] = "MATSHITA CD98Q4 DOWNLOADGS0N";
@@ -25,9 +27,10 @@ void matsushita_cr589_device::nvram_default()
 //  .nv file
 //-------------------------------------------------
 
-void matsushita_cr589_device::nvram_read(emu_file &file)
+bool matsushita_cr589_device::nvram_read(util::read_stream &file)
 {
-	file.read(buffer, sizeof(buffer));
+	size_t actual;
+	return !file.read(buffer, sizeof(buffer), actual) && actual == sizeof(buffer);
 }
 
 
@@ -37,9 +40,10 @@ void matsushita_cr589_device::nvram_read(emu_file &file)
 //  .nv file
 //-------------------------------------------------
 
-void matsushita_cr589_device::nvram_write(emu_file &file)
+bool matsushita_cr589_device::nvram_write(util::write_stream &file)
 {
-	file.write(buffer, sizeof(buffer));
+	size_t actual;
+	return !file.write(buffer, sizeof(buffer), actual) && actual == sizeof(buffer);
 }
 
 
@@ -56,17 +60,17 @@ void matsushita_cr589_device::ExecCommand()
 		break;
 
 	case 0x3b: // WRITE BUFFER
-		bufferOffset = ( command[ 3 ] << 16 ) | ( command[ 4 ] << 8 ) | command[ 5 ];
+		bufferOffset = get_u24be( &command[ 3 ] );
 		m_phase = SCSI_PHASE_DATAOUT;
 		m_status_code = SCSI_STATUS_CODE_GOOD;
-		m_transfer_length = ( command[ 6 ] << 16 ) | ( command[ 7 ] << 8 ) | command[ 8 ];
+		m_transfer_length = get_u24be( &command[ 6 ] );
 		break;
 
 	case 0x3c: // READ BUFFER
-		bufferOffset = ( command[ 3 ] << 16 ) | ( command[ 4 ] << 8 ) | command[ 5 ];
+		bufferOffset = get_u24be( &command[ 3 ] );
 		m_phase = SCSI_PHASE_DATAIN;
 		m_status_code = SCSI_STATUS_CODE_GOOD;
-		m_transfer_length = ( command[ 6 ] << 16 ) | ( command[ 7 ] << 8 ) | command[ 8 ];
+		m_transfer_length = get_u24be( &command[ 6 ] );
 		break;
 
 	case 0xcc: // FIRMWARE DOWNLOAD ENABLE

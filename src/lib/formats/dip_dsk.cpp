@@ -2,7 +2,7 @@
 // copyright-holders:Fabio Priuli
 /*********************************************************************
 
-    formats/dip_dsk.h
+    formats/dip_dsk.cpp
 
     PC98 DIP disk images
 
@@ -14,40 +14,43 @@
 
 *********************************************************************/
 
-#include <cassert>
-
 #include "dip_dsk.h"
+
+#include "ioprocs.h"
+
 
 dip_format::dip_format()
 {
 }
 
-const char *dip_format::name() const
+const char *dip_format::name() const noexcept
 {
 	return "dip";
 }
 
-const char *dip_format::description() const
+const char *dip_format::description() const noexcept
 {
 	return "DIP disk image";
 }
 
-const char *dip_format::extensions() const
+const char *dip_format::extensions() const noexcept
 {
 	return "dip";
 }
 
-int dip_format::identify(io_generic *io, uint32_t form_factor)
+int dip_format::identify(util::random_read &io, uint32_t form_factor, const std::vector<uint32_t> &variants) const
 {
-	uint64_t size = io_generic_size(io);
+	uint64_t size;
+	if (io.length(size))
+		return 0;
 
 	if (size == 0x134000 + 0x100)
-		return 100;
+		return FIFID_SIZE;
 
 	return 0;
 }
 
-bool dip_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
+bool dip_format::load(util::random_read &io, uint32_t form_factor, const std::vector<uint32_t> &variants, floppy_image &image) const
 {
 	int heads, tracks, spt, bps;
 
@@ -69,7 +72,8 @@ bool dip_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
 	for (int track = 0; track < tracks; track++)
 		for (int head = 0; head < heads; head++)
 		{
-			io_generic_read(io, sect_data, 0x100 + bps * spt * (track * heads + head), bps * spt);
+			size_t actual;
+			io.read_at(0x100 + bps * spt * (track * heads + head), sect_data, bps * spt, actual);
 
 			for (int i = 0; i < spt; i++)
 			{
@@ -89,9 +93,9 @@ bool dip_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
 	return true;
 }
 
-bool dip_format::supports_save() const
+bool dip_format::supports_save() const noexcept
 {
 	return false;
 }
 
-const floppy_format_type FLOPPY_DIP_FORMAT = &floppy_image_format_creator<dip_format>;
+const dip_format FLOPPY_DIP_FORMAT;

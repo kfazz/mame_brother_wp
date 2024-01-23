@@ -9,6 +9,8 @@
 #include "emu.h"
 #include "c2031.h"
 
+#include "formats/d64_dsk.h"
+#include "formats/g64_dsk.h"
 
 
 //**************************************************************************
@@ -70,14 +72,14 @@ void c2031_device::c2031_mem(address_map &map)
 }
 
 
-WRITE_LINE_MEMBER( c2031_device::via0_irq_w )
+void c2031_device::via0_irq_w(int state)
 {
 	m_via0_irq = state;
 
 	m_maincpu->set_input_line(INPUT_LINE_IRQ0, (m_via0_irq || m_via1_irq) ? ASSERT_LINE : CLEAR_LINE);
 }
 
-READ8_MEMBER( c2031_device::via0_pa_r )
+uint8_t c2031_device::via0_pa_r()
 {
 	/*
 
@@ -94,10 +96,10 @@ READ8_MEMBER( c2031_device::via0_pa_r )
 
 	*/
 
-	return m_bus->read_dio();
+	return m_bus->dio_r();
 }
 
-WRITE8_MEMBER( c2031_device::via0_pa_w )
+void c2031_device::via0_pa_w(uint8_t data)
 {
 	/*
 
@@ -117,7 +119,7 @@ WRITE8_MEMBER( c2031_device::via0_pa_w )
 	m_bus->dio_w(this, data);
 }
 
-READ8_MEMBER( c2031_device::via0_pb_r )
+uint8_t c2031_device::via0_pb_r()
 {
 	/*
 
@@ -154,7 +156,7 @@ READ8_MEMBER( c2031_device::via0_pb_r )
 	return data;
 }
 
-WRITE8_MEMBER( c2031_device::via0_pb_w )
+void c2031_device::via0_pb_w(uint8_t data)
 {
 	/*
 
@@ -202,14 +204,14 @@ WRITE8_MEMBER( c2031_device::via0_pb_w )
 }
 
 
-WRITE_LINE_MEMBER( c2031_device::via1_irq_w )
+void c2031_device::via1_irq_w(int state)
 {
 	m_via1_irq = state;
 
 	m_maincpu->set_input_line(INPUT_LINE_IRQ0, (m_via0_irq || m_via1_irq) ? ASSERT_LINE : CLEAR_LINE);
 }
 
-READ8_MEMBER( c2031_device::via1_pb_r )
+uint8_t c2031_device::via1_pb_r()
 {
 	/*
 
@@ -237,7 +239,7 @@ READ8_MEMBER( c2031_device::via1_pb_r )
 	return data;
 }
 
-WRITE8_MEMBER( c2031_device::via1_pb_w )
+void c2031_device::via1_pb_w(uint8_t data)
 {
 	/*
 
@@ -272,7 +274,7 @@ WRITE8_MEMBER( c2031_device::via1_pb_w )
 //  C64H156_INTERFACE( ga_intf )
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( c2031_device::byte_w )
+void c2031_device::byte_w(int state)
 {
 	m_maincpu->set_input_line(M6502_SET_OVERFLOW, state);
 
@@ -284,10 +286,11 @@ WRITE_LINE_MEMBER( c2031_device::byte_w )
 //  FLOPPY_FORMATS( floppy_formats )
 //-------------------------------------------------
 
-FLOPPY_FORMATS_MEMBER( c2031_device::floppy_formats )
-	FLOPPY_D64_FORMAT,
-	FLOPPY_G64_FORMAT
-FLOPPY_FORMATS_END
+void c2031_device::floppy_formats(format_registration &fr)
+{
+	fr.add(FLOPPY_D64_FORMAT);
+	fr.add(FLOPPY_G64_FORMAT);
+}
 
 
 //-------------------------------------------------
@@ -298,16 +301,15 @@ void c2031_device::device_add_mconfig(machine_config &config)
 {
 	M6502(config, m_maincpu, XTAL(16'000'000)/16);
 	m_maincpu->set_addrmap(AS_PROGRAM, &c2031_device::c2031_mem);
-	//config.set_perfect_quantum(m_maincpu); FIXME: not safe in a slot device - add barriers
 
-	VIA6522(config, m_via0, XTAL(16'000'000)/16);
+	MOS6522(config, m_via0, XTAL(16'000'000)/16);
 	m_via0->readpa_handler().set(FUNC(c2031_device::via0_pa_r));
 	m_via0->readpb_handler().set(FUNC(c2031_device::via0_pb_r));
 	m_via0->writepa_handler().set(FUNC(c2031_device::via0_pa_w));
 	m_via0->writepb_handler().set(FUNC(c2031_device::via0_pb_w));
 	m_via0->irq_handler().set(FUNC(c2031_device::via0_irq_w));
 
-	VIA6522(config, m_via1, XTAL(16'000'000)/16);
+	MOS6522(config, m_via1, XTAL(16'000'000)/16);
 	m_via1->readpa_handler().set(C64H156_TAG, FUNC(c64h156_device::yb_r));
 	m_via1->readpb_handler().set(FUNC(c2031_device::via1_pb_r));
 	m_via1->writepa_handler().set(C64H156_TAG, FUNC(c64h156_device::yb_w));

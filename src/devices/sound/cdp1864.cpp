@@ -58,24 +58,24 @@ DEFINE_DEVICE_TYPE(CDP1864, cdp1864_device, "cdp1864", "RCA CDP1864")
 //  cdp1864_device - constructor
 //-------------------------------------------------
 
-cdp1864_device::cdp1864_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, CDP1864, tag, owner, clock),
-		device_sound_interface(mconfig, *this),
-		device_video_interface(mconfig, *this),
-		m_read_inlace(*this),
-		m_read_rdata(*this),
-		m_read_bdata(*this),
-		m_read_gdata(*this),
-		m_write_int(*this),
-		m_write_dma_out(*this),
-		m_write_efx(*this),
-		m_write_hsync(*this),
-		m_disp(0),
-		m_dmaout(0),
-		m_bgcolor(0),
-		m_con(0),
-		m_aoe(0),
-		m_latch(CDP1864_DEFAULT_LATCH)
+cdp1864_device::cdp1864_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	device_t(mconfig, CDP1864, tag, owner, clock),
+	device_sound_interface(mconfig, *this),
+	device_video_interface(mconfig, *this),
+	m_read_inlace(*this, 1),
+	m_read_rdata(*this, 0),
+	m_read_bdata(*this, 0),
+	m_read_gdata(*this, 0),
+	m_write_int(*this),
+	m_write_dma_out(*this),
+	m_write_efx(*this),
+	m_write_hsync(*this),
+	m_disp(0),
+	m_dmaout(0),
+	m_bgcolor(0),
+	m_con(0),
+	m_aoe(0),
+	m_latch(CDP1864_DEFAULT_LATCH)
 {
 }
 
@@ -105,27 +105,16 @@ void cdp1864_device::device_config_complete()
 
 void cdp1864_device::device_start()
 {
-	// resolve callbacks
-	m_read_inlace.resolve_safe(1);
-	m_read_rdata.resolve_safe(0);
-	m_read_bdata.resolve_safe(0);
-	m_read_gdata.resolve_safe(0);
-	m_write_int.resolve_safe();
-	m_write_dma_out.resolve_safe();
-	m_write_efx.resolve_safe();
-	m_write_hsync.resolve_safe();
-
 	// initialize palette
 	initialize_palette();
 
 	// create sound stream
-	m_stream = machine().sound().stream_alloc(*this, 0, 1, machine().sample_rate());
+	m_stream = stream_alloc(0, 1, SAMPLE_RATE_OUTPUT_ADAPTIVE);
 
 	// allocate timers
-	m_int_timer = timer_alloc(TIMER_INT);
-	m_efx_timer = timer_alloc(TIMER_EFX);
-	m_dma_timer = timer_alloc(TIMER_DMA);
-	m_hsync_timer = timer_alloc(TIMER_HSYNC);
+	m_int_timer = timer_alloc(FUNC(cdp1864_device::int_tick), this);
+	m_efx_timer = timer_alloc(FUNC(cdp1864_device::efx_tick), this);
+	m_dma_timer = timer_alloc(FUNC(cdp1864_device::dma_tick), this);
 
 	// find devices
 	screen().register_screen_bitmap(m_bitmap);
@@ -163,91 +152,88 @@ void cdp1864_device::device_reset()
 
 
 //-------------------------------------------------
-//  device_timer - handle timer events
+//  timer events
 //-------------------------------------------------
 
-void cdp1864_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(cdp1864_device::int_tick)
+{
+	if (screen().vpos() == SCANLINE_INT_START)
+	{
+		if (m_disp)
+		{
+			m_write_int(ASSERT_LINE);
+		}
+
+		m_int_timer->adjust(screen().time_until_pos(SCANLINE_INT_END, 0));
+	}
+	else
+	{
+		if (m_disp)
+		{
+			m_write_int(CLEAR_LINE);
+		}
+
+		m_int_timer->adjust(screen().time_until_pos(SCANLINE_INT_START, 0));
+	}
+}
+
+TIMER_CALLBACK_MEMBER(cdp1864_device::efx_tick)
 {
 	int scanline = screen().vpos();
-
-	switch (id)
+	switch (scanline)
 	{
-	case TIMER_INT:
-		if (scanline == SCANLINE_INT_START)
-		{
-			if (m_disp)
-			{
-				m_write_int(ASSERT_LINE);
-			}
-
-			m_int_timer->adjust(screen().time_until_pos(SCANLINE_INT_END, 0));
-		}
-		else
-		{
-			if (m_disp)
-			{
-				m_write_int(CLEAR_LINE);
-			}
-
-			m_int_timer->adjust(screen().time_until_pos(SCANLINE_INT_START, 0));
-		}
+	case SCANLINE_EFX_TOP_START:
+		m_write_efx(ASSERT_LINE);
+		m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_TOP_END, 0));
 		break;
 
-	case TIMER_EFX:
-		switch (scanline)
-		{
-		case SCANLINE_EFX_TOP_START:
-			m_write_efx(ASSERT_LINE);
-			m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_TOP_END, 0));
-			break;
-
-		case SCANLINE_EFX_TOP_END:
-			m_write_efx(CLEAR_LINE);
-			m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_BOTTOM_START, 0));
-			break;
-
-		case SCANLINE_EFX_BOTTOM_START:
-			m_write_efx(ASSERT_LINE);
-			m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_BOTTOM_END, 0));
-			break;
-
-		case SCANLINE_EFX_BOTTOM_END:
-			m_write_efx(CLEAR_LINE);
-			m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_TOP_START, 0));
-			break;
-		}
+	case SCANLINE_EFX_TOP_END:
+		m_write_efx(CLEAR_LINE);
+		m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_BOTTOM_START, 0));
 		break;
 
-	case TIMER_DMA:
-		if (m_dmaout)
-		{
-			if (m_disp)
-			{
-				if (scanline >= SCANLINE_DISPLAY_START && scanline < SCANLINE_DISPLAY_END)
-				{
-					m_write_dma_out(CLEAR_LINE);
-				}
-			}
-
-			m_dma_timer->adjust(clocks_to_attotime(CDP1864_CYCLES_DMA_WAIT));
-
-			m_dmaout = 0;
-		}
-		else
-		{
-			if (m_disp)
-			{
-				if (scanline >= SCANLINE_DISPLAY_START && scanline < SCANLINE_DISPLAY_END)
-				{
-					m_write_dma_out(ASSERT_LINE);
-				}
-			}
-
-			m_dma_timer->adjust(clocks_to_attotime(CDP1864_CYCLES_DMA_ACTIVE));
-
-			m_dmaout = 1;
-		}
+	case SCANLINE_EFX_BOTTOM_START:
+		m_write_efx(ASSERT_LINE);
+		m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_BOTTOM_END, 0));
 		break;
+
+	case SCANLINE_EFX_BOTTOM_END:
+		m_write_efx(CLEAR_LINE);
+		m_efx_timer->adjust(screen().time_until_pos(SCANLINE_EFX_TOP_START, 0));
+		break;
+	}
+}
+
+TIMER_CALLBACK_MEMBER(cdp1864_device::dma_tick)
+{
+	int scanline = screen().vpos();
+	if (m_dmaout)
+	{
+		if (m_disp)
+		{
+			if (scanline >= SCANLINE_DISPLAY_START && scanline < SCANLINE_DISPLAY_END)
+			{
+				m_write_dma_out(CLEAR_LINE);
+			}
+		}
+
+		m_dma_timer->adjust(clocks_to_attotime(CDP1864_CYCLES_DMA_WAIT));
+
+		m_dmaout = 0;
+	}
+	else
+	{
+		if (m_disp)
+		{
+			if (scanline >= SCANLINE_DISPLAY_START && scanline < SCANLINE_DISPLAY_END)
+			{
+				m_write_dma_out(ASSERT_LINE);
+			}
+		}
+
+		m_dma_timer->adjust(clocks_to_attotime(CDP1864_CYCLES_DMA_ACTIVE));
+
+		m_dmaout = 1;
 	}
 }
 
@@ -257,36 +243,31 @@ void cdp1864_device::device_timer(emu_timer &timer, device_timer_id id, int para
 //  our sound stream
 //-------------------------------------------------
 
-void cdp1864_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void cdp1864_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
-	// reset the output stream
-	memset(outputs[0], 0, samples * sizeof(*outputs[0]));
-
-	int16_t signal = m_signal;
-	stream_sample_t *buffer = outputs[0];
-
-	memset( buffer, 0, samples * sizeof(*buffer) );
+	stream_buffer::sample_t signal = m_signal;
+	auto &buffer = outputs[0];
 
 	if (m_aoe)
 	{
 		double frequency = unscaled_clock() / 8 / 4 / (m_latch + 1) / 2;
-		int rate = machine().sample_rate() / 2;
+		int rate = buffer.sample_rate() / 2;
 
 		/* get progress through wave */
 		int incr = m_incr;
 
 		if (signal < 0)
 		{
-			signal = -0x7fff;
+			signal = -1.0;
 		}
 		else
 		{
-			signal = 0x7fff;
+			signal = 1.0;
 		}
 
-		while( samples-- > 0 )
+		for (int sampindex = 0; sampindex < buffer.samples(); sampindex++)
 		{
-			*buffer++ = signal;
+			buffer.put(sampindex, signal);
 			incr -= frequency;
 			while( incr < 0 )
 			{
@@ -299,6 +280,8 @@ void cdp1864_device::sound_stream_update(sound_stream &stream, stream_sample_t *
 		m_incr = incr;
 		m_signal = signal;
 	}
+	else
+		buffer.fill(0);
 }
 
 
@@ -362,7 +345,7 @@ void cdp1864_device::dma_w(uint8_t data)
 	int sx = screen().hpos() + 4;
 	int y = screen().vpos();
 
-	if (!m_con)
+	if (m_con)
 	{
 		rdata = m_read_rdata();
 		bdata = m_read_bdata();
@@ -378,7 +361,7 @@ void cdp1864_device::dma_w(uint8_t data)
 			color = (gdata << 2) | (bdata << 1) | rdata;
 		}
 
-		m_bitmap.pix32(y, sx + x) = m_palette[color];
+		m_bitmap.pix(y, sx + x) = m_palette[color];
 
 		data <<= 1;
 	}
@@ -387,11 +370,16 @@ void cdp1864_device::dma_w(uint8_t data)
 
 //-------------------------------------------------
 //  con_w - color on write
+//  At start, color is disabled. If the CON
+//  pin is taken low (or pulsed low), color is
+//  enabled. It can only be disabled again by
+//  resetting the chip.
 //-------------------------------------------------
 
 void cdp1864_device::con_w(int state)
 {
-	m_con = state;
+	if (!state)
+		m_con = true;
 }
 
 

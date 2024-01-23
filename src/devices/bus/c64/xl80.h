@@ -43,8 +43,6 @@ protected:
 	// device_c64_expansion_card_interface overrides
 	virtual uint8_t c64_cd_r(offs_t offset, uint8_t data, int sphi2, int ba, int roml, int romh, int io1, int io2) override;
 	virtual void c64_cd_w(offs_t offset, uint8_t data, int sphi2, int ba, int roml, int romh, int io1, int io2) override;
-	virtual int c64_game_r(offs_t offset, int sphi2, int ba, int rw) override { return 1; }
-	virtual int c64_exrom_r(offs_t offset, int sphi2, int ba, int rw) override { return 0; }
 
 private:
 	MC6845_UPDATE_ROW( crtc_update_row );
@@ -52,7 +50,8 @@ private:
 	required_device<hd6845s_device> m_crtc;
 	required_device<palette_device> m_palette;
 	required_memory_region m_char_rom;
-	optional_shared_ptr<uint8_t> m_ram;
+	memory_share_creator<uint8_t> m_ram;
+	int m_case;
 };
 
 

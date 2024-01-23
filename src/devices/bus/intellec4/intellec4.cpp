@@ -7,11 +7,11 @@
 #include <algorithm>
 
 
-DEFINE_DEVICE_TYPE_NS(INTELLEC4_UNIV_SLOT, bus::intellec4, univ_slot_device, "intlc4univslot", "INTELLEC 4 Universal Slot")
-DEFINE_DEVICE_TYPE_NS(INTELLEC4_UNIV_BUS,  bus::intellec4, univ_bus_device,  "intlc4univbus",  "INTELLEC 4 Universal Bus")
+DEFINE_DEVICE_TYPE(INTELLEC4_UNIV_SLOT, bus::intellec4::univ_slot_device, "intlc4univslot", "INTELLEC 4 Universal Slot")
+DEFINE_DEVICE_TYPE(INTELLEC4_UNIV_BUS,  bus::intellec4::univ_bus_device,  "intlc4univbus",  "INTELLEC 4 Universal Bus")
 
 
-namespace bus { namespace intellec4 {
+namespace bus::intellec4 {
 
 /***********************************************************************
     SLOT DEVICE
@@ -69,7 +69,7 @@ univ_bus_device::univ_bus_device(machine_config const &mconfig, char const *tag,
   input lines
 ----------------------------------*/
 
-WRITE_LINE_MEMBER(univ_bus_device::sync_in)
+void univ_bus_device::sync_in(int state)
 {
 	for (device_univ_card_interface *card : m_cards)
 	{
@@ -80,7 +80,7 @@ WRITE_LINE_MEMBER(univ_bus_device::sync_in)
 	}
 }
 
-WRITE_LINE_MEMBER(univ_bus_device::stop_acknowledge_in)
+void univ_bus_device::stop_acknowledge_in(int state)
 {
 	for (device_univ_card_interface *card : m_cards)
 	{
@@ -91,7 +91,7 @@ WRITE_LINE_MEMBER(univ_bus_device::stop_acknowledge_in)
 	}
 }
 
-WRITE_LINE_MEMBER(univ_bus_device::cpu_reset_in)
+void univ_bus_device::cpu_reset_in(int state)
 {
 	for (device_univ_card_interface *card : m_cards)
 	{
@@ -109,11 +109,6 @@ WRITE_LINE_MEMBER(univ_bus_device::cpu_reset_in)
 
 void univ_bus_device::device_start()
 {
-	m_test_out_cb.resolve_safe();
-	m_stop_out_cb.resolve_safe();
-	m_reset_4002_out_cb.resolve_safe();
-	m_user_reset_out_cb.resolve_safe();
-
 	save_item(NAME(m_test));
 	save_item(NAME(m_stop));
 	save_item(NAME(m_reset_4002));
@@ -127,7 +122,7 @@ void univ_bus_device::device_start()
 
 unsigned univ_bus_device::add_card(device_univ_card_interface &card)
 {
-	for (unsigned i = 0; ARRAY_LENGTH(m_cards) > i; ++i)
+	for (unsigned i = 0; std::size(m_cards) > i; ++i)
 	{
 		if (!m_cards[i])
 		{
@@ -135,12 +130,12 @@ unsigned univ_bus_device::add_card(device_univ_card_interface &card)
 			return i;
 		}
 	}
-	throw emu_fatalerror("univ_bus_device: maximum number of cards (%u) exceeded\n", unsigned(ARRAY_LENGTH(m_cards)));
+	throw emu_fatalerror("univ_bus_device: maximum number of cards (%u) exceeded\n", unsigned(std::size(m_cards)));
 }
 
 void univ_bus_device::set_test(unsigned index, int state)
 {
-	assert(ARRAY_LENGTH(m_cards) >= index);
+	assert(std::size(m_cards) >= index);
 	bool const changed(bool(state) != !BIT(m_test, index));
 	if (changed)
 	{
@@ -150,10 +145,10 @@ void univ_bus_device::set_test(unsigned index, int state)
 		else
 			m_test |= u16(1U) << index;
 
-		if ((ARRAY_LENGTH(m_cards) != index) && !(other & ~(u16(1U) << ARRAY_LENGTH(m_cards))))
+		if ((std::size(m_cards) != index) && !(other & ~(u16(1U) << std::size(m_cards))))
 			m_test_out_cb(state);
 
-		for (unsigned card = 0U; (ARRAY_LENGTH(m_cards) > card) && m_cards[card]; ++card)
+		for (unsigned card = 0U; (std::size(m_cards) > card) && m_cards[card]; ++card)
 		{
 			if ((index != card) && !(other & ~(u16(1U) << index)))
 				m_cards[card]->test_in(state);
@@ -163,7 +158,7 @@ void univ_bus_device::set_test(unsigned index, int state)
 
 void univ_bus_device::set_stop(unsigned index, int state)
 {
-	assert(ARRAY_LENGTH(m_cards) >= index);
+	assert(std::size(m_cards) >= index);
 	bool const changed(bool(state) != !BIT(m_stop, index));
 	if (changed)
 	{
@@ -173,10 +168,10 @@ void univ_bus_device::set_stop(unsigned index, int state)
 		else
 			m_stop |= u16(1U) << index;
 
-		if ((ARRAY_LENGTH(m_cards) != index) && !(other & ~(u16(1U) << ARRAY_LENGTH(m_cards))))
+		if ((std::size(m_cards) != index) && !(other & ~(u16(1U) << std::size(m_cards))))
 			m_stop_out_cb(state);
 
-		for (unsigned card = 0U; (ARRAY_LENGTH(m_cards) > card) && m_cards[card]; ++card)
+		for (unsigned card = 0U; (std::size(m_cards) > card) && m_cards[card]; ++card)
 		{
 			if ((index != card) && !(other & ~(u16(1U) << index)))
 				m_cards[card]->stop_in(state);
@@ -186,7 +181,7 @@ void univ_bus_device::set_stop(unsigned index, int state)
 
 void univ_bus_device::set_reset_4002(unsigned index, int state)
 {
-	assert(ARRAY_LENGTH(m_cards) >= index);
+	assert(std::size(m_cards) >= index);
 	bool const changed(bool(state) != !BIT(m_reset_4002, index));
 	if (changed)
 	{
@@ -196,10 +191,10 @@ void univ_bus_device::set_reset_4002(unsigned index, int state)
 		else
 			m_reset_4002 |= u16(1U) << index;
 
-		if ((ARRAY_LENGTH(m_cards) != index) && !(other & ~(u16(1U) << ARRAY_LENGTH(m_cards))))
+		if ((std::size(m_cards) != index) && !(other & ~(u16(1U) << std::size(m_cards))))
 			m_reset_4002_out_cb(state);
 
-		for (unsigned card = 0U; (ARRAY_LENGTH(m_cards) > card) && m_cards[card]; ++card)
+		for (unsigned card = 0U; (std::size(m_cards) > card) && m_cards[card]; ++card)
 		{
 			if ((index != card) && !(other & ~(u16(1U) << index)))
 				m_cards[card]->reset_4002_in(state);
@@ -209,7 +204,7 @@ void univ_bus_device::set_reset_4002(unsigned index, int state)
 
 void univ_bus_device::set_user_reset(unsigned index, int state)
 {
-	assert(ARRAY_LENGTH(m_cards) > index);
+	assert(std::size(m_cards) > index);
 	bool const changed(bool(state) != !BIT(m_user_reset, index));
 	if (changed)
 	{
@@ -222,7 +217,7 @@ void univ_bus_device::set_user_reset(unsigned index, int state)
 		if (!other)
 			m_user_reset_out_cb(state);
 
-		for (unsigned card = 0U; (ARRAY_LENGTH(m_cards) > card) && m_cards[card]; ++card)
+		for (unsigned card = 0U; (std::size(m_cards) > card) && m_cards[card]; ++card)
 		{
 			if ((index != card) && !(other & ~(u16(1U) << index)))
 				m_cards[card]->user_reset_in(state);
@@ -256,13 +251,19 @@ void device_univ_card_interface::set_bus(univ_bus_device &bus)
 	m_index = (m_bus = &bus)->add_card(*this);
 }
 
-} } // namespace bus::intellec4
+} // namespace bus::intellec4
 
 
 
 #include "insdatastor.h"
 #include "prommemory.h"
 #include "tapereader.h"
+
+
+// must come after including the headers that declare these extern
+template class device_finder<bus::intellec4::device_univ_card_interface, false>;
+template class device_finder<bus::intellec4::device_univ_card_interface, true>;
+
 
 void intellec4_univ_cards(device_slot_interface &device)
 {

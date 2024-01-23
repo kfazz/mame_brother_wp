@@ -1,8 +1,12 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
 
 #ifndef NLD_MS_SOR_MAT_H_
 #define NLD_MS_SOR_MAT_H_
+
+// Names
+// spell-checker: words Seidel,
+//
 
 ///
 /// \file nld_ms_sor.h
@@ -12,35 +16,30 @@
 /// For w==1 we will do the classic Gauss-Seidel approach
 ///
 
-#include "nld_matrix_solver.h"
+#include "nld_matrix_solver_ext.h"
 #include "nld_ms_direct.h"
-#include "nld_solver.h"
 
 #include <algorithm>
 
-namespace netlist
-{
-namespace solver
+namespace netlist::solver
 {
 
 	template <typename FT, int SIZE>
 	class matrix_solver_SOR_mat_t: public matrix_solver_direct_t<FT, SIZE>
 	{
-		friend class matrix_solver_t;
-
 	public:
 
 		using float_type = FT;
 
-		matrix_solver_SOR_mat_t(netlist_state_t &anetlist, const pstring &name,
-			const analog_net_t::list_t &nets,
+		matrix_solver_SOR_mat_t(devices::nld_solver &main_solver, const pstring &name,
+			const matrix_solver_t::net_list_t &nets,
 			const solver_parameters_t *params, std::size_t size)
-			: matrix_solver_direct_t<FT, SIZE>(anetlist, name, nets, params, size)
+			: matrix_solver_direct_t<FT, SIZE>(main_solver, name, nets, params, size)
 			, m_omega(*this, "m_omega", static_cast<float_type>(params->m_gs_sor))
 			{
 			}
 
-		void vsolve_non_dynamic() override;
+		void upstream_solve_non_dynamic() override;
 
 	private:
 		state_var<float_type> m_omega;
@@ -51,7 +50,7 @@ namespace solver
 	// ----------------------------------------------------------------------------------------
 
 	template <typename FT, int SIZE>
-	void matrix_solver_SOR_mat_t<FT, SIZE>::vsolve_non_dynamic()
+	void matrix_solver_SOR_mat_t<FT, SIZE>::upstream_solve_non_dynamic()
 	{
 		// The matrix based code looks a lot nicer but actually is 30% slower than
 		// the optimized code which works directly on the data structures.
@@ -153,7 +152,6 @@ namespace solver
 		}
 	}
 
-} // namespace solver
-} // namespace netlist
+} // namespace netlist::solver
 
 #endif // NLD_MS_SOR_MAT_

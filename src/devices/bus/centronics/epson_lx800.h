@@ -42,22 +42,24 @@ protected:
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual ioport_constructor device_input_ports() const override;
 
+	virtual bool supports_pin35_5v() override { return true; }
+
 private:
-	DECLARE_READ8_MEMBER(porta_r);
-	DECLARE_WRITE8_MEMBER(porta_w);
-	DECLARE_READ8_MEMBER(portc_r);
-	DECLARE_WRITE8_MEMBER(portc_w);
+	uint8_t porta_r(offs_t offset);
+	void porta_w(offs_t offset, uint8_t data);
+	uint8_t portc_r(offs_t offset);
+	void portc_w(offs_t offset, uint8_t data);
 
-	DECLARE_READ_LINE_MEMBER(an0_r);
-	DECLARE_READ_LINE_MEMBER(an1_r);
-	DECLARE_READ_LINE_MEMBER(an2_r);
-	DECLARE_READ_LINE_MEMBER(an3_r);
-	DECLARE_READ_LINE_MEMBER(an4_r);
-	DECLARE_READ_LINE_MEMBER(an5_r);
+	int an0_r();
+	int an1_r();
+	int an2_r();
+	int an3_r();
+	int an4_r();
+	int an5_r();
 
-	DECLARE_READ8_MEMBER(centronics_data_r);
-	DECLARE_WRITE_LINE_MEMBER(centronics_pe_w);
-	DECLARE_WRITE_LINE_MEMBER(reset_w);
+	uint8_t centronics_data_r();
+	void centronics_pe_w(int state);
+	void reset_w(int state);
 
 	void lx800_mem(address_map &map);
 

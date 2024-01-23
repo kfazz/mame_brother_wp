@@ -32,7 +32,7 @@ iop_sio2_device::~iop_sio2_device()
 void iop_sio2_device::device_start()
 {
 	if (!m_response_timer)
-		m_response_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(iop_sio2_device::response_timer), this));
+		m_response_timer = timer_alloc(FUNC(iop_sio2_device::response_timer), this);
 
 	save_item(NAME(m_buffer));
 	save_item(NAME(m_curr_byte));
@@ -73,7 +73,7 @@ void iop_sio2_device::device_reset()
 	m_target_device = 0;
 }
 
-READ32_MEMBER(iop_sio2_device::read)
+uint32_t iop_sio2_device::read(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t ret = 0;
 	switch (offset)
@@ -108,7 +108,7 @@ READ32_MEMBER(iop_sio2_device::read)
 	return ret;
 }
 
-WRITE32_MEMBER(iop_sio2_device::write)
+void iop_sio2_device::write(offs_t offset, uint32_t data, uint32_t mem_mask)
 {
 	switch (offset)
 	{

@@ -13,7 +13,6 @@
 
 #include "adamnet.h"
 #include "cpu/m6800/m6801.h"
-#include "formats/adam_cas.h"
 #include "imagedev/cassette.h"
 
 
@@ -44,17 +43,15 @@ protected:
 
 private:
 	required_device<m6801_cpu_device> m_maincpu;
-	required_device<cassette_image_device> m_ddp0;
-	required_device<cassette_image_device> m_ddp1;
+	required_device_array<cassette_image_device, 2> m_ddp;
 
-	int m_wr0;
-	int m_wr1;
+	uint8_t m_wr;
 	int m_track;
 
-	DECLARE_WRITE8_MEMBER( p1_w );
-	DECLARE_READ8_MEMBER( p2_r );
-	DECLARE_WRITE8_MEMBER( p2_w );
-	DECLARE_READ8_MEMBER( p4_r );
+	void p1_w(uint8_t data);
+	uint8_t p2_r();
+	void p2_w(uint8_t data);
+	uint8_t p4_r();
 
 	void adam_ddp_mem(address_map &map);
 };

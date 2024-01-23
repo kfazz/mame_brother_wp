@@ -91,16 +91,13 @@ msm6585_device::msm6585_device(const machine_config &mconfig, const char *tag, d
 
 void msm5205_device::device_start()
 {
-	m_vck_cb.resolve_safe();
-	m_vck_legacy_cb.resolve();
-
 	/* compute the difference tables */
 	compute_tables();
 
 	/* stream system initialize */
-	m_stream = machine().sound().stream_alloc(*this, 0, 1, clock());
-	m_vck_timer = timer_alloc(TIMER_VCK);
-	m_capture_timer = timer_alloc(TIMER_ADPCM_CAPTURE);
+	m_stream = stream_alloc(0, 1, clock());
+	m_vck_timer = timer_alloc(FUNC(msm5205_device::toggle_vck), this);
+	m_capture_timer = timer_alloc(FUNC(msm5205_device::update_adpcm), this);
 
 	/* register for save states */
 	save_item(NAME(m_data));
@@ -172,35 +169,25 @@ void msm5205_device::compute_tables()
 
 
 //-------------------------------------------------
-//  device_timer - called whenever a device timer
-//  fires
+//  toggle_vck -
 //-------------------------------------------------
 
-void msm5205_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(msm5205_device::toggle_vck)
 {
-	switch (id)
-	{
-		case TIMER_VCK:
-			m_vck = !m_vck;
-			m_vck_cb(m_vck);
-			if (!m_vck)
-				m_capture_timer->adjust(attotime::from_hz(clock()/6)); // 15.6 usec at 384KHz
-			break;
-
-		case TIMER_ADPCM_CAPTURE:
-			update_adpcm();
-			break;
-	}
+	m_vck = !m_vck;
+	m_vck_cb(m_vck);
+	if (!m_vck)
+		m_capture_timer->adjust(attotime::from_hz(clock() / adpcm_capture_divisor()));
 }
 
 // timer callback at VCK low edge on MSM5205 (at rising edge on MSM6585)
-void msm5205_device::update_adpcm()
+TIMER_CALLBACK_MEMBER(msm5205_device::update_adpcm)
 {
 	int val;
 	int new_signal;
 
 	// callback user handler and latch next data
-	if (!m_vck_legacy_cb.isnull())
+	if (!m_vck_legacy_cb.isunset())
 		m_vck_legacy_cb(1);
 
 	// reset check at last hiedge of VCK
@@ -226,7 +213,7 @@ void msm5205_device::update_adpcm()
 	}
 
 	/* update when signal changed */
-	if( m_signal != new_signal)
+	if (m_signal != new_signal)
 	{
 		m_stream->update();
 		m_signal = new_signal;
@@ -360,46 +347,20 @@ void msm5205_device::device_clock_changed()
 //  sound_stream_update - handle a stream update
 //-------------------------------------------------
 
-void msm5205_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void msm5205_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
-	stream_sample_t *buffer = outputs[0];
+	auto &output = outputs[0];
 
 	/* if this voice is active */
-	if(m_signal)
+	if (m_signal)
 	{
+		constexpr stream_buffer::sample_t sample_scale = 1.0 / double(1 << 12);
 		const int dac_mask = (m_dac_bits >= 12) ? 0 : (1 << (12 - m_dac_bits)) - 1;
-		short val = (m_signal & ~dac_mask) * 16; // 10 bit DAC
-		while (samples)
-		{
-			*buffer++ = val;
-			samples--;
-		}
+		stream_buffer::sample_t val = stream_buffer::sample_t(m_signal & ~dac_mask) * sample_scale;
+		output.fill(val);
 	}
 	else
-		memset(buffer, 0, samples * sizeof(*buffer));
-}
-
-
-//-------------------------------------------------
-//  device_timer - called whenever a device timer
-//  fires
-//-------------------------------------------------
-
-void msm6585_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
-{
-	switch (id)
-	{
-		case TIMER_VCK:
-			m_vck = !m_vck;
-			m_vck_cb(m_vck);
-			if (m_vck)
-				m_capture_timer->adjust(attotime::from_hz(clock()/2)); // 3 usec at 640KHz
-			break;
-
-		case TIMER_ADPCM_CAPTURE:
-			update_adpcm();
-			break;
-	}
+		output.fill(0);
 }
 
 
@@ -407,8 +368,8 @@ void msm6585_device::device_timer(emu_timer &timer, device_timer_id id, int para
 //  sound_stream_update - handle a stream update
 //-------------------------------------------------
 
-void msm6585_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void msm6585_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
 	// should this be different?
-	msm5205_device::sound_stream_update(stream, inputs, outputs,samples);
+	msm5205_device::sound_stream_update(stream, inputs, outputs);
 }

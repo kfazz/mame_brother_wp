@@ -6,6 +6,7 @@
 #pragma once
 
 #include "fdc_pll.h"
+#include "imagedev/floppy.h"
 
 class floppy_image_device;
 
@@ -35,7 +36,7 @@ public:
 
 	void set_ready_line_connected(bool ready);
 	void set_select_lines_connected(bool select);
-	void set_floppy(floppy_image_device *image);
+	void set_floppies(floppy_connector* f0, floppy_connector* f1);
 	void soft_reset();
 
 	void map(address_map &map);
@@ -43,7 +44,8 @@ public:
 protected:
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+
+	TIMER_CALLBACK_MEMBER(floppy_tick);
 
 private:
 	enum {
@@ -205,8 +207,7 @@ private:
 	int cur_rate;
 	int idle_icnt;
 
-	static std::string tts(attotime t);
-	std::string ttsn();
+	std::string ttsn() const;
 
 	enum {
 		C_FORMAT_TRACK,
@@ -234,7 +235,7 @@ private:
 	void cmd_w(uint8_t data);
 	void param_w(uint8_t data);
 
-	void delay_cycles(emu_timer *tm, int cycles);
+	void delay_cycles(floppy_info &fi, int cycles);
 	void set_drq(bool state);
 	void set_irq(bool state);
 	bool get_ready(int fid);

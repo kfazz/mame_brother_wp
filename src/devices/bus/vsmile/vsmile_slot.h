@@ -5,14 +5,12 @@
 
 #pragma once
 
-#include "softlist_dev.h"
+#include "imagedev/cartrom.h"
 
 
 /***************************************************************************
  TYPE DEFINITIONS
  ***************************************************************************/
-
-#define VSMILE_SLOT_ROM_REGION_TAG ":cart:rom"
 
 enum
 {
@@ -29,19 +27,19 @@ public:
 	virtual ~device_vsmile_cart_interface();
 
 	// reading and writing
-	virtual DECLARE_READ16_MEMBER(bank0_r) { return 0; }
-	virtual DECLARE_READ16_MEMBER(bank1_r) { return 0; }
-	virtual DECLARE_READ16_MEMBER(bank2_r) { return 0; }
-	virtual DECLARE_READ16_MEMBER(bank3_r) { return 0; }
-	virtual DECLARE_WRITE16_MEMBER(bank0_w) { }
-	virtual DECLARE_WRITE16_MEMBER(bank1_w) { }
-	virtual DECLARE_WRITE16_MEMBER(bank2_w) { }
-	virtual DECLARE_WRITE16_MEMBER(bank3_w) { }
+	virtual uint16_t bank0_r(offs_t offset) { return 0; }
+	virtual uint16_t bank1_r(offs_t offset) { return 0; }
+	virtual uint16_t bank2_r(offs_t offset) { return 0; }
+	virtual uint16_t bank3_r(offs_t offset) { return 0; }
+	virtual void bank0_w(offs_t offset, uint16_t data) { }
+	virtual void bank1_w(offs_t offset, uint16_t data) { }
+	virtual void bank2_w(offs_t offset, uint16_t data) { }
+	virtual void bank3_w(offs_t offset, uint16_t data) { }
 
 	// banking
 	virtual void set_cs2(bool cs2) = 0;
 
-	void rom_alloc(uint32_t size, const char *tag);
+	void rom_alloc(uint32_t size);
 	void nvram_alloc(uint32_t size);
 	uint16_t* get_rom_base() { return m_rom; }
 	uint16_t* get_nvram_base() { return &m_nvram[0]; }
@@ -64,7 +62,7 @@ protected:
 // ======================> vsmile_cart_slot_device
 
 class vsmile_cart_slot_device : public device_t,
-								public device_image_interface,
+								public device_cartrom_image_interface,
 								public device_single_card_slot_interface<device_vsmile_cart_interface>
 {
 public:
@@ -81,47 +79,39 @@ public:
 	vsmile_cart_slot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 	virtual ~vsmile_cart_slot_device();
 
-	// image-level overrides
-	virtual image_init_result call_load() override;
+	// device_image_interface implementation
+	virtual std::pair<std::error_condition, std::string> call_load() override;
 	virtual void call_unload() override;
 
-	virtual iodevice_t image_type() const noexcept override { return IO_CARTSLOT; }
-	virtual bool is_readable()  const noexcept override { return true; }
-	virtual bool is_writeable() const noexcept override { return false; }
-	virtual bool is_creatable() const noexcept override { return false; }
-	virtual bool must_be_loaded() const noexcept override { return false; }
 	virtual bool is_reset_on_load() const noexcept override { return true; }
 	virtual const char *image_interface() const noexcept override { return "vsmile_cart"; }
 	virtual const char *file_extensions() const noexcept override { return "u1,u3,bin"; }
 
-	// slot interface overrides
+	// device_slot_interface implementation
 	virtual std::string get_default_card_software(get_default_card_software_hook &hook) const override;
 
 	void save_nvram() { if (m_cart && m_cart->get_nvram_size()) m_cart->save_nvram(); }
 	uint32_t get_rom_size() { return m_cart ? m_cart->get_rom_size() : 0; }
 
 	// reading and writing
-	virtual DECLARE_READ16_MEMBER(bank0_r);
-	virtual DECLARE_READ16_MEMBER(bank1_r);
-	virtual DECLARE_READ16_MEMBER(bank2_r);
-	virtual DECLARE_READ16_MEMBER(bank3_r);
-	virtual DECLARE_WRITE16_MEMBER(bank0_w);
-	virtual DECLARE_WRITE16_MEMBER(bank1_w);
-	virtual DECLARE_WRITE16_MEMBER(bank2_w);
-	virtual DECLARE_WRITE16_MEMBER(bank3_w);
+	uint16_t bank0_r(offs_t offset);
+	uint16_t bank1_r(offs_t offset);
+	uint16_t bank2_r(offs_t offset);
+	uint16_t bank3_r(offs_t offset);
+	void bank0_w(offs_t offset, uint16_t data);
+	void bank1_w(offs_t offset, uint16_t data);
+	void bank2_w(offs_t offset, uint16_t data);
+	void bank3_w(offs_t offset, uint16_t data);
 
 	// banking
 	void set_cs2(bool cs2);
 
 protected:
-	// device-level overrides
+	// device_t implementation
 	virtual void device_start() override;
 
-	// device_image_interface implementation
-	virtual const software_list_loader &get_software_list_loader() const override { return rom_software_list_loader::instance(); }
-
 	int m_type;
-	device_vsmile_cart_interface* m_cart;
+	device_vsmile_cart_interface *m_cart;
 };
 
 // device type definition

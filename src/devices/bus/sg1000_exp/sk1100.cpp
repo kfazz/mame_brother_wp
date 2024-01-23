@@ -18,7 +18,9 @@ TODO:
 
 #include "emu.h"
 #include "sk1100.h"
-#include "softlist.h"
+#include "softlist_dev.h"
+
+#include "formats/sc3000_bit.h"
 
 
 
@@ -70,7 +72,7 @@ static INPUT_PORTS_START( sk1100_keys )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_F) PORT_CHAR('F') PORT_CHAR('f')
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_V) PORT_CHAR('V') PORT_CHAR('v')
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("INS DEL") PORT_CODE(KEYCODE_BACKSPACE) PORT_CHAR(8)
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_SMALL_PI) PORT_CODE(KEYCODE_EQUALS) PORT_CHAR(0x03c0)
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_EQUALS) PORT_CHAR(U'π')
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_QUOTE) PORT_CHAR(':') PORT_CHAR('*')
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_OPENBRACE) PORT_CHAR('@') PORT_CHAR('`')
 
@@ -80,7 +82,7 @@ static INPUT_PORTS_START( sk1100_keys )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_G) PORT_CHAR('G') PORT_CHAR('g')
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_B) PORT_CHAR('B') PORT_CHAR('b')
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNUSED )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_DOWN) PORT_CODE(KEYCODE_DOWN) PORT_CHAR(UCHAR_MAMEKEY(DOWN))
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(u8"\u2193") PORT_CODE(KEYCODE_DOWN) PORT_CHAR(UCHAR_MAMEKEY(DOWN)) // U+2193 = ↓
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_BACKSLASH) PORT_CHAR(']') PORT_CHAR('}')
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_CLOSEBRACE) PORT_CHAR('[') PORT_CHAR('{')
 
@@ -90,7 +92,7 @@ static INPUT_PORTS_START( sk1100_keys )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_H) PORT_CHAR('H') PORT_CHAR('h')
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_N) PORT_CHAR('N') PORT_CHAR('n')
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNUSED )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_LEFT) PORT_CODE(KEYCODE_LEFT) PORT_CHAR(UCHAR_MAMEKEY(LEFT))
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(u8"\u2190") PORT_CODE(KEYCODE_LEFT) PORT_CHAR(UCHAR_MAMEKEY(LEFT)) // U+2190 = ←
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("CR") PORT_CODE(KEYCODE_ENTER) PORT_CHAR(13)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNUSED )
 
@@ -100,8 +102,8 @@ static INPUT_PORTS_START( sk1100_keys )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_J) PORT_CHAR('J') PORT_CHAR('j')
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_M) PORT_CHAR('M') PORT_CHAR('m')
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNUSED )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_RIGHT) PORT_CODE(KEYCODE_RIGHT) PORT_CHAR(UCHAR_MAMEKEY(RIGHT))
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_UP) PORT_CODE(KEYCODE_UP) PORT_CHAR(UCHAR_MAMEKEY(UP))
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(u8"\u2192") PORT_CODE(KEYCODE_RIGHT) PORT_CHAR(UCHAR_MAMEKEY(RIGHT)) // U+2192 = →
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(u8"\u2191") PORT_CODE(KEYCODE_UP) PORT_CHAR(UCHAR_MAMEKEY(UP)) // U+2191 = ↑
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNUSED )
 
 	PORT_START("PA7")
@@ -128,7 +130,7 @@ static INPUT_PORTS_START( sk1100_keys )
 	PORT_BIT( 0x0e, IP_ACTIVE_LOW, IPT_UNUSED )
 
 	PORT_START("PB5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xc2\xa5") PORT_CODE(KEYCODE_TILDE) PORT_CHAR(0x00a5)
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_TILDE) PORT_CHAR(U'¥')
 	PORT_BIT( 0x06, IP_ACTIVE_LOW, IPT_UNUSED )
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("FUNC") PORT_CODE(KEYCODE_TAB)
 
@@ -187,8 +189,8 @@ sega_sk1100_device::sega_sk1100_device(const machine_config &mconfig, const char
 	m_cassette(*this, "cassette"),
 	m_ppi(*this, UPD9255_0_TAG),
 	m_printer_port(*this, "printer"),
-	m_pa(*this, {"PA0", "PA1", "PA2", "PA3", "PA4", "PA5", "PA6", "PA7"}),
-	m_pb(*this, {"PB0", "PB1", "PB2", "PB3", "PB4", "PB5", "PB6", "PB7"}),
+	m_pa(*this, "PA%u", 0U),
+	m_pb(*this, "PB%u", 0U),
 	m_keylatch(0)
 {
 }
@@ -209,7 +211,7 @@ void sega_sk1100_device::device_start()
 //  peripheral_r - keyboard read
 //-------------------------------------------------
 
-READ8_MEMBER(sega_sk1100_device::peripheral_r)
+uint8_t sega_sk1100_device::peripheral_r(offs_t offset)
 {
 	return m_ppi->read(offset & 0x03);
 }
@@ -219,7 +221,7 @@ READ8_MEMBER(sega_sk1100_device::peripheral_r)
 //  peripheral_w - keyboard write
 //-------------------------------------------------
 
-WRITE8_MEMBER(sega_sk1100_device::peripheral_w)
+void sega_sk1100_device::peripheral_w(offs_t offset, uint8_t data)
 {
 	m_ppi->write(offset & 0x03, data);
 }
@@ -235,7 +237,7 @@ bool sega_sk1100_device::is_readable(uint8_t offset)
     I8255 INTERFACE
 -------------------------------------------------*/
 
-READ8_MEMBER( sega_sk1100_device::ppi_pa_r )
+uint8_t sega_sk1100_device::ppi_pa_r()
 {
 	/*
 	    Signal  Description
@@ -253,7 +255,7 @@ READ8_MEMBER( sega_sk1100_device::ppi_pa_r )
 	return m_pa[m_keylatch]->read();
 }
 
-READ8_MEMBER( sega_sk1100_device::ppi_pb_r )
+uint8_t sega_sk1100_device::ppi_pb_r()
 {
 	/*
 	    Signal  Description
@@ -284,7 +286,7 @@ READ8_MEMBER( sega_sk1100_device::ppi_pb_r )
 	return data;
 }
 
-WRITE8_MEMBER( sega_sk1100_device::ppi_pc_w )
+void sega_sk1100_device::ppi_pc_w(uint8_t data)
 {
 	/*
 	    Signal  Description

@@ -20,7 +20,6 @@
 #include "emu.h"
 #include "sc61860.h"
 #include "scdasm.h"
-#include "debugger.h"
 
 
 #define I 0
@@ -51,12 +50,12 @@ DEFINE_DEVICE_TYPE(SC61860, sc61860_device, "sc61860", "Sharp SC61860")
 sc61860_device::sc61860_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: cpu_device(mconfig, SC61860, tag, owner, clock)
 	, m_program_config("program", ENDIANNESS_BIG, 8, 16, 0)
-	, m_reset(*this)
-	, m_brk(*this)
-	, m_x(*this)
-	, m_ina(*this)
+	, m_reset(*this, 0)
+	, m_brk(*this, 0)
+	, m_x(*this, 0)
+	, m_ina(*this, 0)
 	, m_outa(*this)
-	, m_inb(*this)
+	, m_inb(*this, 0)
 	, m_outb(*this)
 	, m_outc(*this)
 {
@@ -106,19 +105,11 @@ void sc61860_device::device_reset()
 
 void sc61860_device::device_start()
 {
-	m_2ms_tick_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(sc61860_device::sc61860_2ms_tick), this));
+	m_2ms_tick_timer = timer_alloc(FUNC(sc61860_device::sc61860_2ms_tick), this);
 	m_2ms_tick_timer->adjust(attotime::from_hz(500), 0, attotime::from_hz(500));
 
-	m_program = &space(AS_PROGRAM);
-	m_cache = m_program->cache<0, 0, ENDIANNESS_BIG>();
-	m_reset.resolve();
-	m_brk.resolve();
-	m_x.resolve();
-	m_ina.resolve_safe(0);
-	m_outa.resolve_safe();
-	m_inb.resolve_safe(0);
-	m_outb.resolve_safe();
-	m_outc.resolve_safe();
+	space(AS_PROGRAM).cache(m_cache);
+	space(AS_PROGRAM).specific(m_program);
 
 	m_p = 0;
 	m_q = 0;
@@ -170,7 +161,6 @@ void sc61860_device::device_start()
 	state_add(STATE_GENPC, "GENPC", m_pc).formatstr("%04X").noshow();
 	state_add(STATE_GENPCBASE, "CURPC", m_oldpc).formatstr("%04X").noshow();
 	state_add(STATE_GENFLAGS, "GENFLAGS",  m_debugger_temp).formatstr("%2s").noshow();
-	state_add(STATE_GENSP, "GENSP", m_r).mask(0x7f).formatstr("%02X").noshow();
 
 	set_icountptr(m_icount);
 }

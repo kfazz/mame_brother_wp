@@ -39,36 +39,32 @@ public:
 
 	uint8_t read(offs_t offset);
 	void write(offs_t offset, uint8_t data);
-	uint32_t acknowledge();
+	uint8_t acknowledge();
 
-	DECLARE_WRITE_LINE_MEMBER( ir0_w ) { set_irq_line(0, state); }
-	DECLARE_WRITE_LINE_MEMBER( ir1_w ) { set_irq_line(1, state); }
-	DECLARE_WRITE_LINE_MEMBER( ir2_w ) { set_irq_line(2, state); }
-	DECLARE_WRITE_LINE_MEMBER( ir3_w ) { set_irq_line(3, state); }
-	DECLARE_WRITE_LINE_MEMBER( ir4_w ) { set_irq_line(4, state); }
-	DECLARE_WRITE_LINE_MEMBER( ir5_w ) { set_irq_line(5, state); }
-	DECLARE_WRITE_LINE_MEMBER( ir6_w ) { set_irq_line(6, state); }
-	DECLARE_WRITE_LINE_MEMBER( ir7_w ) { set_irq_line(7, state); }
+	void ir0_w(int state) { set_irq_line(0, state); }
+	void ir1_w(int state) { set_irq_line(1, state); }
+	void ir2_w(int state) { set_irq_line(2, state); }
+	void ir3_w(int state) { set_irq_line(3, state); }
+	void ir4_w(int state) { set_irq_line(4, state); }
+	void ir5_w(int state) { set_irq_line(5, state); }
+	void ir6_w(int state) { set_irq_line(6, state); }
+	void ir7_w(int state) { set_irq_line(7, state); }
 
 	IRQ_CALLBACK_MEMBER(inta_cb);
 
 protected:
 	pic8259_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
 
-	// device-level overrides
-	virtual void device_resolve_objects() override;
+	// device_t implementation
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	virtual bool is_x86() const { return m_is_x86; }
 
+	TIMER_CALLBACK_MEMBER(irq_timer_tick);
+
 private:
-	static constexpr device_timer_id TIMER_CHECK_IRQ = 0;
-
-	inline void set_timer() { timer_set(attotime::zero, TIMER_CHECK_IRQ); }
 	void set_irq_line(int irq, int state);
-
 
 	enum class state_t : u8
 	{
@@ -83,6 +79,7 @@ private:
 	devcb_read_line m_in_sp_func;
 	devcb_read8 m_read_slave_ack_func;
 
+	emu_timer *m_irq_timer;
 	state_t m_state;
 
 	uint8_t m_isr;
@@ -113,6 +110,9 @@ private:
 	uint8_t m_mode;
 	uint8_t m_auto_eoi;
 	uint8_t m_is_x86;
+
+	int8_t m_current_level;
+	uint8_t m_inta_sequence;
 };
 
 class v5x_icu_device : public pic8259_device
@@ -124,7 +124,17 @@ protected:
 	virtual bool is_x86() const override { return true; }
 };
 
+class mk98pic_device : public pic8259_device
+{
+public:
+	mk98pic_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock = 0);
+
+protected:
+	virtual bool is_x86() const override { return true; }
+};
+
 DECLARE_DEVICE_TYPE(PIC8259, pic8259_device)
 DECLARE_DEVICE_TYPE(V5X_ICU, v5x_icu_device)
+DECLARE_DEVICE_TYPE(MK98PIC, mk98pic_device)
 
 #endif // MAME_MACHINE_PIC8259_H

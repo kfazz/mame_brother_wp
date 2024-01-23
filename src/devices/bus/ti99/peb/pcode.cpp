@@ -75,20 +75,20 @@
 #include "emu.h"
 #include "pcode.h"
 
-#define LOG_WARN        (1U<<1)   // Warnings
-#define LOG_CONFIG      (1U<<2)   // Configuration
-#define LOG_ROM         (1U<<3)
-#define LOG_GROM        (1U<<4)
-#define LOG_SWITCH      (1U<<5)
-#define LOG_CRU         (1U<<6)
+#define LOG_WARN        (1U << 1)   // Warnings
+#define LOG_CONFIG      (1U << 2)   // Configuration
+#define LOG_ROM         (1U << 3)
+#define LOG_GROM        (1U << 4)
+#define LOG_SWITCH      (1U << 5)
+#define LOG_CRU         (1U << 6)
 
-#define VERBOSE ( LOG_CONFIG | LOG_WARN )
+#define VERBOSE (LOG_CONFIG | LOG_WARN)
 
 #include "logmacro.h"
 
-DEFINE_DEVICE_TYPE_NS(TI99_P_CODE, bus::ti99::peb, ti_pcode_card_device, "ti99_pcode", "TI-99 P-Code Card")
+DEFINE_DEVICE_TYPE(TI99_P_CODE, bus::ti99::peb::ti_pcode_card_device, "ti99_pcode", "TI-99 P-Code Card")
 
-namespace bus { namespace ti99 { namespace peb {
+namespace bus::ti99::peb {
 
 #define PCODE_GROM_TAG "pcode_grom"
 #define PCODE_ROM_TAG "pcode_rom"
@@ -115,7 +115,7 @@ ti_pcode_card_device::ti_pcode_card_device(const machine_config &mconfig, const 
 {
 }
 
-SETADDRESS_DBIN_MEMBER( ti_pcode_card_device::setaddress_dbin )
+void ti_pcode_card_device::setaddress_dbin(offs_t offset, int state)
 {
 	m_address = offset;
 	m_inDsrArea = in_dsr_space(offset, true);
@@ -142,25 +142,26 @@ SETADDRESS_DBIN_MEMBER( ti_pcode_card_device::setaddress_dbin )
 	}
 }
 
-void ti_pcode_card_device::debugger_read(uint16_t offset, uint8_t& value)
+void ti_pcode_card_device::debugger_read(offs_t offset, uint8_t& value)
 {
 	// The debuger does not call setaddress
 	if (m_active && in_dsr_space(offset, true))
 	{
 		bool isrom0 = ((offset & 0xf000)==0x4000);
 		bool isrom12 = ((offset & 0xf000)==0x5000);
-		if (isrom0) value = m_rom[m_address & 0x0fff];
+		if (isrom0) value = m_rom[offset & 0x0fff];
 		else
 			if (isrom12) value = m_rom[(m_bank_select<<12) | (offset & 0x0fff)];
 	}
 }
 
-READ8Z_MEMBER( ti_pcode_card_device::readz )
+void ti_pcode_card_device::readz(offs_t offset, uint8_t *value)
 {
 	// Care for debugger
 	if (machine().side_effects_disabled())
 	{
 		debugger_read(offset, *value);
+		return;
 	}
 
 	if (m_active && m_inDsrArea && m_selected)
@@ -213,7 +214,7 @@ void ti_pcode_card_device::write(offs_t offset, uint8_t data)
 /*
     Common READY* line from the GROMs.
 */
-WRITE_LINE_MEMBER( ti_pcode_card_device::ready_line )
+void ti_pcode_card_device::ready_line(int state)
 {
 	m_slot->set_ready(state);
 }
@@ -223,7 +224,7 @@ WRITE_LINE_MEMBER( ti_pcode_card_device::ready_line )
     clock input for the GROMs, which are thus running at a lower rate than
     those in the console driven by the VDP (477 kHz).
 */
-WRITE_LINE_MEMBER( ti_pcode_card_device::clock_in)
+void ti_pcode_card_device::clock_in(int state)
 {
 	m_clock_count = (m_clock_count+1) & 0x03;  // four pulses high, four pulses low
 	if (m_clock_count==0)
@@ -240,7 +241,7 @@ WRITE_LINE_MEMBER( ti_pcode_card_device::clock_in)
     we just ignore any request. (Note that CRU lines are not like memory; you
     may be able to write to them, but not necessarily read them again.)
 */
-READ8Z_MEMBER(ti_pcode_card_device::crureadz)
+void ti_pcode_card_device::crureadz(offs_t offset, uint8_t *value)
 {
 }
 
@@ -259,12 +260,12 @@ void ti_pcode_card_device::cruwrite(offs_t offset, uint8_t data)
 		m_crulatch->write_bit((offset & 0x80) >> 5 | (offset & 0x06) >> 1, data);
 }
 
-WRITE_LINE_MEMBER(ti_pcode_card_device::pcpage_w)
+void ti_pcode_card_device::pcpage_w(int state)
 {
 	m_selected = state;
 }
 
-WRITE_LINE_MEMBER(ti_pcode_card_device::ekrpg_w)
+void ti_pcode_card_device::ekrpg_w(int state)
 {
 	m_bank_select = state ? 2 : 1;   // we're calling this bank 1 and bank 2
 	LOGMASKED(LOG_CRU, "Select rom bank %d\n", m_bank_select);
@@ -356,4 +357,4 @@ ioport_constructor ti_pcode_card_device::device_input_ports() const
 	return INPUT_PORTS_NAME( ti99_pcode );
 }
 
-} } } // end namespace bus::ti99::peb
+} // end namespace bus::ti99::peb

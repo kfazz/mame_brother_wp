@@ -39,12 +39,6 @@
 #include "diserial.h"
 
 //**************************************************************************
-//  DEVICE CONFIGURATION MACROS
-//**************************************************************************
-
-#define Z80SCC_USE_LOCAL_BRG 0
-
-//**************************************************************************
 //  TYPE DEFINITIONS
 //**************************************************************************
 
@@ -61,12 +55,7 @@ class z80scc_channel : public device_t,
 public:
 	z80scc_channel(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	// device-level overrides
-	virtual void device_start() override;
-	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
-
-	// device_serial_interface overrides
+	// device_serial_interface implementation
 	virtual void tra_callback() override;
 	virtual void tra_complete() override;
 	virtual void rcv_callback() override;
@@ -128,6 +117,8 @@ public:
 	void rxc_w(int state);
 	void txc_w(int state);
 	void sync_w(int state);
+
+	TIMER_CALLBACK_MEMBER(brg_tick);
 
 	int m_rxc;
 	int m_txc;
@@ -237,22 +228,12 @@ protected:
 		REG_WR15_EXT_ST_INT_CTRL= 15
 	};
 
-	enum
-	{
-		TIMER_ID_BAUD,
-		TIMER_ID_XTAL,
-		TIMER_ID_RTXC,
-		TIMER_ID_TRXC
-	};
+	// device-level overrides
+	virtual void device_start() override;
+	virtual void device_reset() override;
 
-#if Z80SCC_USE_LOCAL_BRG
-	emu_timer *baudtimer;
-	uint16_t m_brg_counter;
-#else
-	unsigned int m_brg_rate;
-#endif
-	unsigned int m_delayed_tx_brg_change;
 	unsigned int get_brg_rate();
+	void update_baudtimer();
 
 	void scc_register_write(uint8_t reg, uint8_t data);
 	uint8_t scc_register_read(uint8_t reg);
@@ -266,7 +247,12 @@ protected:
 	int get_rx_word_length();
 	int get_tx_word_length();
 	void safe_transmit_register_reset();
-	void check_waitrequest();
+	void check_dma_request();
+
+	emu_timer *m_baudtimer;
+	uint16_t m_brg_counter;
+	unsigned int m_brg_rate;
+	unsigned int m_delayed_tx_brg_change;
 
 	// receiver state
 	uint8_t m_rx_data_fifo[8];    // receive data FIFO
@@ -311,6 +297,7 @@ protected:
 	// SCC specifics
 	int m_ph;       // Point high command to access regs 08-0f
 	uint8_t m_zc;
+
 private:
 	// helpers
 	void out_txd_cb(int state);
@@ -397,13 +384,12 @@ public:
 protected:
 	z80scc_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, uint32_t variant);
 
-	// device-level overrides
-	virtual void device_resolve_objects() override;
+	// device_t implementation
 	virtual void device_start() override;
 	virtual void device_reset_after_children() override;
 	virtual void device_add_mconfig(machine_config &config) override;
 
-	// device_z80daisy_interface overrides
+	// device_z80daisy_interface implementation
 	virtual int z80daisy_irq_state() override;
 	virtual int z80daisy_irq_ack() override;
 	virtual void z80daisy_irq_reti() override;

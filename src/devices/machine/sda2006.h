@@ -17,10 +17,10 @@ public:
 	sda2006_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock = 0);
 
 	// I/O operations
-	DECLARE_READ_LINE_MEMBER(read_data);
-	DECLARE_WRITE_LINE_MEMBER(write_data);
-	DECLARE_WRITE_LINE_MEMBER(write_clock);
-	DECLARE_WRITE_LINE_MEMBER(write_enable);
+	int read_data();
+	void write_data(int state);
+	void write_clock(int state);
+	void write_enable(int state);
 
 protected:
 	// device-level overrides
@@ -29,8 +29,8 @@ protected:
 	virtual void device_reset() override;
 
 	virtual void nvram_default() override;
-	virtual void nvram_read(emu_file &file) override;
-	virtual void nvram_write(emu_file &file) override;
+	virtual bool nvram_read(util::read_stream &file) override;
+	virtual bool nvram_write(util::write_stream &file) override;
 
 private:
 	enum {

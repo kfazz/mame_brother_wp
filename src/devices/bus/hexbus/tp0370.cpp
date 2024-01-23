@@ -106,15 +106,15 @@
 // Devices
 #include "tp0370.h"
 
-#define LOG_DATA        (1U<<1)   // Data transfer
-#define LOG_DETAIL      (1U<<2)
-#define LOG_WRITE       (1U<<3)
-#define LOG_LINES       (1U<<4)
-#define LOG_STATUS      (1U<<5)
-#define LOG_MODE        (1U<<6)
+#define LOG_DATA        (1U << 1)   // Data transfer
+#define LOG_DETAIL      (1U << 2)
+#define LOG_WRITE       (1U << 3)
+#define LOG_LINES       (1U << 4)
+#define LOG_STATUS      (1U << 5)
+#define LOG_MODE        (1U << 6)
 
 // Minimum log should be config and warnings
-#define VERBOSE ( LOG_GENERAL )
+#define VERBOSE (LOG_GENERAL)
 
 enum
 {
@@ -128,9 +128,9 @@ enum
 #include "logmacro.h"
 
 // Hexbus instance
-DEFINE_DEVICE_TYPE_NS(IBC, bus::hexbus, ibc_device,  "ibc",  "Intelligent Peripheral Bus Controller")
+DEFINE_DEVICE_TYPE(IBC, bus::hexbus::ibc_device,  "hexbus_ibc",  "Intelligent Peripheral Bus Controller")
 
-namespace bus { namespace hexbus {
+namespace bus::hexbus {
 
 ibc_device::ibc_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, IBC, tag, owner, clock),
@@ -153,7 +153,7 @@ ibc_device::ibc_device(const machine_config &mconfig, const char *tag, device_t 
 /*
     Reading from host
 */
-READ8_MEMBER( ibc_device::read )
+uint8_t ibc_device::read(offs_t offset)
 {
 	uint8_t status = 0;
 	switch (offset)
@@ -197,7 +197,7 @@ READ8_MEMBER( ibc_device::read )
 /*
     Writing from host
 */
-WRITE8_MEMBER( ibc_device::write )
+void ibc_device::write(offs_t offset, uint8_t data)
 {
 	switch (offset)
 	{
@@ -347,9 +347,6 @@ void ibc_device::update_lines(bool bav, bool hsk)
 
 void ibc_device::device_start()
 {
-	m_int.resolve_safe();
-	m_hexout.resolve_safe();
-	m_latch.resolve_safe();
 }
 
 void ibc_device::device_reset()
@@ -358,5 +355,5 @@ void ibc_device::device_reset()
 	m_disable = true;
 }
 
-}   }
+} // namespace bus::hexbus
 

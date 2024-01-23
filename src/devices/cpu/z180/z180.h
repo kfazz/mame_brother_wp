@@ -5,6 +5,9 @@
 
 #pragma once
 
+#include "z180asci.h"
+#include "z180csio.h"
+
 #include "machine/z80daisy.h"
 
 
@@ -90,36 +93,53 @@ enum
 	Z180_TABLE_ed,
 	Z180_TABLE_xy,
 	Z180_TABLE_xycb,
-	Z180_TABLE_ex    /* cycles counts for taken jr/jp/call and interrupt latency (rst opcodes) */
+	Z180_TABLE_ex    // cycles counts for taken jr/jp/call and interrupt latency (rst opcodes) */
 };
 
 // input lines
 enum {
-	Z180_INPUT_LINE_IRQ0,           /* Execute IRQ1 */
-	Z180_INPUT_LINE_IRQ1,           /* Execute IRQ1 */
-	Z180_INPUT_LINE_IRQ2,           /* Execute IRQ2 */
-	Z180_INPUT_LINE_DREQ0,          /* Start DMA0 */
-	Z180_INPUT_LINE_DREQ1           /* Start DMA1 */
+	Z180_INPUT_LINE_IRQ0,           // Execute IRQ1
+	Z180_INPUT_LINE_IRQ1,           // Execute IRQ1
+	Z180_INPUT_LINE_IRQ2,           // Execute IRQ2
+	Z180_INPUT_LINE_DREQ0,          // Start DMA0
+	Z180_INPUT_LINE_DREQ1           // Start DMA1
 };
 
 class z180_device : public cpu_device, public z80_daisy_chain_interface
 {
 public:
-	auto tend0_callback() { return m_tend0_cb.bind(); }
-	auto tend1_callback() { return m_tend1_cb.bind(); }
+	auto tend0_wr_callback() { return m_tend0_cb.bind(); }
+	auto tend1_wr_callback() { return m_tend1_cb.bind(); }
+	auto txa0_wr_callback() { return m_asci[0].lookup()->txa_handler(); }
+	auto txa1_wr_callback() { return m_asci[1].lookup()->txa_handler(); }
+	auto rts0_wr_callback() { return m_asci[0].lookup()->rts_handler(); }
+	auto cka0_wr_callback() { return m_asci[0].lookup()->cka_handler(); }
+	auto cka1_wr_callback() { return m_asci[1].lookup()->cka_handler(); }
+	auto cks_wr_callback() { return m_csio.lookup()->cks_handler(); }
+	auto txs_wr_callback() { return m_csio.lookup()->txs_handler(); }
+
 	bool get_tend0();
 	bool get_tend1();
+
+	void rxa0_w(int state)     { m_asci[0]->rxa_wr(state); }
+	void rxa1_w(int state)     { m_asci[1]->rxa_wr(state); }
+	void cts0_w(int state)     { m_asci[0]->cts_wr(state); }
+	void rxs_cts1_w(int state) { m_asci[1]->cts_wr(state); m_csio->rxs_wr(state); }
+	void dcd0_w(int state)     { m_asci[0]->dcd_wr(state); }
+	void cka0_w(int state)     { m_asci[0]->cka_wr(state); }
+	void cka1_w(int state)     { m_asci[1]->cka_wr(state); }
+	void cks_w(int state)      { m_csio->cks_wr(state); }
 
 protected:
 	// construction/destruction
 	z180_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, bool extended_io, address_map_constructor internal_map);
 
-	// device-level overrides
+	// device_t implementation
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_resolve_objects() override;
+	virtual void device_add_mconfig(machine_config &config) override;
 
-	// device_execute_interface overrides
+	// device_execute_interface implementation
 	virtual uint32_t execute_min_cycles() const noexcept override { return 1; }
 	virtual uint32_t execute_max_cycles() const noexcept override { return 16; }
 	virtual uint64_t execute_clocks_to_cycles(uint64_t clocks) const noexcept override { return (clocks + 2 - 1) / 2; }
@@ -131,36 +151,38 @@ protected:
 	virtual void execute_burn(int32_t cycles) override;
 	virtual void execute_set_input(int inputnum, int state) override;
 
-	// device_memory_interface overrides
+	// device_memory_interface implementation
 	virtual space_config_vector memory_space_config() const override;
-	virtual bool memory_translate(int spacenum, int intention, offs_t &address) override;
+	virtual bool memory_translate(int spacenum, int intention, offs_t &address, address_space *&target_space) override;
 
-	// device_state_interface overrides
+	// device_state_interface implementation
 	virtual void state_import(const device_state_entry &entry) override;
 	virtual void state_export(const device_state_entry &entry) override;
 	virtual void state_string_export(const device_state_entry &entry, std::string &str) const override;
 
-	// device_disasm_interface overrides
+	// device_disasm_interface implementation
 	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
 
-	virtual uint8_t z180_read_memory(offs_t addr);
-	virtual void z180_write_memory(offs_t addr, uint8_t data);
 	virtual uint8_t z180_internal_port_read(uint8_t port);
 	virtual void z180_internal_port_write(uint8_t port, uint8_t data);
 
 	address_space_config m_program_config;
 	address_space_config m_io_config;
 	address_space_config m_decrypted_opcodes_config;
+	required_device_array<z180asci_channel_base, 2> m_asci;
+	required_device<z180csio_device> m_csio;
 
 	void set_address_width(int bits);
 
 private:
+	uint8_t z180_read_memory(offs_t addr) { return m_program.read_byte(addr); }
+	void z180_write_memory(offs_t addr, uint8_t data) { m_program.write_byte(addr, data); }
+
 	int memory_wait_states() const { return (m_dcntl & 0xc0) >> 6; }
 	int io_wait_states() const { return (m_dcntl & 0x30) == 0 ? 0 : ((m_dcntl & 0x30) >> 4) + 1; }
 	bool is_internal_io_address(uint16_t port) const { return ((port ^ m_iocr) & (m_extended_io ? 0xff80 : 0xffc0)) == 0; }
 
 	const bool m_extended_io;
-	devcb_write_line m_tend0_cb, m_tend1_cb;
 
 	PAIR      m_PREPC,m_PC,m_SP,m_AF,m_BC,m_DE,m_HL,m_IX,m_IY;
 	PAIR      m_AF2,m_BC2,m_DE2,m_HL2;
@@ -168,17 +190,11 @@ private:
 	uint8_t   m_tmdr_latch;                     // flag latched TMDR0H, TMDR1H values
 	uint8_t   m_read_tcr_tmdr[2];               // flag to indicate that TCR or TMDR was read
 	uint32_t  m_iol;                            // I/O line status bits
-	uint8_t   m_asci_cntla[2];                  // ASCI control register A ch 0-1
-	uint8_t   m_asci_cntlb[2];                  // ASCI control register B ch 0-1
-	uint8_t   m_asci_stat[2];                   // ASCI status register 0-1
-	uint8_t   m_asci_tdr[2];                    // ASCI transmit data register 0-1
-	uint8_t   m_asci_rdr[2];                    // ASCI receive data register 0-1
-	uint8_t   m_csio_cntr;                      // CSI/O control/status register
-	uint8_t   m_csio_trdr;                      // CSI/O transmit/receive register
-	PAIR16    m_tmdr[2];                        // TIMER data register ch 0-1
-	PAIR16    m_rldr[2];                        // TIMER reload register ch 0-1
-	uint8_t   m_tcr;                            // TIMER control register
-	uint8_t   m_frc;                            // free running counter
+	PAIR16    m_tmdr[2];                        // PRT data register ch 0-1
+	PAIR16    m_rldr[2];                        // PRT reload register ch 0-1
+	uint8_t   m_tcr;                            // PRT control register
+	uint8_t   m_frc;                            // free running counter (also time base for ASCI, CSI/O & PRT)
+	uint8_t   m_frc_prescale;                   // divide CPU clock by 10
 	PAIR      m_dma_sar0;                       // DMA source address register ch 0
 	PAIR      m_dma_dar0;                       // DMA destination address register ch 0
 	PAIR16    m_dma_bcr[2];                     // DMA byte register ch 0-1
@@ -204,19 +220,15 @@ private:
 	uint8_t   m_int_pending[11 + 1];            // interrupt pending
 	uint8_t   m_after_EI;                       // are we in the EI shadow?
 	uint32_t  m_ea;
-	uint8_t   m_timer_cnt;                      // timer counter / divide by 20
-	uint8_t   m_dma0_cnt;                       // DMA0 counter / divide by 20
-	uint8_t   m_dma1_cnt;                       // DMA1 counter / divide by 20
-	address_space *m_program;
-	memory_access_cache<0, 0, ENDIANNESS_LITTLE> *m_cache;
-	address_space *m_oprogram;
-	memory_access_cache<0, 0, ENDIANNESS_LITTLE> *m_ocache;
-	address_space *m_iospace;
+	memory_access<20, 0, 0, ENDIANNESS_LITTLE>::cache m_cprogram, m_copcodes;
+	memory_access<20, 0, 0, ENDIANNESS_LITTLE>::specific m_program;
+	memory_access<16, 0, 0, ENDIANNESS_LITTLE>::specific m_io;
 	uint8_t   m_rtemp;
 	uint32_t  m_ioltemp;
 	int m_icount;
 	int m_extra_cycles;           /* extra cpu cycles */
 	uint8_t *m_cc[6];
+	devcb_write_line m_tend0_cb, m_tend1_cb;
 
 	typedef void (z180_device::*opcode_func)();
 	static const opcode_func s_z180ops[6][0x100];
@@ -1821,11 +1833,13 @@ public:
 protected:
 	z8s180_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
 
-	// device-level overrides
+	// device_t implementation
 	virtual void device_start() override;
 	virtual void device_reset() override;
+	virtual void device_clock_changed() override;
+	virtual void device_add_mconfig(machine_config &config) override;
 
-	// device_execute_interface overrides
+	// device_execute_interface implementation
 	virtual uint64_t execute_clocks_to_cycles(uint64_t clocks) const noexcept override { return BIT(m_cmr, 7) ? (clocks * 2) : BIT(m_ccr, 7) ? clocks : (clocks + 2 - 1) / 2; }
 	virtual uint64_t execute_cycles_to_clocks(uint64_t cycles) const noexcept override { return BIT(m_cmr, 7) ? (cycles + 2 - 1) / 2 : BIT(m_ccr, 7) ? cycles : (cycles * 2); }
 
@@ -1833,8 +1847,6 @@ protected:
 	virtual void z180_internal_port_write(uint8_t port, uint8_t data) override;
 
 private:
-	uint8_t   m_asci_ext[2];                    // ASCI extension control register 0-1
-	PAIR16    m_asci_tc[2];                     // ASCI time constant ch 0-1
 	uint8_t   m_cmr;                            // clock multiplier
 	uint8_t   m_ccr;                            // chip control register
 };

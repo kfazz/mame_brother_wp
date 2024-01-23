@@ -91,13 +91,13 @@ public:
 	uint8_t pa_r() { return m_pa; }
 	uint8_t pb_r() { return m_pb; }
 
-	DECLARE_READ_LINE_MEMBER( sp_r ) { return m_sp; }
-	DECLARE_WRITE_LINE_MEMBER( sp_w );
-	DECLARE_READ_LINE_MEMBER( cnt_r ) { return m_cnt; }
-	DECLARE_WRITE_LINE_MEMBER( cnt_w );
-	DECLARE_WRITE_LINE_MEMBER( flag_w );
-	DECLARE_READ_LINE_MEMBER( irq_r ) { return m_irq; }
-	DECLARE_WRITE_LINE_MEMBER( tod_w );
+	int sp_r() { return m_sp; }
+	void sp_w(int state);
+	int cnt_r() { return m_cnt; }
+	void cnt_w(int state);
+	void flag_w(int state);
+	int irq_r() { return m_irq; }
+	void tod_w(int state);
 
 protected:
 	enum
@@ -113,28 +113,29 @@ protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 	virtual void execute_run() override;
+
+	TIMER_CALLBACK_MEMBER(advance_tod_clock);
 
 	int m_icount;
 	const int m_variant;
 	int m_tod_clock;
 
-	inline void update_interrupt();
-	inline void update_pa();
-	inline void update_pb();
-	inline void set_cra(uint8_t data);
-	inline void set_crb(uint8_t data);
-	inline void serial_input();
-	inline void serial_output();
-	inline void clock_ta();
-	inline void clock_tb();
-	inline void clock_pipeline();
-	inline uint8_t bcd_increment(uint8_t value);
-	virtual inline void clock_tod();
-	inline uint8_t read_tod(int offset);
-	inline void write_tod(int offset, uint8_t data);
-	inline void synchronize();
+	void update_interrupt();
+	void update_pa();
+	void update_pb();
+	void set_cra(uint8_t data);
+	void set_crb(uint8_t data);
+	void serial_input();
+	void serial_output();
+	void clock_ta();
+	void clock_tb();
+	void clock_pipeline();
+	uint8_t bcd_increment(uint8_t value);
+	virtual void clock_tod();
+	uint8_t read_tod(int offset);
+	void write_tod(int offset, uint8_t data);
+	void synchronize();
 
 	devcb_write_line   m_write_irq;
 	devcb_write_line   m_write_pc;
@@ -232,7 +233,7 @@ public:
 	void write(offs_t offset, uint8_t data);
 
 protected:
-	virtual inline void clock_tod() override;
+	virtual void clock_tod() override;
 };
 
 

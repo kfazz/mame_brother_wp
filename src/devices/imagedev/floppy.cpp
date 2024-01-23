@@ -9,9 +9,29 @@
 #include "emu.h"
 #include "floppy.h"
 
+#include "formats/d88_dsk.h"
+#include "formats/dfi_dsk.h"
+#include "formats/hxchfe_dsk.h"
+#include "formats/hxcmfm_dsk.h"
+#include "formats/imd_dsk.h"
+#include "formats/mfi_dsk.h"
+#include "formats/td0_dsk.h"
+#include "formats/cqm_dsk.h"
+#include "formats/dsk_dsk.h"
+#include "formats/pc_dsk.h"
+#include "formats/ipf_dsk.h"
+
+#include "formats/fs_unformatted.h"
+#include "formats/fsblk_vec.h"
+
+#include "softlist_dev.h"
 #include "speaker.h"
+
 #include "formats/imageutl.h"
-#include "zippath.h"
+
+#include "util/ioprocs.h"
+#include "util/ioprocsfilter.h"
+#include "util/zippath.h"
 
 /*
     Debugging flags. Set to 0 or 1.
@@ -22,6 +42,8 @@
 #define TRACE_AUDIO 0
 
 #define PITCH_SEEK_SAMPLES 1
+
+#define FLUX_SCREEN 0
 
 #define FLOPSND_TAG "floppysound"
 
@@ -41,6 +63,7 @@ DEFINE_DEVICE_TYPE(FLOPPY_35_ED,   floppy_35_ed,   "floppy_35_ed",   "3.5\" exte
 // generic 5.25" drives
 DEFINE_DEVICE_TYPE(FLOPPY_525_SSSD_35T, floppy_525_sssd_35t, "floppy_525_sssd_35t", "5.25\" single-sided single density 35-track floppy drive")
 DEFINE_DEVICE_TYPE(FLOPPY_525_SD_35T,   floppy_525_sd_35t,   "floppy_525_sd_35t",   "5.25\" double-sided single density 35-track floppy drive")
+DEFINE_DEVICE_TYPE(FLOPPY_525_VTECH,    floppy_525_vtech,    "floppy_525_vtech",    "5.25\" single-sided single density VTECH floppy drive")
 DEFINE_DEVICE_TYPE(FLOPPY_525_SSSD,     floppy_525_sssd,     "floppy_525_sssd",     "5.25\" single-sided single density floppy drive")
 DEFINE_DEVICE_TYPE(FLOPPY_525_SD,       floppy_525_sd,       "floppy_525_sd",       "5.25\" single density floppy drive")
 DEFINE_DEVICE_TYPE(FLOPPY_525_SSDD,     floppy_525_ssdd,     "floppy_525_ssdd",     "5.25\" single-sided double density floppy drive")
@@ -95,6 +118,9 @@ DEFINE_DEVICE_TYPE(EPSON_SD_621L, epson_sd_621l, "epson_sd_621l", "EPSON SD-621L
 DEFINE_DEVICE_TYPE(EPSON_SD_680L, epson_sd_680l, "epson_sd_680l", "EPSON SD-680L Mini-Floppy Disk Drive")
 #endif
 
+// Panasonic 3.5" drive
+DEFINE_DEVICE_TYPE(PANA_JU_363, pana_ju_363, "pana_ju_363", "Panasonic JU-363 Flexible Disk Drive")
+
 // Sony 3.5" drives
 DEFINE_DEVICE_TYPE(SONY_OA_D31V, sony_oa_d31v, "sony_oa_d31v", "Sony OA-D31V Micro Floppydisk Drive")
 DEFINE_DEVICE_TYPE(SONY_OA_D32W, sony_oa_d32w, "sony_oa_d32w", "Sony OA-D32W Micro Floppydisk Drive")
@@ -104,10 +130,8 @@ DEFINE_DEVICE_TYPE(SONY_OA_D32V, sony_oa_d32v, "sony_oa_d32v", "Sony OA-D32V Mic
 DEFINE_DEVICE_TYPE(TEAC_FD_30A, teac_fd_30a, "teac_fd_30a", "TEAC FD-30A FDD")
 
 // TEAC 5.25" drives
-#if 0
 DEFINE_DEVICE_TYPE(TEAC_FD_55A, teac_fd_55a, "teac_fd_55a", "TEAC FD-55A FDD")
 DEFINE_DEVICE_TYPE(TEAC_FD_55B, teac_fd_55b, "teac_fd_55b", "TEAC FD-55B FDD")
-#endif
 DEFINE_DEVICE_TYPE(TEAC_FD_55E, teac_fd_55e, "teac_fd_55e", "TEAC FD-55E FDD")
 DEFINE_DEVICE_TYPE(TEAC_FD_55F, teac_fd_55f, "teac_fd_55f", "TEAC FD-55F FDD")
 DEFINE_DEVICE_TYPE(TEAC_FD_55G, teac_fd_55g, "teac_fd_55g", "TEAC FD-55G FDD")
@@ -118,20 +142,69 @@ DEFINE_DEVICE_TYPE(ALPS_3255190X, alps_3255190x, "alps_3255190x", "ALPS 32551901
 // IBM 8" drives
 DEFINE_DEVICE_TYPE(IBM_6360, ibm_6360, "ibm_6360", "IBM 6360 8\" single-sided single density floppy drive")
 
+// Mac 3.5" drives
+DEFINE_DEVICE_TYPE(OAD34V, oa_d34v_device, "oa_d34v", "Apple/Sony 3.5 SD (400K GCR)")
+DEFINE_DEVICE_TYPE(MFD51W, mfd51w_device,  "mfd51w",  "Apple/Sony 3.5 DD (400/800K GCR)")
+DEFINE_DEVICE_TYPE(MFD75W, mfd75w_device,  "mfd75w",  "Apple/Sony 3.5 HD (Superdrive)")
 
-const floppy_format_type floppy_image_device::default_floppy_formats[] = {
-	FLOPPY_D88_FORMAT,
-	FLOPPY_DFI_FORMAT,
-	FLOPPY_HFE_FORMAT,
-	FLOPPY_IMD_FORMAT,
-	FLOPPY_IPF_FORMAT,
-	FLOPPY_MFI_FORMAT,
-	FLOPPY_MFM_FORMAT,
-	FLOPPY_TD0_FORMAT,
-	FLOPPY_CQM_FORMAT,
-	FLOPPY_DSK_FORMAT,
-	nullptr
-};
+
+format_registration::format_registration()
+{
+	add(FLOPPY_MFI_FORMAT); // Our generic format
+	add(FLOPPY_DFI_FORMAT); // Flux format, dying
+
+	add(fs::UNFORMATTED);
+}
+
+void format_registration::add_fm_containers()
+{
+	add(FLOPPY_HFE_FORMAT);
+	add(FLOPPY_MFM_FORMAT);
+	add(FLOPPY_TD0_FORMAT);
+	add(FLOPPY_IMD_FORMAT);
+}
+
+void format_registration::add_mfm_containers()
+{
+	add_fm_containers();
+
+	add(FLOPPY_D88_FORMAT);
+	add(FLOPPY_CQM_FORMAT);
+	add(FLOPPY_DSK_FORMAT);
+}
+
+void format_registration::add_pc_formats()
+{
+	add_mfm_containers();
+
+	add(FLOPPY_PC_FORMAT);
+	add(FLOPPY_IPF_FORMAT);
+}
+
+void format_registration::add(const floppy_image_format_t &format)
+{
+	m_formats.push_back(&format);
+}
+
+void format_registration::add(const fs::manager_t &fs)
+{
+	m_fs.push_back(&fs);
+}
+
+void floppy_image_device::default_fm_floppy_formats(format_registration &fr)
+{
+	fr.add_fm_containers();
+}
+
+void floppy_image_device::default_mfm_floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+}
+
+void floppy_image_device::default_pc_floppy_formats(format_registration &fr)
+{
+	fr.add_pc_formats();
+}
 
 floppy_connector::floppy_connector(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, FLOPPY_CONNECTOR, tag, owner, clock),
@@ -143,11 +216,6 @@ floppy_connector::floppy_connector(const machine_config &mconfig, const char *ta
 
 floppy_connector::~floppy_connector()
 {
-}
-
-void floppy_connector::set_formats(const floppy_format_type _formats[])
-{
-	formats = _formats;
 }
 
 void floppy_connector::device_start()
@@ -176,31 +244,32 @@ floppy_image_device *floppy_connector::get_device()
 floppy_image_device::floppy_image_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
 	: device_t(mconfig, type, tag, owner, clock),
 		device_image_interface(mconfig, *this),
-		input_format(nullptr),
-		output_format(nullptr),
-		image(nullptr),
-		fif_list(nullptr),
-		index_timer(nullptr),
-		tracks(0),
-		sides(0),
-		form_factor(0),
-		motor_always_on(false),
-		dskchg_writable(false),
-		has_trk00_sensor(true),
-		dir(0), stp(0), wtg(0), mon(0), ss(0), ds(-1), idx(0), wpt(0), rdy(0), dskchg(0),
-		ready(false),
-		rpm(0),
-		floppy_ratio_1(0),
-		revolution_count(0),
-		cyl(0),
-		subcyl(0),
-		image_dirty(false),
-		ready_counter(0),
+		m_input_format(nullptr),
+		m_output_format(nullptr),
+		m_image(),
+		m_index_timer(nullptr),
+		m_tracks(0),
+		m_sides(0),
+		m_form_factor(0),
+		m_motor_always_on(false),
+		m_dskchg_writable(false),
+		m_has_trk00_sensor(true),
+		m_dir(0), m_stp(0), m_wtg(0), m_mon(0), m_ss(0), m_ds(-1), m_idx(0), m_wpt(0), m_rdy(0), m_dskchg(0),
+		m_ready(false),
+		m_rpm(0),
+		m_angular_speed(0),
+		m_revolution_count(0),
+		m_cyl(0),
+		m_subcyl(0),
+		m_amplifier_freakout_time(attotime::from_usec(16)),
+		m_image_dirty(false),
+		m_track_dirty(false),
+		m_ready_counter(0),
 		m_make_sound(false),
-		m_sound_out(nullptr)
+		m_sound_out(nullptr),
+		m_flux_screen(*this, "flux")
 {
-	extension_list[0] = '\0';
-	m_err = IMAGE_ERROR_INVALIDIMAGE;
+	m_extension_list[0] = '\0';
 }
 
 //-------------------------------------------------
@@ -209,106 +278,161 @@ floppy_image_device::floppy_image_device(const machine_config &mconfig, device_t
 
 floppy_image_device::~floppy_image_device()
 {
-	for(floppy_image_format_t *format = fif_list; format; ) {
-		floppy_image_format_t* tmp_format = format;
-		format = format->next;
-		delete tmp_format;
-	}
-	fif_list = nullptr;
 }
 
 void floppy_image_device::setup_load_cb(load_cb cb)
 {
-	cur_load_cb = cb;
+	m_cur_load_cb = cb;
 }
 
 void floppy_image_device::setup_unload_cb(unload_cb cb)
 {
-	cur_unload_cb = cb;
+	m_cur_unload_cb = cb;
 }
 
 void floppy_image_device::setup_index_pulse_cb(index_pulse_cb cb)
 {
-	cur_index_pulse_cb = cb;
+	m_cur_index_pulse_cb = cb;
 }
 
 void floppy_image_device::setup_ready_cb(ready_cb cb)
 {
-	cur_ready_cb = cb;
+	m_cur_ready_cb = cb;
 }
 
 void floppy_image_device::setup_wpt_cb(wpt_cb cb)
 {
-	cur_wpt_cb = cb;
+	m_cur_wpt_cb = cb;
 }
 
 void floppy_image_device::setup_led_cb(led_cb cb)
 {
-	cur_led_cb = cb;
+	m_cur_led_cb = cb;
 }
 
-void floppy_image_device::set_formats(const floppy_format_type *formats)
+struct floppy_image_device::fs_enum : public fs::manager_t::floppy_enumerator {
+	floppy_image_device *m_fid;
+	const fs::manager_t *m_manager;
+
+	fs_enum(floppy_image_device *fid);
+
+	virtual void add_raw(const char *name, u32 key, const char *description) override;
+protected:
+	virtual void add_format(const floppy_image_format_t &type, u32 image_size, const char *name, const char *description) override;
+};
+
+floppy_image_device::fs_enum::fs_enum(floppy_image_device *fid)
+	: fs::manager_t::floppy_enumerator(fid->m_form_factor, fid->m_variants)
+	, m_fid(fid)
 {
-	extension_list[0] = '\0';
-	fif_list = nullptr;
-	for(int cnt=0; formats[cnt]; cnt++)
+}
+
+void floppy_image_device::fs_enum::add_format(const floppy_image_format_t &type, u32 image_size, const char *name, const char *description)
+{
+	m_fid->m_fs.emplace_back(fs_info(m_manager, &type, image_size, name, description));
+}
+
+void floppy_image_device::fs_enum::add_raw(const char *name, u32 key, const char *description)
+{
+	m_fid->m_fs.emplace_back(fs_info(name, key, description));
+}
+
+void floppy_image_device::register_formats()
+{
+	format_registration fr;
+	if(m_format_registration_cb)
+		m_format_registration_cb(fr);
+
+	m_extension_list[0] = '\0';
+	m_fif_list = std::move(fr.m_formats);
+	for(const floppy_image_format_t *fif : m_fif_list)
 	{
-		// allocate a new format
-		floppy_image_format_t *fif = formats[cnt]();
-		if(!fif_list)
-			fif_list = fif;
-		else
-			fif_list->append(fif);
-
 		add_format(fif->name(), fif->description(), fif->extensions(), "");
+		image_specify_extension( m_extension_list, 256, fif->extensions() );
+	}
 
-		image_specify_extension( extension_list, 256, fif->extensions() );
+	fs_enum fse(this);
+	for(const fs::manager_t *fmt : fr.m_fs)
+	{
+		fse.m_manager = fmt;
+		fmt->enumerate_f(fse);
+		m_fs_managers.push_back(fmt);
 	}
 }
 
-floppy_image_format_t *floppy_image_device::get_formats() const
+void floppy_image_device::set_formats(std::function<void (format_registration &fr)> formats)
 {
-	return fif_list;
+	m_format_registration_cb = formats;
 }
 
-floppy_image_format_t *floppy_image_device::get_load_format() const
+const std::vector<const floppy_image_format_t *> &floppy_image_device::get_formats() const
 {
-	return input_format;
+	return m_fif_list;
+}
+
+const floppy_image_format_t *floppy_image_device::get_load_format() const
+{
+	return m_input_format;
 }
 
 void floppy_image_device::set_rpm(float _rpm)
 {
-	if(rpm == _rpm)
+	if(m_rpm == _rpm)
 		return;
 
-	rpm = _rpm;
-	rev_time = attotime::from_double(60/rpm);
-	floppy_ratio_1 = int(1000.0f*rpm/300.0f+0.5f);
+	m_rpm = _rpm;
+	m_rev_time = attotime::from_double(60/m_rpm);
+	m_angular_speed = m_rpm/60.0*2e8;
 }
 
-void floppy_image_device::setup_write(floppy_image_format_t *_output_format)
+void floppy_image_device::setup_write(const floppy_image_format_t *_output_format)
 {
-	output_format = _output_format;
-	commit_image();
+	m_output_format = _output_format;
+	if(m_image)
+		commit_image();
 }
 
 void floppy_image_device::commit_image()
 {
-	image_dirty = false;
-	if(!output_format || !output_format->supports_save())
+	if(FLUX_SCREEN && m_track_dirty) {
+		flux_image_compute_for_track(((m_cyl << 2) | m_subcyl) >> (2 - m_image->get_resolution()), m_ss);
+		m_track_dirty = false;
+	}
+
+	m_image_dirty = false;
+	if(!m_output_format || !m_output_format->supports_save())
 		return;
-	io_generic io;
-	// Do _not_ remove this cast otherwise the pointer will be incorrect when used by the ioprocs.
-	io.file = (device_image_interface *)this;
-	io.procs = &image_ioprocs;
-	io.filler = 0xff;
 
-	osd_file::error err = image_core_file().truncate(0);
-	if (err != osd_file::error::NONE)
-		popmessage("Error, unable to truncate image: %d", int(err));
+	check_for_file();
+	auto io = util::random_read_write_fill(image_core_file(), 0xff);
+	if(!io) {
+		popmessage("Error, out of memory");
+		return;
+	}
 
-	output_format->save(&io, image);
+	std::error_condition const err = image_core_file().truncate(0);
+	if (err)
+		popmessage("Error, unable to truncate image: %s", err.message());
+
+	m_output_format->save(*io, m_variants, *m_image);
 }
+
+void floppy_image_device::device_config_complete()
+{
+	m_rpm = 0;
+	m_motor_always_on = false;
+	m_dskchg_writable = false;
+	m_has_trk00_sensor = true;
+
+	setup_characteristics();
+	register_formats();
+}
+
+const software_list_loader &floppy_image_device::get_software_list_loader() const
+{
+	return image_software_list_loader::instance();
+}
+
 
 //-------------------------------------------------
 //  device_start - device-specific startup
@@ -316,60 +440,81 @@ void floppy_image_device::commit_image()
 
 void floppy_image_device::device_start()
 {
-	rpm = 0;
-	motor_always_on = false;
-	dskchg_writable = false;
-	has_trk00_sensor = true;
-
 	// better would be an extra parameter in the MCFG macro
-	drive_index = atoi(owner()->basetag());
+	m_drive_index = atoi(owner()->basetag());
 
-	idx = 0;
+	m_idx = 0;
 
 	/* motor off */
-	mon = 1;
+	m_mon = 1;
 
-	cyl = 0;
-	subcyl = 0;
-	ss  = 0;
-	ds = -1;
-	stp = 1;
-	wpt = 0;
-	dskchg = exists() ? 1 : 0;
-	index_timer = timer_alloc(0);
-	image_dirty = false;
-	ready = true;
-	ready_counter = 0;
+	m_cyl = 0;
+	m_subcyl = 0;
+	m_ss  = 0;
+	m_actual_ss = 0;
+	m_ds = -1;
+	m_stp = 1;
+	m_wpt = 0;
+	m_dskchg = exists() ? 1 : 0;
+	m_index_timer = timer_alloc(FUNC(floppy_image_device::index_resync), this);
+	m_image_dirty = false;
+	m_ready = true;
+	m_ready_counter = 0;
+	m_phases = 0;
 
-	setup_characteristics();
 
 	if (m_make_sound) m_sound_out = subdevice<floppy_sound_device>(FLOPSND_TAG);
 
-	save_item(NAME(dir));
-	save_item(NAME(stp));
-	save_item(NAME(wtg));
-	save_item(NAME(mon));
-	save_item(NAME(ss));
-	save_item(NAME(ds));
-	save_item(NAME(idx));
-	save_item(NAME(wpt));
-	save_item(NAME(rdy));
-	save_item(NAME(dskchg));
-	save_item(NAME(ready));
-	save_item(NAME(rpm));
-	save_item(NAME(floppy_ratio_1));
-	save_item(NAME(revolution_start_time));
-	save_item(NAME(rev_time));
-	save_item(NAME(revolution_count));
-	save_item(NAME(cyl));
-	save_item(NAME(subcyl));
-	save_item(NAME(cache_start_time));
-	save_item(NAME(cache_end_time));
-	save_item(NAME(cache_index));
-	save_item(NAME(cache_entry));
-	save_item(NAME(cache_weak));
-	save_item(NAME(image_dirty));
-	save_item(NAME(ready_counter));
+	save_item(NAME(m_dir));
+	save_item(NAME(m_stp));
+	save_item(NAME(m_wtg));
+	save_item(NAME(m_mon));
+	save_item(NAME(m_ss));
+	save_item(NAME(m_actual_ss));
+	save_item(NAME(m_ds));
+	save_item(NAME(m_idx));
+	save_item(NAME(m_wpt));
+	save_item(NAME(m_rdy));
+	save_item(NAME(m_dskchg));
+	save_item(NAME(m_ready));
+	save_item(NAME(m_rpm));
+	save_item(NAME(m_angular_speed));
+	save_item(NAME(m_revolution_start_time));
+	save_item(NAME(m_rev_time));
+	save_item(NAME(m_revolution_count));
+	save_item(NAME(m_cyl));
+	save_item(NAME(m_subcyl));
+	save_item(NAME(m_cache_start_time));
+	save_item(NAME(m_cache_end_time));
+	save_item(NAME(m_cache_index));
+	save_item(NAME(m_cache_entry));
+	save_item(NAME(m_cache_weak));
+	save_item(NAME(m_image_dirty));
+	save_item(NAME(m_ready_counter));
+	save_item(NAME(m_phases));
+
+	if(FLUX_SCREEN) {
+		m_flux_per_pixel_infos.resize(flux_screen_sx*flux_screen_sy);
+		flux_per_pixel_info *ppi = m_flux_per_pixel_infos.data();
+		for(int y = 0; y != flux_screen_sy; y++) {
+			int head = y >= flux_screen_sy / 2 ? 1 : 0;
+			int yc = (flux_screen_sy/2-1)/2 + (flux_screen_sy/2)*head;
+			int dy = y - yc;
+			for(int x = 0; x != flux_screen_sx; x++) {
+				const int xc = (flux_screen_sx - 1)/2;
+				int dx = x - xc;
+				int r = int(sqrt(dx*dx + dy*dy) + 0.5);
+				ppi->m_r = r;
+				if(r > flux_max_r || r < flux_min_r)
+					ppi->m_position = 0xffffffff;
+				else
+					ppi->m_position = int((200e6 / 2 / M_PI) * atan2(dy, dx) + 100000000.5) % 200000000;
+				ppi->m_combined_track = 0;
+				ppi->m_color = 0;
+				ppi ++;
+			}
+		}
+	}
 }
 
 void floppy_image_device::device_reset()
@@ -380,143 +525,266 @@ void floppy_image_device::device_reset()
 		m_make_sound = m_sound_out->samples_loaded();
 	}
 
-	revolution_start_time = attotime::never;
-	revolution_count = 0;
-	mon = 1;
+	m_revolution_start_time = attotime::never;
+	m_revolution_count = 0;
+	m_mon = 1;
 	set_ready(true);
-	if(motor_always_on && image)
+	if(m_motor_always_on && m_image)
 		mon_w(0);
 	cache_clear();
 }
 
-void floppy_image_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
-{
-	index_resync();
-}
-
-floppy_image_format_t *floppy_image_device::identify(std::string filename)
+std::pair<std::error_condition, const floppy_image_format_t *> floppy_image_device::identify(std::string_view filename)
 {
 	util::core_file::ptr fd;
 	std::string revised_path;
+	std::error_condition err = util::zippath_fopen(filename, OPEN_FLAG_READ, fd, revised_path);
+	if(err)
+		return{ err, nullptr };
 
-	osd_file::error err = util::zippath_fopen(filename, OPEN_FLAG_READ, fd, revised_path);
-	if(err != osd_file::error::NONE) {
-		seterror(IMAGE_ERROR_INVALIDIMAGE, "Unable to open the image file");
-		return nullptr;
-	}
+	auto io = util::random_read_fill(std::move(fd), 0xff);
+	if(!io)
+		return{ std::errc::not_enough_memory, nullptr };
 
-	io_generic io;
-	io.file = fd.get();
-	io.procs = &corefile_ioprocs_noclose;
-	io.filler = 0xff;
 	int best = 0;
-	floppy_image_format_t *best_format = nullptr;
-	for (floppy_image_format_t *format = fif_list; format; format = format->next)
-	{
-		int score = format->identify(&io, form_factor);
+	const floppy_image_format_t *best_format = nullptr;
+	for(const floppy_image_format_t *format : m_fif_list) {
+		int score = format->identify(*io, m_form_factor, m_variants);
 		if(score > best) {
 			best = score;
 			best_format = format;
 		}
 	}
-	fd.reset();
-	return best_format;
+
+	return{ std::error_condition(), best_format };
 }
 
 void floppy_image_device::init_floppy_load(bool write_supported)
 {
 	cache_clear();
-	revolution_start_time = mon ? attotime::never : machine().time();
-	revolution_count = 0;
+	m_revolution_start_time = m_mon ? attotime::never : machine().time();
+	m_revolution_count = 0;
 
-	index_resync();
+	index_resync(0);
 
-	wpt = 1; // disk sleeve is covering the sensor
-	if (!cur_wpt_cb.isnull())
-		cur_wpt_cb(this, wpt);
+	m_wpt = 1; // disk sleeve is covering the sensor
+	if (!m_cur_wpt_cb.isnull())
+		m_cur_wpt_cb(this, m_wpt);
 
-	wpt = is_readonly() || (!write_supported);
-	if (!cur_wpt_cb.isnull())
-		cur_wpt_cb(this, wpt);
+	m_wpt = is_readonly() || (!write_supported);
+	if (!m_cur_wpt_cb.isnull())
+		m_cur_wpt_cb(this, m_wpt);
 
-	if (motor_always_on) {
+	if (m_motor_always_on) {
 		// When disk is inserted, start motor
 		mon_w(0);
-	} else if(!mon)
-		ready_counter = 2;
+	} else if(!m_mon)
+		m_ready_counter = 2;
 
-	if (dskchg_writable)
-		dskchg = 1;
+	if (m_dskchg_writable)
+		m_dskchg = 1;
 }
 
-image_init_result floppy_image_device::call_load()
+std::pair<std::error_condition, std::string> floppy_image_device::call_load()
 {
-	io_generic io;
+	check_for_file();
+	auto io = util::random_read_fill(image_core_file(), 0xff);
+	if(!io)
+		return std::make_pair(std::errc::not_enough_memory, std::string());
 
-	// Do _not_ remove this cast otherwise the pointer will be incorrect when used by the ioprocs.
-	io.file = (device_image_interface *)this;
-	io.procs = &image_ioprocs;
-	io.filler = 0xff;
 	int best = 0;
-	floppy_image_format_t *best_format = nullptr;
-	for(floppy_image_format_t *format = fif_list; format; format = format->next) {
-		int score = format->identify(&io, form_factor);
+	const floppy_image_format_t *best_format = nullptr;
+	for (const floppy_image_format_t *format : m_fif_list) {
+		int score = format->identify(*io, m_form_factor, m_variants);
+		if(score && format->extension_matches(filename()))
+			score |= floppy_image_format_t::FIFID_EXT;
 		if(score > best) {
 			best = score;
 			best_format = format;
 		}
 	}
 
-	if(!best_format)
-	{
-		seterror(IMAGE_ERROR_INVALIDIMAGE, "Unable to identify the image format");
-		return image_init_result::FAIL;
+	if (!best_format)
+		return std::make_pair(image_error::INVALIDIMAGE, "Unable to identify image file format");
+
+	m_image = std::make_unique<floppy_image>(m_tracks, m_sides, m_form_factor);
+	if (!best_format->load(*io, m_form_factor, m_variants, *m_image)) {
+		m_image.reset();
+		return std::make_pair(image_error::INVALIDIMAGE, "Incompatible image file format or corrupted data");
+	}
+	m_output_format = is_readonly() ? nullptr : best_format;
+
+	m_image_dirty = false;
+
+	init_floppy_load(m_output_format != nullptr);
+
+	if (!m_cur_load_cb.isnull())
+		m_cur_load_cb(this);
+
+	flux_image_prepare();
+
+	return std::make_pair(std::error_condition(), std::string());
+}
+
+void floppy_image_device::flux_image_prepare()
+{
+	if(!FLUX_SCREEN)
+		return;
+
+	int tracks = 0, heads = 0, rez = 0;
+	m_image->get_maximal_geometry(tracks, heads);
+	rez = m_image->get_resolution();
+
+	int trackm = (tracks - 1) << rez;
+	int tmask = (1 << rez) - 1;
+
+	m_flux_per_combined_track_infos.clear();
+	m_flux_per_combined_track_infos.resize(trackm+1);
+	for(int track = 0; track <= trackm; track++) {
+		int refr = 200 + (trackm - 0.5 - track) * 290 / (trackm+1) + 200;
+		int span = int((200e6 / 2 / M_PI) / refr);
+		m_flux_per_combined_track_infos[track].m_span = span;
+		m_flux_per_combined_track_infos[track].m_track = track >> rez;
+		m_flux_per_combined_track_infos[track].m_subtrack = track & tmask;
 	}
 
-	image = global_alloc(floppy_image(tracks, sides, form_factor));
-	if (!best_format->load(&io, form_factor, image))
-	{
-		seterror(IMAGE_ERROR_UNSUPPORTED, "Incompatible image format or corrupted data");
-		global_free(image);
-		image = nullptr;
-		return image_init_result::FAIL;
+	flux_per_pixel_info *ppi = m_flux_per_pixel_infos.data();
+	for(int head = 0; head != heads; head++)
+		for(unsigned int i=0; i != flux_screen_sx*flux_screen_sy/2; i++) {
+			if(ppi->m_position != 0xffffffff) {
+				int trk = (trackm + 1) * (flux_max_r - ppi->m_r) / (flux_max_r - flux_min_r + 1);
+				ppi->m_combined_track = trk;
+				m_flux_per_combined_track_infos[trk].m_pixels[head].push_back(ppi);
+			}
+			ppi++;
+		}
+
+	for(auto &t : m_flux_per_combined_track_infos) {
+		std::sort(t.m_pixels[0].begin(), t.m_pixels[0].end(), [](const flux_per_pixel_info *a, const flux_per_pixel_info *b) -> bool { return a->m_position < b->m_position; });
+		if(heads == 2)
+			std::sort(t.m_pixels[1].begin(), t.m_pixels[1].end(), [](const flux_per_pixel_info *a, const flux_per_pixel_info *b) -> bool { return a->m_position < b->m_position; });
 	}
-	output_format = is_readonly() ? nullptr : best_format;
 
-	image_dirty = false;
+	for(int head = 0; head != heads; head++)
+		for(int track = 0; track <= trackm; track++)
+			flux_image_compute_for_track(track, head);
+}
 
-	init_floppy_load(output_format != nullptr);
+void floppy_image_device::flux_image_compute_for_track(int track, int head)
+{
+	auto *pcti = m_flux_per_combined_track_infos.data() + track;
+	const std::vector<uint32_t> &buffer = m_image->get_buffer(pcti->m_track, head, pcti->m_subtrack);
+	int sz = buffer.size();
+	if(!sz) {
+		for(flux_per_pixel_info *p : m_flux_per_combined_track_infos[track].m_pixels[head])
+			p->m_color = 255;
+		return;
+	}
 
-	if (!cur_load_cb.isnull())
-		return cur_load_cb(this);
+	int spos = pcti->m_pixels[head][0]->m_position - pcti->m_span + 200000000;
+	int bpos = sz;
+	while(bpos && (buffer[bpos-1] & floppy_image::TIME_MASK) < spos)
+		bpos --;
+	if(bpos == sz)
+		bpos = 0;
 
-	return image_init_result::PASS;
+	int pspos = spos;
+	for(flux_per_pixel_info *p : m_flux_per_combined_track_infos[track].m_pixels[head]) {
+		int spos = p->m_position - pcti->m_span;
+		int epos = p->m_position + pcti->m_span;
+		if(spos < 0)
+			spos += 200000000;
+		if(epos >= 200000000)
+			epos -= 200000000;
+
+		if(spos < pspos)
+			bpos = 0;
+		while(bpos != sz-1 && (buffer[bpos+1] & floppy_image::TIME_MASK) < spos)
+			bpos ++;
+
+		int bpos2 = spos < epos ? bpos : 0;
+		while(bpos2 != sz-1 && (buffer[bpos2+1] & floppy_image::TIME_MASK) < epos)
+			bpos2 ++;
+
+		int count;
+		if(bpos <= bpos2)
+			count = bpos2 - bpos;
+		else {
+			count = (sz - 1 - bpos) + bpos2;
+			if((buffer[0] ^ buffer[sz-1]) & floppy_image::MG_MASK)
+				count ++;
+		}
+
+		count *= 5;
+		if(count > 255)
+			count = 255;
+		p->m_color = 255 - count;
+		pspos = spos;
+	}
+}
+
+uint32_t floppy_image_device::flux_screen_update(screen_device &device, bitmap_rgb32 &bitmap, const rectangle &cliprect)
+{
+	if(m_image.get()) {
+		int ctrack = ((m_cyl << 2) | m_subcyl) >> (2 - m_image->get_resolution());
+		if(m_mon)
+			ctrack = -1;
+		for(int y = cliprect.min_y; y <= cliprect.max_y; y++) {
+			int head = y >= flux_screen_sy / 2;
+			flux_per_pixel_info *ppi = m_flux_per_pixel_infos.data() + y * flux_screen_sx + cliprect.min_x;
+			uint32_t *p = &bitmap.pix(y, cliprect.min_x);
+			for(int x = cliprect.min_x; x <= cliprect.max_x; x++) {
+				if(ppi->m_position == 0xffffffff)
+					*p++ = 0;
+				else {
+					u32 color = 0x010101 * ppi->m_color;
+					if(ppi->m_combined_track == ctrack && head == m_ss)
+						color &= 0x0000ff;
+					*p++ = color;
+				}
+				ppi++;
+			}
+		}
+	} else {
+		for(int y = cliprect.min_y; y <= cliprect.max_y; y++) {
+			flux_per_pixel_info *ppi = m_flux_per_pixel_infos.data() + y * flux_screen_sx + cliprect.min_x;
+			uint32_t *p = &bitmap.pix(y, cliprect.min_x);
+			for(int x = cliprect.min_x; x <= cliprect.max_x; x++) {
+				if(ppi->m_position == 0xffffffff)
+					*p++ = 0;
+				else
+					*p++ = 0x404040;
+				ppi++;
+			}
+		}
+	}
+
+	return 0;
 }
 
 void floppy_image_device::call_unload()
 {
 	cache_clear();
-	dskchg = 0;
+	m_dskchg = 0;
 
-	if (image) {
-		if(image_dirty)
+	if (m_image) {
+		if(m_image_dirty)
 			commit_image();
-		global_free(image);
-		image = nullptr;
+		m_image.reset();
 	}
 
-	wpt = 1; // disk sleeve is covering the sensor
-	if (!cur_wpt_cb.isnull())
-		cur_wpt_cb(this, wpt);
+	m_wpt = 1; // disk sleeve is covering the sensor
+	if (!m_cur_wpt_cb.isnull())
+		m_cur_wpt_cb(this, m_wpt);
 
-	wpt = 0; // sensor is uncovered
-	if (!cur_wpt_cb.isnull())
-		cur_wpt_cb(this, wpt);
+	m_wpt = 0; // sensor is uncovered
+	if (!m_cur_wpt_cb.isnull())
+		m_cur_wpt_cb(this, m_wpt);
 
-	if (!cur_unload_cb.isnull())
-		cur_unload_cb(this);
+	if (!m_cur_unload_cb.isnull())
+		m_cur_unload_cb(this);
 
-	if (motor_always_on) {
+	if (m_motor_always_on) {
 		// When disk is removed, stop motor
 		mon_w(1);
 	}
@@ -524,13 +792,13 @@ void floppy_image_device::call_unload()
 	set_ready(true);
 }
 
-image_init_result floppy_image_device::call_create(int format_type, util::option_resolution *format_options)
+std::pair<std::error_condition, std::string> floppy_image_device::call_create(int format_type, util::option_resolution *format_options)
 {
-	image = global_alloc(floppy_image(tracks, sides, form_factor));
-	output_format = nullptr;
+	m_image = std::make_unique<floppy_image>(m_tracks, m_sides, m_form_factor);
+	m_output_format = nullptr;
 
 	// search for a suitable format based on the extension
-	for(floppy_image_format_t *i = fif_list; i; i = i->next)
+	for(const floppy_image_format_t *i : m_fif_list)
 	{
 		// only consider formats that actually support saving
 		if(!i->supports_save())
@@ -538,53 +806,80 @@ image_init_result floppy_image_device::call_create(int format_type, util::option
 
 		if (i->extension_matches(basename()))
 		{
-			output_format = i;
+			m_output_format = i;
 			break;
 		}
+
+		// Use MFI as a default.
+		if (!strcmp(i->name(), "mfi"))
+			m_output_format = i;
 	}
 
-	// did we find a suitable format?
-	if (output_format == nullptr)
-	{
-		seterror(IMAGE_ERROR_INVALIDIMAGE, "Unable to identify the image format");
-		return image_init_result::FAIL;
+	init_floppy_load(true);
+
+	flux_image_prepare();
+
+	return std::make_pair(std::error_condition(), std::string());
+}
+
+void floppy_image_device::init_fs(const fs_info *fs, const fs::meta_data &meta)
+{
+	assert(m_image);
+	if (fs->m_type) {
+		std::vector<u8> img(fs->m_image_size);
+		fs::fsblk_vec_t blockdev(img);
+		auto cfs = fs->m_manager->mount(blockdev);
+		cfs->format(meta);
+
+		auto io = util::ram_read(img.data(), img.size(), 0xff);
+		fs->m_type->load(*io, floppy_image::FF_UNKNOWN, m_variants, *m_image);
+	} else {
+		fs::unformatted_image::format(fs->m_key, m_image.get());
 	}
 
-	init_floppy_load(output_format != nullptr);
+	// intializing a file system makes the floppy dirty
+	m_image_dirty = true;
+}
 
-	return image_init_result::PASS;
+/* write protect, active high
+   phase 1 can force it to 1 for drive detection
+   on the rare drives that actually use m_phases.
+ */
+bool floppy_image_device::wpt_r()
+{
+	return m_wpt || (m_phases & 2);
 }
 
 /* motor on, active low */
 void floppy_image_device::mon_w(int state)
 {
-	if(mon == state)
+	if(m_mon == state)
 		return;
 
-	mon = state;
+	m_mon = state;
 
 	/* off -> on */
-	if (!mon && image)
+	if (!m_mon && m_image)
 	{
-		revolution_start_time = machine().time();
+		m_revolution_start_time = machine().time();
 		cache_clear();
-		if (motor_always_on) {
+		if (m_motor_always_on) {
 			// Drives with motor that is always spinning are immediately ready when a disk is loaded
 			// because there is no spin-up time
 			set_ready(false);
 		} else {
-			ready_counter = 2;
+			m_ready_counter = 2;
 		}
-		index_resync();
+		index_resync(0);
 	}
 
 	/* on -> off */
 	else {
-		if(image_dirty)
+		if(m_image_dirty)
 			commit_image();
 		cache_clear();
-		revolution_start_time = attotime::never;
-		index_timer->adjust(attotime::zero);
+		m_revolution_start_time = attotime::never;
+		m_index_timer->adjust(attotime::zero);
 		set_ready(true);
 	}
 
@@ -594,87 +889,91 @@ void floppy_image_device::mon_w(int state)
 
 attotime floppy_image_device::time_next_index()
 {
-	if(revolution_start_time.is_never())
+	if(m_revolution_start_time.is_never())
 		return attotime::never;
-	return revolution_start_time + rev_time;
+	return m_revolution_start_time + m_rev_time;
 }
 
-/* index pulses at rpm/60 Hz, and stays high for ~2ms at 300rpm */
-void floppy_image_device::index_resync()
+/* index pulses at m_rpm/60 Hz, and stays high for ~2ms at 300rpm */
+TIMER_CALLBACK_MEMBER(floppy_image_device::index_resync)
 {
-	if(revolution_start_time.is_never()) {
-		if(idx) {
-			idx = 0;
-			if (!cur_index_pulse_cb.isnull())
-				cur_index_pulse_cb(this, idx);
+	if(m_revolution_start_time.is_never()) {
+		if(m_idx) {
+			m_idx = 0;
+			if (!m_cur_index_pulse_cb.isnull())
+				m_cur_index_pulse_cb(this, m_idx);
 		}
 		return;
 	}
 
-	attotime delta = machine().time() - revolution_start_time;
-	while(delta >= rev_time) {
-		delta -= rev_time;
-		revolution_start_time += rev_time;
-		revolution_count++;
+	attotime delta = machine().time() - m_revolution_start_time;
+	while(delta >= m_rev_time) {
+		delta -= m_rev_time;
+		m_revolution_start_time += m_rev_time;
+		m_revolution_count++;
 	}
-	int position = (delta*floppy_ratio_1).as_ticks(1000000000/1000);
+	int position = int(delta.as_double()*m_angular_speed + 0.5);
 
-	int new_idx = position < 20000;
+	int new_idx = position < 2000000;
 
 	if(new_idx) {
-		attotime index_up_time = attotime::from_nsec((2000000*1000)/floppy_ratio_1);
-		index_timer->adjust(index_up_time - delta);
+		attotime index_up_time = attotime::from_double(2000000/m_angular_speed);
+		m_index_timer->adjust(index_up_time - delta);
 	} else
-		index_timer->adjust(rev_time - delta);
+		m_index_timer->adjust(m_rev_time - delta);
 
-	if(new_idx != idx) {
-		idx = new_idx;
-		if(idx && ready) {
-			ready_counter--;
-			if(!ready_counter) {
+	if(new_idx != m_idx) {
+		m_idx = new_idx;
+		if(m_idx && m_ready) {
+			m_ready_counter--;
+			if(!m_ready_counter) {
 				// logerror("Drive spun up\n");
 				set_ready(false);
 			}
 		}
-		if (!cur_index_pulse_cb.isnull())
-			cur_index_pulse_cb(this, idx);
+		if (!m_cur_index_pulse_cb.isnull())
+			m_cur_index_pulse_cb(this, m_idx);
 	}
 }
 
 bool floppy_image_device::ready_r()
 {
-	return ready;
+	return m_ready;
 }
 
 void floppy_image_device::set_ready(bool state)
 {
-	if (state != ready)
+	if (state != m_ready)
 	{
-		ready = state;
+		m_ready = state;
 		check_led();
-		if (!cur_ready_cb.isnull())
-			cur_ready_cb(this, ready);
+		if (!m_cur_ready_cb.isnull())
+			m_cur_ready_cb(this, m_ready);
 	}
 }
 
 void floppy_image_device::check_led()
 {
-	if(!cur_led_cb.isnull())
-		cur_led_cb(this, (ds == drive_index) && !ready ? 1 : 0);
+	if(!m_cur_led_cb.isnull())
+		m_cur_led_cb(this, (m_ds == m_drive_index) && !m_ready ? 1 : 0);
 }
 
 double floppy_image_device::get_pos()
 {
-	return index_timer->elapsed().as_double();
+	return m_index_timer->elapsed().as_double();
 }
 
 bool floppy_image_device::twosid_r()
 {
 	int tracks = 0, heads = 0;
 
-	if (image) image->get_actual_geometry(tracks, heads);
+	if (m_image) m_image->get_actual_geometry(tracks, heads);
 
 	return heads == 1;
+}
+
+void floppy_image_device::track_changed()
+{
 }
 
 void floppy_image_device::stp_w(int state)
@@ -682,40 +981,48 @@ void floppy_image_device::stp_w(int state)
 	// Before spin-up is done, ignore step pulses
 	// TODO: There are reports about drives supporting step operation with
 	// stopped spindle. Need to check that on real drives.
-	// if (ready_counter > 0) return;
+	// if (m_ready_counter > 0) return;
 
-	if ( stp != state ) {
+	if ( m_stp != state ) {
 		cache_clear();
-		stp = state;
-		if ( stp == 0 ) {
-			int ocyl = cyl;
-			if ( dir ) {
-				if ( cyl ) cyl--;
-			} else {
-				if ( cyl < tracks-1 ) cyl++;
+		m_stp = state;
+		if ( m_stp == 0 ) {
+			if(FLUX_SCREEN && m_track_dirty) {
+				flux_image_compute_for_track(((m_cyl << 2) | m_subcyl) >> (2 - m_image->get_resolution()), m_ss);
+				m_track_dirty = false;
 			}
-			if(ocyl != cyl)
+
+			int ocyl = m_cyl;
+			if ( m_dir ) {
+				if ( m_cyl ) m_cyl--;
+			} else {
+				if ( m_cyl < m_tracks-1 ) m_cyl++;
+			}
+			if(ocyl != m_cyl)
 			{
-				if (TRACE_STEP) logerror("track %d\n", cyl);
+				if (TRACE_STEP) logerror("track %d\n", m_cyl);
 				// Do we want a stepper sound?
 				// We plan for 5 zones with possibly specific sounds
-				if (m_make_sound) m_sound_out->step(cyl*5/tracks);
+				if (m_make_sound) m_sound_out->step(m_cyl*5/m_tracks);
+				track_changed();
 			}
 			/* Update disk detection if applicable */
-			if (exists() && !dskchg_writable)
+			if (exists() && !m_dskchg_writable)
 			{
-				if (dskchg==0) dskchg = 1;
+				if (m_dskchg==0) m_dskchg = 1;
 			}
 		}
-		subcyl = 0;
+		m_subcyl = 0;
 	}
 }
 
-void floppy_image_device::seek_phase_w(int phases)
+void floppy_image_device::seek_phase_w(int _phases)
 {
-	int cur_pos = (cyl << 2) | subcyl;
+	m_phases = _phases;
+
+	int cur_pos = (m_cyl << 2) | m_subcyl;
 	int req_pos;
-	switch(phases) {
+	switch(m_phases) {
 	case 0x1: req_pos = 0; break;
 	case 0x3: req_pos = 1; break;
 	case 0x2: req_pos = 2; break;
@@ -738,20 +1045,28 @@ void floppy_image_device::seek_phase_w(int phases)
 		next_pos -= 8;
 	if(next_pos < 0)
 		next_pos = 0;
-	else if(next_pos > (tracks-1)*4)
-		next_pos = (tracks-1)*4;
-	cyl = next_pos >> 2;
-	subcyl = next_pos & 3;
+	else if(next_pos > (m_tracks-1)*4)
+		next_pos = (m_tracks-1)*4;
+
+	if(FLUX_SCREEN && m_track_dirty) {
+		flux_image_compute_for_track(((m_cyl << 2) | m_subcyl) >> (2 - m_image->get_resolution()), m_ss);
+		m_track_dirty = false;
+	}
+
+	m_cyl = next_pos >> 2;
+	m_subcyl = next_pos & 3;
 
 	cache_clear();
 
-	if(TRACE_STEP && (next_pos != cur_pos))
-		logerror("track %d.%d\n", cyl, subcyl);
+	if(next_pos != cur_pos) {
+		if (TRACE_STEP) logerror("track %d.%d\n", m_cyl, m_subcyl);
+		if (m_make_sound) m_sound_out->step(m_subcyl);
+	}
 
 	/* Update disk detection if applicable */
-	if (exists() && !dskchg_writable)
-		if (dskchg==0)
-			dskchg = 1;
+	if (exists() && !m_dskchg_writable)
+		if (m_dskchg==0)
+			m_dskchg = 1;
 }
 
 // From http://burtleburtle.net/bob/hash/integer.html
@@ -787,78 +1102,67 @@ int floppy_image_device::find_index(uint32_t position, const std::vector<uint32_
 
 uint32_t floppy_image_device::find_position(attotime &base, const attotime &when)
 {
-	base = revolution_start_time;
+	base = m_revolution_start_time;
 	attotime delta = when - base;
 
-	while(delta >= rev_time) {
-		delta -= rev_time;
-		base += rev_time;
+	while(delta >= m_rev_time) {
+		delta -= m_rev_time;
+		base += m_rev_time;
 	}
 	while(delta < attotime::zero) {
-		delta += rev_time;
-		base -= rev_time;
+		delta += m_rev_time;
+		base -= m_rev_time;
 	}
 
-	uint32_t res = (delta*floppy_ratio_1).as_ticks(1000000000/1000);
+	uint32_t res = uint32_t(delta.as_double()*m_angular_speed+0.5);
 	if (res >= 200000000) {
 		// Due to rounding errors in the previous operation,
 		// 'res' sometimes overflows 2E+8
 		res -= 200000000;
-		base += rev_time;
+		base += m_rev_time;
 	}
 	return res;
 }
 
-bool floppy_image_device::test_track_last_entry_warps(const std::vector<uint32_t> &buf) const
-{
-	return !((buf[buf.size() - 1]^buf[0]) & floppy_image::MG_MASK);
-}
-
 attotime floppy_image_device::position_to_time(const attotime &base, int position) const
 {
-	return base + attotime::from_nsec((int64_t(position)*2000/floppy_ratio_1+1)/2);
+	return base + attotime::from_double(position/m_angular_speed);
 }
 
 void floppy_image_device::cache_fill_index(const std::vector<uint32_t> &buf, int &index, attotime &base)
 {
 	int cells = buf.size();
 
-	if(index != 0 || !test_track_last_entry_warps(buf)) {
-		cache_index = index;
-		cache_start_time = position_to_time(base, buf[index] & floppy_image::TIME_MASK);
-	} else {
-		cache_index = cells - 1;
-		cache_start_time = position_to_time(base - rev_time, buf[cache_index] & floppy_image::TIME_MASK);
-	}
-
-	cache_entry = buf[cache_index];
+	m_cache_index = index;
+	m_cache_start_time = position_to_time(base, buf[index] & floppy_image::TIME_MASK);
+	m_cache_entry = buf[m_cache_index];
 
 	index ++;
 	if(index >= cells) {
-		index = test_track_last_entry_warps(buf) ? 1 : 0;
-		base += rev_time;
+		index = 0;
+		base += m_rev_time;
 	}
 
-	cache_end_time = position_to_time(base, buf[index] & floppy_image::TIME_MASK);
+	m_cache_end_time = position_to_time(base, buf[index] & floppy_image::TIME_MASK);
 }
 
 void floppy_image_device::cache_clear()
 {
-	cache_start_time = cache_end_time = cache_weak_start = attotime::zero;
-	cache_index = 0;
-	cache_entry = 0;
-	cache_weak = false;
+	m_cache_start_time = m_cache_end_time = m_cache_weak_start = attotime::zero;
+	m_cache_index = 0;
+	m_cache_entry = 0;
+	m_cache_weak = false;
 }
 
 void floppy_image_device::cache_fill(const attotime &when)
 {
-	std::vector<uint32_t> &buf = image->get_buffer(cyl, ss, subcyl);
+	std::vector<uint32_t> &buf = m_image->get_buffer(m_cyl, m_ss, m_subcyl);
 	uint32_t cells = buf.size();
 	if(cells <= 1) {
-		cache_start_time = attotime::zero;
-		cache_end_time = attotime::never;
-		cache_index = 0;
-		cache_entry = cells == 1 ? buf[0] : floppy_image::MG_N;
+		m_cache_start_time = attotime::zero;
+		m_cache_end_time = attotime::never;
+		m_cache_index = 0;
+		m_cache_entry = cells == 1 ? buf[0] : floppy_image::MG_N;
 		cache_weakness_setup();
 		return;
 	}
@@ -870,17 +1174,17 @@ void floppy_image_device::cache_fill(const attotime &when)
 
 	if(index == -1) {
 		// I suspect this should be an abort(), to check...
-		cache_start_time = attotime::zero;
-		cache_end_time = attotime::never;
-		cache_index = 0;
-		cache_entry = buf[0];
+		m_cache_start_time = attotime::zero;
+		m_cache_end_time = attotime::never;
+		m_cache_index = 0;
+		m_cache_entry = buf[0];
 		cache_weakness_setup();
 		return;
 	}
 
 	for(;;) {
 		cache_fill_index(buf, index, base);
-		if(cache_end_time > when) {
+		if(m_cache_end_time > when) {
 			cache_weakness_setup();
 			return;
 		}
@@ -889,42 +1193,40 @@ void floppy_image_device::cache_fill(const attotime &when)
 
 void floppy_image_device::cache_weakness_setup()
 {
-	u32 type = cache_entry & floppy_image::MG_MASK;
+	u32 type = m_cache_entry & floppy_image::MG_MASK;
 	if(type == floppy_image::MG_N || type == floppy_image::MG_D) {
-		cache_weak = true;
-		cache_weak_start = cache_start_time;
+		m_cache_weak = true;
+		m_cache_weak_start = m_cache_start_time;
 		return;
 	}
 
-	cache_weak = cache_end_time.is_never() || (cache_end_time - cache_start_time >= attotime::from_usec(16));
-	if(!cache_weak) {
-		cache_weak_start = attotime::never;
+	m_cache_weak = m_cache_end_time.is_never() || (m_cache_end_time - m_cache_start_time >= m_amplifier_freakout_time);
+	if(!m_cache_weak) {
+		m_cache_weak_start = attotime::never;
 		return;
 	}
-	cache_weak_start = cache_start_time + attotime::from_usec(16);
+	m_cache_weak_start = m_cache_start_time + attotime::from_usec(16);
 }
 
 attotime floppy_image_device::get_next_transition(const attotime &from_when)
 {
-	if(!image || mon)
+	if(!m_image || m_mon)
 		return attotime::never;
 
-	if(from_when < cache_start_time || (!cache_end_time.is_never() && from_when >= cache_end_time))
+	if(from_when < m_cache_start_time || m_cache_start_time.is_zero() || (!m_cache_end_time.is_never() && from_when >= m_cache_end_time))
 		cache_fill(from_when);
 
-	if(!cache_weak)
-		return cache_end_time;
+	if(!m_cache_weak)
+		return m_cache_end_time;
 
 	// Put a flux transition in the middle of a 4us interval with a 50% probability
-	int interval_index = (from_when - cache_weak_start).as_ticks(250000);
-	if(interval_index < 0)
-		interval_index = 0;
-	attotime weak_time = cache_weak_start + attotime::from_ticks(interval_index*2+1, 500000);
+	uint64_t interval_index = (from_when < m_cache_weak_start) ? 0 : (from_when - m_cache_weak_start).as_ticks(250000);
+	attotime weak_time = m_cache_weak_start + attotime::from_ticks(interval_index*2+1, 500000);
 	for(;;) {
-		if(weak_time >= cache_end_time)
-			return cache_end_time;
+		if(weak_time >= m_cache_end_time)
+			return m_cache_end_time;
 		if(weak_time > from_when) {
-			u32 test = hash32(hash32(hash32(hash32(revolution_count) ^ 0x4242) + cache_index) + interval_index);
+			u32 test = hash32(hash32(hash32(hash32(m_revolution_count) ^ 0x4242) + m_cache_index) + interval_index);
 			if(test & 1)
 				return weak_time;
 		}
@@ -933,180 +1235,192 @@ attotime floppy_image_device::get_next_transition(const attotime &from_when)
 	}
 }
 
-void floppy_image_device::write_flux(const attotime &start, const attotime &end, int transition_count, const attotime *transitions)
+bool floppy_image_device::writing_disabled() const
 {
-	if(!image || mon)
-		return;
-	image_dirty = true;
-
-	attotime base;
-	int start_pos = find_position(base, start);
-	int end_pos   = find_position(base, end);
-
-	std::vector<int> trans_pos(transition_count);
-	for(int i=0; i != transition_count; i++)
-		trans_pos[i] = find_position(base, transitions[i]);
-
-	std::vector<uint32_t> &buf = image->get_buffer(cyl, ss, subcyl);
-
-	int index;
-	if(!buf.empty())
-		index = find_index(start_pos, buf);
-	else {
-		index = 0;
-		buf.push_back(floppy_image::MG_N);
-	}
-
-	if(index && (buf[index] & floppy_image::TIME_MASK) == start_pos)
-		index--;
-
-	uint32_t cur_mg = buf[index] & floppy_image::MG_MASK;
-	if(cur_mg == floppy_image::MG_N || cur_mg == floppy_image::MG_D)
-		cur_mg = floppy_image::MG_A;
-
-	uint32_t pos = start_pos;
-	int ti = 0;
-	int cells = buf.size();
-	while(pos != end_pos) {
-		if(buf.size() < cells+10)
-			buf.resize(cells+200);
-		uint32_t next_pos;
-		if(ti != transition_count)
-			next_pos = trans_pos[ti++];
-		else
-			next_pos = end_pos;
-		if(next_pos > pos)
-			write_zone(&buf[0], cells, index, pos, next_pos, cur_mg);
-		else {
-			write_zone(&buf[0], cells, index, pos, 200000000, cur_mg);
-			index = 0;
-			write_zone(&buf[0], cells, index, 0, next_pos, cur_mg);
-		}
-		pos = next_pos;
-		cur_mg = cur_mg == floppy_image::MG_A ? floppy_image::MG_B : floppy_image::MG_A;
-	}
-
-	buf.resize(cells);
+	// Disable writing when write protect is on or when, in the diskii
+	// case, phase 1 is 1
+	return m_wpt || (m_phases & 2);
 }
 
-void floppy_image_device::write_zone(uint32_t *buf, int &cells, int &index, uint32_t spos, uint32_t epos, uint32_t mg)
+void floppy_image_device::write_flux(const attotime &start, const attotime &end, int transition_count, const attotime *transitions)
 {
+	if(!m_image || m_mon)
+		return;
+
+	if(writing_disabled())
+		return;
+
+	m_image_dirty = true;
+	m_track_dirty = true;
 	cache_clear();
-	while(spos < epos) {
-		while(index != cells-1 && (buf[index+1] & floppy_image::TIME_MASK) <= spos)
-			index++;
 
-		uint32_t ref_start = buf[index] & floppy_image::TIME_MASK;
-		uint32_t ref_end   = index == cells-1 ? 200000000 : buf[index+1] & floppy_image::TIME_MASK;
-		uint32_t ref_mg    = buf[index] & floppy_image::MG_MASK;
+	std::vector<wspan> wspans(1);
 
-		// Can't overwrite a damaged zone
-		if(ref_mg == floppy_image::MG_D) {
-			spos = ref_end;
-			continue;
-		}
+	attotime base;
+	wspans[0].start = find_position(base, start);
+	wspans[0].end   = find_position(base, end);
 
-		// If the zone is of the type we want, we don't need to touch it
-		if(ref_mg == mg) {
-			spos = ref_end;
-			continue;
-		}
+	for(int i=0; i != transition_count; i++)
+		wspans[0].flux_change_positions.push_back(find_position(base, transitions[i]));
 
-		//  Check the overlaps, act accordingly
-		if(spos == ref_start) {
-			if(epos >= ref_end) {
-				// Full overlap, that cell is dead, we need to see which ones we can extend
-				uint32_t prev_mg = index != 0       ? buf[index-1] & floppy_image::MG_MASK : ~0;
-				uint32_t next_mg = index != cells-1 ? buf[index+1] & floppy_image::MG_MASK : ~0;
-				if(prev_mg == mg) {
-					if(next_mg == mg) {
-						// Both match, merge all three in one
-						memmove(buf+index, buf+index+2, (cells-index-2)*sizeof(uint32_t));
-						cells -= 2;
-						index--;
+	wspan_split_on_wrap(wspans);
 
-					} else {
-						// Previous matches, drop the current cell
-						memmove(buf+index, buf+index+1, (cells-index-1)*sizeof(uint32_t));
-						cells --;
-					}
+	std::vector<uint32_t> &buf = m_image->get_buffer(m_cyl, m_ss, m_subcyl);
 
-				} else {
-					if(next_mg == mg) {
-						// Following matches, extend it
-						memmove(buf+index, buf+index+1, (cells-index-1)*sizeof(uint32_t));
-						cells --;
-						buf[index] = mg | spos;
-					} else {
-						// None match, convert the current cell
-						buf[index] = mg | spos;
-						index++;
-					}
-				}
-				spos = ref_end;
+	if(buf.empty()) {
+		buf.push_back(floppy_image::MG_N);
+		buf.push_back(floppy_image::MG_E | 199999999);
+	}
 
-			} else {
-				// Overlap at the start only
-				// Check if we can just extend the previous cell
-				if(index != 0 && (buf[index-1] & floppy_image::MG_MASK) == mg)
-					buf[index] = ref_mg | epos;
-				else {
-					// Otherwise we need to insert a new cell
-					if(index != cells-1)
-						memmove(buf+index+1, buf+index, (cells-index)*sizeof(uint32_t));
-					cells++;
-					buf[index] = mg | spos;
-					buf[index+1] = ref_mg | epos;
-				}
-				spos = epos;
-			}
+	wspan_remove_damaged(wspans, buf);
+	wspan_write(wspans, buf);
 
-		} else {
-			if(epos >= ref_end) {
-				// Overlap at the end only
-				// If we can't just extend the following cell, we need to insert a new one
-				if(index == cells-1 || (buf[index+1] & floppy_image::MG_MASK) != mg) {
-					if(index != cells-1)
-						memmove(buf+index+2, buf+index+1, (cells-index-1)*sizeof(uint32_t));
-					cells++;
-				}
-				buf[index+1] = mg | spos;
-				index++;
-				spos = ref_end;
+	cache_clear();
+}
 
-			} else {
-				// Full inclusion
-				// We need to split the zone in 3
-				if(index != cells-1)
-					memmove(buf+index+3, buf+index+1, (cells-index-1)*sizeof(uint32_t));
-				cells += 2;
-				buf[index+1] = mg | spos;
-				buf[index+2] = ref_mg | epos;
-				spos = epos;
+void floppy_image_device::wspan_split_on_wrap(std::vector<wspan> &wspans)
+{
+	int ne = wspans.size();
+	for(int i=0; i != ne; i++)
+		if(wspans[i].end < wspans[i].start) {
+			wspans.resize(wspans.size()+1);
+			auto &ws = wspans[i];
+			auto &we = wspans.back();
+			we.start = 0;
+			we.end = ws.end;
+			ws.end = 200000000;
+			int start = ws.start;
+			int split_index;
+			for(split_index = 0; split_index != ws.flux_change_positions.size(); split_index++)
+				if(ws.flux_change_positions[split_index] < start)
+					break;
+			if(split_index == 0)
+				std::swap(ws.flux_change_positions, we.flux_change_positions);
+
+			else {
+				we.flux_change_positions.resize(ws.flux_change_positions.size() - split_index);
+				std::copy(ws.flux_change_positions.begin() + split_index, ws.flux_change_positions.end(), we.flux_change_positions.begin());
+				ws.flux_change_positions.erase(ws.flux_change_positions.begin() + split_index, ws.flux_change_positions.end());
 			}
 		}
+}
 
+void floppy_image_device::wspan_remove_damaged(std::vector<wspan> &wspans, const std::vector<uint32_t> &track)
+{
+	for(size_t pos = 0; pos != track.size(); pos++)
+		if((track[pos] & floppy_image::MG_MASK) == floppy_image::MG_D) {
+			int start = track[pos] & floppy_image::TIME_MASK;
+			int end = track[pos+1] & floppy_image::TIME_MASK;
+			int ne = wspans.size();
+			for(int i=0; i != ne; i++) {
+				// D range outside of span range
+				if(wspans[i].start > end || wspans[i].end <= start)
+					continue;
+
+				// D range covers span range
+				if(wspans[i].start >= start && wspans[i].end-1 <= end) {
+					wspans.erase(wspans.begin() + i);
+					i --;
+					ne --;
+					continue;
+				}
+
+				// D range covers the start of the span range
+				if(wspans[i].start >= start && wspans[i].end-1 > end) {
+					wspans[i].start = end+1;
+					while(!wspans[i].flux_change_positions.empty() && wspans[i].flux_change_positions[0] <= end)
+						wspans[i].flux_change_positions.erase(wspans[i].flux_change_positions.begin());
+					continue;
+				}
+
+				// D range covers the end of the span range
+				if(wspans[i].start < start && wspans[i].end-1 <= end) {
+					wspans[i].end = start;
+					while(!wspans[i].flux_change_positions.empty() && wspans[i].flux_change_positions[wspans[i].flux_change_positions.size()-1] >= start)
+						wspans[i].flux_change_positions.erase(wspans[i].flux_change_positions.end()-1);
+					continue;
+				}
+
+				// D range is inside the span range, need to split
+				int id = wspans.size();
+				wspans.resize(id+1);
+				wspans[id].start = end+1;
+				wspans[id].end = wspans[i].end;
+				wspans[id].flux_change_positions = wspans[i].flux_change_positions;
+				wspans[i].end = start;
+				while(!wspans[i].flux_change_positions.empty() && wspans[i].flux_change_positions[wspans[i].flux_change_positions.size()-1] >= start)
+					wspans[i].flux_change_positions.erase(wspans[i].flux_change_positions.end()-1);
+				while(!wspans[id].flux_change_positions.empty() && wspans[id].flux_change_positions[0] <= end)
+					wspans[id].flux_change_positions.erase(wspans[id].flux_change_positions.begin());
+			}
+		}
+}
+
+void floppy_image_device::wspan_write(const std::vector<wspan> &wspans, std::vector<uint32_t> &track)
+{
+	for(const auto &ws : wspans) {
+		unsigned si, ei;
+		for(si = 0; si != track.size(); si++)
+			if((track[si] & floppy_image::TIME_MASK) >= ws.start)
+				break;
+		for(ei = si; ei != track.size(); ei++)
+			if((track[ei] & floppy_image::TIME_MASK) >= ws.end)
+				break;
+
+		// Reduce neutral zone at the start, if there's one
+		if(si != track.size() && (track[si] & floppy_image::MG_MASK) == floppy_image::MG_E) {
+			// Neutral zone is over the whole range, split it and adapt si/ei
+			if(si == ei) {
+				track.insert(track.begin() + si, floppy_image::MG_E | (ws.start-1));
+				track.insert(track.begin() + si + 1, (track[si-1] & floppy_image::MG_MASK) | ws.end);
+				si = ei = si+1;
+			} else {
+				// Reduce the zone size
+				track[si] = floppy_image::MG_E | (ws.start-1);
+				si ++;
+			}
+		}
+
+		// Check for a neutral zone at the end and reduce it if needed
+		if(ei != track.size() && (track[ei] & floppy_image::MG_MASK) == floppy_image::MG_E) {
+			track[ei-1] = floppy_image::MG_N | ws.end;
+			ei --;
+		}
+
+		// Clear the covered zone
+		track.erase(track.begin() + si, track.begin() + ei);
+
+		// Insert the flux changes
+		for(auto f : ws.flux_change_positions) {
+			track.insert(track.begin() + si, floppy_image::MG_F | f);
+			si ++;
+		}
 	}
 }
 
 void floppy_image_device::set_write_splice(const attotime &when)
 {
-	if(image) {
-		image_dirty = true;
+	if(m_image && !m_mon) {
+		m_image_dirty = true;
 		attotime base;
 		int splice_pos = find_position(base, when);
-		image->set_write_splice_position(cyl, ss, splice_pos, subcyl);
+		m_image->set_write_splice_position(m_cyl, m_ss, splice_pos, m_subcyl);
 	}
 }
 
 uint32_t floppy_image_device::get_form_factor() const
 {
-	return form_factor;
+	return m_form_factor;
 }
 
 uint32_t floppy_image_device::get_variant() const
 {
-	return image ? image->get_variant() : 0;
+	return m_image ? m_image->get_variant() : 0;
+}
+
+std::vector<uint32_t> &floppy_image_device::get_buffer()
+{
+	return m_image->get_buffer(m_cyl, m_ss, m_subcyl);
 }
 
 //===================================================================
@@ -1229,7 +1543,7 @@ void floppy_sound_device::device_start()
 {
 	// What kind of drive do we have?
 	bool is525 = strstr(tag(), "525") != nullptr;
-	set_samples_names(is525? floppy525_sample_names : floppy35_sample_names);
+	set_samples_names(is525 ? floppy525_sample_names : floppy35_sample_names);
 
 	m_motor_on = false;
 
@@ -1248,7 +1562,7 @@ void floppy_sound_device::device_start()
 	// If we don't have all samples, don't allocate a stream or access sample data.
 	if (m_loaded)
 	{
-		m_sound = machine().sound().stream_alloc(*this, 0, 1, clock()); // per-floppy stream
+		m_sound = stream_alloc(0, 1, clock()); // per-floppy stream
 	}
 	register_for_save_states();
 }
@@ -1267,13 +1581,16 @@ void floppy_sound_device::motor(bool running, bool withdisk)
 		if ((m_spin_playback_sample==QUIET || m_spin_playback_sample==SPIN_END) && running) // motor was either off or already spinning down
 		{
 			m_spin_samplepos = 0;
-			m_spin_playback_sample = withdisk? SPIN_START_LOADED : SPIN_START_EMPTY; // (re)start the motor sound
+			m_spin_playback_sample = withdisk ? SPIN_START_LOADED : SPIN_START_EMPTY; // (re)start the motor sound
 		}
 		else
 		{
 			// Motor has been running and is turned off now
 			if ((m_spin_playback_sample == SPIN_EMPTY || m_spin_playback_sample == SPIN_LOADED) && !running)
+			{
+				m_spin_samplepos = 0;
 				m_spin_playback_sample = SPIN_END; // go to spin down sound when loop is finished
+			}
 		}
 	}
 	m_motor_on = running;
@@ -1372,27 +1689,27 @@ void floppy_sound_device::step(int zone)
 //  sound_stream_update - update the sound stream
 //-------------------------------------------------
 
-void floppy_sound_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void floppy_sound_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
 	// We are using only one stream, unlike the parent class
 	// Also, there is no need for interpolation, as we only expect
 	// one sample rate of 44100 for all samples
 
 	int16_t out;
-	stream_sample_t *samplebuffer = outputs[0];
-	int idx = 0;
+	auto &samplebuffer = outputs[0];
+	int m_idx = 0;
 	int sampleend = 0;
 
-	while (samples-- > 0)
+	for (int sampindex = 0; sampindex < samplebuffer.samples(); sampindex++)
 	{
 		out = 0;
 
 		// Motor sound
 		if (m_spin_playback_sample != QUIET)
 		{
-			idx = m_spin_playback_sample;
-			sampleend = m_sample[idx].data.size();
-			out = m_sample[idx].data[m_spin_samplepos++];
+			m_idx = m_spin_playback_sample;
+			sampleend = m_sample[m_idx].data.size();
+			out = m_sample[m_idx].data[m_spin_samplepos++];
 
 			if (m_spin_samplepos >= sampleend)
 			{
@@ -1419,7 +1736,7 @@ void floppy_sound_device::sound_stream_update(sound_stream &stream, stream_sampl
 					// Spindown sample over, be quiet or restart if the
 					// motor has been restarted
 					if (m_motor_on)
-						m_spin_playback_sample = m_with_disk? SPIN_START_LOADED : SPIN_START_EMPTY;
+						m_spin_playback_sample = m_with_disk ? SPIN_START_LOADED : SPIN_START_EMPTY;
 					else
 						m_spin_playback_sample = QUIET;
 					break;
@@ -1445,10 +1762,10 @@ void floppy_sound_device::sound_stream_update(sound_stream &stream, stream_sampl
 		{
 			m_seek_sound_timeout--;
 
-			idx = m_step_base + m_seek_playback_sample;
-			sampleend = m_sample[idx].data.size();
+			m_idx = m_step_base + m_seek_playback_sample;
+			sampleend = m_sample[m_idx].data.size();
 			// Mix it into the stream value
-			out += m_sample[idx].data[(int)m_seek_samplepos];
+			out += m_sample[m_idx].data[(int)m_seek_samplepos];
 			// By adding different values than 1, we can change the playback speed
 			// This will be used to adjust the seek sound
 			m_seek_samplepos += m_seek_pitch;
@@ -1462,11 +1779,11 @@ void floppy_sound_device::sound_stream_update(sound_stream &stream, stream_sampl
 			// Stepper sound
 			if (m_step_playback_sample != QUIET)
 			{
-				idx = m_step_base + m_step_playback_sample;
-				sampleend = m_sample[idx].data.size();
+				m_idx = m_step_base + m_step_playback_sample;
+				sampleend = m_sample[m_idx].data.size();
 
 				// Mix it into the stream value
-				out += m_sample[idx].data[m_step_samplepos++];
+				out += m_sample[m_idx].data[m_step_samplepos++];
 				if (m_step_samplepos >= sampleend)
 				{
 					// Step sample done
@@ -1477,7 +1794,7 @@ void floppy_sound_device::sound_stream_update(sound_stream &stream, stream_sampl
 		}
 
 		// Write to the stream buffer
-		*(samplebuffer++) = out;
+		samplebuffer.put_int(sampindex, out, 32768);
 	}
 }
 
@@ -1487,6 +1804,14 @@ void floppy_image_device::device_add_mconfig(machine_config &config)
 {
 	SPEAKER(config, FLOPSPK).front_center();
 	FLOPPYSOUND(config, FLOPSND_TAG, 44100).add_route(ALL_OUTPUTS, FLOPSPK, 0.5);
+
+	if (FLUX_SCREEN)
+	{
+		SCREEN(config, m_flux_screen, SCREEN_TYPE_RASTER);
+		m_flux_screen->set_screen_update(FUNC(floppy_image_device::flux_screen_update));
+		m_flux_screen->set_raw(30*(flux_screen_sx+1)*(flux_screen_sy+1), flux_screen_sx+1, 0, flux_screen_sx, flux_screen_sy+1, 0, flux_screen_sy);
+		m_flux_screen->set_physical_aspect(1, 2);
+	}
 }
 
 
@@ -1512,16 +1837,12 @@ floppy_3_ssdd::~floppy_3_ssdd()
 
 void floppy_3_ssdd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_3;
-	tracks = 42;
-	sides = 1;
+	m_form_factor = floppy_image::FF_3;
+	m_tracks = 42;
+	m_sides = 1;
 	set_rpm(300);
-}
 
-void floppy_3_ssdd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSDD;
+	m_variants.push_back(floppy_image::SSDD);
 }
 
 //-------------------------------------------------
@@ -1539,17 +1860,13 @@ floppy_3_dsdd::~floppy_3_dsdd()
 
 void floppy_3_dsdd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_3;
-	tracks = 42;
-	sides = 2;
+	m_form_factor = floppy_image::FF_3;
+	m_tracks = 42;
+	m_sides = 2;
 	set_rpm(300);
-}
 
-void floppy_3_dsdd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::DSDD;
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::DSDD);
 }
 
 //-------------------------------------------------
@@ -1567,17 +1884,13 @@ floppy_35_ssdd::~floppy_35_ssdd()
 
 void floppy_35_ssdd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_35;
-	tracks = 84;
-	sides = 1;
+	m_form_factor = floppy_image::FF_35;
+	m_tracks = 84;
+	m_sides = 1;
 	set_rpm(300);
-}
 
-void floppy_35_ssdd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
 }
 
 //-------------------------------------------------
@@ -1595,18 +1908,14 @@ floppy_35_dd::~floppy_35_dd()
 
 void floppy_35_dd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_35;
-	tracks = 84;
-	sides = 2;
+	m_form_factor = floppy_image::FF_35;
+	m_tracks = 84;
+	m_sides = 2;
 	set_rpm(300);
-}
 
-void floppy_35_dd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::DSDD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::DSDD);
 }
 
 //-------------------------------------------------
@@ -1624,19 +1933,15 @@ floppy_35_hd::~floppy_35_hd()
 
 void floppy_35_hd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_35;
-	tracks = 84;
-	sides = 2;
+	m_form_factor = floppy_image::FF_35;
+	m_tracks = 84;
+	m_sides = 2;
 	set_rpm(300);
-}
 
-void floppy_35_hd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::DSDD;
-	variants[var_count++] = floppy_image::DSHD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::DSDD);
+	m_variants.push_back(floppy_image::DSHD);
 }
 
 //-------------------------------------------------
@@ -1654,20 +1959,16 @@ floppy_35_ed::~floppy_35_ed()
 
 void floppy_35_ed::setup_characteristics()
 {
-	form_factor = floppy_image::FF_35;
-	tracks = 84;
-	sides = 2;
+	m_form_factor = floppy_image::FF_35;
+	m_tracks = 84;
+	m_sides = 2;
 	set_rpm(300);
-}
 
-void floppy_35_ed::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::DSDD;
-	variants[var_count++] = floppy_image::DSHD;
-	variants[var_count++] = floppy_image::DSED;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::DSDD);
+	m_variants.push_back(floppy_image::DSHD);
+	m_variants.push_back(floppy_image::DSED);
 }
 
 //-------------------------------------------------
@@ -1685,16 +1986,12 @@ floppy_525_sssd_35t::~floppy_525_sssd_35t()
 
 void floppy_525_sssd_35t::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 35;
-	sides = 1;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 35;
+	m_sides = 1;
 	set_rpm(300);
-}
 
-void floppy_525_sssd_35t::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
+	m_variants.push_back(floppy_image::SSSD);
 }
 
 //-------------------------------------------------
@@ -1712,16 +2009,37 @@ floppy_525_sd_35t::~floppy_525_sd_35t()
 
 void floppy_525_sd_35t::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 35;
-	sides = 2;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 35;
+	m_sides = 2;
 	set_rpm(300);
+
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::DSSD);
 }
 
-void floppy_525_sd_35t::handled_variants(uint32_t *variants, int &var_count) const
+//-------------------------------------------------
+//  5.25" single-sided single density, VTECH edition
+//-------------------------------------------------
+
+floppy_525_vtech::floppy_525_vtech(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	floppy_image_device(mconfig, FLOPPY_525_VTECH, tag, owner, clock)
 {
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
+	m_amplifier_freakout_time = attotime::from_usec(64);
+}
+
+floppy_525_vtech::~floppy_525_vtech()
+{
+}
+
+void floppy_525_vtech::setup_characteristics()
+{
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 40;
+	m_sides = 1;
+	set_rpm(85);
+
+	m_variants.push_back(floppy_image::SSSD);
 }
 
 //-------------------------------------------------
@@ -1739,16 +2057,12 @@ floppy_525_sssd::~floppy_525_sssd()
 
 void floppy_525_sssd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 42;
-	sides = 1;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 42;
+	m_sides = 1;
 	set_rpm(300);
-}
 
-void floppy_525_sssd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
+	m_variants.push_back(floppy_image::SSSD);
 }
 
 //-------------------------------------------------
@@ -1766,16 +2080,12 @@ floppy_525_sd::~floppy_525_sd()
 
 void floppy_525_sd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 42;
-	sides = 2;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 42;
+	m_sides = 2;
 	set_rpm(300);
-}
 
-void floppy_525_sd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
+	m_variants.push_back(floppy_image::SSSD);
 }
 
 //-------------------------------------------------
@@ -1793,17 +2103,13 @@ floppy_525_ssdd::~floppy_525_ssdd()
 
 void floppy_525_ssdd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 42;
-	sides = 1;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 42;
+	m_sides = 1;
 	set_rpm(300);
-}
 
-void floppy_525_ssdd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
 }
 
 //-------------------------------------------------
@@ -1821,18 +2127,14 @@ floppy_525_dd::~floppy_525_dd()
 
 void floppy_525_dd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 42;
-	sides = 2;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 42;
+	m_sides = 2;
 	set_rpm(300);
-}
 
-void floppy_525_dd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::DSDD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::DSDD);
 }
 
 //-------------------------------------------------
@@ -1850,18 +2152,14 @@ floppy_525_ssqd::~floppy_525_ssqd()
 
 void floppy_525_ssqd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 84;
-	sides = 1;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 84;
+	m_sides = 1;
 	set_rpm(300);
-}
 
-void floppy_525_ssqd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::SSQD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::SSQD);
 }
 
 //-------------------------------------------------
@@ -1879,21 +2177,17 @@ floppy_525_qd::~floppy_525_qd()
 
 void floppy_525_qd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 84;
-	sides = 2;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 84;
+	m_sides = 2;
 	set_rpm(300);
-}
 
-void floppy_525_qd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::SSQD;
-	variants[var_count++] = floppy_image::DSSD;
-	variants[var_count++] = floppy_image::DSDD;
-	variants[var_count++] = floppy_image::DSQD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::SSQD);
+	m_variants.push_back(floppy_image::DSSD);
+	m_variants.push_back(floppy_image::DSDD);
+	m_variants.push_back(floppy_image::DSQD);
 }
 
 //-------------------------------------------------
@@ -1911,21 +2205,17 @@ floppy_525_hd::~floppy_525_hd()
 
 void floppy_525_hd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 84;
-	sides = 2;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 84;
+	m_sides = 2;
 	set_rpm(360);
-}
 
-void floppy_525_hd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::SSQD;
-	variants[var_count++] = floppy_image::DSDD;
-	variants[var_count++] = floppy_image::DSQD;
-	variants[var_count++] = floppy_image::DSHD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::SSQD);
+	m_variants.push_back(floppy_image::DSDD);
+	m_variants.push_back(floppy_image::DSQD);
+	m_variants.push_back(floppy_image::DSHD);
 }
 
 //-------------------------------------------------
@@ -1943,17 +2233,13 @@ floppy_8_sssd::~floppy_8_sssd()
 
 void floppy_8_sssd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_8;
-	tracks = 77;
-	sides = 1;
-	motor_always_on = true;
+	m_form_factor = floppy_image::FF_8;
+	m_tracks = 77;
+	m_sides = 1;
+	m_motor_always_on = true;
 	set_rpm(360);
-}
 
-void floppy_8_sssd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
+	m_variants.push_back(floppy_image::SSSD);
 }
 
 //-------------------------------------------------
@@ -1971,18 +2257,14 @@ floppy_8_dssd::~floppy_8_dssd()
 
 void floppy_8_dssd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_8;
-	tracks = 77;
-	sides = 2;
-	motor_always_on = true;
+	m_form_factor = floppy_image::FF_8;
+	m_tracks = 77;
+	m_sides = 2;
+	m_motor_always_on = true;
 	set_rpm(360);
-}
 
-void floppy_8_dssd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::DSSD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::DSSD);
 }
 
 //-------------------------------------------------
@@ -2000,18 +2282,14 @@ floppy_8_ssdd::~floppy_8_ssdd()
 
 void floppy_8_ssdd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_8;
-	tracks = 77;
-	sides = 1;
-	motor_always_on = true;
+	m_form_factor = floppy_image::FF_8;
+	m_tracks = 77;
+	m_sides = 1;
+	m_motor_always_on = true;
 	set_rpm(360);
-}
 
-void floppy_8_ssdd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
 }
 
 //-------------------------------------------------
@@ -2029,19 +2307,15 @@ floppy_8_dsdd::~floppy_8_dsdd()
 
 void floppy_8_dsdd::setup_characteristics()
 {
-	form_factor = floppy_image::FF_8;
-	tracks = 77;
-	sides = 2;
-	motor_always_on = true;
+	m_form_factor = floppy_image::FF_8;
+	m_tracks = 77;
+	m_sides = 2;
+	m_motor_always_on = true;
 	set_rpm(360);
-}
 
-void floppy_8_dsdd::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::DSDD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::DSDD);
 }
 
 
@@ -2070,17 +2344,13 @@ epson_smd_165::~epson_smd_165()
 
 void epson_smd_165::setup_characteristics()
 {
-	form_factor = floppy_image::FF_35;
-	tracks = 40;
-	sides = 2;
+	m_form_factor = floppy_image::FF_35;
+	m_tracks = 40;
+	m_sides = 2;
 	set_rpm(300);
-}
 
-void epson_smd_165::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::DSSD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::DSSD);
 }
 
 //-------------------------------------------------
@@ -2121,18 +2391,14 @@ epson_sd_320::~epson_sd_320()
 
 void epson_sd_320::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 40;
-	sides = 2;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 40;
+	m_sides = 2;
 	set_rpm(300);
-}
 
-void epson_sd_320::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::DSDD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::DSDD);
 }
 
 //-------------------------------------------------
@@ -2153,18 +2419,47 @@ epson_sd_321::~epson_sd_321()
 
 void epson_sd_321::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 40;
-	sides = 2;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 40;
+	m_sides = 2;
 	set_rpm(300);
+
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::DSDD);
 }
 
-void epson_sd_321::handled_variants(uint32_t *variants, int &var_count) const
+
+//-------------------------------------------------
+//  3.5" Panasonic Flexible Disk Drive JU-363
+//
+//  track to track: 3 ms
+//  settling time: 15 ms
+//  motor start time: 500 ms
+//  transfer rate: 250 Kbits/s
+//
+//-------------------------------------------------
+
+pana_ju_363::pana_ju_363(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	floppy_image_device(mconfig, PANA_JU_363, tag, owner, clock)
 {
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::DSDD;
+}
+
+pana_ju_363::~pana_ju_363()
+{
+}
+
+void pana_ju_363::setup_characteristics()
+{
+	m_form_factor = floppy_image::FF_35;
+	m_tracks = 84;
+	m_sides = 2;
+	m_dskchg_writable = true;
+	set_rpm(300);
+
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::DSDD);
 }
 
 //-------------------------------------------------
@@ -2188,18 +2483,14 @@ sony_oa_d31v::~sony_oa_d31v()
 
 void sony_oa_d31v::setup_characteristics()
 {
-	form_factor = floppy_image::FF_35;
-	tracks = 70;
-	sides = 1;
-	dskchg_writable = true;
+	m_form_factor = floppy_image::FF_35;
+	m_tracks = 70;
+	m_sides = 1;
+	m_dskchg_writable = true;
 	set_rpm(600);
-}
 
-void sony_oa_d31v::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
 }
 
 //-------------------------------------------------
@@ -2224,19 +2515,15 @@ sony_oa_d32w::~sony_oa_d32w()
 
 void sony_oa_d32w::setup_characteristics()
 {
-	form_factor = floppy_image::FF_35;
-	tracks = 80;
-	sides = 2;
-	dskchg_writable = true;
+	m_form_factor = floppy_image::FF_35;
+	m_tracks = 80;
+	m_sides = 2;
+	m_dskchg_writable = true;
 	set_rpm(600);
-}
 
-void sony_oa_d32w::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::DSDD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::DSDD);
 }
 
 //-------------------------------------------------
@@ -2261,18 +2548,14 @@ sony_oa_d32v::~sony_oa_d32v()
 
 void sony_oa_d32v::setup_characteristics()
 {
-	form_factor = floppy_image::FF_35;
-	tracks = 80;
-	sides = 1;
-	dskchg_writable = true;
+	m_form_factor = floppy_image::FF_35;
+	m_tracks = 80;
+	m_sides = 1;
+	m_dskchg_writable = true;
 	set_rpm(600);
-}
 
-void sony_oa_d32v::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
 }
 
 //-------------------------------------------------
@@ -2296,16 +2579,74 @@ teac_fd_30a::~teac_fd_30a()
 
 void teac_fd_30a::setup_characteristics()
 {
-	form_factor = floppy_image::FF_3;
-	tracks = 40;
-	sides = 1;
+	m_form_factor = floppy_image::FF_3;
+	m_tracks = 40;
+	m_sides = 1;
 	set_rpm(300);
+
+	m_variants.push_back(floppy_image::SSDD);
 }
 
-void teac_fd_30a::handled_variants(uint32_t *variants, int &var_count) const
+//-------------------------------------------------
+//  TEAC FD-55A
+//
+//  track to track: 6 ms
+//  average: 93 ms
+//  setting time: 15 ms
+//  motor start time: 400 ms
+//
+//-------------------------------------------------
+
+teac_fd_55a::teac_fd_55a(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: floppy_image_device(mconfig, TEAC_FD_55A, tag, owner, clock)
 {
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
+}
+
+teac_fd_55a::~teac_fd_55a()
+{
+}
+
+void teac_fd_55a::setup_characteristics()
+{
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 40;
+	m_sides = 1;
+	set_rpm(300);
+
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+}
+
+//-------------------------------------------------
+//  TEAC FD-55B
+//
+//  track to track: 6 ms
+//  average: 93 ms
+//  setting time: 15 ms
+//  motor start time: 400 ms
+//
+//-------------------------------------------------
+
+teac_fd_55b::teac_fd_55b(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+		: floppy_image_device(mconfig, TEAC_FD_55B, tag, owner, clock)
+{
+}
+
+teac_fd_55b::~teac_fd_55b()
+{
+}
+
+void teac_fd_55b::setup_characteristics()
+{
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 40;
+	m_sides = 2;
+	set_rpm(300);
+
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::DSSD);
+	m_variants.push_back(floppy_image::DSDD);
 }
 
 //-------------------------------------------------
@@ -2329,18 +2670,14 @@ teac_fd_55e::~teac_fd_55e()
 
 void teac_fd_55e::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 80;
-	sides = 1;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 80;
+	m_sides = 1;
 	set_rpm(300);
-}
 
-void teac_fd_55e::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::SSQD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::SSQD);
 }
 
 //-------------------------------------------------
@@ -2364,21 +2701,17 @@ teac_fd_55f::~teac_fd_55f()
 
 void teac_fd_55f::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 80;
-	sides = 2;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 80;
+	m_sides = 2;
 	set_rpm(300);
-}
 
-void teac_fd_55f::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::SSQD;
-	variants[var_count++] = floppy_image::DSSD;
-	variants[var_count++] = floppy_image::DSDD;
-	variants[var_count++] = floppy_image::DSQD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::SSQD);
+	m_variants.push_back(floppy_image::DSSD);
+	m_variants.push_back(floppy_image::DSDD);
+	m_variants.push_back(floppy_image::DSQD);
 }
 
 //-------------------------------------------------
@@ -2402,21 +2735,17 @@ teac_fd_55g::~teac_fd_55g()
 
 void teac_fd_55g::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 77;
-	sides = 2;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 77;
+	m_sides = 2;
 	set_rpm(360);
-}
 
-void teac_fd_55g::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
-	variants[var_count++] = floppy_image::SSDD;
-	variants[var_count++] = floppy_image::SSQD;
-	variants[var_count++] = floppy_image::DSDD;
-	variants[var_count++] = floppy_image::DSQD;
-	variants[var_count++] = floppy_image::DSHD;
+	m_variants.push_back(floppy_image::SSSD);
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::SSQD);
+	m_variants.push_back(floppy_image::DSDD);
+	m_variants.push_back(floppy_image::DSQD);
+	m_variants.push_back(floppy_image::DSHD);
 }
 
 //-------------------------------------------------
@@ -2436,17 +2765,13 @@ alps_3255190x::~alps_3255190x()
 
 void alps_3255190x::setup_characteristics()
 {
-	form_factor = floppy_image::FF_525;
-	tracks = 84;
-	sides = 1;
+	m_form_factor = floppy_image::FF_525;
+	m_tracks = 84;
+	m_sides = 1;
 	set_rpm(300);
-	cyl = 34;
-}
+	m_cyl = 34;
 
-void alps_3255190x::handled_variants(uint32_t *variants, int &var_count) const
-{
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
+	m_variants.push_back(floppy_image::SSSD);
 }
 
 //-------------------------------------------------
@@ -2464,16 +2789,314 @@ ibm_6360::~ibm_6360()
 
 void ibm_6360::setup_characteristics()
 {
-	form_factor = floppy_image::FF_8;
-	tracks = 77;
-	sides = 1;
-	motor_always_on = true;
-	has_trk00_sensor = false;
+	m_form_factor = floppy_image::FF_8;
+	m_tracks = 77;
+	m_sides = 1;
+	m_motor_always_on = true;
+	m_has_trk00_sensor = false;
 	set_rpm(360);
+
+	m_variants.push_back(floppy_image::SSSD);
 }
 
-void ibm_6360::handled_variants(uint32_t *variants, int &var_count) const
+
+//-------------------------------------------------
+//  Variable-speed Macintosh drives
+//-------------------------------------------------
+
+mac_floppy_device::mac_floppy_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock) : floppy_image_device(mconfig, type, tag, owner, clock)
 {
-	var_count = 0;
-	variants[var_count++] = floppy_image::SSSD;
+	m_has_mfm = false;
+	m_dskchg_writable = true;
+}
+
+void mac_floppy_device::device_start()
+{
+	floppy_image_device::device_start();
+	save_item(NAME(m_reg));
+	save_item(NAME(m_strb));
+}
+
+void mac_floppy_device::device_reset()
+{
+	floppy_image_device::device_reset();
+	m_reg = 0;
+	m_strb = 0;
+	m_mfm = m_has_mfm;
+}
+
+// Initial state of bits f-c (2M, ready, MFM, rd1):
+//    0000 - 400K GCR drive
+//    0001 - 4MB Typhoon drive
+//    x011 - Superdrive (x depends on the HD hole of the inserted disk, if any)
+//    1010 - 800K GCR drive
+//    1110 - HD-20 drive
+//    1111 - No drive (pull-up on the sense line)
+
+bool mac_floppy_device::writing_disabled() const
+{
+	return m_wpt;
+}
+
+bool mac_floppy_device::wpt_r()
+{
+	static const char *const regnames[16] = {
+		"Dir", "Step", "Motor", "Eject",
+		"RdData0", "Superdrive", "DoubleSide", "NoDrive",
+		"NoDiskInPl", "NoWrProtect", "NotTrack0", "NoTachPulse",
+		"RdData1", "MFMModeOn", "NoReady", "HD"
+	};
+
+	// m_actual_ss may have changed after the m_phases were set
+	m_reg = (m_reg & 7) | (m_actual_ss ? 8 : 0);
+
+	if(0 && (m_reg != 4 && m_reg != 12 && m_reg != 5 && m_reg != 13))
+		logerror("fdc disk sense reg %x %s %p\n", m_reg, regnames[m_reg], m_image.get());
+
+	switch(m_reg) {
+	case 0x0: // Step direction
+		return m_dir;
+
+	case 0x1: // Step signal
+		// We don't do the delay
+		return true;
+
+	case 0x2: // Is the motor on?
+		return m_mon;
+
+	case 0x3: // Disk change signal
+		return !m_dskchg;
+
+	case 0x4:
+	case 0xc: // Index pulse, probably only in mfm mode and while writing though
+		return !m_has_mfm ? false : !m_image || m_mon ? true : !m_idx;
+
+	case 0x5: // Is it a superdrive (supports 1.4M MFM) ?
+		return m_has_mfm;
+
+	case 0x6: // Is the drive double-sided?
+		return m_sides == 2;
+
+	case 0x7: // Does the drive exist?
+		return false;
+
+	case 0x8: // Is there a disk in the drive?
+		return m_image.get() == nullptr;
+
+	case 0x9: // Is the disk write-protected?
+		return !m_wpt;
+
+	case 0xa: // Not on track 0?
+		return m_cyl != 0;
+
+	case 0xb:{// Tachometer, 60 pulses/rotation
+		if(m_image.get() != nullptr && !m_mon) {
+			attotime base;
+			uint32_t pos = find_position(base, machine().time());
+			uint32_t subpos = pos % 3333334;
+			return subpos < 20000;
+		} else
+			return false;
+	}
+
+	case 0xd: // Is the current mode GCR or MFM?
+		return m_mfm;
+
+	case 0xe: // Is the floppy ready?
+		return m_ready;
+
+	case 0xf: // Does it implement the new interface *or* is the current disk is 1.4M MFM (superdrive only)
+		return is_2m();
+
+	default:
+		return false;
+	}
+}
+
+void mac_floppy_device::seek_phase_w(int phases)
+{
+	static const char *const regnames[16] = {
+		"DirNext", "StepOn", "MotorOn", "EjectOff",
+		"DirPrev", "StepOff", "MotorOff", "EjectOn",
+		"-", "MFMModeOn", "-", "-",
+		"DskchgClear", "GCRModeOn", "-", "-"
+	};
+
+	bool prev_strb = m_strb;
+
+	m_reg = (phases & 7) | (m_actual_ss ? 8 : 0);
+	m_strb = (phases >> 3) & 1;
+
+	if(m_strb && !prev_strb) {
+		switch(m_reg) {
+		case 0x0: // Step to cylinder + 1
+			logerror("cmd step dir +1\n");
+			dir_w(0);
+			break;
+
+		case 0x1: // Step on
+			logerror("cmd step on\n");
+			stp_w(0);
+			// There should be a delay, but it's not necessary
+			stp_w(1);
+			break;
+
+		case 0x2: // Motor on
+			logerror("cmd motor on\n");
+			floppy_image_device::mon_w(0);
+			break;
+
+		case 0x3: // End eject
+			logerror("cmd end eject\n");
+			break;
+
+		case 0x4: // Step to cylinder - 1
+			logerror("cmd step dir -1\n");
+			dir_w(1);
+			break;
+
+		case 0x6: // Motor off
+			logerror("cmd motor off\n");
+			floppy_image_device::mon_w(1);
+			break;
+
+		case 0x7: // Start eject
+			logerror("cmd start eject\n");
+			unload();
+			break;
+
+		case 0x9: // MFM mode on
+			logerror("cmd mfm on\n");
+			if(m_has_mfm) {
+				m_mfm = true;
+				track_changed();
+			}
+			break;
+
+		case 0xc: // Clear m_dskchg
+			logerror("cmd clear m_dskchg\n");
+			m_dskchg = 1;
+			break;
+
+		case 0xd: // GCR mode on
+			logerror("cmd gcr on\n");
+			m_mfm = false;
+			track_changed();
+			break;
+
+		default:
+			logerror("cmd reg %x %s\n", m_reg, regnames[m_reg]);
+			break;
+		}
+	}
+}
+
+void mac_floppy_device::track_changed()
+{
+	floppy_image_device::track_changed();
+
+	float new_rpm;
+	if(m_mfm)
+		new_rpm = is_2m() ? 600 : 300;
+	else if(m_cyl <= 15)
+		new_rpm = 394;
+	else if(m_cyl <= 31)
+		new_rpm = 429;
+	else if(m_cyl <= 47)
+		new_rpm = 472;
+	else if(m_cyl <= 63)
+		new_rpm = 525;
+	else
+		new_rpm = 590;
+
+	if(m_rpm != new_rpm)
+		set_rpm(new_rpm);
+}
+
+void mac_floppy_device::mon_w(int)
+{
+	// Motor control is through commands
+}
+
+void mac_floppy_device::tfsel_w(int state)
+{
+	// if 35SEL line is clear and the motor is on, turn off the motor
+	if ((state == CLEAR_LINE) && (!floppy_image_device::mon_r()))
+	{
+		floppy_image_device::mon_w(1);
+	}
+}
+
+oa_d34v_device::oa_d34v_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) : mac_floppy_device(mconfig, OAD34V, tag, owner, clock)
+{
+}
+
+void oa_d34v_device::setup_characteristics()
+{
+	m_form_factor = floppy_image::FF_35;
+	m_tracks = 80;
+	m_sides = 1;
+	set_rpm(394);
+
+	m_variants.push_back(floppy_image::SSDD);
+}
+
+bool oa_d34v_device::is_2m() const
+{
+	return false;
+}
+
+void oa_d34v_device::track_changed()
+{
+	// Skip the m_rpm-setting mac generic version, the single-sided
+	// drive's m_rpm is externally controlled through a PWM signal.
+
+	floppy_image_device::track_changed();
+}
+
+mfd51w_device::mfd51w_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) : mac_floppy_device(mconfig, MFD51W, tag, owner, clock)
+{
+}
+void mfd51w_device::setup_characteristics()
+{
+	m_form_factor = floppy_image::FF_35;
+	m_tracks = 80;
+	m_sides = 2;
+	set_rpm(394);
+
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::DSDD);
+}
+
+bool mfd51w_device::is_2m() const
+{
+	return true;
+}
+
+mfd75w_device::mfd75w_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) : mac_floppy_device(mconfig, MFD75W, tag, owner, clock)
+{
+	m_has_mfm = true;
+}
+
+void mfd75w_device::setup_characteristics()
+{
+	m_form_factor = floppy_image::FF_35;
+	m_tracks = 80;
+	m_sides = 2;
+	set_rpm(300);
+
+	m_variants.push_back(floppy_image::SSDD);
+	m_variants.push_back(floppy_image::DSDD);
+	m_variants.push_back(floppy_image::DSHD);
+}
+
+bool mfd75w_device::is_2m() const
+{
+	if(!m_image)
+		return false;
+
+	if(m_image->get_variant() == floppy_image::SSDD || m_image->get_variant() == floppy_image::DSDD)
+		return true;
+
+	return false;
 }

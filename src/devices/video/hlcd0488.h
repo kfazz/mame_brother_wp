@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Wilbert Pol
+// copyright-holders:Wilbert Pol, hap
 /*
 
   Hughes HLCD 0488 LCD Driver
@@ -47,14 +47,15 @@ public:
 	// configuration helpers
 	auto write_cols() { return m_write_cols.bind(); } // COL pins in data, ROW pins in offset
 
-	DECLARE_WRITE_LINE_MEMBER(latch_pulse_w);
-	DECLARE_WRITE_LINE_MEMBER(data_clk_w);
+	void latch_pulse_w(int state);
+	void data_clk_w(int state);
 	void data_w(u8 data);
 
 protected:
 	// device-level overrides
 	virtual void device_start() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+
+	TIMER_CALLBACK_MEMBER(sync_update);
 
 private:
 	// pin state

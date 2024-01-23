@@ -3,7 +3,6 @@
 /*
 
   American Microsystems, Inc.(AMI) S2000-family 4-bit MCU cores, introduced late 1970s
-  Overall functionality is similar to (and probably derived from) NEC uCOM-4.
 
   References:
   - AMI MOS Products Catalog 1979/1980
@@ -21,7 +20,6 @@
 #include "emu.h"
 #include "amis2000.h"
 #include "amis2000d.h"
-#include "debugger.h"
 
 
 // S2000 is the most basic one, 64 nibbles internal RAM and 1KB internal ROM
@@ -61,16 +59,32 @@ void amis2000_base_device::data_80x4(address_map &map)
 
 
 // device definitions
-amis2000_cpu_device::amis2000_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
-	: amis2000_base_device(mconfig, AMI_S2000, tag, owner, clock, 2, 10, 3, 13, address_map_constructor(FUNC(amis2000_cpu_device::program_1k), this), 6, address_map_constructor(FUNC(amis2000_cpu_device::data_64x4), this))
+amis2000_base_device::amis2000_base_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock, u8 bu_bits, u8 callstack_bits, u8 callstack_depth, int prgwidth, address_map_constructor program, int datawidth, address_map_constructor data) :
+	cpu_device(mconfig, type, tag, owner, clock),
+	m_program_config("program", ENDIANNESS_BIG, 8, prgwidth, 0, program),
+	m_data_config("data", ENDIANNESS_BIG, 8, datawidth, 0, data),
+	m_bu_bits(bu_bits),
+	m_callstack_bits(callstack_bits),
+	m_callstack_depth(callstack_depth),
+	m_7seg_table(nullptr),
+	m_read_k(*this, 0xf),
+	m_read_i(*this, 0xf),
+	m_read_d(*this, 0),
+	m_write_d(*this),
+	m_write_a(*this),
+	m_write_f(*this)
 { }
 
-amis2150_cpu_device::amis2150_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
-	: amis2000_base_device(mconfig, AMI_S2150, tag, owner, clock, 3, 11, 3, 13, address_map_constructor(FUNC(amis2150_cpu_device::program_1_5k), this), 7, address_map_constructor(FUNC(amis2150_cpu_device::data_80x4), this))
+amis2000_cpu_device::amis2000_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock) :
+	amis2000_base_device(mconfig, AMI_S2000, tag, owner, clock, 2, 10, 3, 13, address_map_constructor(FUNC(amis2000_cpu_device::program_1k), this), 6, address_map_constructor(FUNC(amis2000_cpu_device::data_64x4), this))
 { }
 
-amis2152_cpu_device::amis2152_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
-	: amis2000_base_device(mconfig, AMI_S2152, tag, owner, clock, 3, 11, 3, 13, address_map_constructor(FUNC(amis2152_cpu_device::program_1_5k), this), 7, address_map_constructor(FUNC(amis2152_cpu_device::data_80x4), this))
+amis2150_cpu_device::amis2150_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock) :
+	amis2000_base_device(mconfig, AMI_S2150, tag, owner, clock, 3, 11, 3, 13, address_map_constructor(FUNC(amis2150_cpu_device::program_1_5k), this), 7, address_map_constructor(FUNC(amis2150_cpu_device::data_80x4), this))
+{ }
+
+amis2152_cpu_device::amis2152_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock) :
+	amis2000_base_device(mconfig, AMI_S2152, tag, owner, clock, 3, 11, 3, 13, address_map_constructor(FUNC(amis2152_cpu_device::program_1_5k), this), 7, address_map_constructor(FUNC(amis2152_cpu_device::data_80x4), this))
 { }
 
 device_memory_interface::space_config_vector amis2000_base_device::memory_space_config() const
@@ -114,23 +128,10 @@ std::unique_ptr<util::disasm_interface> amis2000_base_device::create_disassemble
 //  device_start - device-specific startup
 //-------------------------------------------------
 
-enum
-{
-	S2000_PC = STATE_GENPC, S2000_BL = 0, S2000_BU,
-	S2000_ACC, S2000_E, S2000_CY
-};
-
 void amis2000_base_device::device_start()
 {
 	m_program = &space(AS_PROGRAM);
 	m_data = &space(AS_DATA);
-
-	m_read_k.resolve_safe(0xf);
-	m_read_i.resolve_safe(0xf);
-	m_read_d.resolve_safe(0);
-	m_write_d.resolve_safe();
-	m_write_a.resolve_safe();
-	m_write_f.resolve_safe();
 
 	m_bu_mask = (1 << m_bu_bits) - 1;
 	m_callstack_mask = (1 << m_callstack_bits) - 1;
@@ -176,15 +177,17 @@ void amis2000_base_device::device_start()
 	save_item(NAME(m_a));
 
 	// register state for debugger
-	state_add(S2000_PC,     "PC",     m_pc    ).formatstr("%04X");
-	state_add(S2000_BL,     "BL",     m_bl    ).formatstr("%01X");
-	state_add(S2000_BU,     "BU",     m_bu    ).formatstr("%01X");
-	state_add(S2000_ACC,    "ACC",    m_acc   ).formatstr("%01X");
-	state_add(S2000_E,      "E",      m_e     ).formatstr("%01X");
-	state_add(S2000_CY,     "CY",     m_carry ).formatstr("%01X");
-
-	state_add(STATE_GENPCBASE, "CURPC", m_pc).noshow();
+	state_add(STATE_GENPC, "GENPC", m_pc).formatstr("%04X").noshow();
+	state_add(STATE_GENPCBASE, "CURPC", m_pc).formatstr("%04X").noshow();
 	state_add(STATE_GENFLAGS, "CURFLAGS", m_f).formatstr("%6s").noshow();
+
+	m_state_count = 0;
+	state_add(++m_state_count, "PC", m_pc).formatstr("%04X"); // 1
+	state_add(++m_state_count, "BL", m_bl).formatstr("%01X"); // 2
+	state_add(++m_state_count, "BU", m_bu).formatstr("%01X"); // 3
+	state_add(++m_state_count, "ACC", m_acc).formatstr("%01X"); // 4
+	state_add(++m_state_count, "E", m_e).formatstr("%01X"); // 5
+	state_add(++m_state_count, "CY", m_carry).formatstr("%01X"); // 6
 
 	set_icountptr(m_icount);
 }
@@ -194,7 +197,7 @@ void amis2152_cpu_device::device_start()
 {
 	amis2000_base_device::device_start();
 
-	m_d2f_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(amis2152_cpu_device::d2f_timer_cb), this));
+	m_d2f_timer = timer_alloc(FUNC(amis2152_cpu_device::d2f_timer_cb), this);
 
 	// zerofill
 	m_d2f_latch = 0;
@@ -250,7 +253,9 @@ void amis2000_base_device::execute_run()
 		// remember previous opcode
 		m_prev_op = m_op;
 
-		debugger_instruction_hook(m_pc);
+		// fetch next opcode
+		if (!m_skip)
+			debugger_instruction_hook(m_pc);
 		m_op = m_program->read_byte(m_pc);
 		m_pc = (m_pc + 1) & 0x1fff;
 

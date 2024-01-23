@@ -31,7 +31,7 @@ void i80130_device::io_map(address_map &map)
 	//map(0x08, 0x0f).rw("pit", FUNC(pit8254_device::read), FUNC(pit8254_device::write)).umask16(0x00ff);
 }
 
-READ16_MEMBER( i80130_device::io_r )
+uint16_t i80130_device::io_r(offs_t offset, uint16_t mem_mask)
 {
 	uint16_t data = 0;
 
@@ -55,7 +55,7 @@ READ16_MEMBER( i80130_device::io_r )
 	return data;
 }
 
-WRITE16_MEMBER( i80130_device::io_w )
+void i80130_device::io_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	switch (offset)
 	{
@@ -81,8 +81,8 @@ WRITE16_MEMBER( i80130_device::io_w )
 //-------------------------------------------------
 
 //ROM_START( i80130 )
-//	ROM_REGION16_LE( 0x4000, "rom", 0 )
-//	ROM_LOAD( "80130", 0x0000, 0x4000, NO_DUMP )
+//  ROM_REGION16_LE( 0x4000, "rom", 0 )
+//  ROM_LOAD( "80130", 0x0000, 0x4000, NO_DUMP )
 //ROM_END
 
 
@@ -92,7 +92,7 @@ WRITE16_MEMBER( i80130_device::io_w )
 
 //const tiny_rom_entry *i80130_device::device_rom_region() const
 //{
-//	return ROM_NAME( i80130 );
+//  return ROM_NAME( i80130 );
 //}
 
 
@@ -124,16 +124,16 @@ void i80130_device::device_add_mconfig(machine_config &config)
 //  i80130_device - constructor
 //-------------------------------------------------
 
-i80130_device::i80130_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, I80130, tag, owner, clock),
-		m_pic(*this, "pic"),
-		m_pit(*this, "pit"),
-		m_write_irq(*this),
-		m_write_ack(*this),
-		m_write_lir(*this),
-		m_write_systick(*this),
-		m_write_delay(*this),
-		m_write_baud(*this)
+i80130_device::i80130_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	device_t(mconfig, I80130, tag, owner, clock),
+	m_pic(*this, "pic"),
+	m_pit(*this, "pit"),
+	m_write_irq(*this),
+	m_write_ack(*this),
+	m_write_lir(*this),
+	m_write_systick(*this),
+	m_write_delay(*this),
+	m_write_baud(*this)
 {
 }
 
@@ -144,13 +144,6 @@ i80130_device::i80130_device(const machine_config &mconfig, const char *tag, dev
 
 void i80130_device::device_start()
 {
-	// resolve callbacks
-	m_write_irq.resolve_safe();
-	m_write_ack.resolve_safe();
-	m_write_lir.resolve_safe();
-	m_write_systick.resolve_safe();
-	m_write_delay.resolve_safe();
-	m_write_baud.resolve_safe();
 }
 
 

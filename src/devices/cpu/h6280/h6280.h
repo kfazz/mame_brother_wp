@@ -90,7 +90,7 @@ protected:
 
 	// device_memory_interface overrides
 	virtual space_config_vector memory_space_config() const override;
-	virtual bool memory_translate(int spacenum, int intention, offs_t &address) override;
+	virtual bool memory_translate(int spacenum, int intention, offs_t &address, address_space *&target_space) override;
 
 	// device_disasm_interface overrides
 	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
@@ -380,9 +380,9 @@ protected:
 	uint8_t m_timer_scale;
 
 	// address spaces
-	address_space *m_program;
-	address_space *m_io;
-	memory_access_cache<0, 0, ENDIANNESS_LITTLE> *m_cache;
+	memory_access<21, 0, 0, ENDIANNESS_LITTLE>::cache m_cache;
+	memory_access<21, 0, 0, ENDIANNESS_LITTLE>::specific m_program;
+	memory_access< 2, 0, 0, ENDIANNESS_LITTLE>::specific m_io;
 
 	typedef void (h6280_device::*ophandler)();
 

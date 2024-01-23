@@ -67,17 +67,17 @@ public:
 	uint8_t read(offs_t offset);
 	void write(offs_t offset, uint8_t data);
 
-	DECLARE_WRITE_LINE_MEMBER( i0_w );
-	DECLARE_WRITE_LINE_MEMBER( i1_w );
-	DECLARE_WRITE_LINE_MEMBER( i2_w );
-	DECLARE_WRITE_LINE_MEMBER( i3_w );
-	DECLARE_WRITE_LINE_MEMBER( i4_w );
-	DECLARE_WRITE_LINE_MEMBER( i5_w );
-	DECLARE_WRITE_LINE_MEMBER( i6_w );
-	DECLARE_WRITE_LINE_MEMBER( i7_w );
+	void i0_w(int state);
+	void i1_w(int state);
+	void i2_w(int state);
+	void i3_w(int state);
+	void i4_w(int state);
+	void i5_w(int state);
+	void i6_w(int state);
+	void i7_w(int state);
 
-	DECLARE_WRITE_LINE_MEMBER( tc_w );
-	DECLARE_WRITE_LINE_MEMBER( rc_w );
+	void tc_w(int state);
+	void rc_w(int state);
 
 private:
 	enum
@@ -148,7 +148,6 @@ private:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// device_serial_interface overrides
 	virtual void tra_callback() override;
@@ -163,7 +162,7 @@ private:
 	// internal helpers
 	void check_interrupts();
 	void take_interrupt(int level);
-	void timer_count(int index);
+	TIMER_CALLBACK_MEMBER(timer_count);
 	void gpip_input(int bit, int state);
 
 	// device callbacks

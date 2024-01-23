@@ -58,11 +58,11 @@
 
 ***************************************************************************/
 
-#include <cassert>
-
 #include "avhuff.h"
-#include "huffman.h"
+
 #include "chd.h"
+#include "huffman.h"
+#include "multibyte.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -211,20 +211,17 @@ avhuff_error avhuff_encoder::encode_data(const uint8_t *source, uint8_t *dest, u
 	// extract info from the header
 	uint32_t metasize = source[4];
 	uint32_t channels = source[5];
-	uint32_t samples = (source[6] << 8) + source[7];
-	uint32_t width = (source[8] << 8) + source[9];
-	uint32_t height = (source[10] << 8) + source[11];
+	uint32_t samples = get_u16be(&source[6]);
+	uint32_t width = get_u16be(&source[8]);
+	uint32_t height = get_u16be(&source[10]);
 	source += 12;
 
 	// write the basics to the new header
 	dest[0] = metasize;
 	dest[1] = channels;
-	dest[2] = samples >> 8;
-	dest[3] = samples;
-	dest[4] = width >> 8;
-	dest[5] = width;
-	dest[6] = height >> 8;
-	dest[7] = height;
+	put_u16be(&dest[2], samples);
+	put_u16be(&dest[4], width);
+	put_u16be(&dest[6], height);
 
 	// starting offsets
 	uint32_t dstoffs = 10 + 2 * channels;
@@ -247,11 +244,11 @@ avhuff_error avhuff_encoder::encode_data(const uint8_t *source, uint8_t *dest, u
 			return err;
 
 		// advance the pointers past the data
-		uint16_t treesize = (dest[8] << 8) + dest[9];
+		uint16_t treesize = get_u16be(&dest[8]);
 		if (treesize != 0xffff)
 			dstoffs += treesize;
 		for (int chnum = 0; chnum < channels; chnum++)
-			dstoffs += (dest[10 + 2 * chnum] << 8) + dest[11 + 2 * chnum];
+			dstoffs += get_u16be(&dest[10 + 2 * chnum]);
 	}
 	else
 	{
@@ -299,10 +296,10 @@ uint32_t avhuff_encoder::raw_data_size(const uint8_t *data)
 		size = 12 + data[4];
 
 		// add in channels * samples
-		size += 2 * data[5] * ((data[6] << 8) + data[7]);
+		size += 2 * data[5] * get_u16be(&data[6]);
 
 		// add in 2 * width * height
-		size += 2 * ((data[8] << 8) + data[9]) * (((data[10] << 8) + data[11]) & 0x7fff);
+		size += 2 * get_u16be(&data[8]) * (get_u16be(&data[10]) & 0x7fff);
 	}
 	return size;
 }
@@ -344,12 +341,12 @@ avhuff_error avhuff_encoder::assemble_data(std::vector<uint8_t> &buffer, bitmap_
 	*dest++ = 'v';
 	*dest++ = metadatasize;
 	*dest++ = channels;
-	*dest++ = numsamples >> 8;
-	*dest++ = numsamples & 0xff;
-	*dest++ = bitmap.width() >> 8;
-	*dest++ = bitmap.width() & 0xff;
-	*dest++ = bitmap.height() >> 8;
-	*dest++ = bitmap.height() & 0xff;
+	put_u16be(dest, numsamples);
+	dest += 2;
+	put_u16be(dest, bitmap.width());
+	dest += 2;
+	put_u16be(dest, bitmap.height());
+	dest += 2;
 
 	// copy the metadata
 	if (metadatasize > 0)
@@ -360,8 +357,8 @@ avhuff_error avhuff_encoder::assemble_data(std::vector<uint8_t> &buffer, bitmap_
 	for (uint8_t curchan = 0; curchan < channels; curchan++)
 		for (uint32_t cursamp = 0; cursamp < numsamples; cursamp++)
 		{
-			*dest++ = samples[curchan][cursamp] >> 8;
-			*dest++ = samples[curchan][cursamp] & 0xff;
+			put_u16be(dest, samples[curchan][cursamp]);
+			dest += 2;
 		}
 
 	// copy the video data
@@ -370,8 +367,8 @@ avhuff_error avhuff_encoder::assemble_data(std::vector<uint8_t> &buffer, bitmap_
 		uint16_t *src = &bitmap.pix(y);
 		for (int32_t x = 0; x < bitmap.width(); x++)
 		{
-			*dest++ = src[x] >> 8;
-			*dest++ = src[x] & 0xff;
+			put_u16be(dest, src[x]);
+			dest += 2;
 		}
 	}
 	return AVHERR_NONE;
@@ -417,8 +414,7 @@ avhuff_error avhuff_encoder::encode_audio(const uint8_t *source, int channels, i
 
 		// set the size for this channel
 		uint32_t cursize = m_flac_encoder.finish();
-		sizes[chnum * 2 + 2] = cursize >> 8;
-		sizes[chnum * 2 + 3] = cursize;
+		put_u16be(&sizes[chnum * 2 + 2], cursize);
 		dest += cursize;
 	}
 
@@ -437,7 +433,7 @@ avhuff_error avhuff_encoder::encode_audio(const uint8_t *source, int channels, i
 		int16_t prevsample = 0;
 		for (int sampnum = 0; sampnum < samples; sampnum++)
 		{
-			int16_t newsample = (source[0] << 8) | source[1];
+			int16_t newsample = get_s16be(source);
 			source += 2;
 
 			int16_t delta = newsample - prevsample;
@@ -467,8 +463,7 @@ avhuff_error avhuff_encoder::encode_audio(const uint8_t *source, int channels, i
 
 	// note the size of the two trees
 	uint32_t huffsize = bitbuf.flush();
-	sizes[0] = huffsize >> 8;
-	sizes[1] = huffsize;
+	put_u16be(&sizes[0], huffsize);
 
 	// iterate over channels
 	uint32_t totalsize = huffsize;
@@ -488,8 +483,7 @@ avhuff_error avhuff_encoder::encode_audio(const uint8_t *source, int channels, i
 		totalsize += cursize;
 		if (totalsize >= channels * samples * 2)
 			break;
-		sizes[chnum * 2 + 2] = cursize >> 8;
-		sizes[chnum * 2 + 3] = cursize;
+		put_u16be(&sizes[chnum * 2 + 2], cursize);
 	}
 
 	// if we ran out of room, throw it all away and just store raw
@@ -499,10 +493,7 @@ avhuff_error avhuff_encoder::encode_audio(const uint8_t *source, int channels, i
 		uint32_t size = samples * 2;
 		sizes[0] = sizes[1] = 0;
 		for (chnum = 0; chnum < channels; chnum++)
-		{
-			sizes[chnum * 2 + 2] = size >> 8;
-			sizes[chnum * 2 + 3] = size;
-		}
+			put_u16be(&sizes[chnum * 2 + 2], size);
 	}
 
 #endif
@@ -691,24 +682,19 @@ avhuff_decoder::avhuff_decoder()
 }
 
 /**
- * @fn  void avhuff_decoder::configure(const avhuff_decompress_config &config)
+ * @fn  void avhuff_decoder::configure(const config &cfg)
  *
  * @brief   -------------------------------------------------
  *            configure - configure decompression parameters
  *          -------------------------------------------------.
  *
- * @param   config  The configuration.
+ * @param   cfg     The configuration.
  */
 
-void avhuff_decoder::configure(const avhuff_decompress_config &config)
+void avhuff_decoder::configure(const config &cfg)
 {
-	m_config.video.wrap(config.video, config.video.cliprect());
-	m_config.maxsamples = config.maxsamples;
-	m_config.actsamples = config.actsamples;
-	memcpy(m_config.audio, config.audio, sizeof(m_config.audio));
-	m_config.maxmetalength = config.maxmetalength;
-	m_config.actmetalength = config.actmetalength;
-	m_config.metadata = config.metadata;
+	m_video.wrap(*cfg.video, cfg.video->cliprect());
+	m_config = cfg;
 }
 
 /**
@@ -732,19 +718,19 @@ avhuff_error avhuff_decoder::decode_data(const uint8_t *source, uint32_t complen
 		return AVHERR_INVALID_DATA;
 	uint32_t metasize = source[0];
 	uint32_t channels = source[1];
-	uint32_t samples = (source[2] << 8) + source[3];
-	uint32_t width = (source[4] << 8) + source[5];
-	uint32_t height = (source[6] << 8) + source[7];
+	uint32_t samples = get_u16be(&source[2]);
+	uint32_t width = get_u16be(&source[4]);
+	uint32_t height = get_u16be(&source[6]);
 
 	// validate that the sizes make sense
 	if (complength < 10 + 2 * channels)
 		return AVHERR_INVALID_DATA;
 	uint32_t totalsize = 10 + 2 * channels;
-	uint32_t treesize = (source[8] << 8) | source[9];
+	uint32_t treesize = get_u16be(&source[8]);
 	if (treesize != 0xffff)
 		totalsize += treesize;
 	for (int chnum = 0; chnum < channels; chnum++)
-		totalsize += (source[10 + 2 * chnum] << 8) | source[11 + 2 * chnum];
+		totalsize += get_u16be(&source[10 + 2 * chnum]);
 	if (totalsize >= complength)
 		return AVHERR_INVALID_DATA;
 
@@ -763,12 +749,9 @@ avhuff_error avhuff_decoder::decode_data(const uint8_t *source, uint32_t complen
 		dest[3] = 'v';
 		dest[4] = metasize;
 		dest[5] = channels;
-		dest[6] = samples >> 8;
-		dest[7] = samples;
-		dest[8] = width >> 8;
-		dest[9] = width;
-		dest[10] = height >> 8;
-		dest[11] = height;
+		put_u16be(&dest[6], samples);
+		put_u16be(&dest[8], width);
+		put_u16be(&dest[10], height);
 		dest += 12;
 
 		// determine the start of each piece of data
@@ -792,9 +775,9 @@ avhuff_error avhuff_decoder::decode_data(const uint8_t *source, uint32_t complen
 		// determine the start of each piece of data
 		metastart = m_config.metadata;
 		for (int chnum = 0; chnum < channels; chnum++)
-			audiostart[chnum] = (uint8_t *)m_config.audio[chnum];
-		videostart = (m_config.video.valid()) ? reinterpret_cast<uint8_t *>(&m_config.video.pix(0)) : nullptr;
-		videostride = (m_config.video.valid()) ? m_config.video.rowpixels() * 2 : 0;
+			audiostart[chnum] = reinterpret_cast<uint8_t *>(m_config.audio[chnum]);
+		videostart = m_video.valid() ? reinterpret_cast<uint8_t *>(&m_video.pix(0)) : nullptr;
+		videostride = m_video.valid() ? m_video.rowpixels() * 2 : 0;
 
 		// data is assumed to be native-endian
 		uint16_t betest = 0;
@@ -802,7 +785,7 @@ avhuff_error avhuff_decoder::decode_data(const uint8_t *source, uint32_t complen
 		audioxor = videoxor = (betest == 1) ? 1 : 0;
 
 		// verify against sizes
-		if (m_config.video.valid() && (m_config.video.width() < width || m_config.video.height() < height))
+		if (m_video.valid() && (m_video.width() < width || m_video.height() < height))
 			return AVHERR_VIDEO_TOO_LARGE;
 		for (int chnum = 0; chnum < channels; chnum++)
 			if (m_config.audio[chnum] != nullptr && m_config.maxsamples < samples)
@@ -834,11 +817,11 @@ avhuff_error avhuff_decoder::decode_data(const uint8_t *source, uint32_t complen
 			return err;
 
 		// advance the pointers past the data
-		treesize = (source[8] << 8) + source[9];
+		treesize = get_u16be(&source[8]);
 		if (treesize != 0xffff)
 			srcoffs += treesize;
 		for (int chnum = 0; chnum < channels; chnum++)
-			srcoffs += (source[10 + 2 * chnum] << 8) + source[11 + 2 * chnum];
+			srcoffs += get_u16be(&source[10 + 2 * chnum]);
 	}
 
 	// decode the video data
@@ -875,7 +858,7 @@ avhuff_error avhuff_decoder::decode_data(const uint8_t *source, uint32_t complen
 avhuff_error avhuff_decoder::decode_audio(int channels, int samples, const uint8_t *source, uint8_t **dest, uint32_t dxor, const uint8_t *sizes)
 {
 	// extract the huffman trees
-	uint16_t treesize = (sizes[0] << 8) | sizes[1];
+	uint16_t treesize = get_u16be(&sizes[0]);
 
 #if AVHUFF_USE_FLAC
 
@@ -893,7 +876,7 @@ avhuff_error avhuff_decoder::decode_audio(int channels, int samples, const uint8
 		for (int chnum = 0; chnum < channels; chnum++)
 		{
 			// extract the size of this channel
-			uint16_t size = (sizes[chnum * 2 + 2] << 8) | sizes[chnum * 2 + 3];
+			uint16_t size = get_u16be(&sizes[chnum * 2 + 2]);
 
 			// only process if the data is requested
 			uint8_t *curdest = dest[chnum];
@@ -901,9 +884,9 @@ avhuff_error avhuff_decoder::decode_audio(int channels, int samples, const uint8
 			{
 				// reset and decode
 				if (!m_flac_decoder.reset(48000, 1, samples, source, size))
-					throw CHDERR_DECOMPRESSION_ERROR;
+					throw std::error_condition(chd_file::error::DECOMPRESSION_ERROR);
 				if (!m_flac_decoder.decode_interleaved(reinterpret_cast<int16_t *>(curdest), samples, swap_endian))
-					throw CHDERR_DECOMPRESSION_ERROR;
+					throw std::error_condition(chd_file::error::DECOMPRESSION_ERROR);
 
 				// finish up
 				m_flac_decoder.finish();
@@ -937,7 +920,7 @@ avhuff_error avhuff_decoder::decode_audio(int channels, int samples, const uint8
 	for (int chnum = 0; chnum < channels; chnum++)
 	{
 		// extract the size of this channel
-		uint16_t size = (sizes[chnum * 2 + 2] << 8) | sizes[chnum * 2 + 3];
+		uint16_t size = get_u16be(&sizes[chnum * 2 + 2]);
 
 		// only process if the data is requested
 		uint8_t *curdest = dest[chnum];
@@ -951,7 +934,7 @@ avhuff_error avhuff_decoder::decode_audio(int channels, int samples, const uint8
 				const uint8_t *cursource = source;
 				for (int sampnum = 0; sampnum < samples; sampnum++)
 				{
-					int16_t delta = (cursource[0] << 8) | cursource[1];
+					int16_t delta = get_s16be(cursource);
 					cursource += 2;
 
 					int16_t newsample = prevsample + delta;

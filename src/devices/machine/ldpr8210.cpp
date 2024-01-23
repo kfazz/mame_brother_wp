@@ -27,9 +27,12 @@
 //  DEBUGGING
 //**************************************************************************
 
-#define LOG_VBLANK_VBI              0
-#define LOG_SERIAL                  0
-#define LOG_SIMUTREK                0
+#define LOG_VBLANK_VBI (1U << 1)
+#define LOG_SERIAL     (1U << 2)
+#define LOG_SIMUTREK   (1U << 3)
+#define LOG_UNKNOWNS   (1U << 4)
+#define VERBOSE (0)
+#include "logmacro.h"
 
 
 
@@ -226,8 +229,7 @@ void pioneer_pr8210_device::control_w(uint8_t data)
 		{
 			m_firstbittime = curtime;
 			m_accumulator = 0x5555;
-			if (LOG_SERIAL)
-				logerror("Reset accumulator\n");
+			LOGMASKED(LOG_SERIAL, "Reset accumulator\n");
 		}
 
 		// 0 bit delta is 1.05 msec, 1 bit delta is 2.11 msec
@@ -235,11 +237,7 @@ void pioneer_pr8210_device::control_w(uint8_t data)
 		m_accumulator = (m_accumulator << 1) | longpulse;
 
 		// log the deltas for debugging
-		if (LOG_SERIAL)
-		{
-			int usecdiff = (int)(delta.attoseconds() / ATTOSECONDS_IN_USEC(1));
-			logerror("bitdelta = %5d (%d) - accum = %04X\n", usecdiff, longpulse, m_accumulator);
-		}
+		LOGMASKED(LOG_SERIAL, "bitdelta = %5d (%d) - accum = %04X\n", delta.as_ticks(1'000'000), longpulse, m_accumulator);
 
 		// if we have a complete command, signal it
 		// a complete command is 0,0,1 followed by 5 bits, followed by 0,0
@@ -260,8 +258,7 @@ void pioneer_pr8210_device::control_w(uint8_t data)
 				m_lastcommand = m_pia.porta;
 
 			// log the command and wait for a keypress
-			if (LOG_SERIAL)
-				logerror("--- Command = %02X\n", m_pia.porta >> 3);
+			LOGMASKED(LOG_SERIAL, "--- Command = %02X\n", m_pia.porta >> 3);
 
 			// reset the first bit time so that the accumulator clears on the next write
 			m_firstbittime = curtime - SERIAL_MAX_WORD_TIME;
@@ -276,6 +273,10 @@ void pioneer_pr8210_device::control_w(uint8_t data)
 
 void pioneer_pr8210_device::device_start()
 {
+	// alocate timers
+	m_process_vbi_timer = timer_alloc(FUNC(pioneer_pr8210_device::process_vbi_data), this);
+	m_vsync_off_timer = timer_alloc(FUNC(pioneer_pr8210_device::vsync_off), this);
+
 	// resolve outputs
 	m_audio1.resolve();
 	m_audio2.resolve();
@@ -312,71 +313,63 @@ void pioneer_pr8210_device::device_reset()
 
 
 //-------------------------------------------------
-//  device_timer - handle timers set by this
-//  device
+//  process_vbi_data - process VBI data which was
+//  fetched by the parent device
 //-------------------------------------------------
 
-void pioneer_pr8210_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(pioneer_pr8210_device::process_vbi_data)
 {
-	switch (id)
+	// update the VBI data in the PIA as soon as it is ready;
+	// this must happen early in the frame because the player
+	// logic relies on fetching it here
+
+	// logging
+	uint32_t line1718 = get_field_code(LASERDISC_CODE_LINE1718, false);
+	if ((line1718 & VBI_MASK_CAV_PICTURE) == VBI_CODE_CAV_PICTURE)
+		LOGMASKED(LOG_VBLANK_VBI, "%3d:VBI(%05d)\n", screen().vpos(), VBI_CAV_PICTURE(line1718));
+	else
+		LOGMASKED(LOG_VBLANK_VBI, "%3d:VBI()\n", screen().vpos());
+
+	// update PIA registers based on vbi code
+	m_pia.vbi1 = 0xff;
+	m_pia.vbi2 = 0xff;
+	if (focus_on() && laser_on())
 	{
-		// update the VBI data in the PIA as soon as it is ready;
-		// this must happen early in the frame because the player
-		// logic relies on fetching it here
-		case TID_VBI_DATA_FETCH:
-
-			// logging
-			if (LOG_VBLANK_VBI)
-			{
-				uint32_t line1718 = get_field_code(LASERDISC_CODE_LINE1718, false);
-				if ((line1718 & VBI_MASK_CAV_PICTURE) == VBI_CODE_CAV_PICTURE)
-					logerror("%3d:VBI(%05d)\n", screen().vpos(), VBI_CAV_PICTURE(line1718));
-				else
-					logerror("%3d:VBI()\n", screen().vpos());
-			}
-
-			// update PIA registers based on vbi code
-			m_pia.vbi1 = 0xff;
-			m_pia.vbi2 = 0xff;
-			if (focus_on() && laser_on())
-			{
-				uint32_t line16 = get_field_code(LASERDISC_CODE_LINE16, false);
-				uint32_t line1718 = get_field_code(LASERDISC_CODE_LINE1718, false);
-				if (line1718 == VBI_CODE_LEADIN)
-					m_pia.vbi1 &= ~0x01;
-				if (line1718 == VBI_CODE_LEADOUT)
-					m_pia.vbi1 &= ~0x02;
-				if (line16 == VBI_CODE_STOP)
-					m_pia.vbi1 &= ~0x04;
-				// unsure what this bit means: m_pia.vbi1 &= ~0x08;
-				if ((line1718 & VBI_MASK_CAV_PICTURE) == VBI_CODE_CAV_PICTURE)
-				{
-					m_pia.vbi1 &= ~0x10;
-					m_pia.frame[2] = 0xf0 | ((line1718 >> 16) & 0x07);
-					m_pia.frame[3] = 0xf0 | ((line1718 >> 12) & 0x0f);
-					m_pia.frame[4] = 0xf0 | ((line1718 >>  8) & 0x0f);
-					m_pia.frame[5] = 0xf0 | ((line1718 >>  4) & 0x0f);
-					m_pia.frame[6] = 0xf0 | ((line1718 >>  0) & 0x0f);
-				}
-				if ((line1718 & VBI_MASK_CHAPTER) == VBI_CODE_CHAPTER)
-				{
-					m_pia.vbi2 &= ~0x01;
-					m_pia.frame[0] = 0xf0 | ((line1718 >> 16) & 0x07);
-					m_pia.frame[1] = 0xf0 | ((line1718 >> 12) & 0x0f);
-				}
-			}
-			break;
-
-		// clear the VSYNC flag
-		case TID_VSYNC_OFF:
-			m_vsync = false;
-			break;
-
-		// pass everything else onto the parent
-		default:
-			laserdisc_device::device_timer(timer, id, param, ptr);
-			break;
+		uint32_t line16 = get_field_code(LASERDISC_CODE_LINE16, false);
+		uint32_t line1718 = get_field_code(LASERDISC_CODE_LINE1718, false);
+		if (line1718 == VBI_CODE_LEADIN)
+			m_pia.vbi1 &= ~0x01;
+		if (line1718 == VBI_CODE_LEADOUT)
+			m_pia.vbi1 &= ~0x02;
+		if (line16 == VBI_CODE_STOP)
+			m_pia.vbi1 &= ~0x04;
+		// unsure what this bit means: m_pia.vbi1 &= ~0x08;
+		if ((line1718 & VBI_MASK_CAV_PICTURE) == VBI_CODE_CAV_PICTURE)
+		{
+			m_pia.vbi1 &= ~0x10;
+			m_pia.frame[2] = 0xf0 | ((line1718 >> 16) & 0x07);
+			m_pia.frame[3] = 0xf0 | ((line1718 >> 12) & 0x0f);
+			m_pia.frame[4] = 0xf0 | ((line1718 >>  8) & 0x0f);
+			m_pia.frame[5] = 0xf0 | ((line1718 >>  4) & 0x0f);
+			m_pia.frame[6] = 0xf0 | ((line1718 >>  0) & 0x0f);
+		}
+		if ((line1718 & VBI_MASK_CHAPTER) == VBI_CODE_CHAPTER)
+		{
+			m_pia.vbi2 &= ~0x01;
+			m_pia.frame[0] = 0xf0 | ((line1718 >> 16) & 0x07);
+			m_pia.frame[1] = 0xf0 | ((line1718 >> 12) & 0x0f);
+		}
 	}
+}
+
+
+//-------------------------------------------------
+//  vsync_off - clear the VSYNC flag
+//-------------------------------------------------
+
+TIMER_CALLBACK_MEMBER(pioneer_pr8210_device::vsync_off)
+{
+	m_vsync = false;
 }
 
 
@@ -415,20 +408,17 @@ void pioneer_pr8210_device::device_add_mconfig(machine_config &config)
 void pioneer_pr8210_device::player_vsync(const vbi_metadata &vbi, int fieldnum, const attotime &curtime)
 {
 	// logging
-	if (LOG_VBLANK_VBI)
-	{
-		if ((vbi.line1718 & VBI_MASK_CAV_PICTURE) == VBI_CODE_CAV_PICTURE)
-			logerror("%3d:VSYNC(%d,%05d)\n", screen().vpos(), fieldnum, VBI_CAV_PICTURE(vbi.line1718));
-		else
-			logerror("%3d:VSYNC(%d)\n", screen().vpos(), fieldnum);
-	}
+	if ((vbi.line1718 & VBI_MASK_CAV_PICTURE) == VBI_CODE_CAV_PICTURE)
+		LOGMASKED(LOG_VBLANK_VBI, "%3d:VSYNC(%d,%05d)\n", screen().vpos(), fieldnum, VBI_CAV_PICTURE(vbi.line1718));
+	else
+		LOGMASKED(LOG_VBLANK_VBI, "%3d:VSYNC(%d)\n", screen().vpos(), fieldnum);
 
 	// signal VSYNC and set a timer to turn it off
 	m_vsync = true;
-	timer_set(screen().scan_period() * 4, TID_VSYNC_OFF);
+	m_vsync_off_timer->adjust(screen().scan_period() * 4);
 
 	// also set a timer to fetch the VBI data when it is ready
-	timer_set(screen().time_until_pos(19*2), TID_VBI_DATA_FETCH);
+	m_process_vbi_timer->adjust(screen().time_until_pos(19*2));
 }
 
 
@@ -440,8 +430,7 @@ void pioneer_pr8210_device::player_vsync(const vbi_metadata &vbi, int fieldnum, 
 int32_t pioneer_pr8210_device::player_update(const vbi_metadata &vbi, int fieldnum, const attotime &curtime)
 {
 	// logging
-	if (LOG_VBLANK_VBI)
-		logerror("%3d:Update(%d)\n", screen().vpos(), fieldnum);
+	LOGMASKED(LOG_VBLANK_VBI, "%3d:Update(%d)\n", screen().vpos(), fieldnum);
 
 	// if the spindle is on, we advance by 1 track after completing field #1
 	return spdl_on() ? fieldnum : 0;
@@ -507,20 +496,18 @@ uint8_t pioneer_pr8210_device::i8049_pia_r(offs_t offset)
 
 		// (C0) VBI decoding state 1
 		case 0xc0:
-			if (LOG_VBLANK_VBI)
-				logerror("%3d:PIA(C0)\n", screen().vpos());
+			LOGMASKED(LOG_VBLANK_VBI, "%3d:PIA(C0)\n", screen().vpos());
 			result = m_pia.vbi1;
 			break;
 
 		// (E0) VBI decoding state 2
 		case 0xe0:
-			if (LOG_VBLANK_VBI)
-				logerror("%3d:PIA(E0)\n", screen().vpos());
+			LOGMASKED(LOG_VBLANK_VBI, "%3d:PIA(E0)\n", screen().vpos());
 			result = m_pia.vbi2;
 			break;
 
 		default:
-			logerror("%s Unknown PR-8210 PIA read from offset %02X\n", machine().describe_context(), offset);
+			LOGMASKED(LOG_UNKNOWNS, "%s Unknown PR-8210 PIA read from offset %02X\n", machine().describe_context(), offset);
 			break;
 	}
 	return result;
@@ -592,7 +579,7 @@ void pioneer_pr8210_device::i8049_pia_w(offs_t offset, uint8_t data)
 
 		// no other writes known
 		default:
-			logerror("%s Unknown PR-8210 PIA write to offset %02X = %02X\n", machine().describe_context(), offset, data);
+			LOGMASKED(LOG_UNKNOWNS, "%s Unknown PR-8210 PIA write to offset %02X = %02X\n", machine().describe_context(), offset, data);
 			break;
 	}
 }
@@ -673,12 +660,13 @@ void pioneer_pr8210_device::i8049_port1_w(uint8_t data)
 		// special override for the Simutrek, which takes over control of this is some situations
 		if (!override_control())
 		{
-			if (LOG_SIMUTREK)
-				logerror("%3d:JUMP TRG\n", screen().vpos());
+			LOGMASKED(LOG_SIMUTREK, "%3d:JUMP TRG\n", screen().vpos());
 			advance_slider(direction);
 		}
-		else if (LOG_SIMUTREK)
-			logerror("%3d:Skipped JUMP TRG\n", screen().vpos());
+		else
+		{
+			LOGMASKED(LOG_SIMUTREK, "%3d:Skipped JUMP TRG\n", screen().vpos());
+		}
 	}
 
 	// bit 1 low enables scanning
@@ -784,12 +772,12 @@ void pioneer_pr8210_device::overlay_draw_group(bitmap_yuy16 &bitmap, const uint8
 
 void pioneer_pr8210_device::overlay_erase(bitmap_yuy16 &bitmap, float xstart, float xend)
 {
-	uint32_t xmin = (uint32_t)(xstart * 256.0f * float(bitmap.width()));
-	uint32_t xmax = (uint32_t)(xend * 256.0f * float(bitmap.width()));
+	uint32_t xmin = uint32_t(xstart * 256.0f * float(bitmap.width()));
+	uint32_t xmax = uint32_t(xend * 256.0f * float(bitmap.width()));
 
 	for (uint32_t y = OVERLAY_Y; y < (OVERLAY_Y + (OVERLAY_Y_PIXELS + 2) * OVERLAY_PIXEL_HEIGHT); y++)
 	{
-		uint16_t *dest = &bitmap.pix16(y, xmin >> 8);
+		uint16_t *dest = &bitmap.pix(y, xmin >> 8);
 		uint16_t ymax = *dest >> 8;
 		uint16_t ymin = ymax * 3 / 8;
 		uint16_t yres = ymin + ((ymax - ymin) * (xmin & 0xff)) / 256;
@@ -819,8 +807,8 @@ void pioneer_pr8210_device::overlay_erase(bitmap_yuy16 &bitmap, float xstart, fl
 
 void pioneer_pr8210_device::overlay_draw_char(bitmap_yuy16 &bitmap, uint8_t ch, float xstart)
 {
-	uint32_t xminbase = (uint32_t)(xstart * 256.0f * float(bitmap.width()));
-	uint32_t xsize = (uint32_t)(OVERLAY_PIXEL_WIDTH * 256.0f * float(bitmap.width()));
+	uint32_t xminbase = uint32_t(xstart * 256.0f * float(bitmap.width()));
+	uint32_t xsize = uint32_t(OVERLAY_PIXEL_WIDTH * 256.0f * float(bitmap.width()));
 
 	// iterate over pixels
 	const uint8_t *chdataptr = &text_bitmap[ch & 0x3f][0];
@@ -835,7 +823,7 @@ void pioneer_pr8210_device::overlay_draw_char(bitmap_yuy16 &bitmap, uint8_t ch, 
 				uint32_t xmax = xmin + xsize;
 				for (uint32_t yy = 0; yy < OVERLAY_PIXEL_HEIGHT; yy++)
 				{
-					uint16_t *dest = &bitmap.pix16(OVERLAY_Y + (y + 1) * OVERLAY_PIXEL_HEIGHT + yy, xmin >> 8);
+					uint16_t *dest = &bitmap.pix(OVERLAY_Y + (y + 1) * OVERLAY_PIXEL_HEIGHT + yy, xmin >> 8);
 					uint16_t ymax = 0xff;
 					uint16_t ymin = *dest >> 8;
 					uint16_t yres = ymin + ((ymax - ymin) * (~xmin & 0xff)) / 256;
@@ -905,9 +893,8 @@ simutrek_special_device::simutrek_special_device(const machine_config &mconfig, 
 
 void simutrek_special_device::data_w(uint8_t data)
 {
-	synchronize(TID_LATCH_DATA, data);
-	if (LOG_SIMUTREK)
-		logerror("%03d:**** Simutrek Command = %02X\n", screen().vpos(), data);
+	m_latch_data_timer->adjust(attotime::zero, data);
+	LOGMASKED(LOG_SIMUTREK, "%03d:**** Simutrek Command = %02X\n", screen().vpos(), data);
 }
 
 
@@ -918,8 +905,8 @@ void simutrek_special_device::data_w(uint8_t data)
 
 void simutrek_special_device::set_external_audio_squelch(int state)
 {
-	if (LOG_SIMUTREK && m_audio_squelch != (state == 0))
-		logerror("--> audio squelch = %d\n", state == 0);
+	if (m_audio_squelch != (state == 0))
+		LOGMASKED(LOG_SIMUTREK, "--> audio squelch = %d\n", state == 0);
 	m_audio_squelch = (state == 0);
 	update_audio_squelch();
 }
@@ -940,17 +927,15 @@ void simutrek_special_device::player_vsync(const vbi_metadata &vbi, int fieldnum
 	}
 
 	// call the parent
-	if (LOG_SIMUTREK)
-		logerror("%3d:VSYNC(%d)\n", screen().vpos(), fieldnum);
+	LOGMASKED(LOG_SIMUTREK, "%3d:VSYNC(%d)\n", screen().vpos(), fieldnum);
 	pioneer_pr8210_device::player_vsync(vbi, fieldnum, curtime);
 
 	// process data
 	if (m_data_ready)
 	{
-		if (LOG_SIMUTREK)
-			logerror("%3d:VSYNC IRQ\n", screen().vpos());
+		LOGMASKED(LOG_SIMUTREK, "%3d:VSYNC IRQ\n", screen().vpos());
 		m_i8748_cpu->set_input_line(MCS48_INPUT_IRQ, ASSERT_LINE);
-		timer_set(screen().scan_period(), TID_IRQ_OFF);
+		m_irq_off_timer->adjust(screen().scan_period());
 	}
 }
 
@@ -961,6 +946,10 @@ void simutrek_special_device::player_vsync(const vbi_metadata &vbi, int fieldnum
 
 void simutrek_special_device::device_start()
 {
+	// alocate timers
+	m_irq_off_timer = timer_alloc(FUNC(simutrek_special_device::irq_off), this);
+	m_latch_data_timer = timer_alloc(FUNC(simutrek_special_device::latch_data), this);
+
 	// pass through to the parent
 	pioneer_pr8210_device::device_start();
 }
@@ -982,30 +971,23 @@ void simutrek_special_device::device_reset()
 
 
 //-------------------------------------------------
-//  device_timer - handle timers set by this
-//  device
+//  irq_off - clear the 8748 IRQ
 //-------------------------------------------------
 
-void simutrek_special_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(simutrek_special_device::irq_off)
 {
-	switch (id)
-	{
-		// clear the 8748 IRQ
-		case TID_IRQ_OFF:
-			m_i8748_cpu->set_input_line(MCS48_INPUT_IRQ, CLEAR_LINE);
-			break;
+	m_i8748_cpu->set_input_line(MCS48_INPUT_IRQ, CLEAR_LINE);
+}
 
-		// latch data
-		case TID_LATCH_DATA:
-			m_data = param;
-			m_data_ready = true;
-			break;
 
-		// pass everything else onto the parent
-		default:
-			pioneer_pr8210_device::device_timer(timer, id, param, ptr);
-			break;
-	}
+//-------------------------------------------------
+//  latch_data - perform delayed latching of data
+//-------------------------------------------------
+
+TIMER_CALLBACK_MEMBER(simutrek_special_device::latch_data)
+{
+	m_data = param;
+	m_data_ready = true;
 }
 
 
@@ -1068,19 +1050,18 @@ void simutrek_special_device::i8748_port2_w(uint8_t data)
 	if (!(data & 0x10) && (prev & 0x10))
 	{
 		int direction = (data & 0x08) ? 1 : -1;
-		if (LOG_SIMUTREK)
-			logerror("%3d:JUMP TRG %s\n", screen().vpos(), machine().describe_context());
+		LOGMASKED(LOG_SIMUTREK, "%3d:JUMP TRG %s\n", screen().vpos(), machine().describe_context());
 		advance_slider(direction);
 	}
 
 	// bit $04 controls who owns the JUMP TRG command
-	if (LOG_SIMUTREK && ((data ^ prev) & 0x04))
-		logerror("%3d:Simutrek ownership line = %d %s\n", screen().vpos(), (data >> 2) & 1, machine().describe_context());
+	if ((data ^ prev) & 0x04)
+		LOGMASKED(LOG_SIMUTREK, "%3d:Simutrek ownership line = %d %s\n", screen().vpos(), (data >> 2) & 1, machine().describe_context());
 	m_controlnext = (~data >> 2) & 1;
 
 	// bits $03 control something (status?)
-	if (LOG_SIMUTREK && ((data ^ prev) & 0x03))
-		logerror("Simutrek Status = %d\n", data & 0x03);
+	if ((data ^ prev) & 0x03)
+		LOGMASKED(LOG_SIMUTREK, "Simutrek Status = %d\n", data & 0x03);
 }
 
 

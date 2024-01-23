@@ -1,13 +1,18 @@
 // license:BSD-3-Clause
 // copyright-holders:Andrew Gardner
-#ifndef __DEBUG_QT_MEMORY_WINDOW_H__
-#define __DEBUG_QT_MEMORY_WINDOW_H__
+#ifndef MAME_DEBUGGER_QT_MEMORYWINDOW_H
+#define MAME_DEBUGGER_QT_MEMORYWINDOW_H
 
-#include <QtWidgets/QLineEdit>
-#include <QtWidgets/QComboBox>
+#pragma once
 
 #include "debuggerview.h"
 #include "windowqt.h"
+
+#include <QtWidgets/QComboBox>
+#include <QtWidgets/QLineEdit>
+
+
+namespace osd::debugger::qt {
 
 class DebuggerMemView;
 
@@ -20,31 +25,40 @@ class MemoryWindow : public WindowQt
 	Q_OBJECT
 
 public:
-	MemoryWindow(running_machine* machine, QWidget* parent=nullptr);
+	MemoryWindow(DebuggerQt &debugger, QWidget *parent = nullptr);
 	virtual ~MemoryWindow();
 
+	virtual void restoreConfiguration(util::xml::data_node const &node) override;
+
+protected:
+	virtual void saveConfigurationToNode(util::xml::data_node &node) override;
+
+	// Used to intercept the user hitting the up arrow in the input widget
+	virtual bool eventFilter(QObject *obj, QEvent *event) override;
 
 private slots:
 	void memoryRegionChanged(int index);
 	void expressionSubmitted();
-	void formatChanged(QAction* changedTo);
-	void addressChanged(QAction* changedTo);
+	void expressionEdited(QString const &text);
+
+	void formatChanged(QAction *changedTo);
+	void addressChanged(QAction *changedTo);
+	void radixChanged(QAction *changedTo);
 	void reverseChanged(bool changedTo);
 	void increaseBytesPerLine(bool changedTo);
-	void decreaseBytesPerLine(bool checked=false);
-
+	void decreaseBytesPerLine(bool checked = false);
 
 private:
 	void populateComboBox();
 	void setToCurrentCpu();
-	QAction* dataFormatMenuItem(const QString& itemName);
 
-
-private:
 	// Widgets
-	QLineEdit* m_inputEdit;
-	QComboBox* m_memoryComboBox;
-	DebuggerMemView* m_memTable;
+	QLineEdit *m_inputEdit;
+	QComboBox *m_memoryComboBox;
+	DebuggerMemView *m_memTable;
+
+	// Expression history
+	CommandHistory m_inputHistory;
 };
 
 
@@ -53,47 +67,25 @@ private:
 //=========================================================================
 class DebuggerMemView : public DebuggerView
 {
+	Q_OBJECT
+
 public:
-	DebuggerMemView(const debug_view_type& type,
-					running_machine* machine,
-					QWidget* parent=nullptr)
+	DebuggerMemView(const debug_view_type& type, running_machine &machine, QWidget *parent = nullptr)
 		: DebuggerView(type, machine, parent)
 	{}
+
 	virtual ~DebuggerMemView() {}
 
 protected:
-	void mousePressEvent(QMouseEvent* event);
+	virtual void addItemsToContextMenu(QMenu *menu) override;
+
+private slots:
+	void copyLastPc();
+
+private:
+	QString m_lastPc;
 };
 
+} // namespace osd::debugger::qt
 
-//=========================================================================
-//  A way to store the configuration of a window long enough to read/write.
-//=========================================================================
-class MemoryWindowQtConfig : public WindowQtConfig
-{
-public:
-	MemoryWindowQtConfig() :
-		WindowQtConfig(WIN_TYPE_MEMORY),
-		m_reverse(0),
-		m_addressMode(0),
-		m_dataFormat(0),
-		m_memoryRegion(0)
-	{
-	}
-
-	~MemoryWindowQtConfig() {}
-
-	// Settings
-	int m_reverse;
-	int m_addressMode;
-	int m_dataFormat;
-	int m_memoryRegion;
-
-	void buildFromQWidget(QWidget* widget);
-	void applyToQWidget(QWidget* widget);
-	void addToXmlDataNode(util::xml::data_node &node) const;
-	void recoverFromXmlNode(util::xml::data_node const &node);
-};
-
-
-#endif
+#endif // MAME_DEBUGGER_QT_MEMORYWINDOW_H

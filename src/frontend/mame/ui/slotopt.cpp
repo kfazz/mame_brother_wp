@@ -45,6 +45,7 @@ namespace ui {
 
 menu_slot_devices::menu_slot_devices(mame_ui_manager &mui, render_container &container) : menu(mui, container)
 {
+	set_heading(_("Slot Devices"));
 }
 
 //-------------------------------------------------
@@ -85,7 +86,7 @@ device_slot_interface::slot_option const *menu_slot_devices::get_current_option(
 //  set_slot_device
 //-------------------------------------------------
 
-void menu_slot_devices::set_slot_device(device_slot_interface &slot, const char *val)
+void menu_slot_devices::set_slot_device(device_slot_interface &slot, std::string_view val)
 {
 	// we might change slot options; in the spirit of user friendliness, we should record all current
 	// options
@@ -115,7 +116,7 @@ void menu_slot_devices::set_slot_device(device_slot_interface &slot, const char 
 
 void menu_slot_devices::record_current_options()
 {
-	for (device_slot_interface &slot : slot_interface_iterator(m_config->root_device()))
+	for (device_slot_interface &slot : slot_interface_enumerator(m_config->root_device()))
 	{
 		// we're doing this out of a desire to honor user-selectable options; therefore it only
 		// makes sense to record values for selectable options
@@ -170,14 +171,14 @@ bool menu_slot_devices::try_refresh_current_options()
 //  populate
 //-------------------------------------------------
 
-void menu_slot_devices::populate(float &customtop, float &custombottom)
+void menu_slot_devices::populate()
 {
 	// we need to keep our own copy of the machine_config because we
 	// can change this out from under the caller
 	m_config = std::make_unique<machine_config>(machine().system(), machine().options());
 
 	// cycle through all devices for this system
-	for (device_slot_interface &slot : slot_interface_iterator(m_config->root_device()))
+	for (device_slot_interface &slot : slot_interface_enumerator(m_config->root_device()))
 	{
 		// does this slot have any selectable options?
 		bool has_selectable_options = slot.has_selectable_options();
@@ -200,10 +201,20 @@ void menu_slot_devices::populate(float &customtop, float &custombottom)
 		item_append(slot.slot_name(), opt_name, item_flags, (void *)&slot);
 	}
 	item_append(menu_item_type::SEPARATOR);
-	item_append(_("Reset"), "", 0, ITEMREF_RESET);
+	item_append(_("Reset System"), 0, ITEMREF_RESET);
+}
+
+
+//-------------------------------------------------
+//  recompute metrics
+//-------------------------------------------------
+
+void menu_slot_devices::recompute_metrics(uint32_t width, uint32_t height, float aspect)
+{
+	menu::recompute_metrics(width, height, aspect);
 
 	// leave space for the name of the current option at the bottom
-	custombottom = ui().get_line_height() + 3.0f * ui().box_tb_border();
+	set_custom_space(0.0F, line_height() + 3.0F * tb_border());
 }
 
 
@@ -220,9 +231,9 @@ void menu_slot_devices::custom_render(void *selectedref, float top, float bottom
 		char const *const text[] = { option ? option->devtype().fullname() : _("[empty slot]") };
 		draw_text_box(
 				std::begin(text), std::end(text),
-				origx1, origx2, origy2 + ui().box_tb_border(), origy2 + bottom,
-				ui::text_layout::CENTER, ui::text_layout::TRUNCATE, false,
-				ui().colors().text_color(), ui().colors().background_color(), 1.0f);
+				origx1, origx2, origy2 + tb_border(), origy2 + bottom,
+				text_layout::text_justify::CENTER, text_layout::word_wrapping::TRUNCATE, false,
+				ui().colors().text_color(), ui().colors().background_color());
 	}
 }
 
@@ -231,31 +242,30 @@ void menu_slot_devices::custom_render(void *selectedref, float top, float bottom
 //  handle - process an input event
 //-------------------------------------------------
 
-void menu_slot_devices::handle()
+bool menu_slot_devices::handle(event const *ev)
 {
-	// process the menu
-	event const *const menu_event(process(0));
+	if (!ev || !ev->itemref)
+		return false;
 
-	if (menu_event && menu_event->itemref != nullptr)
+	if (ev->itemref == ITEMREF_RESET)
 	{
-		if (menu_event->itemref == ITEMREF_RESET)
-		{
-			if (menu_event->iptkey == IPT_UI_SELECT)
-				machine().schedule_hard_reset();
-		}
-		else if (menu_event->iptkey == IPT_UI_LEFT || menu_event->iptkey == IPT_UI_RIGHT)
-		{
-			device_slot_interface *slot = (device_slot_interface *)menu_event->itemref;
-			rotate_slot_device(*slot, menu_event->iptkey == IPT_UI_LEFT ? step_t::PREVIOUS : step_t::NEXT);
-		}
-		else if (menu_event->iptkey == IPT_UI_SELECT)
-		{
-			device_slot_interface *slot = (device_slot_interface *)menu_event->itemref;
-			device_slot_interface::slot_option const *const option = get_current_option(*slot);
-			if (option)
-				menu::stack_push<menu_device_config>(ui(), container(), slot, option);
-		}
+		if (ev->iptkey == IPT_UI_SELECT)
+			machine().schedule_hard_reset();
 	}
+	else if (ev->iptkey == IPT_UI_LEFT || ev->iptkey == IPT_UI_RIGHT)
+	{
+		device_slot_interface *slot = (device_slot_interface *)ev->itemref;
+		rotate_slot_device(*slot, ev->iptkey == IPT_UI_LEFT ? step_t::PREVIOUS : step_t::NEXT);
+	}
+	else if (ev->iptkey == IPT_UI_SELECT)
+	{
+		device_slot_interface *slot = (device_slot_interface *)ev->itemref;
+		device_slot_interface::slot_option const *const option = get_current_option(*slot);
+		if (option)
+			menu::stack_push<menu_device_config>(ui(), container(), slot, option);
+	}
+
+	return false; // any changes require the menu to be rebuilt
 }
 
 
@@ -320,7 +330,7 @@ void menu_slot_devices::rotate_slot_device(device_slot_interface &slot, menu_slo
 		throw false;
 	}
 
-	set_slot_device(slot, m_current_option_list_iter->c_str());
+	set_slot_device(slot, *m_current_option_list_iter);
 }
 
 } // namespace ui

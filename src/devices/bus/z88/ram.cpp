@@ -38,7 +38,10 @@ z88_32k_ram_device::z88_32k_ram_device(const machine_config &mconfig, const char
 }
 
 z88_32k_ram_device::z88_32k_ram_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig, type, tag, owner, clock), device_z88cart_interface(mconfig, *this), m_ram(nullptr)
+	: device_t(mconfig, type, tag, owner, clock)
+	, device_nvram_interface(mconfig, *this)
+	, device_z88cart_interface(mconfig, *this)
+	, m_ram(nullptr)
 {
 }
 
@@ -93,7 +96,7 @@ uint8_t* z88_32k_ram_device::get_cart_base()
     read
 -------------------------------------------------*/
 
-READ8_MEMBER(z88_32k_ram_device::read)
+uint8_t z88_32k_ram_device::read(offs_t offset)
 {
 	return m_ram[offset & (get_cart_size() - 1)];
 }
@@ -102,7 +105,7 @@ READ8_MEMBER(z88_32k_ram_device::read)
     write
 -------------------------------------------------*/
 
-WRITE8_MEMBER(z88_32k_ram_device::write)
+void z88_32k_ram_device::write(offs_t offset, uint8_t data)
 {
 	m_ram[offset & (get_cart_size() - 1)] = data;
 }

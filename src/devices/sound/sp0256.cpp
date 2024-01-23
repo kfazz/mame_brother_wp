@@ -4,7 +4,7 @@
    GI SP0256 Narrator Speech Processor
    GI SPB640 Speech Buffer
 
-   By Joe Zbiciak. Ported to MESS by tim lindner.
+   By Joe Zbiciak. Ported to MAME by tim lindner.
 
    Unimplemented:
    - Microsequencer repeat count of zero
@@ -23,7 +23,6 @@
 #include "emu.h"
 #include "sp0256.h"
 
-#define LOG_GENERAL (1U << 0)
 #define LOG_FIFO    (1U << 1)
 
 //#define VERBOSE (LOG_GENERAL | LOG_FIFO)
@@ -69,12 +68,10 @@ sp0256_device::sp0256_device(const machine_config &mconfig, const char *tag, dev
 
 void sp0256_device::device_start()
 {
-	m_drq_cb.resolve_safe();
-	m_sby_cb.resolve_safe();
 	m_drq_cb(1);
 	m_sby_cb(1);
 
-	m_stream = machine().sound().stream_alloc(*this, 0, 1, clock() / CLOCK_DIVIDER);
+	m_stream = stream_alloc(0, 1, clock() / CLOCK_DIVIDER);
 
 	/* -------------------------------------------------------------------- */
 	/*  Configure our internal variables.                                   */
@@ -106,7 +103,7 @@ void sp0256_device::device_start()
 	// TODO: because of this, check if the bitrev functions are even used anywhere else
 	// bitrevbuff(m_rom, 0, 0xffff);
 
-	m_lrq_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(sp0256_device::set_lrq_timer_proc),this));
+	m_lrq_timer = timer_alloc(FUNC(sp0256_device::set_lrq_timer_proc), this);
 
 	// save device variables
 	save_item(NAME(m_sby_line));
@@ -1165,7 +1162,7 @@ void sp0256_device::ald_w(uint8_t data)
 	return;
 }
 
-READ_LINE_MEMBER( sp0256_device::lrq_r )
+int sp0256_device::lrq_r()
 {
 	// force stream update
 	m_stream->update();
@@ -1173,7 +1170,7 @@ READ_LINE_MEMBER( sp0256_device::lrq_r )
 	return m_lrq == 0x8000;
 }
 
-READ_LINE_MEMBER( sp0256_device::sby_r )
+int sp0256_device::sby_r()
 {
 	// TODO: force stream update??
 
@@ -1263,13 +1260,13 @@ TIMER_CALLBACK_MEMBER(sp0256_device::set_lrq_timer_proc)
 //  sound_stream_update - handle a stream update
 //-------------------------------------------------
 
-void sp0256_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void sp0256_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
 {
-	stream_sample_t *output = outputs[0];
+	auto &output = outputs[0];
 	int output_index = 0;
 	int length, did_samp/*, old_idx*/;
 
-	while (output_index < samples)
+	while (output_index < output.samples())
 	{
 		/* ---------------------------------------------------------------- */
 		/*  First, drain as much of our scratch buffer as we can into the   */
@@ -1278,20 +1275,20 @@ void sp0256_device::sound_stream_update(sound_stream &stream, stream_sample_t **
 
 		while (m_sc_tail != m_sc_head)
 		{
-			output[output_index++] = m_scratch[m_sc_tail++ & SCBUF_MASK];
+			output.put_int(output_index++, m_scratch[m_sc_tail++ & SCBUF_MASK], 32768);
 			m_sc_tail &= SCBUF_MASK;
 
-			if (output_index > samples)
+			if (output_index >= output.samples())
 				break;
 		}
 
 		/* ---------------------------------------------------------------- */
 		/*  If output outputs is full, then we're done.                      */
 		/* ---------------------------------------------------------------- */
-		if (output_index > samples)
+		if (output_index > output.samples())
 			break;
 
-		length = samples - output_index;
+		length = output.samples() - output_index;
 
 		/* ---------------------------------------------------------------- */
 		/*  Process the current set of filter coefficients as long as the   */

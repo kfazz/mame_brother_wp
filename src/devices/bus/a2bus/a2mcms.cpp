@@ -123,7 +123,7 @@ mcms_device *a2bus_mcms1_device::get_engine(void)
 	return m_mcms;
 }
 
-WRITE_LINE_MEMBER(a2bus_mcms1_device::irq_w)
+void a2bus_mcms1_device::irq_w(int state)
 {
 	if (state == ASSERT_LINE)
 	{
@@ -205,10 +205,9 @@ mcms_device::mcms_device(const machine_config &mconfig, const char *tag, device_
 
 void mcms_device::device_start()
 {
-	m_write_irq.resolve();
-	m_stream = machine().sound().stream_alloc(*this, 0, 2, 31250);
-	m_timer = timer_alloc(0, nullptr);
-	m_clrtimer = timer_alloc(1, nullptr);
+	m_stream = stream_alloc(0, 2, 31250);
+	m_timer = timer_alloc(FUNC(mcms_device::set_irq_tick), this);
+	m_clrtimer = timer_alloc(FUNC(mcms_device::clr_irq_tick), this);
 	m_enabled = false;
 	memset(m_vols, 0, sizeof(m_vols));
 	memset(m_table, 0, sizeof(m_table));
@@ -238,34 +237,31 @@ void mcms_device::device_reset()
 	m_enabled = false;
 }
 
-void mcms_device::device_timer(emu_timer &timer, device_timer_id tid, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(mcms_device::set_irq_tick)
 {
-	if (tid == 0)
-	{
-		m_write_irq(ASSERT_LINE);
-		// clear this IRQ in 10 cycles (?)
-		m_clrtimer->adjust(attotime::from_usec(10), 0);
-	}
-	else if (tid == 1)
-	{
-		m_write_irq(CLEAR_LINE);
-	}
+	m_write_irq(ASSERT_LINE);
+	// clear this IRQ in 10 cycles (?)
+	m_clrtimer->adjust(attotime::from_usec(10), 0);
 }
 
-void mcms_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+TIMER_CALLBACK_MEMBER(mcms_device::clr_irq_tick)
 {
-	stream_sample_t *outL, *outR;
+	m_write_irq(CLEAR_LINE);
+}
+
+void mcms_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
+{
 	int i, v;
 	uint16_t wptr;
 	int8_t sample;
 	int32_t mixL, mixR;
 
-	outL = outputs[1];
-	outR = outputs[0];
+	auto &outL = outputs[1];
+	auto &outR = outputs[0];
 
 	if (m_enabled)
 	{
-		for (i = 0; i < samples; i++)
+		for (i = 0; i < outL.samples(); i++)
 		{
 			mixL = mixR = 0;
 
@@ -286,16 +282,14 @@ void mcms_device::sound_stream_update(sound_stream &stream, stream_sample_t **in
 				}
 			}
 
-			outL[i] = (mixL * m_mastervol)>>9;
-			outR[i] = (mixR * m_mastervol)>>9;
+			outL.put_int(i, mixL * m_mastervol, 32768 << 9);
+			outR.put_int(i, mixR * m_mastervol, 32768 << 9);
 		}
 	}
 	else
 	{
-		for (i = 0; i < samples; i++)
-		{
-			outL[i] = outR[i] = 0;
-		}
+		outL.fill(0);
+		outR.fill(0);
 	}
 }
 

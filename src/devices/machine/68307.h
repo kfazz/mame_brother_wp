@@ -40,36 +40,34 @@ protected:
 	virtual void device_reset() override;
 	virtual void device_add_mconfig(machine_config &config) override;
 
-	virtual void m68k_reset_peripherals() override;
-
 private:
+	void reset_peripherals(int state);
+
 	void set_ipl(int level);
-	DECLARE_WRITE_LINE_MEMBER(timer0_interrupt);
-	DECLARE_WRITE_LINE_MEMBER(timer1_interrupt);
-	DECLARE_WRITE_LINE_MEMBER(mbus_interrupt);
+	void timer0_interrupt(int state);
+	void timer1_interrupt(int state);
+	void mbus_interrupt(int state);
 
 	uint8_t int_ack(offs_t offset);
 
-	DECLARE_WRITE_LINE_MEMBER(m68307_duart_irq_handler);
-	DECLARE_WRITE_LINE_MEMBER(m68307_duart_txa) { m_write_a_tx(state); }
-	DECLARE_WRITE_LINE_MEMBER(m68307_duart_txb) { m_write_b_tx(state);  }
-	DECLARE_READ8_MEMBER(m68307_duart_input_r) { return m_read_inport();  }
-	DECLARE_WRITE8_MEMBER(m68307_duart_output_w) { m_write_outport(data);  }
-
-	void init16_m68307(address_space &space);
+	void m68307_duart_irq_handler(int state);
+	void m68307_duart_txa(int state) { m_write_a_tx(state); }
+	void m68307_duart_txb(int state) { m_write_b_tx(state);  }
+	uint8_t m68307_duart_input_r() { return m_read_inport();  }
+	void m68307_duart_output_w(uint8_t data) { m_write_outport(data);  }
 
 	int calc_cs(offs_t address) const;
 
-	DECLARE_READ16_MEMBER( m68307_internal_base_r );
-	DECLARE_WRITE16_MEMBER( m68307_internal_base_w );
-	DECLARE_READ16_MEMBER( m68307_internal_timer_r );
-	DECLARE_WRITE16_MEMBER( m68307_internal_timer_w );
-	DECLARE_READ16_MEMBER( m68307_internal_sim_r );
-	DECLARE_WRITE16_MEMBER( m68307_internal_sim_w );
-	DECLARE_READ8_MEMBER( m68307_internal_serial_r );
-	DECLARE_WRITE8_MEMBER( m68307_internal_serial_w );
-	DECLARE_READ8_MEMBER( m68307_internal_mbus_r );
-	DECLARE_WRITE8_MEMBER( m68307_internal_mbus_w );
+	uint16_t m68307_internal_base_r(offs_t offset, uint16_t mem_mask = ~0);
+	void m68307_internal_base_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
+	uint16_t m68307_internal_timer_r(offs_t offset, uint16_t mem_mask = ~0);
+	void m68307_internal_timer_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
+	uint16_t m68307_internal_sim_r(address_space &space, offs_t offset, uint16_t mem_mask = ~0);
+	void m68307_internal_sim_w(address_space &space, offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
+	uint8_t m68307_internal_serial_r(offs_t offset);
+	void m68307_internal_serial_w(offs_t offset, uint8_t data);
+	uint8_t m68307_internal_mbus_r(offs_t offset);
+	void m68307_internal_mbus_w(offs_t offset, uint8_t data);
 
 	void internal_map(address_map &map);
 	void cpu_space_map(address_map &map);

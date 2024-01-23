@@ -24,7 +24,6 @@
     the 2002 chip seems to be the one that was officially dubbed 'SuperXaviX'
     and has additional video capabilities on top of the extended opcodes.
 
-
 ***************************************************************************/
 
 #include "emu.h"
@@ -39,10 +38,6 @@ DEFINE_DEVICE_TYPE(XAVIX2002, xavix2002_device, "xavix2002", "XaviX (SSD 2002) (
 xavix2000_device::xavix2000_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock) :
 	xavix_device(mconfig, type, tag, owner, clock)
 {
-	program_config.m_addr_width = 24;
-	program_config.m_logaddr_width = 24;
-	sprogram_config.m_addr_width = 24;
-	sprogram_config.m_logaddr_width = 24;
 }
 
 xavix2000_device::xavix2000_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
@@ -60,10 +55,10 @@ void xavix2000_device::device_start()
 {
 	xavix_device::device_start();
 
-	state_add(SXAVIX_J, "J", m_j).callimport().formatstr("%8s");;
-	state_add(SXAVIX_K, "K", m_k).callimport().formatstr("%8s");;
-	state_add(SXAVIX_L, "L", m_l).callimport().formatstr("%8s");;
-	state_add(SXAVIX_M, "M", m_m).callimport().formatstr("%8s");;
+	state_add(SXAVIX_J, "J", m_j).callimport().formatstr("%8s");
+	state_add(SXAVIX_K, "K", m_k).callimport().formatstr("%8s");
+	state_add(SXAVIX_L, "L", m_l).callimport().formatstr("%8s");
+	state_add(SXAVIX_M, "M", m_m).callimport().formatstr("%8s");
 	state_add(SXAVIX_PA, "PA", m_pa).callimport().formatstr("%8s");
 	state_add(SXAVIX_PB, "PB", m_pb).callimport().formatstr("%8s");
 }

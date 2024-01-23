@@ -32,8 +32,8 @@ public:
 	virtual void z80_program_map(address_map &map);
 	virtual void z80_io_map(address_map &map);
 
-	DECLARE_WRITE_LINE_MEMBER( int1_w );
-	DECLARE_WRITE_LINE_MEMBER( int2_w );
+	void int1_w(int state);
+	void int2_w(int state);
 
 	void io_map(address_map &map);
 	void program_map(address_map &map);
@@ -41,13 +41,15 @@ protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// device_memory_interface overrides
 	virtual space_config_vector memory_space_config() const override;
 
 	// sound stream update overrides
-	virtual void sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples) override;
+	virtual void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
+
+	TIMER_CALLBACK_MEMBER(update_1hz_timer);
+	TIMER_CALLBACK_MEMBER(update_50hz_timer);
 
 	uint8_t program_r(offs_t offset);
 	void program_w(offs_t offset, uint8_t data);
@@ -56,12 +58,6 @@ protected:
 	void io_w(offs_t offset, uint8_t data);
 
 private:
-	enum
-	{
-		TIMER_1HZ,
-		TIMER_50HZ
-	};
-
 	enum
 	{
 		IRQ_50HZ_DIVIDER    = 0x01,

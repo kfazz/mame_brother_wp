@@ -9,7 +9,7 @@
 ***************************************************************************/
 
 #include "emu.h"
-#include "debugger.h"
+#include "debug/debugcpu.h"
 #include "drcbec.h"
 
 #include <cmath>
@@ -528,7 +528,7 @@ int drcbe_c::execute(code_handle &entry)
 				newinst = (const drcbec_instruction *)m_hash.get_codeptr(PARAM0, PARAM1);
 				if (newinst == nullptr)
 				{
-					assert(sp < ARRAY_LENGTH(callstack));
+					assert(sp < std::size(callstack));
 					m_state.exp = PARAM1;
 					newinst = (const drcbec_instruction *)inst[2].handle->codeptr();
 					callstack[sp++] = inst;
@@ -540,7 +540,7 @@ int drcbe_c::execute(code_handle &entry)
 			case MAKE_OPCODE_SHORT(OP_EXIT, 4, 1):      // EXIT    src1[,c]
 				if (OPCODE_FAIL_CONDITION(opcode, flags))
 					break;
-				// fall through...
+				[[fallthrough]];
 
 			case MAKE_OPCODE_SHORT(OP_EXIT, 4, 0):
 				return PARAM0;
@@ -548,7 +548,7 @@ int drcbe_c::execute(code_handle &entry)
 			case MAKE_OPCODE_SHORT(OP_JMP, 4, 1):       // JMP     imm[,c]
 				if (OPCODE_FAIL_CONDITION(opcode, flags))
 					break;
-				// fall through...
+				[[fallthrough]];
 
 			case MAKE_OPCODE_SHORT(OP_JMP, 4, 0):
 				newinst = inst[0].inst;
@@ -559,10 +559,10 @@ int drcbe_c::execute(code_handle &entry)
 			case MAKE_OPCODE_SHORT(OP_CALLH, 4, 1):     // CALLH   handle[,c]
 				if (OPCODE_FAIL_CONDITION(opcode, flags))
 					break;
-				// fall through...
+				[[fallthrough]];
 
 			case MAKE_OPCODE_SHORT(OP_CALLH, 4, 0):
-				assert(sp < ARRAY_LENGTH(callstack));
+				assert(sp < std::size(callstack));
 				newinst = (const drcbec_instruction *)inst[0].handle->codeptr();
 				assert_in_cache(m_cache, newinst);
 				callstack[sp++] = inst + OPCODE_GET_PWORDS(opcode);
@@ -572,7 +572,7 @@ int drcbe_c::execute(code_handle &entry)
 			case MAKE_OPCODE_SHORT(OP_RET, 4, 1):       // RET     [c]
 				if (OPCODE_FAIL_CONDITION(opcode, flags))
 					break;
-				// fall through...
+				[[fallthrough]];
 
 			case MAKE_OPCODE_SHORT(OP_RET, 4, 0):
 				assert(sp > 0);
@@ -584,10 +584,10 @@ int drcbe_c::execute(code_handle &entry)
 			case MAKE_OPCODE_SHORT(OP_EXH, 4, 1):       // EXH     handle,param[,c]
 				if (OPCODE_FAIL_CONDITION(opcode, flags))
 					break;
-				// fall through...
+				[[fallthrough]];
 
 			case MAKE_OPCODE_SHORT(OP_EXH, 4, 0):
-				assert(sp < ARRAY_LENGTH(callstack));
+				assert(sp < std::size(callstack));
 				newinst = (const drcbec_instruction *)inst[0].handle->codeptr();
 				assert_in_cache(m_cache, newinst);
 				m_state.exp = PARAM1;
@@ -598,7 +598,7 @@ int drcbe_c::execute(code_handle &entry)
 			case MAKE_OPCODE_SHORT(OP_CALLC, 4, 1):     // CALLC   func,ptr[,c]
 				if (OPCODE_FAIL_CONDITION(opcode, flags))
 					break;
-				// fall through...
+				[[fallthrough]];
 
 			case MAKE_OPCODE_SHORT(OP_CALLC, 4, 0):
 				(*inst[0].cfunc)(inst[1].v);
@@ -833,7 +833,7 @@ int drcbe_c::execute(code_handle &entry)
 			case MAKE_OPCODE_SHORT(OP_MOV, 4, 1):       // MOV     dst,src[,c]
 				if (OPCODE_FAIL_CONDITION(opcode, flags))
 					break;
-				// fall through...
+				[[fallthrough]];
 
 			case MAKE_OPCODE_SHORT(OP_MOV, 4, 0):
 				PARAM0 = PARAM1;
@@ -864,25 +864,21 @@ int drcbe_c::execute(code_handle &entry)
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROLAND, 4, 0):    // ROLAND  dst,src,count,mask[,f]
-				shift = PARAM2 & 31;
-				PARAM0 = ((PARAM1 << shift) | (PARAM1 >> (32 - shift))) & PARAM3;
+				PARAM0 = rotl_32(PARAM1, PARAM2) & PARAM3;
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROLAND, 4, 1):
-				shift = PARAM2 & 31;
-				temp32 = ((PARAM1 << shift) | (PARAM1 >> (32 - shift))) & PARAM3;
+				temp32 = rotl_32(PARAM1, PARAM2) & PARAM3;
 				flags = FLAGS32_NZ(temp32);
 				PARAM0 = temp32;
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROLINS, 4, 0):    // ROLINS  dst,src,count,mask[,f]
-				shift = PARAM2 & 31;
-				PARAM0 = (PARAM0 & ~PARAM3) | (((PARAM1 << shift) | (PARAM1 >> (32 - shift))) & PARAM3);
+				PARAM0 = (PARAM0 & ~PARAM3) | (rotl_32(PARAM1, PARAM2) & PARAM3);
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROLINS, 4, 1):
-				shift = PARAM2 & 31;
-				temp32 = (PARAM0 & ~PARAM3) | (((PARAM1 << shift) | (PARAM1 >> (32 - shift))) & PARAM3);
+				temp32 = (PARAM0 & ~PARAM3) | (rotl_32(PARAM1, PARAM2) & PARAM3);
 				flags = FLAGS32_NZ(temp32);
 				PARAM0 = temp32;
 				break;
@@ -1062,11 +1058,11 @@ int drcbe_c::execute(code_handle &entry)
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_LZCNT, 4, 0):     // LZCNT   dst,src
-				PARAM0 = count_leading_zeros(PARAM1);
+				PARAM0 = count_leading_zeros_32(PARAM1);
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_LZCNT, 4, 1):
-				temp32 = count_leading_zeros(PARAM1);
+				temp32 = count_leading_zeros_32(PARAM1);
 				flags = FLAGS32_NZ(temp32);
 				PARAM0 = temp32;
 				break;
@@ -1138,13 +1134,12 @@ int drcbe_c::execute(code_handle &entry)
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROL, 4, 0):       // ROL     dst,src,count[,f]
-				shift = PARAM2 & 31;
-				PARAM0 = (PARAM1 << shift) | (PARAM1 >> ((32 - shift) & 31));
+				PARAM0 = rotl_32(PARAM1, PARAM2);
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROL, 4, 1):
 				shift = PARAM2 & 31;
-				temp32 = (PARAM1 << shift) | (PARAM1 >> ((32 - shift) & 31));
+				temp32 = rotl_32(PARAM1, shift);
 				if (shift != 0)
 				{
 					flags = FLAGS32_NZ(temp32);
@@ -1175,13 +1170,12 @@ int drcbe_c::execute(code_handle &entry)
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROR, 4, 0):       // ROR     dst,src,count[,f]
-				shift = PARAM2 & 31;
-				PARAM0 = (PARAM1 >> shift) | (PARAM1 << ((32 - shift) & 31));
+				PARAM0 = rotr_32(PARAM1, PARAM2);
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROR, 4, 1):
 				shift = PARAM2 & 31;
-				temp32 = (PARAM1 >> shift) | (PARAM1 << ((32 - shift) & 31));
+				temp32 = rotr_32(PARAM1, shift);
 				flags = FLAGS32_NZ(temp32);
 				if (shift != 0) flags |= (PARAM1 >> (shift - 1)) & FLAG_C;
 				PARAM0 = temp32;
@@ -1466,7 +1460,7 @@ int drcbe_c::execute(code_handle &entry)
 			case MAKE_OPCODE_SHORT(OP_MOV, 8, 1):       // DMOV    dst,src[,c]
 				if (OPCODE_FAIL_CONDITION(opcode, flags))
 					break;
-				// fall through...
+				[[fallthrough]];
 
 			case MAKE_OPCODE_SHORT(OP_MOV, 8, 0):
 				DPARAM0 = DPARAM1;
@@ -1507,25 +1501,21 @@ int drcbe_c::execute(code_handle &entry)
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROLAND, 8, 0):    // DROLAND dst,src,count,mask[,f]
-				shift = DPARAM2 & 63;
-				DPARAM0 = ((DPARAM1 << shift) | (DPARAM1 >> (64 - shift))) & DPARAM3;
+				DPARAM0 = rotl_64(DPARAM1, DPARAM2) & DPARAM3;
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROLAND, 8, 1):
-				shift = DPARAM2 & 63;
-				temp64 = ((DPARAM1 << shift) | (DPARAM1 >> (64 - shift))) & DPARAM3;
+				temp64 = rotl_64(DPARAM1, DPARAM2) & DPARAM3;
 				flags = FLAGS64_NZ(temp64);
 				DPARAM0 = temp64;
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROLINS, 8, 0):    // DROLINS dst,src,count,mask[,f]
-				shift = DPARAM2 & 63;
-				DPARAM0 = (DPARAM0 & ~DPARAM3) | (((DPARAM1 << shift) | (DPARAM1 >> (64 - shift))) & DPARAM3);
+				DPARAM0 = (DPARAM0 & ~DPARAM3) | (rotl_64(DPARAM1, DPARAM2) & DPARAM3);
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROLINS, 8, 1):
-				shift = DPARAM2 & 63;
-				temp64 = (DPARAM0 & ~DPARAM3) | (((DPARAM1 << shift) | (DPARAM1 >> (64 - shift))) & DPARAM3);
+				temp64 = (DPARAM0 & ~DPARAM3) | (rotl_64(DPARAM1, DPARAM2) & DPARAM3);
 				flags = FLAGS64_NZ(temp64);
 				DPARAM0 = temp64;
 				break;
@@ -1650,7 +1640,7 @@ int drcbe_c::execute(code_handle &entry)
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_TEST, 8, 1):      // DTEST   src1,src2[,f]
-				temp64 = DPARAM1 & DPARAM2;
+				temp64 = DPARAM0 & DPARAM1;
 				flags = FLAGS64_NZ(temp64);
 				break;
 
@@ -1675,17 +1665,11 @@ int drcbe_c::execute(code_handle &entry)
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_LZCNT, 8, 0):     // DLZCNT  dst,src
-				if ((uint32_t)(DPARAM1 >> 32) != 0)
-					DPARAM0 = count_leading_zeros(DPARAM1 >> 32);
-				else
-					DPARAM0 = 32 + count_leading_zeros(DPARAM1);
+				DPARAM0 = count_leading_zeros_64(DPARAM1);
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_LZCNT, 8, 1):
-				if ((uint32_t)(DPARAM1 >> 32) != 0)
-					temp64 = count_leading_zeros(DPARAM1 >> 32);
-				else
-					temp64 = 32 + count_leading_zeros(DPARAM1);
+				temp64 = count_leading_zeros_64(DPARAM1);
 				flags = FLAGS64_NZ(temp64);
 				DPARAM0 = temp64;
 				break;
@@ -1748,13 +1732,12 @@ int drcbe_c::execute(code_handle &entry)
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROL, 8, 0):       // DROL    dst,src,count[,f]
-				shift = DPARAM2 & 63;
-				DPARAM0 = (DPARAM1 << shift) | (DPARAM1 >> ((64 - shift) & 63));
+				DPARAM0 = rotl_64(DPARAM1, DPARAM2);
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROL, 8, 1):
 				shift = DPARAM2 & 63;
-				temp64 = (DPARAM1 << shift) | (DPARAM1 >> ((64 - shift) & 63));
+				temp64 = rotl_64(DPARAM1, shift);
 				flags = FLAGS64_NZ(temp64);
 				if (shift != 0) flags |= ((DPARAM1 << (shift - 1)) >> 63) & FLAG_C;
 				DPARAM0 = temp64;
@@ -1782,13 +1765,12 @@ int drcbe_c::execute(code_handle &entry)
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROR, 8, 0):       // DROR    dst,src,count[,f]
-				shift = DPARAM2 & 63;
-				DPARAM0 = (DPARAM1 >> shift) | (DPARAM1 << ((64 - shift) & 63));
+				DPARAM0 = rotr_64(DPARAM1, DPARAM2);
 				break;
 
 			case MAKE_OPCODE_SHORT(OP_ROR, 8, 1):
 				shift = DPARAM2 & 63;
-				temp64 = (DPARAM1 >> shift) | (DPARAM1 << ((64 - shift) & 63));
+				temp64 = rotr_64(DPARAM1, shift);
 				flags = FLAGS64_NZ(temp64);
 				if (shift != 0) flags |= (DPARAM1 >> (shift - 1)) & FLAG_C;
 				DPARAM0 = temp64;
@@ -1837,7 +1819,7 @@ int drcbe_c::execute(code_handle &entry)
 			case MAKE_OPCODE_SHORT(OP_FMOV, 4, 1):      // FSMOV   dst,src[,c]
 				if (OPCODE_FAIL_CONDITION(opcode, flags))
 					break;
-				// fall through...
+				[[fallthrough]];
 
 			case MAKE_OPCODE_SHORT(OP_FMOV, 4, 0):
 				FSPARAM0 = FSPARAM1;
@@ -1980,7 +1962,7 @@ int drcbe_c::execute(code_handle &entry)
 			case MAKE_OPCODE_SHORT(OP_FMOV, 8, 1):      // FDMOV   dst,src[,c]
 				if (OPCODE_FAIL_CONDITION(opcode, flags))
 					break;
-				// fall through...
+				[[fallthrough]];
 
 			case MAKE_OPCODE_SHORT(OP_FMOV, 8, 0):
 				FDPARAM0 = FDPARAM1;

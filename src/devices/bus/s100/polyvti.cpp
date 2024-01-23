@@ -54,7 +54,7 @@ private:
 	u32 screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
 	void kbd_put(u8 data);
-	DECLARE_WRITE_LINE_MEMBER(kbd_int_w);
+	void kbd_int_w(int state);
 
 	// object finders
 	required_device<i8212_device> m_kbdlatch;
@@ -119,22 +119,22 @@ u32 poly_vti_device::screen_update(screen_device &screen, bitmap_ind16 &bitmap, 
 					{
 						u8 r = b/5;
 						if (l==0 && r==0)
-							bitmap.pix16(y*15+j, xpos+b ) = BIT(code,5) ? 0 : 1;
+							bitmap.pix(y*15+j, xpos+b ) = BIT(code,5) ? 0 : 1;
 
 						if (l==0 && r==1)
-							bitmap.pix16(y*15+j, xpos+b ) = BIT(code,2) ? 0 : 1;
+							bitmap.pix(y*15+j, xpos+b ) = BIT(code,2) ? 0 : 1;
 
 						if (l==1 && r==0)
-							bitmap.pix16(y*15+j, xpos+b ) = BIT(code,4) ? 0 : 1;
+							bitmap.pix(y*15+j, xpos+b ) = BIT(code,4) ? 0 : 1;
 
 						if (l==1 && r==1)
-							bitmap.pix16(y*15+j, xpos+b ) = BIT(code,1) ? 0 : 1;
+							bitmap.pix(y*15+j, xpos+b ) = BIT(code,1) ? 0 : 1;
 
 						if (l==2 && r==0)
-							bitmap.pix16(y*15+j, xpos+b ) = BIT(code,3) ? 0 : 1;
+							bitmap.pix(y*15+j, xpos+b ) = BIT(code,3) ? 0 : 1;
 
 						if (l==2 && r==1)
-							bitmap.pix16(y*15+j, xpos+b ) = BIT(code,0) ? 0 : 1;
+							bitmap.pix(y*15+j, xpos+b ) = BIT(code,0) ? 0 : 1;
 					}
 				}
 			}
@@ -156,11 +156,11 @@ u32 poly_vti_device::screen_update(screen_device &screen, bitmap_ind16 &bitmap, 
 					}
 
 					for (int b = 0; b < 7; b++)
-						bitmap.pix16(y*15+j, xpos+b ) =  (l >> (6-b)) & 1;
+						bitmap.pix(y*15+j, xpos+b ) =  (l >> (6-b)) & 1;
 
-					bitmap.pix16(y*15+j, xpos+7 ) =  0;
-					bitmap.pix16(y*15+j, xpos+8 ) =  0;
-					bitmap.pix16(y*15+j, xpos+9 ) =  0;
+					bitmap.pix(y*15+j, xpos+7 ) =  0;
+					bitmap.pix(y*15+j, xpos+8 ) =  0;
+					bitmap.pix(y*15+j, xpos+9 ) =  0;
 				}
 			}
 			xpos += 10;
@@ -206,7 +206,7 @@ void poly_vti_device::kbd_put(u8 data)
 	}
 }
 
-WRITE_LINE_MEMBER(poly_vti_device::kbd_int_w)
+void poly_vti_device::kbd_int_w(int state)
 {
 	m_kbd_int = !state;
 

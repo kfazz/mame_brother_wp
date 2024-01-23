@@ -6,7 +6,7 @@
 #pragma once
 
 #include "isa.h"
-#include "video/clgd542x.h"
+#include "video/pc_vga_cirrus.h"
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -20,7 +20,7 @@ public:
 	// construction/destruction
 	isa16_svga_cirrus_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(input_port_0_r);
+	uint8_t input_port_0_r();
 
 protected:
 	// device-level overrides
@@ -30,6 +30,8 @@ protected:
 	// optional information overrides
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual const tiny_rom_entry *device_rom_region() const override;
+
+	void io_isa_map(address_map &map);
 
 private:
 	required_device<cirrus_gd5430_device> m_vga;
@@ -43,7 +45,7 @@ public:
 	// construction/destruction
 	isa16_svga_cirrus_gd542x_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(input_port_0_r);
+	uint8_t input_port_0_r();
 
 protected:
 	// device-level overrides
@@ -53,6 +55,8 @@ protected:
 	// optional information overrides
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual const tiny_rom_entry *device_rom_region() const override;
+
+	void io_isa_map(address_map &map);
 
 private:
 	required_device<cirrus_gd5428_device> m_vga;

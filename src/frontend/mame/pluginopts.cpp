@@ -10,7 +10,9 @@
 
 #include "emu.h"
 #include "pluginopts.h"
+
 #include "options.h"
+#include "path.h"
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -47,13 +49,12 @@ void plugin_options::scan_directory(const std::string &path, bool recursive)
 		{
 			if (entry->type == osd::directory::entry::entry_type::FILE && !strcmp(entry->name, "plugin.json"))
 			{
-				std::string curfile = std::string(path).append(PATH_SEPARATOR).append(entry->name);
-				load_plugin(curfile);
+				load_plugin(util::path_concat(path, entry->name));
 			}
 			else if (entry->type == osd::directory::entry::entry_type::DIR)
 			{
 				if (recursive && strcmp(entry->name, ".") && strcmp(entry->name, ".."))
-					scan_directory(path + PATH_SEPARATOR + entry->name, recursive);
+					scan_directory(util::path_concat(path, entry->name), recursive);
 			}
 		}
 	}
@@ -107,7 +108,7 @@ bool plugin_options::load_plugin(const std::string &path)
 //  find
 //-------------------------------------------------
 
-plugin *plugin_options::find(const std::string &name)
+plugin_options::plugin *plugin_options::find(const std::string &name)
 {
 	auto iter = std::find_if(
 		m_plugins.begin(),
@@ -131,7 +132,7 @@ static core_options create_core_options(const plugin_options &plugin_opts)
 	// the data back
 	static const options_entry s_option_entries[] =
 	{
-		{ nullptr, nullptr, OPTION_HEADER, "PLUGINS OPTIONS" },
+		{ nullptr, nullptr, core_options::option_type::HEADER, "PLUGINS OPTIONS" },
 		{ nullptr }
 	};
 
@@ -139,13 +140,16 @@ static core_options create_core_options(const plugin_options &plugin_opts)
 	opts.add_entries(s_option_entries);
 
 	// create an entry for each option
-	for (const plugin &p : plugin_opts.plugins())
+	for (const plugin_options::plugin &p : plugin_opts.plugins())
 	{
-		opts.add_entry(
-			{ p.m_name },
-			nullptr,
-			core_options::option_type::BOOLEAN,
-			p.m_start ? "1" : "0");
+		if (p.m_type != "library")
+		{
+			opts.add_entry(
+				{ p.m_name },
+				nullptr,
+				core_options::option_type::BOOLEAN,
+				p.m_start ? "1" : "0");
+		}
 	}
 
 	return opts;
@@ -165,7 +169,7 @@ void plugin_options::parse_ini_file(util::core_file &inifile)
 
 	// and reflect these options back
 	for (plugin &p : m_plugins)
-		p.m_start = opts.bool_value(p.m_name.c_str());
+		p.m_start = opts.bool_value(p.m_name);
 }
 
 

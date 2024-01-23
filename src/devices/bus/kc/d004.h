@@ -34,7 +34,6 @@ protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// optional information overrides
 	virtual void device_add_mconfig(machine_config &config) override;
@@ -47,21 +46,21 @@ protected:
 	virtual void io_read(offs_t offset, uint8_t &data) override;
 	virtual void io_write(offs_t offset, uint8_t data) override;
 
-	DECLARE_READ8_MEMBER(hw_input_gate_r);
-	DECLARE_WRITE8_MEMBER(fdd_select_w);
-	DECLARE_WRITE8_MEMBER(hw_terminal_count_w);
+	TIMER_CALLBACK_MEMBER(reset_tick);
+
+	uint8_t hw_input_gate_r();
+	void fdd_select_w(uint8_t data);
+	void hw_terminal_count_w(uint8_t data);
 
 	required_device<z80_device> m_cpu;
 
 private:
-	DECLARE_FLOPPY_FORMATS( floppy_formats );
+	static void floppy_formats(format_registration &fr);
 
-	DECLARE_WRITE_LINE_MEMBER( fdc_irq );
+	void fdc_irq(int state);
 
 	void kc_d004_io(address_map &map);
 	void kc_d004_mem(address_map &map);
-
-	static const device_timer_id TIMER_RESET = 0;
 
 	required_device<upd765a_device> m_fdc;
 	required_device<floppy_connector> m_floppy0;
@@ -106,8 +105,8 @@ private:
 	uint16_t              m_ata_data;
 	int                 m_lh;
 
-	DECLARE_READ8_MEMBER(gide_r);
-	DECLARE_WRITE8_MEMBER(gide_w);
+	uint8_t gide_r(offs_t offset);
+	void gide_w(offs_t offset, uint8_t data);
 
 	void kc_d004_gide_io(address_map &map);
 };

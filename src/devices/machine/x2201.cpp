@@ -24,6 +24,7 @@
 
 #include "emu.h"
 #include "machine/x2201.h"
+
 #include <algorithm>
 
 
@@ -45,7 +46,7 @@ DEFINE_DEVICE_TYPE(X2201, x2201_device, "x2201", "Xicor X2201 1024x1 NOVRAM")
 x2201_device::x2201_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
 	: device_t(mconfig, X2201, tag, owner, clock)
 	, device_nvram_interface(mconfig, *this)
-	, m_default_data(*this, DEVICE_SELF, 1024 / 8)
+	, m_default_data(*this, DEVICE_SELF)
 	, m_cs(false)
 	, m_store(false)
 	, m_array_recall(false)
@@ -61,7 +62,7 @@ void x2201_device::device_start()
 {
 	// create arrays
 	m_ram = make_unique_clear<u8[]>(1024 / 8);
-	m_eeprom = std::make_unique<u8[]>(1028 / 8);
+	m_eeprom = std::make_unique<u8[]>(1024 / 8);
 
 	// register state for saving
 	save_pointer(NAME(m_ram), 1024 / 8);
@@ -96,9 +97,10 @@ void x2201_device::nvram_default()
 //  specified file
 //-------------------------------------------------
 
-void x2201_device::nvram_read(emu_file &file)
+bool x2201_device::nvram_read(util::read_stream &file)
 {
-	file.read(&m_eeprom[0], 1024 / 8);
+	size_t actual;
+	return !file.read(&m_eeprom[0], 1024 / 8, actual) && actual == 1024 / 8;
 }
 
 
@@ -107,9 +109,10 @@ void x2201_device::nvram_read(emu_file &file)
 //  specified file
 //-------------------------------------------------
 
-void x2201_device::nvram_write(emu_file &file)
+bool x2201_device::nvram_write(util::write_stream &file)
 {
-	file.write(&m_eeprom[0], 1024 / 8);
+	size_t actual;
+	return !file.write(&m_eeprom[0], 1024 / 8, actual) && actual == 1024 / 8;
 }
 
 
@@ -149,7 +152,7 @@ void x2201_device::write(offs_t offset, u8 data)
 //  cs_w - write to the CS line (active low)
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER(x2201_device::cs_w)
+void x2201_device::cs_w(int state)
 {
 	m_cs = !state;
 }
@@ -160,7 +163,7 @@ WRITE_LINE_MEMBER(x2201_device::cs_w)
 //  (active low)
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER(x2201_device::store_w)
+void x2201_device::store_w(int state)
 {
 	if (m_cs && !state && !m_store)
 		std::copy_n(&m_ram[0], 1024 / 8, &m_eeprom[0]);
@@ -174,7 +177,7 @@ WRITE_LINE_MEMBER(x2201_device::store_w)
 //  into RAM (active low)
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER(x2201_device::array_recall_w)
+void x2201_device::array_recall_w(int state)
 {
 	if (m_cs && !state && !m_array_recall)
 		std::copy_n(&m_eeprom[0], 1024 / 8, &m_ram[0]);

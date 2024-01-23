@@ -205,6 +205,8 @@ DEFINE_DEVICE_TYPE(MPC8240,   mpc8240_device,   "mpc8240",    "IBM PowerPC MPC82
 DEFINE_DEVICE_TYPE(PPC403GA,  ppc403ga_device,  "ppc403ga",   "IBM PowerPC 403GA")
 DEFINE_DEVICE_TYPE(PPC403GCX, ppc403gcx_device, "ppc403gcx",  "IBM PowerPC 403GCX")
 DEFINE_DEVICE_TYPE(PPC405GP,  ppc405gp_device,  "ppc405gp",   "IBM PowerPC 405GP")
+DEFINE_DEVICE_TYPE(PPC740,    ppc740_device,    "ppc740",     "IBM PowerPC 740")
+DEFINE_DEVICE_TYPE(PPC750,    ppc750_device,    "ppc750",     "IBM PowerPC 750")
 
 
 ppc_device::ppc_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, int address_bits, int data_bits, powerpc_flavor flavor, uint32_t cap, uint32_t tb_divisor, address_map_constructor internal_map)
@@ -212,6 +214,7 @@ ppc_device::ppc_device(const machine_config &mconfig, device_type type, const ch
 	, device_vtlb_interface(mconfig, *this, AS_PROGRAM)
 	, m_program_config("program", ENDIANNESS_BIG, data_bits, address_bits, 0, internal_map)
 	, c_bus_frequency(0)
+	, c_serial_clock(0)
 	, m_core(nullptr)
 	, m_bus_freq_multiplier(1)
 	, m_flavor(flavor)
@@ -227,6 +230,7 @@ ppc_device::ppc_device(const machine_config &mconfig, device_type type, const ch
 	, m_drcuml(nullptr)
 	, m_drcfe(nullptr)
 	, m_drcoptions(0)
+	, m_dasm(powerpc_disassembler())
 {
 	m_program_config.m_logaddr_width = 32;
 	m_program_config.m_page_shift = POWERPC_MIN_PAGE_SHIFT;
@@ -286,6 +290,16 @@ ppc604_device::ppc604_device(const machine_config &mconfig, const char *tag, dev
 {
 }
 
+ppc740_device::ppc740_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: ppc_device(mconfig, PPC740, tag, owner, clock, 32, 64, PPC_MODEL_740, PPCCAP_OEA | PPCCAP_VEA | PPCCAP_FPU | PPCCAP_MISALIGNED | PPCCAP_604_MMU | PPCCAP_750_TLB , 4, address_map_constructor())
+{
+}
+
+ppc750_device::ppc750_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: ppc_device(mconfig, PPC750, tag, owner, clock, 32, 64, PPC_MODEL_750, PPCCAP_OEA | PPCCAP_VEA | PPCCAP_FPU | PPCCAP_MISALIGNED | PPCCAP_604_MMU | PPCCAP_750_TLB, 4, address_map_constructor())
+{
+}
+
 void ppc4xx_device::internal_ppc4xx(address_map &map)
 {
 	map(0x40000000, 0x4000000f).rw(FUNC(ppc4xx_device::ppc4xx_spu_r), FUNC(ppc4xx_device::ppc4xx_spu_w));
@@ -332,9 +346,9 @@ device_memory_interface::space_config_vector ppc_device::memory_space_config() c
 static inline bool page_access_allowed(int transtype, uint8_t key, uint8_t protbits)
 {
 	if (key == 0)
-		return (transtype == TRANSLATE_WRITE) ? (protbits != 3) : true;
+		return (transtype == device_memory_interface::TR_WRITE) ? (protbits != 3) : true;
 	else
-		return (transtype == TRANSLATE_WRITE) ? (protbits == 2) : (protbits != 0);
+		return (transtype == device_memory_interface::TR_WRITE) ? (protbits == 2) : (protbits != 0);
 }
 
 
@@ -717,29 +731,31 @@ void ppc_device::device_start()
 
 	m_debugger_temp = 0;
 
+	m_serial_clock = 0;
+
 	m_cache_line_size = 32;
 	m_cpu_clock = clock();
 	m_program = &space(AS_PROGRAM);
 	if(m_cap & PPCCAP_4XX)
 	{
-		auto cache = m_program->cache<2, 0, ENDIANNESS_BIG>();
-		m_pr32 = [cache](offs_t address) -> u32 { return cache->read_dword(address); };
-		m_prptr = [cache](offs_t address) -> const void * { return cache->read_ptr(address); };
+		m_program->cache(m_cache32);
+		m_pr32 = [this](offs_t address) -> u32 { return m_cache32.read_dword(address); };
+		m_prptr = [this](offs_t address) -> const void * { return m_cache32.read_ptr(address); };
 	}
 	else
 	{
-		auto cache = m_program->cache<3, 0, ENDIANNESS_BIG>();
-		m_pr32 = [cache](offs_t address) -> u32 { return cache->read_dword(address); };
+		m_program->cache(m_cache64);
+		m_pr32 = [this](offs_t address) -> u32 { return m_cache64.read_dword(address); };
 		if(space_config()->m_endianness != ENDIANNESS_NATIVE)
-			m_prptr = [cache](offs_t address) -> const void * {
-				const u32 *ptr = static_cast<u32 *>(cache->read_ptr(address & ~7));
+			m_prptr = [this](offs_t address) -> const void * {
+				const u32 *ptr = static_cast<u32 *>(m_cache64.read_ptr(address & ~7));
 				if(!(address & 4))
 					ptr++;
 				return ptr;
 			};
 		else
-			m_prptr = [cache](offs_t address) -> const void * {
-				const u32 *ptr = static_cast<u32 *>(cache->read_ptr(address & ~7));
+			m_prptr = [this](offs_t address) -> const void * {
+				const u32 *ptr = static_cast<u32 *>(m_cache64.read_ptr(address & ~7));
 				if(address & 4)
 					ptr++;
 				return ptr;
@@ -751,24 +767,28 @@ void ppc_device::device_start()
 
 	m_tb_divisor = (m_tb_divisor * clock() + m_system_clock / 2 - 1) / m_system_clock;
 
+	m_serial_clock = c_serial_clock != 0 ? c_serial_clock : 3'686'400; // TODO: get rid of this hard-coded magic number
+	if (m_serial_clock > m_system_clock / 2)
+		fatalerror("%s: PPC: serial clock (%d) must not be more than half of the system clock (%d)\n", tag(), m_serial_clock, m_system_clock);
+
 	/* allocate a timer for the compare interrupt */
 	if ((m_cap & PPCCAP_OEA) && (m_tb_divisor))
-		m_decrementer_int_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(ppc_device::decrementer_int_callback), this));
+		m_decrementer_int_timer = timer_alloc(FUNC(ppc_device::decrementer_int_callback), this);
 
 	/* and for the 4XX interrupts if needed */
 	if (m_cap & PPCCAP_4XX)
 	{
-		m_fit_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(ppc_device::ppc4xx_fit_callback), this));
-		m_pit_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(ppc_device::ppc4xx_pit_callback), this));
-		m_spu.timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(ppc_device::ppc4xx_spu_callback), this));
+		m_fit_timer = timer_alloc(FUNC(ppc_device::ppc4xx_fit_callback), this);
+		m_pit_timer = timer_alloc(FUNC(ppc_device::ppc4xx_pit_callback), this);
+		m_spu.timer = timer_alloc(FUNC(ppc_device::ppc4xx_spu_callback), this);
 	}
 
 	if (m_cap & PPCCAP_4XX)
 	{
-		m_buffered_dma_timer[0] = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(ppc_device::ppc4xx_buffered_dma_callback), this));
-		m_buffered_dma_timer[1] = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(ppc_device::ppc4xx_buffered_dma_callback), this));
-		m_buffered_dma_timer[2] = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(ppc_device::ppc4xx_buffered_dma_callback), this));
-		m_buffered_dma_timer[3] = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(ppc_device::ppc4xx_buffered_dma_callback), this));
+		m_buffered_dma_timer[0] = timer_alloc(FUNC(ppc_device::ppc4xx_buffered_dma_callback), this);
+		m_buffered_dma_timer[1] = timer_alloc(FUNC(ppc_device::ppc4xx_buffered_dma_callback), this);
+		m_buffered_dma_timer[2] = timer_alloc(FUNC(ppc_device::ppc4xx_buffered_dma_callback), this);
+		m_buffered_dma_timer[3] = timer_alloc(FUNC(ppc_device::ppc4xx_buffered_dma_callback), this);
 
 		m_buffered_dma_rate[0] = 10000;
 		m_buffered_dma_rate[1] = 10000;
@@ -842,7 +862,6 @@ void ppc_device::device_start()
 
 	state_add(STATE_GENPC, "GENPC", m_core->pc).noshow();
 	state_add(STATE_GENPCBASE, "CURPC", m_core->pc).noshow();
-	state_add(STATE_GENSP, "GENSP", m_core->r[31]).noshow();
 	state_add(STATE_GENFLAGS, "GENFLAGS", m_debugger_temp).noshow().formatstr("%1s");
 
 	set_icountptr(m_core->icount);
@@ -857,15 +876,15 @@ void ppc_device::device_start()
 	for (int regnum = 0; regnum < 32; regnum++)
 	{
 		char buf[10];
-		sprintf(buf, "r%d", regnum);
+		snprintf(buf, 10, "r%d", regnum);
 		m_drcuml->symbol_add(&m_core->r[regnum], sizeof(m_core->r[regnum]), buf);
-		sprintf(buf, "fpr%d", regnum);
+		snprintf(buf, 10, "fpr%d", regnum);
 		m_drcuml->symbol_add(&m_core->f[regnum], sizeof(m_core->f[regnum]), buf);
 	}
 	for (int regnum = 0; regnum < 8; regnum++)
 	{
 		char buf[10];
-		sprintf(buf, "cr%d", regnum);
+		snprintf(buf, 10, "cr%d", regnum);
 		m_drcuml->symbol_add(&m_core->cr[regnum], sizeof(m_core->cr[regnum]), buf);
 	}
 	m_drcuml->symbol_add(&m_core->xerso, sizeof(m_core->xerso), "xerso");
@@ -1150,7 +1169,7 @@ void ppc_device::device_reset()
 		m_dec_zero_cycles = total_cycles();
 		if (m_tb_divisor)
 		{
-			decrementer_int_callback(nullptr, 0);
+			decrementer_int_callback(0);
 		}
 	}
 
@@ -1214,7 +1233,7 @@ void ppc_device::ppccom_dcstore_callback()
 {
 	if (!m_dcstore_cb.isnull())
 	{
-		m_dcstore_cb(*m_program, m_core->param0, 0, 0xffffffff);
+		m_dcstore_cb(m_core->param0, 0);
 	}
 }
 
@@ -1230,10 +1249,10 @@ void ppc_device::ppccom_dcstore_callback()
     filling
 -------------------------------------------------*/
 
-uint32_t ppc_device::ppccom_translate_address_internal(int intention, offs_t &address)
+uint32_t ppc_device::ppccom_translate_address_internal(int intention, bool debug, offs_t &address)
 {
-	int transpriv = ((intention & TRANSLATE_USER_MASK) == 0);   // 1 for supervisor, 0 for user
-	int transtype = intention & TRANSLATE_TYPE_MASK;
+	int transpriv = ((intention & TR_USER) == 0);   // 1 for supervisor, 0 for user
+	int transtype = intention & TR_TYPE;
 	offs_t hash, hashbase, hashmask;
 	int batbase, batnum, hashnum;
 	uint32_t segreg;
@@ -1246,7 +1265,7 @@ uint32_t ppc_device::ppccom_translate_address_internal(int intention, offs_t &ad
 			fatalerror("MMU enabled but not supported!\n");
 
 		/* only check if PE is enabled */
-		if (transtype == TRANSLATE_WRITE && (m_core->msr & MSR4XX_PE))
+		if (transtype == TR_WRITE && (m_core->msr & MSR4XX_PE))
 		{
 			/* are we within one of the protection ranges? */
 			int inrange1 = ((address >> 12) >= (m_core->spr[SPR4XX_PBL1] >> 12) && (address >> 12) < (m_core->spr[SPR4XX_PBU1] >> 12));
@@ -1265,7 +1284,7 @@ uint32_t ppc_device::ppccom_translate_address_internal(int intention, offs_t &ad
 		return 0x001;
 
 	/* also no translation necessary if translation is disabled */
-	if ((transtype == TRANSLATE_FETCH && (m_core->msr & MSROEA_IR) == 0) || (transtype != TRANSLATE_FETCH && (m_core->msr & MSROEA_DR) == 0))
+	if ((transtype == TR_FETCH && (m_core->msr & MSROEA_IR) == 0) || (transtype != TR_FETCH && (m_core->msr & MSROEA_DR) == 0))
 		return 0x001;
 
 	/* first scan the appropriate BAT */
@@ -1275,7 +1294,7 @@ uint32_t ppc_device::ppccom_translate_address_internal(int intention, offs_t &ad
 		{
 			uint32_t upper = m_core->spr[SPROEA_IBAT0U + 2*batnum + 0];
 			uint32_t lower = m_core->spr[SPROEA_IBAT0U + 2*batnum + 1];
-			int privbit = ((intention & TRANSLATE_USER_MASK) == 0) ? 3 : 2;
+			int privbit = ((intention & TR_USER) == 0) ? 3 : 2;
 
 //            printf("bat %d upper = %08x privbit %d\n", batnum, upper, privbit);
 
@@ -1292,7 +1311,7 @@ uint32_t ppc_device::ppccom_translate_address_internal(int intention, offs_t &ad
 					/* verify protection; if we fail, return false and indicate a protection violation */
 					if (!page_access_allowed(transtype, key, upper & 3))
 					{
-						return DSISR_PROTECTED | ((transtype == TRANSLATE_WRITE) ? DSISR_STORE : 0);
+						return DSISR_PROTECTED | ((transtype == TR_WRITE) ? DSISR_STORE : 0);
 					}
 
 					/* otherwise we're good */
@@ -1305,7 +1324,7 @@ uint32_t ppc_device::ppccom_translate_address_internal(int intention, offs_t &ad
 	}
 	else
 	{
-		batbase = (transtype == TRANSLATE_FETCH) ? SPROEA_IBAT0U : SPROEA_DBAT0U;
+		batbase = (transtype == TR_FETCH) ? SPROEA_IBAT0U : SPROEA_DBAT0U;
 
 		for (batnum = 0; batnum < 4; batnum++)
 		{
@@ -1324,7 +1343,7 @@ uint32_t ppc_device::ppccom_translate_address_internal(int intention, offs_t &ad
 					/* verify protection; if we fail, return false and indicate a protection violation */
 					if (!page_access_allowed(transtype, 1, lower & 3))
 					{
-						return DSISR_PROTECTED | ((transtype == TRANSLATE_WRITE) ? DSISR_STORE : 0);
+						return DSISR_PROTECTED | ((transtype == TR_WRITE) ? DSISR_STORE : 0);
 					}
 
 					/* otherwise we're good */
@@ -1346,13 +1365,13 @@ uint32_t ppc_device::ppccom_translate_address_internal(int intention, offs_t &ad
 
 	/* look up the segment register */
 	segreg = m_core->sr[address >> 28];
-	if (transtype == TRANSLATE_FETCH && (segreg & 0x10000000))
-		return DSISR_PROTECTED | ((transtype == TRANSLATE_WRITE) ? DSISR_STORE : 0);
+	if (transtype == TR_FETCH && (segreg & 0x10000000))
+		return DSISR_PROTECTED | ((transtype == TR_WRITE) ? DSISR_STORE : 0);
 
 	/* check for memory-forced I/O */
 	if (m_cap & PPCCAP_MFIOC)
 	{
-		if ((transtype != TRANSLATE_FETCH) && ((segreg & 0x87f00000) == 0x87f00000))
+		if ((transtype != TR_FETCH) && ((segreg & 0x87f00000) == 0x87f00000))
 		{
 			address = ((segreg & 0xf)<<28) | (address & 0x0fffffff);
 			return 1;
@@ -1375,12 +1394,12 @@ uint32_t ppc_device::ppccom_translate_address_internal(int intention, offs_t &ad
 		m_core->mmu603_cmp = 0x80000000 | ((segreg & 0xffffff) << 7) | (0 << 6) | ((address >> 22) & 0x3f);
 		m_core->mmu603_hash[0] = hashbase | ((hash << 6) & hashmask);
 		m_core->mmu603_hash[1] = hashbase | ((~hash << 6) & hashmask);
-		if ((entry & (VTLB_FLAG_FIXED | VTLB_FLAG_VALID)) == (VTLB_FLAG_FIXED | VTLB_FLAG_VALID))
+		if ((entry & (FLAG_FIXED | FLAG_VALID)) == (FLAG_FIXED | FLAG_VALID))
 		{
 			address = (entry & 0xfffff000) | (address & 0x00000fff);
 			return 0x001;
 		}
-		return DSISR_NOT_FOUND | ((transtype == TRANSLATE_WRITE) ? DSISR_STORE : 0);
+		return DSISR_NOT_FOUND | ((transtype == TR_WRITE) ? DSISR_STORE : 0);
 	}
 
 	/* loop twice over hashes */
@@ -1403,13 +1422,13 @@ uint32_t ppc_device::ppccom_translate_address_internal(int intention, offs_t &ad
 
 					/* verify protection; if we fail, return false and indicate a protection violation */
 					if (!page_access_allowed(transtype, (segreg >> (29 + transpriv)) & 1, pteglower & 3))
-						return DSISR_PROTECTED | ((transtype == TRANSLATE_WRITE) ? DSISR_STORE : 0);
+						return DSISR_PROTECTED | ((transtype == TR_WRITE) ? DSISR_STORE : 0);
 
 					/* update page table bits */
-					if (!(intention & TRANSLATE_DEBUG_MASK))
+					if (!debug)
 					{
 						pteglower |= 0x100;
-						if (transtype == TRANSLATE_WRITE)
+						if (transtype == TR_WRITE)
 							pteglower |= 0x080;
 						ptegptr[BYTE_XOR_BE(ptenum * 2 + 1)] = pteglower;
 					}
@@ -1425,7 +1444,7 @@ uint32_t ppc_device::ppccom_translate_address_internal(int intention, offs_t &ad
 	}
 
 	/* we failed to find any match: not found */
-	return DSISR_NOT_FOUND | ((transtype == TRANSLATE_WRITE) ? DSISR_STORE : 0);
+	return DSISR_NOT_FOUND | ((transtype == TR_WRITE) ? DSISR_STORE : 0);
 }
 
 
@@ -1434,14 +1453,16 @@ uint32_t ppc_device::ppccom_translate_address_internal(int intention, offs_t &ad
     from logical to physical
 -------------------------------------------------*/
 
-bool ppc_device::memory_translate(int spacenum, int intention, offs_t &address)
+bool ppc_device::memory_translate(int spacenum, int intention, offs_t &address, address_space *&target_space)
 {
+	target_space = &space(spacenum);
+
 	/* only applies to the program address space */
 	if (spacenum != AS_PROGRAM)
 		return true;
 
 	/* translation is successful if the internal routine returns 0 or 1 */
-	return (ppccom_translate_address_internal(intention, address) <= 1);
+	return (ppccom_translate_address_internal(intention, true, address) <= 1);
 }
 
 
@@ -1451,7 +1472,10 @@ bool ppc_device::memory_translate(int spacenum, int intention, offs_t &address)
 
 void ppc_device::ppccom_tlb_fill()
 {
-	vtlb_fill(m_core->param0, m_core->param1);
+	offs_t address = m_core->param0;
+	if(ppccom_translate_address_internal(m_core->param1, false, address) > 1)
+		return;
+	vtlb_fill(m_core->param0, address, m_core->param1);
 }
 
 
@@ -1482,14 +1506,14 @@ void ppc_device::ppccom_get_dsisr()
 
 	if (m_core->param1 & 1)
 	{
-		intent = TRANSLATE_WRITE;
+		intent = TR_WRITE;
 	}
 	else
 	{
-		intent = TRANSLATE_READ;
+		intent = TR_READ;
 	}
 
-	m_core->param1 = ppccom_translate_address_internal(intent, m_core->param0);
+	m_core->param1 = ppccom_translate_address_internal(intent, false, m_core->param0);
 }
 
 /*-------------------------------------------------
@@ -1533,11 +1557,11 @@ void ppc_device::ppccom_execute_tlbl()
 	entrynum = ((address >> 12) & 0x1f) | (machine().rand() & 0x20) | (isitlb ? 0x40 : 0);
 
 	/* determine the flags */
-	flags = VTLB_FLAG_VALID | VTLB_READ_ALLOWED | VTLB_FETCH_ALLOWED;
+	flags = FLAG_VALID | READ_ALLOWED | FETCH_ALLOWED;
 	if (m_core->spr[SPR603_RPA] & 0x80)
-		flags |= VTLB_WRITE_ALLOWED;
+		flags |= WRITE_ALLOWED;
 	if (isitlb)
-		flags |= VTLB_FETCH_ALLOWED;
+		flags |= FETCH_ALLOWED;
 
 	/* load the entry */
 	vtlb_load(entrynum, 1, address, (m_core->spr[SPR603_RPA] & 0xfffff000) | flags);
@@ -1834,9 +1858,9 @@ void ppc_device::ppccom_execute_mtspr()
 			case SPR4XX_TCR:
 				m_core->spr[SPR4XX_TCR] = m_core->param1 | (oldval & PPC4XX_TCR_WRC_MASK);
 				if ((oldval ^ m_core->spr[SPR4XX_TCR]) & PPC4XX_TCR_FIE)
-					ppc4xx_fit_callback(nullptr, false);
+					ppc4xx_fit_callback(false);
 				if ((oldval ^ m_core->spr[SPR4XX_TCR]) & PPC4XX_TCR_PIE)
-					ppc4xx_pit_callback(nullptr, false);
+					ppc4xx_pit_callback(false);
 				return;
 
 			/* timer status register */
@@ -1849,7 +1873,7 @@ void ppc_device::ppccom_execute_mtspr()
 			case SPR4XX_PIT:
 				m_core->spr[SPR4XX_PIT] = m_core->param1;
 				m_pit_reload = m_core->param1;
-				ppc4xx_pit_callback(nullptr, false);
+				ppc4xx_pit_callback(false);
 				return;
 
 			/* timebase */
@@ -1919,12 +1943,12 @@ void ppc_device::ppccom_execute_mfdcr()
 	/* default handling */
 	if (m_dcr_read_func.isnull()) {
 		osd_printf_debug("DCR %03X read\n", m_core->param0);
-		if (m_core->param0 < ARRAY_LENGTH(m_dcr))
+		if (m_core->param0 < std::size(m_dcr))
 			m_core->param1 = m_dcr[m_core->param0];
 		else
 			m_core->param1 = 0;
 	} else {
-		m_core->param1 = m_dcr_read_func(*m_program,m_core->param0,0xffffffff);
+		m_core->param1 = m_dcr_read_func(m_core->param0);
 	}
 }
 
@@ -2011,10 +2035,10 @@ void ppc_device::ppccom_execute_mtdcr()
 	/* default handling */
 	if (m_dcr_write_func.isnull()) {
 		osd_printf_debug("DCR %03X write = %08X\n", m_core->param0, m_core->param1);
-		if (m_core->param0 < ARRAY_LENGTH(m_dcr))
+		if (m_core->param0 < std::size(m_dcr))
 			m_dcr[m_core->param0] = m_core->param1;
 	} else {
-		m_dcr_write_func(*m_program,m_core->param0,m_core->param1,0xffffffff);
+		m_dcr_write_func(m_core->param0,m_core->param1);
 	}
 }
 
@@ -2099,7 +2123,7 @@ TIMER_CALLBACK_MEMBER( ppc_device::decrementer_int_callback )
     for detecting datacache stores with dcbst
 -------------------------------------------------*/
 
-void ppc_device::ppc_set_dcstore_callback(write32_delegate callback)
+void ppc_device::ppc_set_dcstore_callback(write32sm_delegate callback)
 {
 	m_dcstore_cb = callback;
 }
@@ -2371,7 +2395,7 @@ TIMER_CALLBACK_MEMBER( ppc_device::ppc4xx_buffered_dma_callback )
 			{
 				uint8_t data = m_program->read_byte(dmaregs[DCR4XX_DMADA0]);
 				if (!m_ext_dma_write_cb[dmachan].isnull())
-					(m_ext_dma_write_cb[dmachan])(*m_program, 1, data, 0xffffffff);
+					(m_ext_dma_write_cb[dmachan])(1, data);
 				dmaregs[DCR4XX_DMADA0] += destinc;
 			} while (!ppc4xx_dma_decrement_count(dmachan));
 			break;
@@ -2382,7 +2406,7 @@ TIMER_CALLBACK_MEMBER( ppc_device::ppc4xx_buffered_dma_callback )
 			{
 				uint16_t data = m_program->read_word(dmaregs[DCR4XX_DMADA0]);
 				if (!m_ext_dma_write_cb[dmachan].isnull())
-					(m_ext_dma_write_cb[dmachan])(*m_program, 2, data, 0xffffffff);
+					(m_ext_dma_write_cb[dmachan])(2, data);
 				dmaregs[DCR4XX_DMADA0] += destinc;
 			} while (!ppc4xx_dma_decrement_count(dmachan));
 			break;
@@ -2393,7 +2417,7 @@ TIMER_CALLBACK_MEMBER( ppc_device::ppc4xx_buffered_dma_callback )
 			{
 				uint32_t data = m_program->read_dword(dmaregs[DCR4XX_DMADA0]);
 				if (!m_ext_dma_write_cb[dmachan].isnull())
-					(m_ext_dma_write_cb[dmachan])(*m_program, 4, data, 0xffffffff);
+					(m_ext_dma_write_cb[dmachan])(4, data);
 				dmaregs[DCR4XX_DMADA0] += destinc;
 			} while (!ppc4xx_dma_decrement_count(dmachan));
 			break;
@@ -2662,7 +2686,7 @@ void ppc_device::ppc4xx_spu_rx_data(uint8_t data)
 	uint32_t new_rxin;
 
 	/* fail if we are going to overflow */
-	new_rxin = (m_spu.rxin + 1) % ARRAY_LENGTH(m_spu.rxbuffer);
+	new_rxin = (m_spu.rxin + 1) % std::size(m_spu.rxbuffer);
 	if (new_rxin == m_spu.rxout)
 		fatalerror("ppc4xx_spu_rx_data: buffer overrun!\n");
 
@@ -2684,7 +2708,7 @@ void ppc_device::ppc4xx_spu_timer_reset()
 	/* if we're enabled, reset at the current baud rate */
 	if (enabled)
 	{
-		attotime clockperiod = attotime::from_hz((m_dcr[DCR4XX_IOCR] & 0x02) ? 3686400 : 33333333);
+		attotime clockperiod = attotime::from_hz((m_dcr[DCR4XX_IOCR] & 0x02) ? m_serial_clock : m_system_clock);
 		int divisor = ((m_spu.regs[SPU4XX_BAUD_DIVISOR_H] * 256 + m_spu.regs[SPU4XX_BAUD_DIVISOR_L]) & 0xfff) + 1;
 		int bpc = 7 + ((m_spu.regs[SPU4XX_CONTROL] & 8) >> 3) + 1 + (m_spu.regs[SPU4XX_CONTROL] & 1);
 		attotime charperiod = clockperiod * (divisor * 16 * bpc);
@@ -2716,7 +2740,7 @@ TIMER_CALLBACK_MEMBER( ppc_device::ppc4xx_spu_callback )
 		{
 			/* if we have a transmit handler, send it that way */
 			if (!m_spu.tx_cb.isnull())
-				(m_spu.tx_cb)(*m_program, 0, m_spu.txbuf, 0xff);
+				(m_spu.tx_cb)(m_spu.txbuf);
 
 			/* indicate that we have moved it to the shift register */
 			m_spu.regs[SPU4XX_LINE_STATUS] |= 0x04;
@@ -2741,7 +2765,7 @@ TIMER_CALLBACK_MEMBER( ppc_device::ppc4xx_spu_callback )
 
 			/* consume the byte and advance the out pointer */
 			rxbyte = m_spu.rxbuffer[m_spu.rxout];
-			m_spu.rxout = (m_spu.rxout + 1) % ARRAY_LENGTH(m_spu.rxbuffer);
+			m_spu.rxout = (m_spu.rxout + 1) % std::size(m_spu.rxbuffer);
 
 			/* if we're not full, copy data to the buffer and update the line status */
 			if (!(m_spu.regs[SPU4XX_LINE_STATUS] & 0x80))
@@ -2784,7 +2808,7 @@ uint8_t ppc4xx_device::ppc4xx_spu_r(offs_t offset)
 			break;
 
 		default:
-			if (offset < ARRAY_LENGTH(m_spu.regs))
+			if (offset < std::size(m_spu.regs))
 				result = m_spu.regs[offset];
 			break;
 	}
@@ -2848,7 +2872,7 @@ void ppc4xx_device::ppc4xx_spu_w(offs_t offset, uint8_t data)
 			break;
 
 		default:
-			if (offset < ARRAY_LENGTH(m_spu.regs))
+			if (offset < std::size(m_spu.regs))
 				m_spu.regs[offset] = data;
 			break;
 	}
@@ -2861,7 +2885,7 @@ void ppc4xx_device::ppc4xx_spu_w(offs_t offset, uint8_t data)
     specific TX handler configuration
 -------------------------------------------------*/
 
-void ppc4xx_device::ppc4xx_spu_set_tx_handler(write8_delegate callback)
+void ppc4xx_device::ppc4xx_spu_set_tx_handler(write8smo_delegate callback)
 {
 	m_spu.tx_cb = callback;
 }
@@ -2893,7 +2917,7 @@ void ppc4xx_device::ppc4xx_set_dma_read_handler(int channel, read32_delegate cal
     specific external DMA write handler configuration
 -------------------------------------------------*/
 
-void ppc4xx_device::ppc4xx_set_dma_write_handler(int channel, write32_delegate callback, int rate)
+void ppc4xx_device::ppc4xx_set_dma_write_handler(int channel, write32sm_delegate callback, int rate)
 {
 	m_ext_dma_write_cb[channel] = callback;
 	m_buffered_dma_rate[channel] = rate;
@@ -2903,7 +2927,7 @@ void ppc4xx_device::ppc4xx_set_dma_write_handler(int channel, write32_delegate c
     ppc4xx_set_dcr_read_handler
 -------------------------------------------------*/
 
-void ppc4xx_device::ppc4xx_set_dcr_read_handler(read32_delegate dcr_read_func)
+void ppc4xx_device::ppc4xx_set_dcr_read_handler(read32sm_delegate dcr_read_func)
 {
 	m_dcr_read_func = dcr_read_func;
 
@@ -2913,7 +2937,7 @@ void ppc4xx_device::ppc4xx_set_dcr_read_handler(read32_delegate dcr_read_func)
     ppc4xx_set_dcr_write_handler
 -------------------------------------------------*/
 
-void ppc4xx_device::ppc4xx_set_dcr_write_handler(write32_delegate dcr_write_func)
+void ppc4xx_device::ppc4xx_set_dcr_write_handler(write32sm_delegate dcr_write_func)
 {
 	m_dcr_write_func = dcr_write_func;
 }

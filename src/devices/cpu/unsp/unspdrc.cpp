@@ -154,7 +154,7 @@ void unsp_device::code_compile_block(offs_t pc)
 	const opcode_desc *seqhead, *seqlast;
 	bool override = false;
 
-	g_profiler.start(PROFILER_DRC_COMPILE);
+	auto profile = g_profiler.start(PROFILER_DRC_COMPILE);
 
 	/* get a description of this sequence */
 	const opcode_desc *desclist = m_drcfe->describe_code(pc);
@@ -204,7 +204,7 @@ void unsp_device::code_compile_block(offs_t pc)
 				}
 
 				/* validate this code block if we're not pointing into ROM */
-				if (m_program->get_write_ptr(seqhead->physpc) != nullptr)
+				if (m_program.space().get_write_ptr(seqhead->physpc) != nullptr)
 					generate_checksum_block(block, compiler, seqhead, seqlast);
 
 				/* label this instruction, if it may be jumped to locally */
@@ -230,7 +230,6 @@ void unsp_device::code_compile_block(offs_t pc)
 
 			/* end the sequence */
 			block.end();
-			g_profiler.stop();
 			succeeded = true;
 		}
 		catch (drcuml_block::abort_compilation &)
@@ -526,7 +525,7 @@ void unsp_device::generate_checksum_block(drcuml_block &block, compiler_state &c
 	}
 
 	/* full verification; sum up everything */
-	void *memptr = m_program->get_write_ptr(seqhead->physpc);
+	void *memptr = m_program.space().get_write_ptr(seqhead->physpc);
 	UML_LOAD(block, I0, memptr, 0, SIZE_WORD, SCALE_x2);
 	uint32_t sum = seqhead->opptr.w[0];
 	for (int i = 1; i < seqhead->length; i++)
@@ -539,7 +538,7 @@ void unsp_device::generate_checksum_block(drcuml_block &block, compiler_state &c
 	{
 		if (!(curdesc->flags & OPFLAG_VIRTUAL_NOOP))
 		{
-			memptr = m_program->get_write_ptr(curdesc->physpc);
+			memptr = m_program.space().get_write_ptr(curdesc->physpc);
 			UML_LOAD(block, I1, memptr, 0, SIZE_WORD, SCALE_x2);
 			UML_ADD(block, I0, I0, I1);
 			sum += curdesc->opptr.w[0];
@@ -1158,7 +1157,7 @@ bool unsp_device::generate_opcode(drcuml_block &block, compiler_state &compiler,
 				case 0x01: // imm16
 				{
 					UML_MOV(block, I2, mem(&m_core->m_r[opb]));
-					const uint16_t r1 = m_pr16(desc->pc + 1);
+					const uint16_t r1 = m_cache.read_word(desc->pc + 1);
 					generate_add_lpc(block, 1);
 					UML_MOV(block, I1, r1);
 					break;
@@ -1167,7 +1166,7 @@ bool unsp_device::generate_opcode(drcuml_block &block, compiler_state &compiler,
 				case 0x02: // [imm16]
 				{
 					UML_MOV(block, I2, mem(&m_core->m_r[opb]));
-					const uint16_t r1 = m_pr16(desc->pc + 1);
+					const uint16_t r1 = m_cache.read_word(desc->pc + 1);
 					generate_add_lpc(block, 1);
 					UML_MOV(block, I0, r1);
 					if (op0 != 0x0d)
@@ -1179,7 +1178,7 @@ bool unsp_device::generate_opcode(drcuml_block &block, compiler_state &compiler,
 				{
 					UML_MOV(block, I1, I2);
 					UML_MOV(block, I2, mem(&m_core->m_r[opb]));
-					const uint16_t r2 = m_pr16(desc->pc + 1);
+					const uint16_t r2 = m_cache.read_word(desc->pc + 1);
 					generate_add_lpc(block, 1);
 					UML_MOV(block, I0, r2);
 					break;

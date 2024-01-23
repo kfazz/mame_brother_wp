@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE softwarelist SYSTEM "softwarelist.dtd">
 <!--
-license:CC0
+license:CC0-1.0
 -->
 <softwarelist name="segacd" description="Sega CD CD-ROMs">
 
@@ -24,8 +24,6 @@ Currently undumped discs that are known to still exist:
 | Android Assault (Prototype 19940308)                        |                                                                   |
 | Black Hole Assault (Prototype 19921006)                     |                                                                   |
 | Burning Fists (Prototype 19xx0108)                          |                                                                   |
-| Color Mechanica                                             |                                                                   |
-| Compton's Interactive Encyclopedia 2.00S                    | Version 2.00S is undumped.                                        |
 | Eternal Champions (Prototype)                               |                                                                   |
 | Fahrenheit (Prototype, 32X)                                 |                                                                   |
 | Fatal Fury Special (Prototype)                              |                                                                   |
@@ -36,12 +34,10 @@ Currently undumped discs that are known to still exist:
 | Music from the Sega CD Games: Jurassic Park, Batman Returns |                                                                   |
 | Shadow of the Beast II (Prototype 19940611)                 |                                                                   |
 | SoulStar (Prototype 19940905)                               |                                                                   |
-| Surgical Strike (32X)                                       | 32X version was only released in Brazil.                          |
 | The Secret of Monkey Island (Prototype 19930319)            |                                                                   |
 | The Smurfs (Prototype)                                      | US / Good Deal Games version.                                     |
 | The Terminator (Prototype)                                  |                                                                   |
 | Vay (Prototype 19941006)                                    |                                                                   |
-| What is X'Eye Multi Entertainment System                    |                                                                   |
 +=============================================================+===================================================================+
 
 Announced but never relased games. Probably lost forever:
@@ -227,8 +223,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Sony Imagesoft</publisher>
 		<info name="serial" value="T-93175"/>
-		<info name="ring_code" value="CDAC-078200 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-078200 2"/>
 			<diskarea name="cdrom">
 				<disk name="3 ninjas kick back (usa)" sha1="7dfca4e3bfad7b8e6f98b24651970409fd0d7d6f"/>
 			</diskarea>
@@ -245,8 +241,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Absolute Entertainment</publisher>
 		<info name="serial" value="T-86015"/>
-		<info name="ring_code" value="SEGAT86015RE R1J MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT86015RE R1J MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="ax-101 (usa)" sha1="4a0200c4b1d6b7f486d1946b6ce886d35872aae7"/>
 			</diskarea>
@@ -274,8 +270,8 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="serial" value="4415"/>
 		<info name="release" value="199303xx" />
-		<info name="ring_code" value="CDAC-040200 3"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-040200 3"/>
 			<diskarea name="cdrom">
 				<disk name="after burner iii (usa)" sha1="5387cce37990836db962ce82ec217edbe2c1fd0d"/>
 			</diskarea>
@@ -303,8 +299,8 @@ See: http://rawdump.net/
 		<publisher>JVC</publisher>
 		<info name="release" value="199310xx" />
 		<info name="serial" value="T-60055"/>
-		<info name="ring_code" value="SEGAT60055RE R2D MFD BY JVC, SEGAT60055 R1D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT60055RE R2D MFD BY JVC, SEGAT60055 R1D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="ah3 - thunderstrike (usa)" sha1="46d352674119dabf0728a07dc7354b54fe5a027b"/>
 			</diskarea>
@@ -341,8 +337,8 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="release" value="199303xx" />
 		<info name="serial" value="4401"/>
-		<info name="ring_code" value="CDAC-040500 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-040500 1"/>
 			<diskarea name="cdrom">
 				<disk name="batman returns (usa)" sha1="fcef5b725f01b928a29a60a5e3d4c493908b209f"/>
 			</diskarea>
@@ -408,8 +404,8 @@ See: http://rawdump.net/
 		<publisher>Core Design</publisher>
 		<info name="release" value="199404xx" />
 		<info name="serial" value="T-115045"/>
-		<info name="ring_code" value="SEGAT115045 R1H MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT115045 R1H MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="battlecorps (usa)" sha1="6ea60ddc9064f7aa770ea87f2fb2ff438793c037"/>
 			</diskarea>
@@ -440,8 +436,8 @@ See: http://rawdump.net/
 		<year>1993</year>
 		<publisher>Electronic Arts</publisher>
 		<info name="serial" value="T-50025"/>
-		<info name="ring_code" value="SEGAT115045 R1H MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT115045 R1H MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="bill walsh college football (usa)" sha1="07cc70df34df37f25d24ea387205640dae48e31c"/>
 			</diskarea>
@@ -480,8 +476,8 @@ See: http://rawdump.net/
 		<publisher>Bignet</publisher>
 		<info name="alt_title" value="Blackhole Assault (Box)" />
 		<info name="serial" value="PN-6400"/>
-		<info name="ring_code" value="CDAC-031700 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-031700 1"/>
 			<diskarea name="cdrom">
 				<disk name="black hole assault (usa)" sha1="e7533c9de5cea95b3d3ddbcc19d0002aa4fabb2b"/>
 			</diskarea>
@@ -506,8 +502,8 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="release" value="199412xx" />
 		<info name="serial" value="4908"/>
-		<info name="ring_code" value="CDAC 082400 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC 082400 1"/>
 			<diskarea name="cdrom">
 				<disk name="bouncers (usa)" sha1="ec21e095b7670989495095f6a6cb9a94ba24a405"/>
 			</diskarea>
@@ -530,8 +526,8 @@ See: http://rawdump.net/
 		<publisher>Sony Imagesoft</publisher>
 		<info name="release" value="199311xx" />
 		<info name="serial" value="T-93065"/>
-		<info name="ring_code" value="CDAC-020100 4"/>  <!-- Possibly CDAC-050100 4 -->
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-020100 4"/>  <!-- Possibly CDAC-050100 4 -->
 			<diskarea name="cdrom">
 				<disk name="bram stoker's dracula (usa)" sha1="35a46f2a7c32d18ec22e3e8a7c03518f915fb4b2"/>
 			</diskarea>
@@ -549,13 +545,13 @@ See: http://rawdump.net/
 		<rom name="Bram Stoker's Dracula (USA) (Alt) (Track 6).bin" size="3276336" crc="9591b847" />
 		<rom name="Bram Stoker's Dracula (USA) (Alt) (Track 7).bin" size="46428480" crc="b62ed339" />
 		-->
-		<description>Bram Stoker's Dracula (USA, Alt)</description>
+		<description>Bram Stoker's Dracula (USA, alt)</description>
 		<year>1992</year>
 		<publisher>Sony Imagesoft</publisher>
 		<info name="release" value="199311xx" />
 		<info name="serial" value="T-60064"/>
-		<info name="ring_code" value="CDAC-050100 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-050100 1"/>
 			<diskarea name="cdrom">
 				<disk name="bram stoker's dracula (usa, alt)" sha1="98ef333e37ed4968c3421966f36ea158a5a3e203"/>
 			</diskarea>
@@ -573,13 +569,13 @@ See: http://rawdump.net/
 		<rom name="Bram Stoker's Dracula (USA) (Rev A) (Track 6).bin" size="4019568" crc="8be25c31" md5="8cd2e0d97bb0471dd1f8193438873221" sha1="190ad2fd0ac9e1255dbad8ebc6191aff65ea7a16"/>
 		<rom name="Bram Stoker's Dracula (USA) (Rev A) (Track 7).bin" size="46778928" crc="d9599d60" md5="cc2083ef2ddf06cf7819af7f800fdeb6" sha1="1f079234d51d1fd01288d9c2f6a5cbaea62e1232"/>
 		-->
-		<description>Bram Stoker's Dracula (USA, Rev. A)</description>
+		<description>Bram Stoker's Dracula (USA, rev. A)</description>
 		<year>1992</year>
 		<publisher>Sony Imagesoft</publisher>
 		<info name="release" value="199311xx" />
 		<info name="serial" value="T-93155"/>
-		<info name="ring_code" value="CDAC-068700 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-068700 1"/>
 			<diskarea name="cdrom">
 				<disk name="bram stoker's dracula (usa, rev. a)" sha1="ff8b30072085ed157c94859371e6a8f087ebd132"/>
 			</diskarea>
@@ -610,8 +606,8 @@ See: http://rawdump.net/
 		<publisher>GameTek</publisher>
 		<info name="release" value="199403xx" />
 		<info name="serial" value="T-83015"/>
-		<info name="ring_code" value="SEGAT830155 R1D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT830155 R1D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="brutal - paws of fury (usa)" sha1="4e3f09cb9f1ce381adcf0b832a4d9683e75dd8b5"/>
 			</diskarea>
@@ -638,8 +634,8 @@ See: http://rawdump.net/
 		<publisher>Sony Imagesoft</publisher>
 		<info name="release" value="199301xx" />
 		<info name="serial" value="T-6204"/>
-		<info name="ring_code" value="CDAC-032500 5"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-032500 5"/>
 			<diskarea name="cdrom">
 				<disk name="chuck rock (usa)" sha1="2a0ca620f253992e92af5655c7ed4203a1537b0e"/>
 			</diskarea>
@@ -667,8 +663,8 @@ See: http://rawdump.net/
 		<year>1993</year>
 		<publisher>Virgin Interactive</publisher>
 		<info name="serial" value="T-70045"/>
-		<info name="ring_code" value="SEGACD86006 R1D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGACD86006 R1D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="chuck rock ii - son of chuck (usa)" sha1="d47e53ee53653ee9b5623f276060e7a5f4f28c9e"/>
 			</diskarea>
@@ -691,8 +687,8 @@ See: http://rawdump.net/
 		<publisher>Sony Imagesoft</publisher>
 		<info name="release" value="199311xx" />
 		<info name="serial" value="T-93075"/>
-		<info name="ring_code" value="CDAC-053600 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-053600 1"/>
 			<diskarea name="cdrom">
 				<disk name="cliffhanger (usa)" sha1="71753bdebddc8de1f9920f19e06a7858a470f286"/>
 			</diskarea>
@@ -710,10 +706,82 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="serial" value="4402"/>
 		<info name="release" value="199211xx" />
-		<info name="ring_code" value="CDAC-031400 5"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-031400 5"/>
 			<diskarea name="cdrom">
 				<disk name="cobra command (usa)" sha1="2d7c32591cec389f6d5feb5f0301495ff8021307"/>
+			</diskarea>
+		</part>
+	</software>
+
+	<!--
+	    Released by Good Deal Games in 2014. Track 1 contains a text file that says this is Version 1.1
+	    built on 01/13/2014, plus a folder containing the music in MP3 format.
+	-->
+	<software name="colormec">
+		<!-- Source: redump.org
+		<rom name="Note! Color Mechanica (USA) (Unl).cue" size="837" crc="d57bf1bb" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Track 1).bin" size="218914752" crc="9c9cea01" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Track 2).bin" size="59992464" crc="44561a10" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Track 3).bin" size="50807904" crc="ad7c5f47" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Track 4).bin" size="34508544" crc="0eb05bf5" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Track 5).bin" size="50353968" crc="a54eafa7" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Track 6).bin" size="53449200" crc="325b574e" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Track 7).bin" size="57153600" crc="c90c3ac5" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Track 8).bin" size="40633152" crc="5b633865" />
+		-->
+		<description>Note! Color Mechanica (USA)</description>
+		<year>2014</year>
+		<publisher>Good Deal Games</publisher>
+		<info name="release" value="2014" />
+		<part name="cdrom" interface="scd_cdrom">
+			<diskarea name="cdrom">
+				<disk name="note color mechanica (usa)" sha1="117afb5a656039570a203620c7ba4384d19617bf"/>
+			</diskarea>
+		</part>
+	</software>
+
+	<!--
+	    Released by Good Deal Games in 2014. Tracks 1 and 2 are slightly larger than the other build.
+	    Track 1 contains a text file that says this is Version 1.1, built on 01/13/2014, plus a folder containing the music in MP3 format.
+	-->
+	<software name="colormeca" cloneof="colormec">
+		<!-- Source: redump.org
+		<rom name="Note! Color Mechanica (USA) (Unl) (Alt).cue" size="908" crc="065af004" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Alt) (Track 1).bin" size="218561952" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Alt) (Track 2).bin" size="60345264" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Alt) (Track 3).bin" size="50807904" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Alt) (Track 4).bin" size="34508544" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Alt) (Track 5).bin" size="50353968" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Alt) (Track 6).bin" size="53449200" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Alt) (Track 7).bin" size="57153600" />
+		<rom name="Note! Color Mechanica (USA) (Unl) (Alt) (Track 8).bin" size="40633152" />
+		-->
+		<description>Note! Color Mechanica (USA, alt)</description>
+		<year>2014</year>
+		<publisher>Good Deal Games</publisher>
+		<info name="release" value="2014" />
+		<part name="cdrom" interface="scd_cdrom">
+			<diskarea name="cdrom">
+				<disk name="note color mechanica (usa) (alt)" sha1="6de2359fc0ad8dc7d8206515a0fdcd67bd9e43ab"/>
+			</diskarea>
+		</part>
+	</software>
+
+	<!-- This was exclusively bundled with the JVC X'Eye console -->
+	<software name="comptons200s" cloneof="comptons">
+		<!-- Source: redump.org
+		<rom name="Compton's Interactive Encyclopedia (USA) (Version 2.00S).cue" size="305" crc="f3c220f6" />
+		<rom name="Compton's Interactive Encyclopedia (USA) (Version 2.00S) (Track 1).bin" size="225806112" crc="ebb612cc" />
+		<rom name="Compton's Interactive Encyclopedia (USA) (Version 2.00S) (Track 2).bin" size="2765952" crc="45fccb44" />
+		-->
+		<description>Compton's Interactive Encyclopedia v2.00S (USA)</description>
+			<year>1994</year>
+		<publisher>Compton's NewMedia</publisher>
+		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CIESEGAV200 R1C MFD BY JVC"/>
+			<diskarea name="cdrom">
+				<disk name="compton's interactive encyclopedia v2.00s (usa)" sha1="2d9abe1a456af0a230670e870353d41f330f8d90"/>
 			</diskarea>
 		</part>
 	</software>
@@ -728,16 +796,15 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="T-118025"/>
-		<info name="ring_code" value="SEGAT118025 R1F MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT118025 R1F MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="compton's interactive encyclopedia v2.01r (usa)" sha1="2df62d0e0a8f37e7b52c549ce7605d8c55fadf00"/>
 			</diskarea>
 		</part>
 	</software>
 
-	<!-- Requires 32x add-on! -->
-	<software name="corpse32" cloneof="corpse">
+	<software name="corpse32" cloneof="corpse" supported="no">
 		<!-- Source: redump.org - http://redump.org/disc/2965/
 		<rom name="Corpse Killer (USA) (32X).cue" size="220" crc="5d439045" />
 		<rom name="Corpse Killer (USA) (32X) (Track 1).bin" size="624898176" crc="acd1f057" />
@@ -746,10 +813,15 @@ See: http://rawdump.net/
 		<description>Corpse Killer (USA, 32X)</description>
 		<year>1995</year>
 		<publisher>Digital Pictures</publisher>
+		<notes><![CDATA[
+Hangs on BIOS logo
+Requires [32X] add-on
+]]></notes>
 		<info name="serial" value="T-16201F"/>
-		<info name="ring_code" value="GW 02361 RE-1 SRCR##03"/>
-		<sharedfeat name="requirement" value="32x"/>
+		<!-- <sharedfeat name="requirement" value="32x"/> -->
+		<info name="usage" value="Requires to be run with 32x_scd"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="GW 02361 RE-1 SRCR##03"/>
 			<diskarea name="cdrom">
 				<disk name="corpse killer (usa, 32x)" sha1="68a6c75bc730025e90fa413c107090e7f4e377e0"/>
 			</diskarea>
@@ -776,8 +848,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4651"/>
-		<info name="ring_code" value="CDAC-059200 3"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-059200 3"/>
 			<diskarea name="cdrom">
 				<disk name="dark wizard (usa)" sha1="cf784af53b6dedc2777b91f5ac5f169f2f7b9c30"/>
 			</diskarea>
@@ -794,15 +866,15 @@ See: http://rawdump.net/
 		<year>1993</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4419"/>
-		<info name="ring_code" value="CDAC-052900 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-052900 1"/>
 			<diskarea name="cdrom">
 				<disk name="double switch (usa)" sha1="2b727773fda836ddfb972dc98820bee7135da709"/>
 			</diskarea>
 		</part>
 	</software>
 
-	<software name="dracunl">
+	<software name="dracunl" supported="no">
 		<!-- Source: redump.org - http://redump.org/disc/21040/ http://redump.org/disc/21041/
 		<rom name="Dracula Unleashed (USA) (Disc 1).cue" size="257" crc="93ade26e" md5="fa725eb12ee7eb683144986261c33bf1" sha1="fdb6ad28c7fc21f99e35684502bcd32dfc1abb1b"/>
 		<rom name="Dracula Unleashed (USA) (Disc 1) (Track 1).bin" size="544372752" crc="0e728a6c" md5="282a9be8157a6167a389c7fff475ed3a" sha1="927b6d0525010265059ab1ee4d23c6a0598b7fb8"/>
@@ -815,16 +887,20 @@ See: http://rawdump.net/
 		<description>Dracula Unleashed (USA)</description>
 		<year>1993</year>
 		<publisher>Sega</publisher>
+		<notes><![CDATA[
+Requires [disc swap]
+]]></notes>
 		<info name="serial" value="4420"/>
-		<info name="ring_code" value="CDAC-053000 14 (Disc 1) / CDAC-053100 4 (Disc 2)"/>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1" />
+			<feature name="cd_matrix" value="CDAC-053000 14"/>
 			<diskarea name="cdrom">
 				<disk name="dracula unleashed (usa) (disc 1)" sha1="307c0779dace5d95f3e7a0ccee18c00356ca2362"/>
 			</diskarea>
 		</part>
 		<part name="cdrom2" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 2" />
+			<feature name="cd_matrix" value="CDAC-053100 4"/>
 			<diskarea name="cdrom">
 				<disk name="dracula unleashed (usa) (disc 2)" sha1="e3adeebe60f32a3487e7d5afc86675b73057fba6"/>
 			</diskarea>
@@ -841,8 +917,8 @@ See: http://rawdump.net/
 		<year>1993</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="T-121015"/>
-		<info name="ring_code" value="SEGAT121015 R3D MFD BY JVC 13"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT121015 R3D MFD BY JVC 13"/>
 			<diskarea name="cdrom">
 				<disk name="dragon's lair (usa)" sha1="724bc872d111ed67df10e95b134f8bf7fe2fcfe3"/>
 			</diskarea>
@@ -870,8 +946,8 @@ See: http://rawdump.net/
 		<year>1995</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4657"/>
-		<info name="ring_code" value="JVC SEGA4657 R2E 0 0"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="JVC SEGA4657 R2E 0 0"/>
 			<diskarea name="cdrom">
 				<disk name="dungeon explorer (usa)" sha1="432897f1f19e8a053c8f7d783e2331e7fd0f0b1f"/>
 			</diskarea>
@@ -902,8 +978,8 @@ See: http://rawdump.net/
 		<year>1993</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4408"/>
-		<info name="ring_code" value="CDAC-042000 1, CDAC-042000 3"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-042000 1, CDAC-042000 3"/>
 			<diskarea name="cdrom">
 				<disk name="ecco the dolphin (usa)" sha1="7fb88d4f0fe34ee40991d724b9e90f7586081fd2"/>
 			</diskarea>
@@ -935,8 +1011,8 @@ See: http://rawdump.net/
 		<year>1993</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4441"/>
-		<info name="ring_code" value="CDAC 077400"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC 077400"/>
 			<diskarea name="cdrom">
 				<disk name="ecco - the tides of time (usa)" sha1="20cb72bf75a848568dd034188bebe316138b6186"/>
 			</diskarea>
@@ -964,12 +1040,12 @@ See: http://rawdump.net/
 		<rom name="Ecco - The Tides of Time (USA) (Track 16).bin" size="48597024" crc="8c8b6c37" md5="5244482ce6d7ad3ef977bd4e9c288db4" sha1="fbb32ced119dc47e097c7abc679cec9fc54d31bf"/>
 		<rom name="Ecco - The Tides of Time (USA) (Track 17).bin" size="10814496" crc="1475c942" md5="2f7ef97ed5b8c74272e3f78ffefade1a" sha1="a16a6dd2011d973172322e6f63e3be37a7b06b3d"/>
 		-->
-		<description>Ecco - The Tides of Time (USA, Alt)</description>
+		<description>Ecco - The Tides of Time (USA, alt)</description>
 		<year>1994</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4441"/>
-		<info name="ring_code" value="SEGA4441 R2H"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA4441 R2H"/>
 			<diskarea name="cdrom">
 				<disk name="ecco - the tides of time (usa, alt)" sha1="9fb665727fdc629df195ef315eef17eae9661f4d"/>
 			</diskarea>
@@ -1004,8 +1080,8 @@ See: http://rawdump.net/
 		<publisher>Sony Imagesoft</publisher>
 		<info name="release" value="199411xx" />
 		<info name="serial" value="T-93105"/>
-		<info name="ring_code" value="CDAC-077600 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-077600 1"/>
 			<diskarea name="cdrom">
 				<disk name="espn sunday night nfl (usa)" sha1="11504fbfcecc6ffdaa69960ba9e57d6cd343bd78"/>
 			</diskarea>
@@ -1039,8 +1115,8 @@ See: http://rawdump.net/
 		<year>1995</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="MK-4427"/>
-		<info name="ring_code" value="SEGA4427 R1J 11"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA4427 R1J 11"/>
 			<diskarea name="cdrom">
 				<disk name="eternal champions - challenge from the dark side (usa)" sha1="cfdfda50429d14db0510fdfd8b2642c06d370b05"/>
 			</diskarea>
@@ -1070,12 +1146,12 @@ See: http://rawdump.net/
 		<rom name="Eternal Champions - Challenge from the Dark Side (USA) (RE) (Track 18).bin" size="24159744" crc="9cd9cd92" md5="5a90a744954763bc8e4151deb0f55bbc" sha1="c2899fad72ff6b788053a3421d23baef26df521f"/>
 		<rom name="Eternal Champions - Challenge from the Dark Side (USA) (RE) (Track 19).bin" size="19436928" crc="56b8e348" md5="db2ee275ab481b3010ec6ffe874d584e" sha1="6b4ca877e581257f1b871d270d8fdee258c529f1"/>
 		-->
-		<description>Eternal Champions - Challenge from the Dark Side (USA, Alt)</description>
+		<description>Eternal Champions - Challenge from the Dark Side (USA, alt)</description>
 		<year>1995</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4427"/>
-		<info name="ring_code" value="SEGA4427RE R1J"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA4427RE R1J"/>
 			<diskarea name="cdrom">
 				<disk name="eternal champions - challenge from the dark side (usa, alt)" sha1="6608bca9094b0412578a37b8250c9548f68bbbb1"/>
 			</diskarea>
@@ -1147,8 +1223,8 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="alt_title" value="Advanced Dungeons &amp; Dragons - Eye of the Beholder (Box)"/>
 		<info name="serial" value="4655"/>
-		<info name="ring_code" value="CDAC-070100 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-070100 2"/>
 			<diskarea name="cdrom">
 				<disk name="eye of the beholder (usa)" sha1="8901e20ec6cb1cc8b8771b7bdac01d3220a067f5"/>
 			</diskarea>
@@ -1156,7 +1232,8 @@ See: http://rawdump.net/
 	</software>
 
 	<!-- This game came in a bundle with both a Sega CD compatible disc and one which takes advantage of the 32X expansion. -->
-	<software name="fahrenhe">
+	<!-- TODO: where to load disc 2? Does it detects 32x automatically and just then prompt user? -->
+	<software name="fahrenhe" supported="partial">
 		<!-- Source: redump.org - http://redump.org/disc/29440/ http://redump.org/disc/29441/
 		<rom name="Fahrenheit (USA) (Disc 1) (Key Disc) (Sega CD).cue" size="262" crc="8982108b" md5="0b0a464fd029c7df830ad19ed1bfe099" sha1="825a83edb4966e0d9beaafc2d94233a2a0bc30f0"/>
 		<rom name="Fahrenheit (USA) (Disc 1) (Key Disc) (Sega CD) (Track 1).bin" size="593710656" crc="e22ff784" md5="f96fdb4fc2f8a6308c46d8af793d5c21" sha1="436141455a4726ce065d37db8e39f540c303de0a"/>
@@ -1169,17 +1246,21 @@ See: http://rawdump.net/
 		<description>Fahrenheit (USA, Sega CD &amp; 32X CD)</description>
 		<year>1995</year>
 		<publisher>Sega</publisher>
+		<notes><![CDATA[
+Has optional unemulated [32X] mode, which in turn needs [disc swap]
+]]></notes>
 		<info name="release" value="199503xx" />
 		<info name="serial" value="4438"/>
-		<info name="ring_code" value="CDAC-088300 1 (Disc 1) / CDAC-088400 1 (Disc 2)"/>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Sega CD / Disc 1 - Key Disc" />
+			<feature name="cd_matrix" value="CDAC-088300 1"/>
 			<diskarea name="cdrom">
 				<disk name="fahrenheit (usa) (sega cd)" sha1="c53080012578fe291323197e6319842beb84ee9b"/>
 			</diskarea>
 		</part>
 		<part name="cdrom2" interface="scd_cdrom">
 			<feature name="part_id" value="32X CD / Disc 2 - Insert Key Disc 1 First" />
+			<feature name="cd_matrix" value="CDAC-088400 1"/>
 			<diskarea name="cdrom">
 				<disk name="fahrenheit (usa) (32x cd)" sha1="f94ea9821ca030c3cc61eccc29eb9c692198415e"/>
 			</diskarea>
@@ -1240,8 +1321,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Electronic Arts</publisher>
 		<info name="serial" value="T-50055"/>
-		<info name="ring_code" value="CDAC-064000(9)1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-064000(9)1"/>
 			<diskarea name="cdrom">
 				<disk name="fifa international soccer (usa)" sha1="3e32c3d5e99f5df103277aed209a59f888c06bec"/>
 			</diskarea>
@@ -1283,8 +1364,8 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="serial" value="4410"/>
 		<info name="release" value="199305xx" />
-		<info name="ring_code" value="CDAC-041400 6, CDAC-041400 4"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-041400 6, CDAC-041400 4"/>
 			<diskarea name="cdrom">
 				<disk name="final fight cd (usa)" sha1="bd0ae447a302d2e220f13c84a7a56a45007c7e83"/>
 			</diskarea>
@@ -1336,15 +1417,15 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4608"/>
-		<info name="ring_code" value="CDAC-063600 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-063600 1"/>
 			<diskarea name="cdrom">
 				<disk name="formula one world championship - beyond the limit (usa)" sha1="da0c0fd84af458744d6b045c3fb44b5ac5f89152"/>
 			</diskarea>
 		</part>
 	</software>
 
-	<software name="gztexas">
+	<software name="gztexas" supported="no">
 		<!-- Source: redump.org - http://redump.org/disc/19472/ http://redump.org/disc/19473/
 		<rom name="Ground Zero Texas (USA) (Disc 1).cue" size="257" crc="d0c584c7" md5="113dd7490af1f86d08f70448d443ed93" sha1="2041c4c954bb0b19ede6dbef1190836c9f2c72b7"/>
 		<rom name="Ground Zero Texas (USA) (Disc 1) (Track 1).bin" size="629355216" crc="20b937a8" md5="27eac38ea6f5deee11367f0062f55608" sha1="d151430da0d6e25af45ecd0a9133dea9a1d1d285"/>
@@ -1357,9 +1438,12 @@ See: http://rawdump.net/
 		<description>Ground Zero Texas (USA)</description>
 		<year>1993</year>
 		<publisher>Sony Imagesoft</publisher>
-		<info name="ring_code" value="CDAC-053200 2, CDAC-053200 4 (Disc 1) / CDAC-053300 1 (Disc 2)"/>
+		<notes><![CDATA[
+Requires [disc swap]
+]]></notes>
 		<info name="serial" value="T-93145"/>
 		<part name="cdrom1" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-053200 2, CDAC-053200 4"/>
 			<feature name="part_id" value="Disc 1" />
 			<diskarea name="cdrom">
 				<disk name="ground zero texas (usa) (disc 1)" sha1="226bef5c19446c6be18674941707b3baebc11223"/>
@@ -1368,6 +1452,7 @@ See: http://rawdump.net/
 
 		<part name="cdrom2" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 2" />
+			<feature name="cd_matrix" value="CDAC-053300 1"/>
 			<diskarea name="cdrom">
 				<disk name="ground zero texas (usa) (disc 2)" sha1="13c7cc77f2659155dec4deb4700d8ac8af95fb42"/>
 			</diskarea>
@@ -1425,15 +1510,15 @@ See: http://rawdump.net/
 		<publisher>Virgin Interactive</publisher>
 		<info name="serial" value="T-70025"/>
 		<info name="release" value="199406xx" />
-		<info name="ring_code" value="HOTALIENRE R1H MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="HOTALIENRE R1H MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="heart of the alien - out of this world parts i and ii (usa)" sha1="a2784fa95bb3b29067b5d8148dd95877456577e7"/>
 			</diskarea>
 		</part>
 	</software>
 
-		<software name="heimdall">
+	<software name="heimdall">
 		<!-- Source: redump.org - http://redump.org/disc/21039/
 		<rom name="Heimdall (USA).cue" size="2294" crc="d9024819" md5="efe0f4d6da5b56c260bf6af3b1ccf174" sha1="66e858090085673dbfdea26d06dd354504b2296d"/>
 		<rom name="Heimdall (USA) (Track 01).bin" size="25888464" crc="38d5dd04" md5="9c9d9dae336002fc2f74c8424c7f3ee6" sha1="2f858db859baf28d8b38db72bcc0b84b04ab8fe3"/>
@@ -1463,8 +1548,8 @@ See: http://rawdump.net/
 		<publisher>JVC</publisher>
 		<info name="serial" value="T-60145"/>
 		<info name="release" value="199404xx" />
-		<info name="ring_code" value="SEGAT60105 R1D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT60105 R1D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="heimdall (usa)" sha1="986813f0d66eff9c163c19ccdbe6e055bf75043d"/>
 			</diskarea>
@@ -1501,8 +1586,8 @@ See: http://rawdump.net/
 		<year>1992</year>
 		<publisher>Sony Imagesoft</publisher>
 		<info name="serial" value="T-6205"/>
-		<info name="ring_code" value="CDAC-032400 4"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-032400 4"/>
 			<diskarea name="cdrom">
 				<disk name="hook (usa)" sha1="310b67fc0163da2dbae236b1276624b2170425b0"/>
 			</diskarea>
@@ -1519,8 +1604,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Spectrum Holobyte</publisher>
 		<info name="serial" value="T-124015"/>
-		<info name="ring_code" value="SEGAT124015 R2H MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT124015 R2H MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="iron helix (usa)" sha1="243a1c1691ab1a587371e34c1692663b28814184"/>
 			</diskarea>
@@ -1539,15 +1624,15 @@ See: http://rawdump.net/
 		<publisher>Sony Imagesoft</publisher>
 		<info name="serial" value="T-93095"/>
 		<info name="release" value="199311xx" />
-		<info name="ring_code" value="CDAC-075900 3"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-075900 3"/>
 			<diskarea name="cdrom">
 				<disk name="jeopardy (usa)" sha1="6f159f64d3ea62bb8eff70e9a2f84d02bfb54688"/>
 			</diskarea>
 		</part>
 	</software>
 
-		<software name="joemont">
+	<software name="joemont">
 		<!-- Source: redump.org - http://redump.org/disc/20227/
 		<rom name="Joe Montana's NFL Football (USA).cue" size="761" crc="981e4777" md5="2bc3110fe8d93c90d4b1d4b9e40e222e" sha1="d9d0a8b6315ffc543cf59b0449010f66d19b6be0"/>
 		<rom name="Joe Montana's NFL Football (USA) (Track 1).bin" size="181819008" crc="989d8600" md5="e363615aa4a7c10c8fae378f15563ee3" sha1="24ecd405cd234a1ded9f9a39230d63fbfb566132"/>
@@ -1562,8 +1647,8 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="serial" value="T-4201"/>
 		<info name="release" value="199310xx" />
-		<info name="ring_code" value="SEGA4201 R1C MFD BY JVC, SEGA4201RE R2C MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA4201 R1C MFD BY JVC, SEGA4201RE R2C MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="joe montana's nfl football (usa)" sha1="a6c4dccb249c27d38846e204313446e5928c2b4d"/>
 			</diskarea>
@@ -1610,8 +1695,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4411"/>
-		<info name="ring_code" value="SEGA4411RE R3C MFD BY JVC, SEGA4411RE R4C MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA4411RE R3C MFD BY JVC, SEGA4411RE R4C MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="jurassic park (usa)" sha1="8ab39eda898277571127b9ac03dce64546602caf"/>
 			</diskarea>
@@ -1628,8 +1713,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Digital Pictures</publisher>
 		<info name="serial" value="T162015"/>
-		<info name="ring_code" value="GW 03611 SRCR##02"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="GW 03611 SRCR##02"/>
 			<diskarea name="cdrom">
 				<disk name="kids on site (usa)" sha1="9a97c7c151cbe77121bb626954b50bd2223a9292"/>
 			</diskarea>
@@ -1668,8 +1753,8 @@ See: http://rawdump.net/
 		<publisher>Konami</publisher>
 		<info name="serial" value="T-95015"/>
 		<info name="release" value="199311xx" />
-		<info name="ring_code" value="T95015-U11 2A7 C 39, T95015-U11 2B3 C 39, T95015-U11 2C2 C 39, T95015-U11 2C3 C 39"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="T95015-U11 2A7 C 39, T95015-U11 2B3 C 39, T95015-U11 2C2 C 39, T95015-U11 2C3 C 39"/>
 			<diskarea name="cdrom">
 				<disk name="lethal enforcers (usa)" sha1="2a9bb24ed2a7db353e035311269180b368230069"/>
 			</diskarea>
@@ -1704,13 +1789,13 @@ See: http://rawdump.net/
 		<rom name="Lethal Enforcers (USA) (U12) (Track 22).bin" size="22666224" crc="025d7467" md5="0928be28ff5d1cef3fd92d505dc1af21" sha1="376c19913de5dc4fdbe74225e0b538b84af7bc92"/>
 		<rom name="Lethal Enforcers (USA) (U12) (Track 23).bin" size="37516752" crc="c2d48f9c" md5="37771c3a002d859d0c5de4c5b4d0f863" sha1="c8c37b52f54168aa6fb968837d74d756f77a2feb"/>
 		-->
-		<description>Lethal Enforcers (USA, Alt)</description>
+		<description>Lethal Enforcers (USA, alt)</description>
 		<year>1993</year>
 		<publisher>Konami</publisher>
 		<info name="serial" value="T-95015"/>
 		<info name="release" value="199311xx" />
-		<info name="ring_code" value="T95015-U12 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="T95015-U12 1"/>
 			<diskarea name="cdrom">
 				<disk name="lethal enforcers (usa, alt)" sha1="924fd382c6d23099200ef33eee358f768a0503b8"/>
 			</diskarea>
@@ -1749,8 +1834,8 @@ See: http://rawdump.net/
 		<publisher>Konami</publisher>
 		<info name="serial" value="T-95025"/>
 		<info name="release" value="19941124" />
-		<info name="ring_code" value="T95025-U12 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="T95025-U12 1"/>
 			<diskarea name="cdrom">
 				<disk name="lethal enforcers ii - gun fighters (usa)" sha1="7d63da6fa26441e31bd614474936d8c7adacd239"/>
 			</diskarea>
@@ -1767,8 +1852,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Rocket Science Games</publisher>
 		<info name="serial" value="T-153015"/>
-		<info name="ring_code" value="SEGAT153015 R3J MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT153015 R3J MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="loadstar - the legend of tully bodine (usa)" sha1="a9b4df4c8b3ed81d14cfa5506961c3815387194e"/>
 			</diskarea>
@@ -1804,8 +1889,8 @@ See: http://rawdump.net/
 		<year>1995</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4450"/>
-		<info name="ring_code" value="SEGA4450 R1F"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA4450 R1F"/>
 			<diskarea name="cdrom">
 				<disk name="lords of thunder (usa)" sha1="c4be0138ac50ee190fb8df9839a2efb97e9f30c2"/>
 			</diskarea>
@@ -1872,8 +1957,8 @@ See: http://rawdump.net/
 		<year>1993</year>
 		<publisher>Game Arts</publisher>
 		<info name="serial" value="T-127015"/>
-		<info name="ring_code" value="SEGAT127015RE R1C MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT127015RE R1C MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="lunar - the silver star (usa)" sha1="eebcd9cdadb0a74de4313fc44fff83ba95ba3135"/>
 			</diskarea>
@@ -1891,8 +1976,8 @@ See: http://rawdump.net/
 		<year>1995</year>
 		<publisher>Game Arts</publisher>
 		<info name="serial" value="T-127045"/>
-		<info name="ring_code" value="SEGAT127045RE R1H"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT127045RE R1H"/>
 			<diskarea name="cdrom">
 				<disk name="lunar - eternal blue (usa)" sha1="1cc95c2b91d6c52d561a4f70e96c52ddc3c10313"/>
 			</diskarea>
@@ -1914,8 +1999,8 @@ See: http://rawdump.net/
 		<year>1993</year>
 		<publisher>American Laser Games</publisher>
 		<info name="serial" value="T-111015"/>
-		<info name="ring_code" value="SEGAT111015 R1D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT111015 R1D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="mad dog mccree (usa)" sha1="244713e8c7c1d1ef38f5f9ba2232cb1a2b23a1f7"/>
 			</diskarea>
@@ -1933,8 +2018,8 @@ See: http://rawdump.net/
 		<publisher>Vic Tokai</publisher>
 		<info name="serial" value="T-23015"/>
 		<info name="release" value="199402xx" />
-		<info name="ring_code" value="SEGAT23015 R1D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT23015 R1D MFD BY JVC"/>
 			<feature name="peripheral" value="mouse" />
 			<diskarea name="cdrom">
 				<disk name="mansion of hidden souls (usa)" sha1="1d1dba770de6d5969d23d2e86ad4028445d514c4"/>
@@ -1958,8 +2043,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Sony Imagesoft</publisher>
 		<info name="serial" value="T-93155"/>
-		<info name="ring_code" value="CDAC-077800 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-077800 1"/>
 			<diskarea name="cdrom">
 				<disk name="mary shelley's frankenstein (usa)" sha1="4d0d40a70d2a585e371d23d122ec98a6dce7b299"/>
 			</diskarea>
@@ -2003,8 +2088,8 @@ See: http://rawdump.net/
 		<publisher>Sony Imagesoft</publisher>
 		<info name="serial" value="T-93265"/>
 		<info name="release" value="199411xx" />
-		<info name="ring_code" value="CDAC-073600 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-073600 1"/>
 			<diskarea name="cdrom">
 				<disk name="mickey mania - timeless adventures of mickey mouse (usa)" sha1="c98e204f92845b6e90ee0afce16d10501ded7ea2"/>
 			</diskarea>
@@ -2028,8 +2113,8 @@ See: http://rawdump.net/
 		<year>1993</year>
 		<publisher>Psygnosis</publisher>
 		<info name="serial" value="T-113015"/>
-		<info name="ring_code" value="CDAC-055200 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-055200 1"/>
 			<diskarea name="cdrom">
 				<disk name="microcosm (usa)" sha1="bca8a59c2aa47d1207b0c2df1d2ff40cb5d11fb4"/>
 			</diskarea>
@@ -2046,8 +2131,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4439"/>
-		<info name="ring_code" value="SEGA4439 R1J MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA4439 R1J MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="midnight raiders (usa)" sha1="83db51aee2ef658fa9d29e67acdc7d5774e69d3a"/>
 			</diskarea>
@@ -2084,8 +2169,8 @@ See: http://rawdump.net/
 		<publisher>Arena</publisher>
 		<info name="serial" value="T-81025"/>
 		<info name="release" value="199404xx" />
-		<info name="ring_code" value="CDCA-060900 3, CDCA-061500 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDCA-060900 3, CDCA-061500 2"/>
 			<diskarea name="cdrom">
 				<disk name="mortal kombat (usa)" sha1="454e23c8922380f813a3a5b9d94902a691109332"/>
 			</diskarea>
@@ -2110,8 +2195,8 @@ See: http://rawdump.net/
 		<publisher>Arena</publisher>
 		<info name="serial" value="T-81035"/>
 		<info name="release" value="199412xx" />
-		<info name="ring_code" value="CDAC-074200 4"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-074200 4"/>
 			<diskarea name="cdrom">
 				<disk name="nba jam (usa)" sha1="48b0fdb2476ac795b303bfdc11b40abb8609511b"/>
 			</diskarea>
@@ -2129,8 +2214,8 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="serial" value="4202"/>
 		<info name="release" value="199310xx" />
-		<info name="ring_code" value="CDAC-054500 4"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-054500 4"/>
 			<diskarea name="cdrom">
 				<disk name="nfl's greatest - san francisco vs dallas 1978-1993 (usa)" sha1="20fc574d1912b92dd9d6c248734a8e897501b3ea"/>
 			</diskarea>
@@ -2225,15 +2310,14 @@ See: http://rawdump.net/
 		<publisher>Electronic Arts</publisher>
 		<info name="serial" value="T-50015"/>
 		<info name="release" value="199309xx" />
-		<info name="ring_code" value="CDAC-056700 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-056700 2"/>
 			<diskarea name="cdrom">
 				<disk name="nhl '94 (usa)" sha1="ac34c65117668dc53e7075a0dbe9bd260fdb1c15"/>
 			</diskarea>
 		</part>
 	</software>
 
-	<!-- Requires 32x add-on! -->
 	<software name="ntrap32" cloneof="ntrap">
 		<!-- Source: redump.org - http://redump.org/disc/17550/ http://redump.org/disc/17551/
 		<rom name="Night Trap (USA) (Disc 1) (32X).cue" size="232" crc="40b701ce" />
@@ -2247,11 +2331,17 @@ See: http://rawdump.net/
 		<description>Night Trap (USA, 32X)</description>
 		<year>1994</year>
 		<publisher>Digital Pictures</publisher>
+		<notes><![CDATA[
+Hangs on BIOS logo
+Requires [32X] add-on
+Requires [disc swap]
+]]></notes>
 		<info name="serial" value="T-16202F"/>
-		<info name="ring_code" value="GW 00161.1 RE-1 SRCR##02 (Disc 1) / GW 00161.2 RE-1 SRCR##02 (Disc 2)"/>
-		<sharedfeat name="requirement" value="32x"/>
+		<!--<sharedfeat name="requirement" value="32x"/>-->
+		<info name="usage" value="Requires to be run with 32x_scd"/>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1" />
+			<feature name="cd_matrix" value="GW 00161.1 RE-1 SRCR##02"/>
 			<diskarea name="cdrom">
 				<disk name="night trap (usa, 32x) (disc 1)" sha1="a4407b3264ef29d343f7d4b984194bc4636009d3"/>
 			</diskarea>
@@ -2259,6 +2349,7 @@ See: http://rawdump.net/
 
 		<part name="cdrom2" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 2" />
+			<feature name="cd_matrix" value="GW 00161.2 RE-1 SRCR##02"/>
 			<diskarea name="cdrom">
 				<disk name="night trap (usa, 32x) (disc 2)" sha1="18b2a72bf91589ef43986b3f3add9b70c609f346"/>
 			</diskarea>
@@ -2266,7 +2357,7 @@ See: http://rawdump.net/
 	</software>
 
 	<!-- This is a dump from the original edition. Investigate if the re-release is different. -->
-	<software name="ntrapa" cloneof="ntrap">
+	<software name="ntrapa" cloneof="ntrap" supported="no">
 		<!-- Source: redump.org - http://redump.org/disc/17158/ http://redump.org/disc/17159/
 		<rom name="Night Trap (USA) (Disc 1).cue" size="91" crc="b5fae72b" />
 		<rom name="Night Trap (USA) (Disc 1).bin" size="616997808" crc="900cf0aa" />
@@ -2277,11 +2368,14 @@ See: http://rawdump.net/
 		<description>Night Trap (USA)</description>
 		<year>1992</year>
 		<publisher>Sega</publisher>
+		<notes><![CDATA[
+Required [disc swap]
+]]></notes>
 		<info name="serial" value="4903"/>
 		<info name="release" value="199211xx" />
-		<info name="ring_code" value="CDRM-1027400 5 (Disc 1) / CDRM-1027410 2, CDRM-1027410 1 (Disc 2)"/>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1" />
+			<feature name="cd_matrix" value="CDRM-1027400 5"/>
 			<diskarea name="cdrom">
 				<disk name="night trap (usa) (disc 1)" sha1="c2c18c6af2aae9619ca5772fcb6aecc79a142a40"/>
 			</diskarea>
@@ -2289,6 +2383,7 @@ See: http://rawdump.net/
 
 		<part name="cdrom2" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 2" />
+			<feature name="cd_matrix" value="CDRM-1027410 2, CDRM-1027410 1"/>
 			<diskarea name="cdrom">
 				<disk name="night trap (usa) (disc 2)" sha1="41c44780c325403d9c4522fc3d010912fc3dad5a"/>
 			</diskarea>
@@ -2296,7 +2391,7 @@ See: http://rawdump.net/
 	</software>
 
 	<!-- Only the first disk is different from the parent. -->
-	<software name="ntrapb" cloneof="ntrap">
+	<software name="ntrapb" cloneof="ntrap" supported="no">
 		<!-- Source: redump.org - http://redump.org/disc/20867/ http://redump.org/disc/17159/
 		<rom name="Night Trap (USA) (Disc 1) (Alt).cue" size="97" crc="f2950016" md5="c9261a74b06972b2e1fbf7addc5fb5a0" sha1="2456d059254e74ebaf8b8f17fc665222fa47c323"/>
 		<rom name="Night Trap (USA) (Disc 1) (Alt).bin" size="616645008" crc="133b76ce" md5="6bfe493a225713115096d730edf77afe" sha1="9cd08d3718e17134a013cae92a52a2ac0b226b77"/>
@@ -2304,21 +2399,24 @@ See: http://rawdump.net/
 		<rom name="Night Trap (USA) (Disc 2).cue" size="91" crc="b4a7c1fa" />
 		<rom name="Night Trap (USA) (Disc 2).bin" size="515351424" crc="7c560ae9" />
 		-->
-		<description>Night Trap (USA, Alt)</description>
+		<description>Night Trap (USA, alt)</description>
 		<year>1992</year>
 		<publisher>Sega</publisher>
+		<notes><![CDATA[
+Requires [disc swap]
+]]></notes>
 		<info name="serial" value="4903"/>
 		<info name="release" value="199211xx" />
-		<info name="ring_code" value="CDRM-1027400 3 (Disc 1) / CDRM-1027410 2, CDRM-1027410 1 (Disc 2)"/>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1" />
+			<feature name="cd_matrix" value="CDRM-1027400 3"/>
 			<diskarea name="cdrom">
 				<disk name="night trap (usa, alt) (disc 1)" sha1="d5d21d92798661d67ab7247acc41ea6602721a0b"/>
 			</diskarea>
 		</part>
-
 		<part name="cdrom2" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 2" />
+			<feature name="cd_matrix" value="CDRM-1027410 2, CDRM-1027410 1"/>
 			<diskarea name="cdrom">
 				<disk name="night trap (usa) (disc 2)" sha1="41c44780c325403d9c4522fc3d010912fc3dad5a"/>
 			</diskarea>
@@ -2331,7 +2429,7 @@ See: http://rawdump.net/
 	Mega Drive/Genesis while playing the game, the music and sound effects will
 	be improved. As such, this disc is not really a game in it's own right.
 	-->
-	<software name="psgaesd">
+	<software name="psgaesd" supported="no">
 		<!-- Source: redump.org - http://redump.org/disc/19787/
 		<rom name="Pier Solar and the Great Architects Enhanced Soundtrack Disc (USA).cue" size="622" crc="6d317fa8" md5="f0e03431664704058746f511e21c0958" sha1="ef30161fe9b6737346530bd74644996b3dc58041"/>
 		<rom name="Pier Solar and the Great Architects Enhanced Soundtrack Disc (USA) (Track 1).bin" size="511769328" crc="59200094" md5="5861f8067b1a3b8f1f6567e844a58dd3" sha1="649ca22c941afb50613167a942fd82b0c0b93384"/>
@@ -2342,11 +2440,15 @@ See: http://rawdump.net/
 		<description>Pier Solar and the Great Architects Enhanced Soundtrack Disc (World)</description>
 		<year>2010</year>
 		<publisher>WaterMelon</publisher>
+		<notes><![CDATA[
+No support for Mega CD cart slots
+]]></notes>
 		<info name="serial" value="T-574013, T-574016, T-574016-50"/>
 		<info name="release" value="20101214" />
-		<info name="ring_code" value="Enhanced Soundtrack Disc WM WM 2234612235072235144* Enhanced Soundtrack Disc WM B"/>
-		<sharedfeat name="requirement" value="megadriv -psolar"/>
+		<!--<sharedfeat name="requirement" value="megadriv -psolar"/>-->
+		<info name="usage" value="Requires to be run with megadriv psolar cart"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="Enhanced Soundtrack Disc WM WM 2234612235072235144* Enhanced Soundtrack Disc WM B"/>
 			<diskarea name="cdrom">
 				<disk name="pier solar and the great architects enhanced soundtrack disc (world)" sha1="1f26cce723ef044f449d87cdb624a2937f40f5d9"/>
 			</diskarea>
@@ -2384,8 +2486,8 @@ See: http://rawdump.net/
 		<year>1995</year>
 		<publisher>Activision</publisher>
 		<info name="serial" value="T-130025"/>
-		<info name="ring_code" value="SEGAT130025 R1H MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT130025 R1H MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="pitfall - the mayan adventure (usa)" sha1="512f8ebf40e653f82ac9528193344ad990b58bf3"/>
 			</diskarea>
@@ -2405,8 +2507,8 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="serial" value="T-127035"/>
 		<info name="release" value="19950223" />
-		<info name="ring_code" value="SEGAT127035RE R1J MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT127035RE R1J MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="popful mail (usa)" sha1="459853983b1e01fe297ffd6287502eab1678e8e4"/>
 			</diskarea>
@@ -2447,8 +2549,8 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="serial" value="4652"/>
 		<info name="release" value="199212xx" />
-		<info name="ring_code" value="CDAC-032200 6"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-032200 6"/>
 			<diskarea name="cdrom">
 				<disk name="prince of persia (usa)" sha1="fd9250f32c23e0954b197d1833c20de705df43d3"/>
 			</diskarea>
@@ -2486,8 +2588,8 @@ See: http://rawdump.net/
 		<publisher>Psygnosis</publisher>
 		<info name="serial" value="T-113035"/>
 		<info name="release" value="19940106" />
-		<info name="ring_code" value="CDAC-053800 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-053800 2"/>
 			<diskarea name="cdrom">
 				<disk name="puggsy (usa)" sha1="307206f9f4154699e9386fa9b45bd79d5ed72e5d"/>
 			</diskarea>
@@ -2513,8 +2615,8 @@ See: http://rawdump.net/
 		<year>1993</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4607"/>
-		<info name="ring_code" value="CDAC-055000 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-055000 1"/>
 			<diskarea name="cdrom">
 				<disk name="racing aces (usa)" sha1="a2038d4de56b75d61db6ad757919cca00cc91c95"/>
 			</diskarea>
@@ -2536,8 +2638,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Absolute Entertainment</publisher>
 		<info name="serial" value="T-86025"/>
-		<info name="ring_code" value="SEGAT86025 R1F MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT86025 R1F MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="rdf - global conflict (usa)" sha1="32cf1e068598e385962db8de493eb191aab7716b"/>
 			</diskarea>
@@ -2557,8 +2659,8 @@ See: http://rawdump.net/
 		<year>1993</year>
 		<publisher>Renovation</publisher>
 		<info name="serial" value="T-49035"/>
-		<info name="ring_code" value="SEGAT49035 R1C MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT49035 R1C MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="revenge of the ninja (usa)" sha1="d6f0a13f1b630ba771cad7c86b607f31cf6092b7"/>
 			</diskarea>
@@ -2574,12 +2676,12 @@ See: http://rawdump.net/
 		<rom name="Rise of the Dragon (USA) (Track 4).bin" size="21530208" crc="7552ef3d" />
 		<rom name="Rise of the Dragon (USA) (Track 5).bin" size="29244768" crc="e5463515" />
 		-->
-		<description>Rise of the Dragon (USA, Rev. A)</description>
+		<description>Rise of the Dragon (USA, rev. A)</description>
 		<year>1994</year>
 		<publisher>Dynamix</publisher>
 		<info name="serial" value="T-110035"/>
-		<info name="ring_code" value="S604430RE R1D MFD BY JVC, S604430RE R2D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="S604430RE R1D MFD BY JVC, S604430RE R2D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="rise of the dragon (usa, rev. a)" sha1="412d819633740c597b67591cf12fdac7c7081194"/>
 			</diskarea>
@@ -2600,15 +2702,15 @@ See: http://rawdump.net/
 		<publisher>Dynamix</publisher>
 		<info name="serial" value="4301"/>
 		<info name="release" value="199303xx" />
-		<info name="ring_code" value="CDAC-040300 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-040300 1"/>
 			<diskarea name="cdrom">
 				<disk name="rise of the dragon (usa)" sha1="e84d20447bec4c5bed1bfe27372c5a927d5fbdb2"/>
 			</diskarea>
 		</part>
 	</software>
 
-	<software name="roadaven">
+	<software name="roadaven" supported="no">
 		<!-- Source: redump.org - http://redump.org/disc/29313/
 		<rom name="Road Avenger (USA).cue" size="453" crc="9e7d5e08" md5="840ebb398cce8d27cf3a5d253d8b575d" sha1="cd2b55540b911786886f43aae99e228d9f85efc5"/>
 		<rom name="Road Avenger (USA) (Track 1).bin" size="317816352" crc="cf3bd177" md5="71e1578e091e0d5df4b07f4f26e4d2c9" sha1="9cf7095ab8f7a5aa5df046d0b665263f4f506f19"/>
@@ -2619,10 +2721,13 @@ See: http://rawdump.net/
 		<description>Road Avenger (USA)</description>
 		<year>1993</year>
 		<publisher>Renovation</publisher>
+		<notes><![CDATA[
+Black screen, requires sub CPU to be overclocked by 1.5x
+]]></notes>
 		<info name="serial" value="T-6207"/>
 		<info name="release" value="199303xx" />
-		<info name="ring_code" value="SEGA6207 R1D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA6207 R1D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="road avenger (usa)" sha1="05fa6ae67687aacdf99fe939b0f04ce13b6d527b"/>
 			</diskarea>
@@ -2640,8 +2745,8 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="serial" value="4442"/>
 		<info name="release" value="19950502" />
-		<info name="ring_code" value="SEGA4442 R1J"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA4442 R1J"/>
 			<diskarea name="cdrom">
 				<disk name="saban's mighty morphin power rangers (usa)" sha1="fffd902d4ab06d946c47b7eaa40cc5ddd9963299"/>
 			</diskarea>
@@ -2665,12 +2770,12 @@ See: http://rawdump.net/
 		<rom name="Sega Classics Arcade Collection (USA) (RE) (4-in-1) (Track 11).bin" size="3709104" crc="e6b94a35" md5="307821e989681d84156deae0fde99aa6" sha1="8ddf9194867c8e484c536fbcd3200d3c89fba929"/>
 		<rom name="Sega Classics Arcade Collection (USA) (RE) (4-in-1) (Track 12).bin" size="12173952" crc="99653684" md5="a4dae7ac971f906ec16b2f7494ac4272" sha1="d0bb6b3e99fd29a53759acc211b0215bff37ca25"/>
 		-->
-		<description>Sega Classics Arcade Collection (USA, 4 in 1, Alt)</description>
+		<description>Sega Classics Arcade Collection (USA, 4 in 1, alt)</description>
 		<year>1992</year>
 		<publisher>Sega</publisher>
 		<info name="release" value="19921015" />
-		<info name="ring_code" value="SEGA4126RE R1D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA4126RE R1D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="sega classics arcade collection (usa, 4 in 1, alt)" sha1="c587085ec1b3a2cea0575a5bf90abfd3789c3779"/>
 			</diskarea>
@@ -2697,8 +2802,8 @@ See: http://rawdump.net/
 		<description>Sega Classics Arcade Collection (USA, 5 in 1)</description>
 		<year>1993</year>
 		<publisher>Sega</publisher>
-		<info name="ring_code" value="CDAC-056800 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-056800 2"/>
 			<diskarea name="cdrom">
 				<disk name="sega classics arcade collection (usa, 5 in 1)" sha1="9f4bdadabba7d8998b701a3becd2520d4d2a037d"/>
 			</diskarea>
@@ -2715,8 +2820,8 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="serial" value="T-6201"/>
 		<info name="release" value="199212xx" />
-		<info name="ring_code" value="CDRM-1033200 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDRM-1033200 1"/>
 			<diskarea name="cdrom">
 				<disk name="sewer shark (usa)" sha1="65eb30fa88be9de6a7ceb980b4016241c5aafe0f"/>
 			</diskarea>
@@ -2728,13 +2833,13 @@ See: http://rawdump.net/
 		<rom name="Sewer Shark (USA).cue" size="83" crc="1db0c2a0" />
 		<rom name="Sewer Shark (USA).bin" size="488418672" crc="19f2fe42" />
 		-->
-		<description>Sewer Shark (USA, Rev. A)</description>
+		<description>Sewer Shark (USA, rev. A)</description>
 		<year>1992</year>
 		<publisher>Sony Imagesoft</publisher>
 		<info name="serial" value="T-6201"/>
 		<info name="release" value="199212xx" />
-		<info name="ring_code" value="CDRM-1033200 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDRM-1033200 2"/>
 			<diskarea name="cdrom">
 				<disk name="sewer shark (usa, rev. a)" sha1="0f339806d73c473c20906935836d49457339430f"/>
 			</diskarea>
@@ -2748,13 +2853,13 @@ See: http://rawdump.net/
 		<rom name="Sewer Shark (USA) (Bundle) (Alt) (Track 1).bin" size="487360272" crc="57b21ebe" />
 		<rom name="Sewer Shark (USA) (Bundle) (Alt) (Track 2).bin" size="2234400" crc="9705cbfe" />
 		-->
-		<description>Sewer Shark (USA, Rev. B)</description>
+		<description>Sewer Shark (USA, rev. B)</description>
 		<year>1992</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4101"/>
 		<info name="release" value="199212xx" />
-		<info name="ring_code" value="610-5574P-00086 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="610-5574P-00086 1"/>
 			<diskarea name="cdrom">
 				<disk name="sewer shark (usa, rev. b)" sha1="0353015285afb2fa5119b3e700725d6b8e46d680"/>
 			</diskarea>
@@ -2768,12 +2873,12 @@ See: http://rawdump.net/
 		<rom name="Sewer Shark (USA) (Rev B) (Alt 1) (Track 1).bin" size="487360272" crc="57b21ebe" md5="b05ca93f4b221bee8b206b6e368bc699" sha1="a14d881c0956434ccd04b0b86f8afe6b214f1f8a"/>
 		<rom name="Sewer Shark (USA) (Rev B) (Alt 1) (Track 2).bin" size="2234400" crc="ff2f7adc" md5="af34f10417653d93e6ed0ad3cda9f9a8" sha1="d8ee48d98af0fc667ed5d999b1a32365d7ea892b"/>
 		-->
-		<description>Sewer Shark (USA, Rev. B, Alt)</description>
+		<description>Sewer Shark (USA, rev. B, alt)</description>
 		<year>1992</year>
 		<publisher>Sega</publisher>
 		<info name="release" value="199212xx" />
-		<info name="ring_code" value="CDRM-1095270 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDRM-1095270 1"/>
 			<diskarea name="cdrom">
 				<disk name="sewer shark (usa, rev. b, alt)" sha1="9229f299de538d02ebf6d8e8a44c0066bc879077"/>
 			</diskarea>
@@ -2787,12 +2892,12 @@ See: http://rawdump.net/
 		<rom name="Sewer Shark (USA) (Bundle) (Track 1).bin" size="487360272" crc="57b21ebe" />
 		<rom name="Sewer Shark (USA) (Bundle) (Track 2).bin" size="2234400" crc="75573804" />
 		-->
-		<description>Sewer Shark (USA, Rev. B, Alt 2)</description>
+		<description>Sewer Shark (USA, rev. B, alt 2)</description>
 		<year>1992</year>
 		<publisher>Sega</publisher>
 		<info name="release" value="199212xx" />
-		<info name="ring_code" value="CDRM-1095270 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDRM-1095270 2"/>
 			<diskarea name="cdrom">
 				<disk name="sewer shark (usa, rev. b, alt 2)" sha1="b5cd7913425b5f14c7fd6a5df9dc66a40022edc6"/>
 			</diskarea>
@@ -2811,15 +2916,15 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="alt_title" value="Sherlock Holmes - Consulting Detective (Box)" />
 		<info name="release" value="19921015" />
-		<info name="ring_code" value="CDAC-031300 1, CDAC-031300 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-031300 1, CDAC-031300 2"/>
 			<diskarea name="cdrom">
 				<disk name="sherlock holmes - consulting detective vol. i (usa)" sha1="32d2f47f459927cd162376e46d6a02430572a82a"/>
 			</diskarea>
 		</part>
 	</software>
 
-	<software name="holmes2">
+	<software name="holmes2" supported="no">
 		<!-- Source: redump.org - http://redump.org/disc/17162/ http://redump.org/disc/17163/
 		<rom name="Sherlock Holmes - Consulting Detective Vol. II (USA) (Disc 1).cue" size="292" crc="a33aa103" />
 		<rom name="Sherlock Holmes - Consulting Detective Vol. II (USA) (Disc 1) (Track 1).bin" size="529374048" crc="94a913b7" />
@@ -2832,18 +2937,21 @@ See: http://rawdump.net/
 		<description>Sherlock Holmes - Consulting Detective Vol. II (USA)</description>
 		<year>1993</year>
 		<publisher>Sega</publisher>
+		<notes><![CDATA[
+Requires [disc swap]
+]]></notes>
 		<info name="serial" value="4653"/>
 		<info name="release" value="199305xx" />
-		<info name="ring_code" value="CDAC-041000 1 (Disc 1), CDAC-041100 2 (Disc 2)"/>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1" />
+			<feature name="cd_matrix" value="CDAC-041000 1"/>
 			<diskarea name="cdrom">
 				<disk name="sherlock holmes - consulting detective vol ii (usa) (disc 1)" sha1="162af0ed791b8a18040ecb3925984a738dc72d49"/>
 			</diskarea>
 		</part>
-
 		<part name="cdrom2" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 2" />
+			<feature name="cd_matrix" value="CDAC-041100 2"/>
 			<diskarea name="cdrom">
 				<disk name="sherlock holmes - consulting detective vol ii (usa) (disc 2)" sha1="3de4f89de8920185197d8a65f0ea97a83e774a98"/>
 			</diskarea>
@@ -2939,12 +3047,12 @@ See: http://rawdump.net/
 		<rom name="Shining Force CD (USA) (Alt) (Track 34).bin" size="1822800" crc="d934bfd5" />
 		<rom name="Shining Force CD (USA) (Alt) (Track 35).bin" size="19314624" crc="8a07247e" />
 		-->
-		<description>Shining Force CD (USA, Alt)</description>
+		<description>Shining Force CD (USA, alt)</description>
 		<year>1994</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="MK-4656"/>
-		<info name="ring_code" value="3/95 6RA3 1008604656, 3/95 5RA1 1008604656"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="3/95 6RA3 1008604656, 3/95 5RA1 1008604656"/>
 			<diskarea name="cdrom">
 				<disk name="shining force cd (usa, alt)" sha1="ddb304849d01df44251d69b890df47c8db1d8642"/>
 			</diskarea>
@@ -2968,15 +3076,15 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="serial" value="4423"/>
 		<info name="release" value="199310xx" />
-		<info name="ring_code" value="SEGA4423 R2D MFD BY JVC, SEGA4423RE R2D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA4423 R2D MFD BY JVC, SEGA4423RE R2D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="silpheed (usa)" sha1="f4d368f13f7998fb8d37c9a3439d42497e0ee359"/>
 			</diskarea>
 		</part>
 	</software>
 
-	<software name="slamcity">
+	<software name="slamcity" supported="no">
 		<!-- Source: redump.org - http://redump.org/disc/28031/ http://redump.org/disc/28032/ http://redump.org/disc/28033/ http://redump.org/disc/28034/
 		<rom name="Slam City with Scottie Pippen (USA) (Disc 1) (Fingers).cue" size="301" crc="3f50c8bc" md5="35ca36913af0a3df72cf8c3492eceec1" sha1="e3511c717bb78966f75e0dd4a2190b5d390faefe"/>
 		<rom name="Slam City with Scottie Pippen (USA) (Disc 1) (Fingers) (Track 1).bin" size="587070960" crc="becd1484" md5="99a012c46ec31fec5f9538eaa510bd5a" sha1="f32cf26f6fa4acf12807e7f1064e9e202d11cff3"/>
@@ -2994,32 +3102,38 @@ See: http://rawdump.net/
 		<rom name="Slam City with Scottie Pippen (USA) (Disc 4) (Smash) (Track 1).bin" size="541714992" crc="d1bc5a00" md5="7b0ef7c4df8f2ac1868689e5d0f5725c" sha1="5f9cdffe15d4f577b2777ed27ade62174e1be36b"/>
 		<rom name="Slam City with Scottie Pippen (USA) (Disc 4) (Smash) (Track 2).bin" size="17122560" crc="a47ac691" md5="2f2fa2e38081e85dcfb5e64e6e5aae53" sha1="d2247274b9e36c085565490311652751aa3d3168"/>
 		-->
-		<description>Slam City with Scottie Pippen (USA, Rev. A)</description>
+		<description>Slam City with Scottie Pippen (USA, rev. A)</description>
 		<year>1994</year>
 		<publisher>Digital Pictures</publisher>
+		<notes><![CDATA[
+Requires [disc swap]
+]]></notes>
 		<info name="serial" value="T-162035"/>
 		<info name="release" value="199411xx" />
-		<info name="ring_code" value="GW 02711.1 RE-1 SRCR##01 (Disc 1) / GW 02711.2 RE-1 SRCR**01 (Disc 2) / GW 02711.3 RE-1 SRCR##01 (Disc 3) / GW 02711.4 RE-1 SRCR##01 (Disc 4)"/>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1 - Fingers" />
+			<feature name="cd_matrix" value="GW 02711.1 RE-1 SRCR##01"/>
 			<diskarea name="cdrom1">
 				<disk name="slam city with scottie pippen (usa, alt) (disc 1)" sha1="637ceb49d6e9ff89009b26d848b6097a54969d65"/>
 			</diskarea>
 		</part>
 		<part name="cdrom2" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 2 - Juice" />
+			<feature name="cd_matrix" value="GW 02711.2 RE-1 SRCR**01"/>
 			<diskarea name="cdrom2">
 				<disk name="slam city with scottie pippen (usa, alt) (disc 2)" sha1="e5cc52a7686824b14ee471682f30b0b4a09dbe97"/>
 			</diskarea>
 		</part>
 		<part name="cdrom3" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 3 - Mad Dog" />
+			<feature name="cd_matrix" value="GW 02711.3 RE-1 SRCR##01"/>
 			<diskarea name="cdrom3">
 				<disk name="slam city with scottie pippen (usa, alt) (disc 3)" sha1="6d144435110bc0fcd97313c75dbb56f472e4e123"/>
 			</diskarea>
 		</part>
 		<part name="cdrom4" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 4 - Smash" />
+			<feature name="cd_matrix" value="GW 02711.4 RE-1 SRCR##01"/>
 			<diskarea name="cdrom4">
 				<disk name="slam city with scottie pippen (usa, alt) (disc 4)" sha1="ddffdf4dd92fcb3f93f285ff24384815ba401cab"/>
 			</diskarea>
@@ -3056,8 +3170,8 @@ See: http://rawdump.net/
 		<publisher>Konami</publisher>
 		<info name="serial" value="T-95035"/>
 		<info name="release" value="19941130" />
-		<info name="ring_code" value="T95035-U12 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="T95035-U12 1"/>
 			<diskarea name="cdrom">
 				<disk name="snatcher (usa)" sha1="815edc5df272e4b10edd5919b29c3a996a1799c2"/>
 			</diskarea>
@@ -3091,8 +3205,8 @@ See: http://rawdump.net/
 		<year>1992</year>
 		<publisher>Sega</publisher>
 		<info name="release" value="19921015" />
-		<info name="ring_code" value="SEGA4130RE2 R3C MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA4130RE2 R3C MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="sol-feace (usa)" sha1="498ebd9c1fe4bd2f84cf6c32829b68e471eb3b07"/>
 			</diskarea>
@@ -3144,8 +3258,8 @@ See: http://rawdump.net/
 		<info name="serial" value="4407"/>
 		<info name="alt_title" value="Sonic CD (Box)" />
 		<info name="release" value="19931119" />
-		<info name="ring_code" value="SEGA4407 R1C MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA4407 R1C MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="sonic cd (usa)" sha1="ae08e06cc13b49b75c45e69334b2bdea4974454f"/>
 			</diskarea>
@@ -3191,14 +3305,14 @@ See: http://rawdump.net/
 		<rom name="Sonic CD (USA) (RE125) (Track 34).bin" size="16405200" crc="393386fd" md5="d798e31b863cf5e31ef6e1b242aabe86" sha1="b52aa2b587cd4682e95a56e087cd15e215afa316"/>
 		<rom name="Sonic CD (USA) (RE125) (Track 35).bin" size="31940160" crc="9cebd39d" md5="dcfce720b4e4cb2236cc54537eb551c5" sha1="f3113ef9547a9242fc93bd6654adeb860f22dc27"/>
 		-->
-		<description>Sonic the Hedgehog CD (USA, Alt)</description>
+		<description>Sonic the Hedgehog CD (USA, alt)</description>
 		<year>1993</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4407"/>
 		<info name="alt_title" value="Sonic CD (Box)" />
 		<info name="release" value="19931119" />
-		<info name="ring_code" value="SEGA4407RE125 R7D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA4407RE125 R7D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="sonic cd (usa, alt)" sha1="a8a968a6239da07c6143dd420a6a3093f4dddcd2"/>
 			</diskarea>
@@ -3245,13 +3359,13 @@ See: http://rawdump.net/
 		<rom name="Sonic CD (USA) (RE125) (Alt) (Track 34).bin" size="16405200" crc="393386fd" md5="d798e31b863cf5e31ef6e1b242aabe86" sha1="b52aa2b587cd4682e95a56e087cd15e215afa316"/>
 		<rom name="Sonic CD (USA) (RE125) (Alt) (Track 35).bin" size="31940160" crc="9cebd39d" md5="dcfce720b4e4cb2236cc54537eb551c5" sha1="f3113ef9547a9242fc93bd6654adeb860f22dc27"/>
 		-->
-		<description>Sonic the Hedgehog CD (USA, Alt 2)</description>
+		<description>Sonic the Hedgehog CD (USA, alt 2)</description>
 		<year>1993</year>
 		<publisher>Sega</publisher>
 		<info name="alt_title" value="Sonic CD (Box)" />
 		<info name="release" value="19931119" />
-		<info name="ring_code" value="SEGA4407RE125 R8C MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA4407RE125 R8C MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="sonic cd (usa, alt 2)" sha1="824b78678ce7aa0b845d14de3e7df737105329f4"/>
 			</diskarea>
@@ -3284,8 +3398,8 @@ See: http://rawdump.net/
 		<publisher>Core Design</publisher>
 		<info name="serial" value="T-115035"/>
 		<info name="release" value="199409xx" />
-		<info name="ring_code" value="SEGAT115035 R1J MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT115035 R1J MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="soulstar (usa)" sha1="4e2ab5b51dca2a4c23700b4d3587a9a08ac6d29f"/>
 			</diskarea>
@@ -3302,8 +3416,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>ReadySoft</publisher>
 		<info name="serial" value="T-121025"/>
-		<info name="ring_code" value="CDAC-080300 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-080300 2"/>
 			<diskarea name="cdrom">
 				<disk name="space ace (usa)" sha1="d5f5125af3e9e59a59f775576ddc99b4aadaf505"/>
 			</diskarea>
@@ -3321,8 +3435,8 @@ See: http://rawdump.net/
 		<publisher>JVC</publisher>
 		<info name="serial" value="T-60075"/>
 		<info name="release" value="199403xx" />
-		<info name="ring_code" value="SEGAT60075 R1D MFD BY JVC, SEGAT60075 R2C MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT60075 R1D MFD BY JVC, SEGAT60075 R2C MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="star wars - rebel assault (usa)" sha1="f1049ddf315f3a9ecd29378bc026a05669120112"/>
 			</diskarea>
@@ -3339,8 +3453,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Namco</publisher>
 		<info name="serial" value="T-14025"/>
-		<info name="ring_code" value="CDAC-073400 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-073400 2"/>
 			<diskarea name="cdrom">
 				<disk name="starblade (usa)" sha1="6233ca426d0797a5bccf98261b5164c44feb5203"/>
 			</diskarea>
@@ -3377,8 +3491,8 @@ See: http://rawdump.net/
 		<publisher>Dynamix</publisher>
 		<info name="serial" value="T-110025"/>
 		<info name="release" value="199312xx" />
-		<info name="ring_code" value="SEGAT11025 R1D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT11025 R1D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="stellar-fire (usa)" sha1="4e0245e30cac825c262551eda322eb774919e87b"/>
 			</diskarea>
@@ -3396,10 +3510,31 @@ See: http://rawdump.net/
 		<year>1995</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4435"/>
-		<info name="ring_code" value="CDAC-088700 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-088700 1"/>
 			<diskarea name="cdrom">
 				<disk name="surgical strike (usa)" sha1="37ba598fdc774b805f89d43962591a176c2215d4"/>
+			</diskarea>
+		</part>
+	</software>
+
+	<software name="surgical32" cloneof="surgical" supported="no">
+		<!-- Source: redump.org
+		<rom name="Surgical Strike (Brazil) (Sega CD 32X).cue" size="378" crc="5046e80c" />
+		<rom name="Surgical Strike (Brazil) (Sega CD 32X) (Track 1).bin" size="438499824" crc="2356dcc6" />
+		<rom name="Surgical Strike (Brazil) (Sega CD 32X) (Track 2).bin" size="43210944" crc="87b19436" />
+		<rom name="Surgical Strike (Brazil) (Sega CD 32X) (Track 3).bin" size="1985088" crc="d00d9864" />
+		-->
+		<description>Surgical Strike (Brazil, 32X)</description>
+		<year>1996</year>
+		<publisher>Tec Toy</publisher>
+		<notes><![CDATA[
+Requires [32X] add-on, game asks you to plug it in if not present
+]]></notes>
+		<info name="serial" value="157036"/>
+		<part name="cdrom" interface="scd_cdrom">
+			<diskarea name="cdrom">
+				<disk name="surgical strike (bra, 32x)" sha1="857e0602e35e4b45ec3660d8639fb88d2a014230"/>
 			</diskarea>
 		</part>
 	</software>
@@ -3419,8 +3554,8 @@ See: http://rawdump.net/
 		<year>1995</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4432"/>
-		<info name="ring_code" value="1008604432 7/95 1RA2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="1008604432 7/95 1RA2"/>
 			<diskarea name="cdrom">
 				<disk name="the adventures of batman and robin (usa)" sha1="80e65ec95ea9440e59d64ea067b48921686006e8"/>
 			</diskarea>
@@ -3450,8 +3585,8 @@ See: http://rawdump.net/
 		<year>1993</year>
 		<publisher>Dynamix</publisher>
 		<info name="serial" value="T-6300"/>
-		<info name="ring_code" value="SEGAT110015 R1J"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT110015 R1J"/>
 			<diskarea name="cdrom">
 				<disk name="the adventures of willy beamish (usa)" sha1="694476e5e82d7317ec6943d5d749764592045f37"/>
 			</diskarea>
@@ -3480,8 +3615,8 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="serial" value="4412"/>
 		<info name="release" value="199306xx" />
-		<info name="ring_code" value="CDAC-047100 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-047100 2"/>
 			<diskarea name="cdrom">
 				<disk name="the amazing spider-man vs. the kingpin (usa)" sha1="4102f007184635832ca13ab770ccadcde32242da"/>
 			</diskarea>
@@ -3524,8 +3659,8 @@ See: http://rawdump.net/
 		<publisher>JVC</publisher>
 		<info name="serial" value="T-60035"/>
 		<info name="release" value="199212xx" />
-		<info name="ring_code" value="SEGAT60035RE R1C MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT60035RE R1C MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="the secret of monkey island (usa)" sha1="a894a9e6ba908f742d686fb85b7ae3c700fb1d36"/>
 			</diskarea>
@@ -3569,8 +3704,8 @@ See: http://rawdump.net/
 		<publisher>Virgin Games</publisher>
 		<info name="serial" value="T-70015"/>
 		<info name="release" value="199306xx" />
-		<info name="ring_code" value="SEGACD86003 R1D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGACD86003 R1D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="the terminator (usa)" sha1="43bf02bf06fc5d1bd32bc61b11acd1745d2d7a1d"/>
 			</diskarea>
@@ -3588,8 +3723,8 @@ See: http://rawdump.net/
 		<publisher>Renovation</publisher>
 		<info name="serial" value="T-6214"/>
 		<info name="release" value="199305xx" />
-		<info name="ring_code" value="SEGAT49025 R2C MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT49025 R2C MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="time gal (usa)" sha1="22c4bc9adb5560c276f0fe88967e04bf279d54d0"/>
 			</diskarea>
@@ -3607,8 +3742,8 @@ See: http://rawdump.net/
 		<publisher>Sega</publisher>
 		<info name="serial" value="4429"/>
 		<info name="release" value="199403xx" />
-		<info name="ring_code" value="1008604429 9/95 1RA1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="1008604429 9/95 1RA1"/>
 			<diskarea name="cdrom">
 				<disk name="tomcat alley (usa)" sha1="b90a1fcdd7371da1c36591b53264e809637b0a18"/>
 			</diskarea>
@@ -3621,12 +3756,12 @@ See: http://rawdump.net/
 		<rom name="Tomcat Alley (USA) (Track 1).bin" size="567756336" crc="e064fd12" md5="147bfb944524cbcdd78671348205853c" sha1="49b8fdc6d399bc2bf4c1c5c48922abf1ef5accc8"/>
 		<rom name="Tomcat Alley (USA) (Track 2).bin" size="2337888" crc="aa74f12a" md5="157a4fb5cc0fddde1a5d7ec4b2bd848d" sha1="cbb5362ca92cc0d8ff050c92af3ed5ecf934b045"/>
 		-->
-		<description>Tomcat Alley (USA, Alt)</description>
+		<description>Tomcat Alley (USA, alt)</description>
 		<year>1994</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4429"/>
-		<info name="ring_code" value="CDAC-058500 1, CDAC-058500 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-058500 1, CDAC-058500 2"/>
 			<diskarea name="cdrom">
 				<disk name="tomcat alley (usa, alt)" sha1="0d2ab8e7934c162ef16d233c62f02b9c0268aca4"/>
 			</diskarea>
@@ -3663,10 +3798,35 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Working Designs</publisher>
 		<info name="serial" value="T-127025"/>
-		<info name="ring_code" value="SEGAT127025ARE R1D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT127025ARE R1D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="vay (usa)" sha1="099e4c43d8ca5eb57854db25cbcbfc3139e41a9e"/>
+			</diskarea>
+		</part>
+	</software>
+
+	<!-- This disc was bundled with the JVC X'Eye system in the USA. -->
+	<software name="wixeye">
+		<!-- Source: redump.org
+		<rom name="What is X'Eye Multi Entertainment System (USA).cue" size="1125" crc="ad4993c3" />
+		<rom name="What is X'Eye Multi Entertainment System (USA) (Track 1).bin" size="49316736" crc="7def0d97" />
+		<rom name="What is X'Eye Multi Entertainment System (USA) (Track 2).bin" size="6738480" crc="4865c4cf" />
+		<rom name="What is X'Eye Multi Entertainment System (USA) (Track 3).bin" size="9904272" crc="2435b213" />
+		<rom name="What is X'Eye Multi Entertainment System (USA) (Track 4).bin" size="12712560" crc="3cafa2e8" />
+		<rom name="What is X'Eye Multi Entertainment System (USA) (Track 5).bin" size="11400144" crc="6ee4f4be" />
+		<rom name="What is X'Eye Multi Entertainment System (USA) (Track 6).bin" size="16426368" crc="03e0c09d" />
+		<rom name="What is X'Eye Multi Entertainment System (USA) (Track 7).bin" size="24832416" crc="4abb85d7" />
+		<rom name="What is X'Eye Multi Entertainment System (USA) (Track 8).bin" size="6733776" crc="5576161c" />
+		-->
+		<description>What is X'Eye Multi Entertainment System (USA)</description>
+		<year>1994</year>
+		<publisher>JVC</publisher>
+		<info name="serial" value="SMJ-4110"/>
+		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SMJ-4110-R1M V"/>
+			<diskarea name="cdrom">
+				<disk name="what is x'eye multi entertainment system (usa)" sha1="926143f74d8bad9cda401bbf651051396e96aa54"/>
 			</diskarea>
 		</part>
 	</software>
@@ -3687,8 +3847,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Sony Imagesoft</publisher>
 		<info name="serial" value="T-93085"/>
-		<info name="ring_code" value="CDAC-077500 1"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-077500 1"/>
 			<diskarea name="cdrom">
 				<disk name="wheel of fortune (usa)" sha1="1c48a4dd3d70ed9d4450aea57bb5dc671e5c4a4c"/>
 			</diskarea>
@@ -3705,8 +3865,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>American Laser Games</publisher>
 		<info name="serial" value="T-111045"/>
-		<info name="ring_code" value="SEGAT111045 R1H MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT111045 R1H MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="who shot johnny rock (usa)" sha1="dc9675c0bfc19baae5be13ce1540062c09b930f3"/>
 			</diskarea>
@@ -3728,8 +3888,8 @@ See: http://rawdump.net/
 		<publisher>Electronic Arts</publisher>
 		<info name="serial" value="T-50045"/>
 		<info name="release" value="199302xx" />
-		<info name="ring_code" value="CDAC-059000 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-059000 2"/>
 			<diskarea name="cdrom">
 				<disk name="wing commander (usa)" sha1="d36f61f84a87518691438a3c4f9862b2ce23e483"/>
 			</diskarea>
@@ -3746,8 +3906,8 @@ See: http://rawdump.net/
 		<year>1995</year>
 		<publisher>Sega</publisher>
 		<info name="serial" value="4437"/>
-		<info name="ring_code" value="1008604437 8/95 1RA2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="1008604437 8/95 1RA2"/>
 			<diskarea name="cdrom">
 				<disk name="wirehead (usa)" sha1="762bb917b936f1a781a2fbe66bbe3a9bf5dd5d43"/>
 			</diskarea>
@@ -3780,8 +3940,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>U.S. Gold</publisher>
 		<info name="serial" value="T-79025"/>
-		<info name="ring_code" value="SEGAT79025 R2D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT79025 R2D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="world cup usa 94 (usa)" sha1="cb17c8ea42ec3a7d9562a0e188610a687f6b8829"/>
 			</diskarea>
@@ -3799,8 +3959,8 @@ See: http://rawdump.net/
 		<publisher>Arena</publisher>
 		<info name="serial" value="T-81015"/>
 		<info name="release" value="199311xx" />
-		<info name="ring_code" value="SEGAT81015 R3D MFD BY JVC"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT81015 R3D MFD BY JVC"/>
 			<diskarea name="cdrom">
 				<disk name="wwf rage in the cage (usa)" sha1="960a6ffa31b52e7ca8e7759f3d385940c8f2eb56"/>
 			</diskarea>
@@ -3838,8 +3998,8 @@ See: http://rawdump.net/
 		<info name="alt_title" value="Android Assault - The Revenge of Bari-Arm (Box)" />
 		<info name="release" value="199410xx" />
 		<info name="serial" value="4445"/>
-		<info name="ring_code" value="T-163015-00"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="T-163015-00"/>
 			<diskarea name="cdrom">
 				<disk name="bari-arm (usa)" sha1="99419bf60689cf563a26236f7db116b72ad6ab8b"/>
 			</diskarea>
@@ -3873,7 +4033,7 @@ See: http://rawdump.net/
 		<rom name="Battle Frenzy (2003)(Good Deal Games - Oldergames)(NTSC)(US)(M4)(Track 17 of 17)[!].wav" size="64651820" crc="b0b20d52" md5="03c5360790de73e4be476745680c3cdc" sha1="2fed7d760ff7c687c553a03ed6920d4093d88c62"/>
 		<rom name="Battle Frenzy (2003)(Good Deal Games - Oldergames)(NTSC)(US)(M4)[!].cue" size="2465" crc="f04bb8a2" md5="91f5ef49402455bb7c8e791417c68b7a" sha1="6b81c198a7d3309276b935fee96fc8b8799efab6"/>
 		-->
-		<description>Battle Frenzy (USA, Prototype)</description>
+		<description>Battle Frenzy (USA, prototype)</description>
 		<year>2003</year>
 		<publisher>Good Deal Games</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -3893,7 +4053,7 @@ See: http://rawdump.net/
 		<rom name="Battletech - Gray Death Legion (2007)(Good Deal Games)(NTSC)(US)[!][unreleased beta].cue" size="173" crc="14ae9d68" md5="340a8d067cea412924cec94f015c665f" sha1="746cc88be999098afd138a485933d8999bb4948f"/>
 		<rom name="Battletech - Gray Death Legion (2007)(Good Deal Games)(NTSC)(US)[!][unreleased beta].iso" size="119787520" crc="107be434" md5="a7aad507e31d0aa79efedfab58c5d0ff" sha1="badbff8119a59546e9bc1efcda9700112a3cb183"/>
 		-->
-		<description>Battletech - Gray Death Legion (USA, Prototype)</description>
+		<description>Battletech - Gray Death Legion (USA, prototype)</description>
 		<year>200?</year>
 		<publisher>Good Deal Games</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -3931,13 +4091,13 @@ See: http://rawdump.net/
 		<rom name="Blackhole Assault (1993)(Bignet)(NTSC)(US)(Track 22 of 23)[!][CDAC-031700 2].wav" size="35141276" crc="9b0b72d2" />
 		<rom name="Blackhole Assault (1993)(Bignet)(NTSC)(US)(Track 23 of 23)[!][CDAC-031700 2].wav" size="34301612" crc="0dd98031" />
 		-->
-		<description>Black Hole Assault (USA, Alt)</description>
+		<description>Black Hole Assault (USA, alt)</description>
 		<year>1993</year>
 		<publisher>Bignet</publisher>
 		<info name="alt_title" value="Blackhole Assault (Box)" />
 		<info name="serial" value="T-6401"/>
-		<info name="ring_code" value="CDAC-031700 2"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-031700 2"/>
 			<diskarea name="cdrom">
 				<disk name="blackhole assault (usa, alt)" sha1="7b3e4027715b8752579ad862ac19daae50eb34ea"/>
 			</diskarea>
@@ -3956,7 +4116,7 @@ See: http://rawdump.net/
 		<rom name="Bug Blasters - The Exterminators (2000)(Good Deal Games)(NTSC)(US)(Track 2 of 2).wav" size="39036188" crc="2514f737" md5="17abb3aba0581b8a3824133dcc7fbbb8" sha1="1fc932cb99a91c4b7b46d8cd7a5b6b558eaf632a"/>
 		<rom name="Bug Blasters - The Exterminators (2000)(Good Deal Games)(NTSC)(US).cue" size="329" crc="edd2cc36" md5="10bdedc766be4cbbd7c3549b59513624" sha1="375bd4383edb0cd3c5b0eb4c2450b626d1faff82"/>
 		-->
-		<description>The Exterminators (USA, Prototype)</description>
+		<description>The Exterminators (USA, prototype)</description>
 		<year>2001</year>
 		<publisher>Good Deal Games</publisher>
 		<info name="alt_title" value="Bug Blasters - The Exterminators (Box)" />
@@ -3979,7 +4139,7 @@ See: http://rawdump.net/
 		<rom name="Bug Blasters - The Exterminators (2003)(Good Deal Games)(US)(Track 2 of 2)[!][Special Edition].wav" size="39036188" crc="ac3f1d80" md5="6037ed6379d9cdc1aee4c6906832bfeb" sha1="f97c6d45c2e25da8c6a9cf386eec7f911ebd8c6a"/>
 		<rom name="Bug Blasters - The Exterminators (2003)(Good Deal Games)(US)[!][Special Edition].cue" size="357" crc="87732831" md5="e0ff2d0320675ce21e10b60b6a79eb87" sha1="12ea928038d19dedf574922024246851a2b95c90"/>
 		-->
-		<description>The Exterminators - Special Edition (USA, Prototype)</description>
+		<description>The Exterminators - Special Edition (USA, prototype)</description>
 		<year>2003</year>
 		<publisher>Good Deal Games</publisher>
 		<info name="alt_title" value="Bug Blasters - The Exterminators (Box)" />
@@ -4051,7 +4211,7 @@ See: http://rawdump.net/
 		<rom name="Citizen X Beta (2002)(Good Deal Games - Oldergames)(NTSC)(US)[!][unreleased beta].cue" size="170" crc="71c85c20" />
 		<rom name="Citizen X Beta (2002)(Good Deal Games - Oldergames)(NTSC)(US)[!][unreleased beta].iso" size="329457664" crc="36c21367" />
 		-->
-		<description>Citizen X (USA, Prototype)</description>
+		<description>Citizen X (USA, prototype)</description>
 		<year>2002</year>
 		<publisher>Good Deal Games</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -4102,7 +4262,7 @@ See: http://rawdump.net/
 		<rom name="Dragon's Lair - Demo CD (1993)(ReadySoft)(NTSC)(US).cue" size="140" crc="186a5613" />
 		<rom name="Dragon's Lair - Demo CD (1993)(ReadySoft)(NTSC)(US).iso" size="12802048" crc="22189e3c" />
 		-->
-		<description>Dragon's Lair (USA, Demo)</description>
+		<description>Dragon's Lair (USA, demo)</description>
 		<year>1993</year>
 		<publisher>ReadySoft</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -4222,7 +4382,7 @@ See: http://rawdump.net/
 		<rom name="Burning Fists - Force Striker (2006)(Good Deal Games)(NTSC)(US)(Track 13 of 13)[!].wav" size="17308412" crc="f34cdb68" md5="b4b94c40d55956aeb729fbcac52d9e73" sha1="20db6f89d6c3d67def2c512d9be26f70322ab660"/>
 		<rom name="Burning Fists - Force Striker (2006)(Good Deal Games)(NTSC)(US)[!].cue" size="1884" crc="fcdd6569" md5="fc32f66714b4e60f6358e57201f3fd60" sha1="2493d17b99a8fc6374eb25d05f7f608e6257c434"/>
 		-->
-		<description>Force Striker (USA, Prototype)</description>
+		<description>Force Striker (USA, prototype)</description>
 		<year>2006</year>
 		<publisher>Good Deal Games</publisher>
 		<info name="alt_title" value="Burning Fists - Force Striker (Box)" />
@@ -4251,7 +4411,7 @@ See: http://rawdump.net/
 		</part>
 	</software>
 
-	<software name="gztexasa" cloneof="gztexas">
+	<software name="gztexasa" cloneof="gztexas" supported="no">
 		<!-- Source: TOSEC-ISO
 		<rom name="Ground Zero Texas (1993)(Sony Imagesoft)(NTSC)(US)(Disc 1 of 2)[!].cue" size="329" crc="b82ac042" />
 		<rom name="Ground Zero Texas (1993)(Sony Imagesoft)(NTSC)(US)(Disc 1 of 2)(Track 1 of 2)[!].iso" size="548009984" crc="e397fe2d" />
@@ -4261,11 +4421,13 @@ See: http://rawdump.net/
 		<rom name="Ground Zero Texas (1993)(Sony Imagesoft)(NTSC)(US)(Disc 2 of 2)(Track 1 of 2)[!][CDAC-053300 2].iso" size="522225664" crc="36720a8d" />
 		<rom name="Ground Zero Texas (1993)(Sony Imagesoft)(NTSC)(US)(Disc 2 of 2)(Track 2 of 2)[!][CDAC-053300 2].wav" size="2234444" crc="b08c0b8f" />
 		-->
-		<description>Ground Zero Texas (USA, Alt)</description>
+		<description>Ground Zero Texas (USA, alt)</description>
 		<year>1993</year>
 		<publisher>Sony Imagesoft</publisher>
+		<notes><![CDATA[
+Requires [disc swap]
+]]></notes>
 		<info name="serial" value="T-93145"/>
-		<info name="ring_code" value="CDAC-053300 2 (Disc 2)"/>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1" />
 			<diskarea name="cdrom1">
@@ -4274,6 +4436,7 @@ See: http://rawdump.net/
 		</part>
 		<part name="cdrom2" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 2" />
+			<feature name="cd_matrix" value="CDAC-053300 2"/>
 			<diskarea name="cdrom2">
 				<disk name="ground zero texas (usa, alt) (disc 2)" sha1="4b3ebe516e2047d4df38590e0badf372262fa435"/>
 			</diskarea>
@@ -4306,12 +4469,12 @@ See: http://rawdump.net/
 		<rom name="Hook (1992)(Sony Imagesoft)(NTSC)(US)(Track 21 of 22)[!][CDAC-032400 6, CDAC-032400 7].wav" size="54637004" crc="b8b74872" />
 		<rom name="Hook (1992)(Sony Imagesoft)(NTSC)(US)(Track 22 of 22)[!][CDAC-032400 6, CDAC-032400 7].wav" size="8079164" crc="763e831a" />
 		-->
-		<description>Hook (USA, Alt)</description>
+		<description>Hook (USA, alt)</description>
 		<year>1992</year>
 		<publisher>Sony Imagesoft</publisher>
 		<info name="serial" value="T-6205"/>
-		<info name="ring_code" value="CDAC-032400 6, CDAC-032400 7"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="CDAC-032400 6, CDAC-032400 7"/>
 			<diskarea name="cdrom">
 				<disk name="hook (usa, alt)" sha1="4f01088a4ac4a059dbf8f8e4f2d94acc96757f05"/>
 			</diskarea>
@@ -4404,12 +4567,12 @@ See: http://rawdump.net/
 		<rom name="Links - The Challenge of Golf (1994)(Virgin)(NTSC)(US)(Track 1 of 2)[!][SEGAT70095 R1J].iso" size="530802688" crc="4139c33c" />
 		<rom name="Links - The Challenge of Golf (1994)(Virgin)(NTSC)(US)(Track 2 of 2)[!][SEGAT70095 R1J].wav" size="705644" crc="6eddd6e8" />
 		-->
-		<description>Links - The Challenge of Golf (USA, Alt)</description>
+		<description>Links - The Challenge of Golf (USA, alt)</description>
 		<year>1994</year>
 		<publisher>Virgin Interactive</publisher>
 		<info name="serial" value="T-70095"/>
-		<info name="ring_code" value="SEGAT70095 R1J"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT70095 R1J"/>
 			<diskarea name="cdrom">
 				<disk name="links - the challenge of golf (usa)" sha1="a663bd03db7815b017f7fac039e76f22b4993452"/>
 			</diskarea>
@@ -4426,8 +4589,8 @@ See: http://rawdump.net/
 		<year>1994</year>
 		<publisher>Virgin Interactive</publisher>
 		<info name="serial" value="T-70095"/>
-		<info name="ring_code" value="SEGAT70095RE R1J"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGAT70095RE R1J"/>
 			<diskarea name="cdrom">
 				<disk name="links - the challenge of golf (usa, alt)" sha1="4fd31dafd2c565d1fdf94cb7e483b13f17da7ae7"/>
 			</diskarea>
@@ -4461,7 +4624,7 @@ See: http://rawdump.net/
 		<rom name="Marko (2003)(Good Deal Games - Oldergames)(NTSC)(US)(Track 17 of 17)[!].wav" size="35983292" crc="04a87920" md5="715610e50d8faf39260ebad88d48fbfe" sha1="ca5f8454dc60763d9884da94531e9a7fcb0d44a3"/>
 		<rom name="Marko (2003)(Good Deal Games - Oldergames)(NTSC)(US)[!].cue" size="2261" crc="330fbfd8" md5="7bef009a6bef65308bb40ccdea8dd28d" sha1="df7323fbd221ced1aa560375b5ae5ed641b1faca"/>
 		-->
-		<description>Marko (USA, Prototype)</description>
+		<description>Marko (USA, prototype)</description>
 		<year>200?</year>
 		<publisher>Good Deal Games</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -4581,7 +4744,7 @@ See: http://rawdump.net/
 	</software>
 
 	<!-- Only the first disc is dumped to redump.org standard. The second disc is a TOSEC-ISO dump. -->
-	<software name="prizefig">
+	<software name="prizefig" supported="no">
 		<!-- Source: TOSEC-ISO & redump.org - http://redump.org/disc/28629/
 		<rom name="Prize Fighter (USA) (Disc 1).cue" size="226" crc="008693c6" md5="5d9afab480f10aff98863b7bb6e35eb2" sha1="88788d86717177eca87075169ee40d0fdc683286"/>
 		<rom name="Prize Fighter (USA) (Disc 1) (Track 1).bin" size="410527488" crc="7d3f2a3c" md5="f8c2e9f9adc690908bd753c5c5ad1511" sha1="a310fc47ee68ba2f6c860b24b11be76ac4f08d86"/>
@@ -4594,10 +4757,13 @@ See: http://rawdump.net/
 		<description>Prize Fighter (USA)</description>
 		<year>1994</year>
 		<publisher>Sega</publisher>
+		<notes><![CDATA[
+Requires [disc swap]
+]]></notes>
 		<info name="serial" value="MK-4206"/>
-		<info name="ring_code" value="CDAC-052700 2 (Disc 1)"/>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1" />
+			<feature name="cd_matrix" value="CDAC-052700 2"/>
 			<diskarea name="cdrom">
 				<disk name="prize fighter (usa) (disc 1)" sha1="37742af63ba540380b8285a1e82be8d1898914e6"/>
 			</diskarea>
@@ -4721,15 +4887,15 @@ See: http://rawdump.net/
 		<year>1992</year>
 		<publisher>Sega</publisher>
 		<info name="release" value="19921015" />
-		<info name="ring_code" value="SEGA-4126RE2 R1C"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="SEGA-4126RE2 R1C"/>
 			<diskarea name="cdrom">
 				<disk name="sega classics arcade collection (usa, 4 in 1)" sha1="cfea01b2bdf3e6eb02209d962e57fc41f0a29bc8"/>
 			</diskarea>
 		</part>
 	</software>
 
-	<software name="slamcitya" cloneof="slamcity">
+	<software name="slamcitya" cloneof="slamcity" supported="no">
 		<!-- Source: TOSEC-ISO
 		<rom name="Slam City with Scottie Pippen (1994)(Digital Pictures)(NTSC)(US)(Disc 1 of 4)[!][Fingers][GW 02711.1].cue" size="399" crc="59d841d8" />
 		<rom name="Slam City with Scottie Pippen (1994)(Digital Pictures)(NTSC)(US)(Disc 1 of 4)(Track 1 of 2)[!][Fingers][GW 02711.1].iso" size="511191040" crc="6747b14f" />
@@ -4750,11 +4916,14 @@ See: http://rawdump.net/
 		<description>Slam City with Scottie Pippen (USA)</description>
 		<year>1994</year>
 		<publisher>Digital Pictures</publisher>
+		<notes><![CDATA[
+Requires [disc swap]
+]]></notes>
 		<info name="serial" value="T-162035"/>
 		<info name="release" value="199411xx" />
-		<info name="ring_code" value="GW 02711.1 (Disc 1) / GW 02711.2 (Disc 2) / GW 02711.3 (Disc 3) / GW 02711.4 (Disc 4)"/>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1 - Fingers" />
+			<feature name="cd_matrix" value="GW 02711.1"/>
 			<diskarea name="cdrom">
 				<disk name="slam city with scottie pippen (usa) (disc 1)" sha1="e458f2e459cb097ed32ea27ffaa7ab5cc47c9a18"/>
 			</diskarea>
@@ -4762,6 +4931,7 @@ See: http://rawdump.net/
 
 		<part name="cdrom2" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 2 - Juice" />
+			<feature name="cd_matrix" value="GW 02711.2"/>
 			<diskarea name="cdrom">
 				<disk name="slam city with scottie pippen (usa) (disc 2)" sha1="d900b5e5dcb904530edc089ce376d53ce404d6ec"/>
 			</diskarea>
@@ -4769,6 +4939,7 @@ See: http://rawdump.net/
 
 		<part name="cdrom3" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 3 - Mad Dog" />
+			<feature name="cd_matrix" value="GW 02711.3"/>
 			<diskarea name="cdrom">
 				<disk name="slam city with scottie pippen (usa) (disc 3)" sha1="11bfe9ce5081785bb8e9cbc0e9bd65c7605e817e"/>
 			</diskarea>
@@ -4776,14 +4947,14 @@ See: http://rawdump.net/
 
 		<part name="cdrom4" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 4 - Smash" />
+			<feature name="cd_matrix" value="GW 02711.4"/>
 			<diskarea name="cdrom">
 				<disk name="slam city with scottie pippen (usa) (disc 4)" sha1="010bc11b7d8a078bbdd869ae7c7bf7ebfe04c916"/>
 			</diskarea>
 		</part>
 	</software>
 
-	<!-- Requires 32x add-on! -->
-	<software name="slamcity32" cloneof="slamcity">
+	<software name="slamcity32" cloneof="slamcity" supported="no">
 		<!-- Source: TOSEC-ISO
 		<rom name="Slam City with Scottie Pippen (1994)(Digital Pictures)(NTSC)(US)(Disc 1 of 4)[!][Fingers][32X].cue" size="385" crc="55a0b768" />
 		<rom name="Slam City with Scottie Pippen (1994)(Digital Pictures)(NTSC)(US)(Disc 1 of 4)(Track 1 of 2)[!][Fingers][32X].iso" size="529147904" crc="1c6665b1" />
@@ -4804,8 +4975,14 @@ See: http://rawdump.net/
 		<description>Slam City with Scottie Pippen (USA, 32X)</description>
 		<year>1994</year>
 		<publisher>Digital Pictures</publisher>
+		<notes><![CDATA[
+Hangs on BIOS logo
+Requires [32X] add-on
+Requires [disc swap]
+]]></notes>
 		<info name="serial" value="T16204F"/>
-		<sharedfeat name="requirement" value="32x"/>
+		<!-- <sharedfeat name="requirement" value="32x"/> -->
+		<info name="usage" value="Requires to be run with 32x_scd"/>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1 - Fingers" />
 			<diskarea name="cdrom">
@@ -4840,7 +5017,7 @@ See: http://rawdump.net/
 		<rom name="Space Ace - Demo Disc (1994)(ReadySoft)(NTSC)(US).cue" size="138" crc="b931b4d1" />
 		<rom name="Space Ace - Demo Disc (1994)(ReadySoft)(NTSC)(US).iso" size="8802304" crc="884f4f1f" />
 		-->
-		<description>Space Ace (USA, Demo)</description>
+		<description>Space Ace (USA, demo)</description>
 		<year>1994</year>
 		<publisher>ReadySoft</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -4862,7 +5039,7 @@ See: http://rawdump.net/
 		<rom name="Star Strike (2000)(Good Deal Games)(NTSC)(US)(Track 2 of 2)[!].wav" size="1244252" crc="11acc95b" md5="ae1e4adf83c26c7934321f3c62c7e4b2" sha1="34dc4f6d52da38a9da4488cba5a6763b0d1bf432"/>
 		<rom name="Star Strike (2000)(Good Deal Games)(NTSC)(US)[!].cue" size="293" crc="4bcf74d3" md5="724764b925749718f1b8e8c09a6a65ed" sha1="09b6d016757d5f5352695a9d40da3277d7569221"/>
 		-->
-		<description>Star Strike (USA, Prototype)</description>
+		<description>Star Strike (USA, prototype)</description>
 		<year>2001</year>
 		<publisher>Good Deal Games</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -4872,7 +5049,7 @@ See: http://rawdump.net/
 		</part>
 	</software>
 
-	<software name="supremew">
+	<software name="supremew" supported="no">
 		<!-- Source: TOSEC-ISO
 		<rom name="Supreme Warrior - Ying Heung (1994)(Digital Pictures)(NTSC)(US)(Disc 1 of 2)[!][Fire & Earth][GW 02411.1 RE-1].cue" size="417" crc="503b570d" />
 		<rom name="Supreme Warrior - Ying Heung (1994)(Digital Pictures)(NTSC)(US)(Disc 1 of 2)(Track 1 of 2)[!][Fire & Earth][GW 02411.1 RE-1].iso" size="427319296" crc="c12c22aa" />
@@ -4885,25 +5062,28 @@ See: http://rawdump.net/
 		<description>Supreme Warrior (USA)</description>
 		<year>1994</year>
 		<publisher>Digital Pictures</publisher>
+		<notes><![CDATA[
+Requires [disc swap]
+]]></notes>
 		<info name="serial" value="T-162045"/>
 		<info name="alt_title" value="Supreme Warrior - Ying Heung (Box)" />
-		<info name="ring_code" value="GW 02411.1 RE-1 (Disc 1), GW 02411.2 RE-1 (Disc 2)"/>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1 - Fire and Earth" />
+			<feature name="cd_matrix" value="GW 02411.1 RE-1"/>
 			<diskarea name="cdrom">
 				<disk name="supreme warrior (usa) (disc 1)" sha1="dbdc3fcdee8c590401a815662878476632f42cf0"/>
 			</diskarea>
 		</part>
 		<part name="cdrom2" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 2 - Wind and Tang Fu" />
+			<feature name="cd_matrix" value="GW 02411.2 RE-1"/>
 			<diskarea name="cdrom">
 				<disk name="supreme warrior (usa) (disc 2)" sha1="00344d23da869e465c322e154c9babf219271e49"/>
 			</diskarea>
 		</part>
 	</software>
 
-	<!-- Requires 32x add-on! -->
-	<software name="supremew32" cloneof="supremew">
+	<software name="supremew32" cloneof="supremew" supported="no">
 		<!-- Source: TOSEC-ISO
 		<rom name="Supreme Warrior - Ying Heung (1994)(Digital Pictures)(NTSC)(US)(en-zh)(Disc 1 of 2)[!][Fire & Earth][32X].cue" size="407" crc="6c4630fc" />
 		<rom name="Supreme Warrior - Ying Heung (1994)(Digital Pictures)(NTSC)(US)(en-zh)(Disc 1 of 2)(Track 1 of 2)[!][Fire & Earth][32X].iso" size="459593728" crc="a65565f4" />
@@ -4916,9 +5096,15 @@ See: http://rawdump.net/
 		<description>Supreme Warrior (USA, 32X)</description>
 		<year>1994</year>
 		<publisher>Digital Pictures</publisher>
+		<notes><![CDATA[
+Hangs on BIOS logo
+Requires [32X] add-on
+Requires [disc swap]
+]]></notes>
 		<info name="serial" value="T-16203F"/>
 		<info name="alt_title" value="Supreme Warrior - Ying Heung (Box)" />
-		<sharedfeat name="requirement" value="32x"/>
+		<!-- <sharedfeat name="requirement" value="32x"/> -->
+		<info name="usage" value="Requires to be run with 32x_scd"/>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1 - Fire and Earth" />
 			<diskarea name="cdrom">
@@ -5056,8 +5242,8 @@ See: http://rawdump.net/
 		<publisher>Extreme Entertainment Group</publisher>
 		<info name="serial" value="T-22025"/>
 		<info name="alt_title" value="Third World War (Box)" />
-		<info name="ring_code" value="AE01941 R1C"/>
 		<part name="cdrom" interface="scd_cdrom">
+			<feature name="cd_matrix" value="AE01941 R1C"/>
 			<diskarea name="cdrom">
 				<disk name="the third world war (usa)" sha1="cd1644735ac3b600167f0680f2210811b90b9bd4"/>
 			</diskarea>
@@ -5076,7 +5262,7 @@ See: http://rawdump.net/
 		<rom name="Timecop (2007)(Good Deal Games)(NTSC)(US)(Track 2 of 2)[!][unreleased beta].wav" size="13088924" crc="6ca3b180" md5="0b5d13d7a30ac7455fe740a47b6d36bf" sha1="63279a793dae15ec41f06d17b60386eb6b36c21e"/>
 		<rom name="Timecop (2007)(Good Deal Games)(NTSC)(US)[!][unreleased beta].cue" size="319" crc="586ff418" md5="ae38e45bbb2e631ea9165feee5562bde" sha1="622be6b138e1723e20910ddc911165ad3eab93eb"/>
 		-->
-		<description>Timecop (USA, Prototype)</description>
+		<description>Timecop (USA, prototype)</description>
 		<year>200?</year>
 		<publisher>Good Deal Games</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -5231,7 +5417,7 @@ See: http://rawdump.net/
 		<rom name="Media (CD-ROM)\BC Racers (1994)(Time Warner Interactive)(US).ccd" size="2990" crc="75ef5a02" md5="6d65d70b42192358761a2ad4cdd9a31e" sha1="64317ace80a4c67052a6f6174dafd1f86fd01a84"/>
 		<rom name="Media (CD-ROM)\BC Racers (1994)(Time Warner Interactive)(US).img" size="480673536" crc="5a313588" md5="5b537f47d1b36755e2fd7cda042fee04" sha1="a3233561fb73248e3cc09b542ce045b4b15a5a4a"/>
 		<rom name="Media (CD-ROM)\BC Racers (1994)(Time Warner Interactive)(US).sub" size="19619328" crc="ec7a4537" md5="1c1ffbdeeb5ca4644036544ede3bb7df" sha1="073b4e227275b69fb97d3d4add8f2b5f162d80ac"/>
-		    -->
+		-->
 		<description>BC Racers (USA)</description>
 		<year>1994</year>
 		<publisher>Core Design</publisher>
@@ -5247,7 +5433,7 @@ See: http://rawdump.net/
 	<!-- Sourced from the hiddenpalace forums - http://hiddenpalace.org/forums/viewtopic.php?t=2880 -->
 	<!-- Marked as bad dump as it's an MP3-based dump -->
 	<software name="blackhp" cloneof="blackh">
-		<description>Blackhole Assault (USA, Prototype 19920210)</description>
+		<description>Blackhole Assault (USA, prototype 19920210)</description>
 		<year>1992</year>
 		<publisher>Sega</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -5264,7 +5450,7 @@ See: http://rawdump.net/
 	-->
 	<!-- Marked as bad dump as it's an MP3-based dump. -->
 	<software name="soniccd510" cloneof="soniccd">
-		<description>CD Sonic the Hedgehog (USA, Prototype 19930510)</description>
+		<description>CD Sonic the Hedgehog (USA, prototype 19930510)</description>
 		<year>1993</year>
 		<publisher>Sega</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -5290,35 +5476,6 @@ See: http://rawdump.net/
 			</diskarea>
 		</part>
 	</software>
-
-<!--
-    <software name="colrmech">
-        <description>Color Mechanica (USA)</description>
-        <year>2013</year>
-        <publisher>&lt;unlicensed&gt;</publisher>
-        <info name="release" value="20131227" />
-        <part name="cdrom" interface="scd_cdrom">
-            <diskarea name="cdrom">
-                <disk name="color mechanica (usa)" status="nodump"/>
-            </diskarea>
-        </part>
-    </software>
--->
-
-	<!-- This was exclusively bundled with the JVC X'Eye console -->
-<!--
-    <software name="comptons200s" cloneof="comptons">
-        <description>Compton's Interactive Encyclopedia v2.00S (USA)</description>
-        <year>1994</year>
-        <publisher>Compton's NewMedia</publisher>
-        <info name="serial" value="T-118025"/>
-        <part name="cdrom" interface="scd_cdrom">
-            <diskarea name="cdrom">
-                <disk name="compton's interactive encyclopedia v2.00s (usa)" status="nodump"/>
-            </diskarea>
-        </part>
-    </software>
--->
 
 	<!-- This was exclusively bundled with the JVC X'Eye console -->
 	<software name="comptons201s" cloneof="comptons">
@@ -5399,7 +5556,7 @@ See: http://rawdump.net/
 		<description>ESPN NBA Hangtime '95 (USA)</description>
 		<year>1994</year>
 		<publisher>Sony Imagesoft</publisher>
-		<info name="serial" value="T-93245 "/>
+		<info name="serial" value="T-93245"/>
 		<part name="cdrom" interface="scd_cdrom">
 			<diskarea name="cdrom">
 				<disk name="espn nba hangtime '95 (usa)" sha1="86f1f4ee8da0f04109cf20b6b8ad455900562abe"/>
@@ -5427,7 +5584,7 @@ See: http://rawdump.net/
 	<!-- Sourced from the hiddenpalace forums - http://hiddenpalace.org/forums/viewtopic.php?t=2880 -->
 	<!-- Marked as bad dump as it's an MP3-based dump, but possibly it's also a broken dump. -->
 	<software name="fatfurspp" cloneof="fatfursp">
-		<description>Fatal Fury Special (USA, Prototype)</description>
+		<description>Fatal Fury Special (USA, prototype)</description>
 		<year>1995</year>
 		<publisher>JVC</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -5458,7 +5615,7 @@ See: http://rawdump.net/
 		<!-- Source: http://frogfeast.rastersoft.net/SegaCD.html
 		<rom name="Frog.iso" size="411648" crc="d96c1966" />
 		-->
-		<description>Frog Feast (USA, Demo)</description>
+		<description>Frog Feast (USA, demo)</description>
 		<year>2007</year>
 		<publisher>RasterSoft</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -5470,10 +5627,13 @@ See: http://rawdump.net/
 
 	<!-- Sourced from the hiddenpalace forums - http://hiddenpalace.org/forums/viewtopic.php?t=2880 -->
 	<!-- Marked as bad dump as it's an MP3-based dump, but probably it's also a broken dump. -->
-	<software name="johnnymn">
-		<description>Johnny Mnemonic (USA, Prototype)</description>
+	<software name="johnnymn" supported="no">
+		<description>Johnny Mnemonic (USA, prototype)</description>
 		<year>1995?</year>
 		<publisher>Sega</publisher>
+		<notes><![CDATA[
+Requires [disc swap]
+]]></notes>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1" />
 			<diskarea name="cdrom1">
@@ -5492,7 +5652,7 @@ See: http://rawdump.net/
 	<!-- Marked as bad dump as it's an MP3-based dump. -->
 	<software name="jparkp" cloneof="jpark">
 		<!-- Unknown source -->
-		<description>Jurassic Park (USA, Prototype)</description>
+		<description>Jurassic Park (USA, prototype)</description>
 		<year>1993?</year>
 		<publisher>Sega</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -5607,7 +5767,7 @@ See: http://rawdump.net/
 		</part>
 	</software>
 
-	<software name="ntrap">
+	<software name="ntrap" supported="no">
 		<!-- Source: TruRip
 		<rom name="Media (CD-ROM)\Night Trap (Rerelease) (1994)(Digital Pictures)(US) - (Disc 1 of 2).ccd" size="934" crc="a9d84328" md5="2d6273e67c6602ac5756c3dedabe23ca" sha1="7534eaccfd1977956f36e7492516e0252a111e79"/>
 		<rom name="Media (CD-ROM)\Night Trap (Rerelease) (1994)(Digital Pictures)(US) - (Disc 1 of 2).img" size="619613232" crc="7cb50000" md5="6061e5642a6070ca6e46269386f4cf06" sha1="53693355efedd1b5afdb24aca323697c860ffd46"/>
@@ -5620,6 +5780,9 @@ See: http://rawdump.net/
 		<description>Night Trap (USA, Re-Release)</description>
 		<year>1995</year>
 		<publisher>Sega</publisher>
+		<notes><![CDATA[
+Requires [disc swap]
+]]></notes>
 		<info name="serial" value="T-162105"/>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1" />
@@ -5654,11 +5817,14 @@ See: http://rawdump.net/
 	</software>
 
 	<!-- Marked as bad dump as it's an MP3-based dump. -->
-	<software name="pennsmok">
+	<software name="pennsmok" supported="no">
 		<!-- Unknown source -->
-		<description>Penn &amp; Teller's Smoke and Mirrors (USA, Prototype)</description>
+		<description>Penn &amp; Teller's Smoke and Mirrors (USA, prototype)</description>
 		<year>1995?</year>
 		<publisher>Absolute Entertainment</publisher>
+		<notes><![CDATA[
+Requires [disc swap]
+]]></notes>
 		<part name="cdrom1" interface="scd_cdrom">
 			<feature name="part_id" value="Disc 1" />
 			<diskarea name="cdrom">
@@ -5697,7 +5863,7 @@ See: http://rawdump.net/
 		<rom name="Road Rash CD (Beta 3 - Feb 11, 1995) (hidden-palace.org).cue" size="178" sha1="6da98e6e94ee8cb9ecef40f4c6207d29359b5da2" />
 		<rom name="Road Rash CD (Beta 3 - Feb 11, 1995) (hidden-palace.org).bin" size="625509696" sha1="bd741d48a1977bcc267312f8bfabfdd9355e36c7" />
 		-->
-		<description>Road Rash (USA, Prototype, Beta 3 - 19950211)</description>
+		<description>Road Rash (USA, prototype, beta 3 - 19950211)</description>
 		<year>1995</year>
 		<publisher>Sega</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -5765,25 +5931,10 @@ See: http://rawdump.net/
 		</part>
 	</software>
 
-	<!--
-	<software name="surgical32x" cloneof="surgical">
-	    <description>Surgical Strike (Bra, 32X)</description>
-	    <year>1996</year>
-	    <publisher>Sega</publisher>
-	    <info name="serial" value="157036"/>
-	    <info name="release" value="199601xx" />
-	    <part name="cdrom" interface="scd_cdrom">
-	        <diskarea name="cdrom">
-	            <disk name="surgical strike (bra, 32x)" status="nodump" />
-	        </diskarea>
-	    </part>
-	</software>
-	-->
-
 	<!-- Sourced from the hiddenpalace forums - http://hiddenpalace.org/forums/viewtopic.php?t=2880 -->
 	<!-- Marked as bad dump as it's an MP3-based dump. -->
 	<software name="shinfrcep" cloneof="shinfrce">
-		<description>Shining Force CD (USA, Prototype)</description>
+		<description>Shining Force CD (USA, prototype)</description>
 		<year>1994</year>
 		<publisher>Sega</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -5799,7 +5950,7 @@ See: http://rawdump.net/
 	the alias Phugolz. The disc is a blue Sega Mega CD-R marked SONIC 712.
 	-->
 	<software name="soniccd712" cloneof="soniccd">
-		<description>Sonic the Hedgehog CD (USA, Prototype 19930712)</description>
+		<description>Sonic the Hedgehog CD (USA, prototype 19930712)</description>
 		<year>1993</year>
 		<publisher>Sega</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -5819,7 +5970,7 @@ See: http://rawdump.net/
 		<rom name="SonicCD920-beta.CUE" size="2006" sha1="5b164c2d1089bc629a234b879e4d70cc617798af" />
 		<rom name="SonicCD920-beta.BIN" size="583084320" sha1="02d3566c12e640f81b5258fe70aed9cec27209e9" />
 		-->
-		<description>Sonic the Hedgehog CD (USA, Prototype 19930920)</description>
+		<description>Sonic the Hedgehog CD (USA, prototype 19930920)</description>
 		<year>1993</year>
 		<publisher>Sega</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -5834,7 +5985,7 @@ See: http://rawdump.net/
 		<rom name="Syndicate.cue" size="75" crc="76504918" />
 		<rom name="Syndicate.bin" size="19411056" crc="a36311a7" />
 		-->
-		<description>Syndicate (USA, Prototype)</description>
+		<description>Syndicate (USA, prototype)</description>
 		<year>19??</year>
 		<publisher>&lt;unknown&gt;</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -5848,7 +5999,7 @@ See: http://rawdump.net/
     This game was developed for the Sega Mega-CD system by Virtual Studio and was released in Europe.
     A stateside release never happened, but in 2014 Good Deal Games released a set of reproduction disc
     made from a prototype build of the US version of the game.
-    -->
+-->
 	<!--
 	<software name="smurfs">
 	    <description>The Smurfs (USA, Prototype)</description>
@@ -5883,7 +6034,7 @@ See: http://rawdump.net/
 	<!-- Is the Good Deal Games disc based off this dump? -->
 	<!-- Marked as bad dump as it's an MP3-based dump. -->
 	<software name="timecopp" cloneof="timecop">
-		<description>Timecop (USA, Early Prototype)</description>
+		<description>Timecop (USA, early prototype)</description>
 		<year>19??</year>
 		<publisher>&lt;unknown&gt;</publisher>
 		<part name="cdrom" interface="scd_cdrom">
@@ -5892,20 +6043,6 @@ See: http://rawdump.net/
 			</diskarea>
 		</part>
 	</software>
-
-<!--
-    <software name="wixeye">
-        <description>What is X'Eye Multi Entertainment System (USA)</description>
-        <year>1993?</year>
-        <publisher>JVC</publisher>
-        <info name="serial" value="SMJ-4110"/>
-        <part name="cdrom" interface="scd_cdrom">
-            <diskarea name="cdrom">
-                <disk name="what is x'eye multi entertainment system (usa)" status="nodump"/>
-            </diskarea>
-        </part>
-    </software>
--->
 
 	<software name="wolfchld">
 		<!-- Source: TruRip

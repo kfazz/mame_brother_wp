@@ -1,10 +1,10 @@
 // license:LGPL-2.1+
 // copyright-holders:Angelo Salese, R. Belmont
 // TODO: make separate device when code is decoupled better
-//DECLARE_WRITE8_MEMBER( stv_SMPC_w );
-//DECLARE_READ8_MEMBER( stv_SMPC_r );
-//DECLARE_WRITE8_MEMBER( saturn_SMPC_w );
-//DECLARE_READ8_MEMBER( saturn_SMPC_r );
+//void stv_SMPC_w(offs_t offset, uint8_t data);
+//uint8_t stv_SMPC_r(offs_t offset);
+//void saturn_SMPC_w(offs_t offset, uint8_t data);
+//uint8_t saturn_SMPC_r(offs_t offset);
 
 #ifndef MAME_MACHINE_SMPC_HLE_H
 #define MAME_MACHINE_SMPC_HLE_H
@@ -14,6 +14,7 @@
 #include "screen.h"
 #include "bus/sat_ctrl/ctrl.h"
 #include "machine/nvram.h"
+#include "dirtc.h"
 
 
 //**************************************************************************
@@ -23,7 +24,8 @@
 // ======================> smpc_hle_device
 
 class smpc_hle_device : public device_t,
-						public device_memory_interface
+						public device_memory_interface,
+						public device_rtc_interface
 {
 public:
 	// construction/destruction
@@ -86,18 +88,16 @@ protected:
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 	virtual space_config_vector memory_space_config() const override;
+
+	// device_rtc_interface overrides
+	virtual bool rtc_feature_y2k() const override { return true; }
+	virtual bool rtc_feature_leap_year() const override { return true; }
+	virtual void rtc_clock_updated(int year, int month, int day, int day_of_week, int hour, int minute, int second) override;
 
 private:
 
 	const address_space_config      m_space_config;
-	enum {
-		COMMAND_ID = 1,
-		RTC_ID,
-		INTBACK_ID,
-		SNDRES_ID
-	};
 
 	emu_timer *m_cmd_timer;
 	emu_timer *m_rtc_timer;
@@ -142,8 +142,10 @@ private:
 	void irq_request();
 
 	void resolve_intback();
-	void intback_continue_request();
-	void handle_rtc_increment();
+	TIMER_CALLBACK_MEMBER(intback_continue_request);
+	TIMER_CALLBACK_MEMBER(handle_rtc_increment);
+	TIMER_CALLBACK_MEMBER(sound_reset);
+	TIMER_CALLBACK_MEMBER(handle_command);
 	void read_saturn_ports();
 
 	void sr_set(uint8_t data);

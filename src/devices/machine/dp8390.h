@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include "dinetwork.h"
+
 
 // device stuff
 
@@ -16,10 +18,11 @@ public:
 	auto mem_read_callback() { return m_mem_read_cb.bind(); }
 	auto mem_write_callback() { return m_mem_write_cb.bind(); }
 
-	DECLARE_WRITE16_MEMBER( dp8390_w );
-	DECLARE_READ16_MEMBER( dp8390_r );
-	DECLARE_WRITE_LINE_MEMBER( dp8390_cs );
-	DECLARE_WRITE_LINE_MEMBER( dp8390_reset );
+	void remote_write(uint16_t data);
+	void cs_write(offs_t offset, uint8_t data);
+	uint16_t remote_read();
+	uint8_t cs_read(offs_t offset);
+	void dp8390_reset(int state);
 	void recv_cb(uint8_t *buf, int len) override;
 
 protected:
@@ -29,7 +32,7 @@ protected:
 	};
 
 	// construction/destruction
-	dp8390_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, TYPE varian, float bandwidth);
+	dp8390_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, TYPE varian, u32 bandwidth);
 
 	// device-level overrides
 	virtual void device_start() override;
@@ -52,7 +55,6 @@ private:
 	void recv(uint8_t *buf, int len);
 
 	int m_reset;
-	bool m_cs;
 	int m_rdma_active;
 
 	struct {

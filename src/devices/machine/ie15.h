@@ -42,32 +42,31 @@ public:
 	auto rs232_conn_txd_handler() { return m_rs232_conn_txd_handler.bind(); }
 	auto rs232_conn_dtr_handler() { return m_rs232_conn_dtr_handler.bind(); }
 	auto rs232_conn_rts_handler() { return m_rs232_conn_rts_handler.bind(); }
-	DECLARE_WRITE_LINE_MEMBER(rs232_conn_dcd_w);
-	DECLARE_WRITE_LINE_MEMBER(rs232_conn_dsr_w);
-	DECLARE_WRITE_LINE_MEMBER(rs232_conn_ri_w);
-	DECLARE_WRITE_LINE_MEMBER(rs232_conn_cts_w);
-	DECLARE_WRITE_LINE_MEMBER(rs232_conn_rxd_w);
+	void rs232_conn_dcd_w(int state);
+	void rs232_conn_dsr_w(int state);
+	void rs232_conn_ri_w(int state);
+	void rs232_conn_cts_w(int state);
+	void rs232_conn_rxd_w(int state);
 
-	DECLARE_WRITE_LINE_MEMBER(update_serial);
+	void update_serial(int state);
 
 protected:
 	ie15_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
 
-	virtual void device_resolve_objects() override;
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	virtual void device_add_mconfig(machine_config &config) override;
 	virtual ioport_constructor device_input_ports() const override;
 	virtual const tiny_rom_entry *device_rom_region() const override;
+
+	TIMER_CALLBACK_MEMBER(hblank_onoff_tick);
 
 	virtual void rcv_complete() override;
 	virtual void tra_callback() override;
 	virtual void tra_complete() override;
 
 private:
-	static const device_timer_id TIMER_HBLANK = 0;
 	void scanline_callback();
 	void update_leds();
 	void draw_scanline(uint32_t *p, uint16_t offset, uint8_t scanline);
@@ -75,29 +74,30 @@ private:
 
 	void ie15core(machine_config &config);
 
-	DECLARE_WRITE16_MEMBER(kbd_put);
-	DECLARE_WRITE8_MEMBER(mem_w);
-	DECLARE_READ8_MEMBER(mem_r);
-	DECLARE_WRITE8_MEMBER(mem_addr_lo_w);
-	DECLARE_WRITE8_MEMBER(mem_addr_hi_w);
-	DECLARE_WRITE8_MEMBER(mem_addr_inc_w);
-	DECLARE_WRITE8_MEMBER(mem_addr_dec_w);
-	DECLARE_READ8_MEMBER(flag_r);
-	DECLARE_WRITE8_MEMBER(flag_w);
-	DECLARE_WRITE8_MEMBER(beep_w);
-	DECLARE_READ8_MEMBER(kb_r);
-	DECLARE_READ8_MEMBER(kb_ready_r);
-	DECLARE_READ8_MEMBER(kb_s_red_r);
-	DECLARE_READ8_MEMBER(kb_s_sdv_r);
-	DECLARE_READ8_MEMBER(kb_s_dk_r);
-	DECLARE_READ8_MEMBER(kb_s_dupl_r);
-	DECLARE_READ8_MEMBER(kb_s_lin_r);
-	DECLARE_WRITE8_MEMBER(kb_ready_w);
-	DECLARE_READ8_MEMBER(serial_tx_ready_r);
-	DECLARE_WRITE8_MEMBER(serial_w);
-	DECLARE_READ8_MEMBER(serial_rx_ready_r);
-	DECLARE_READ8_MEMBER(serial_r);
-	DECLARE_WRITE8_MEMBER(serial_speed_w);
+	void kbd_put(uint16_t data);
+	void kbd_sdv(int state);
+	void mem_w(uint8_t data);
+	uint8_t mem_r();
+	void mem_addr_lo_w(uint8_t data);
+	void mem_addr_hi_w(uint8_t data);
+	void mem_addr_inc_w(uint8_t data);
+	void mem_addr_dec_w(uint8_t data);
+	uint8_t flag_r(offs_t offset);
+	void flag_w(offs_t offset, uint8_t data);
+	void beep_w(uint8_t data);
+	uint8_t kb_r();
+	uint8_t kb_ready_r();
+	uint8_t kb_s_red_r();
+	uint8_t kb_s_sdv_r();
+	uint8_t kb_s_dk_r();
+	uint8_t kb_s_dupl_r();
+	uint8_t kb_s_lin_r();
+	void kb_ready_w(uint8_t data);
+	uint8_t serial_tx_ready_r();
+	void serial_w(uint8_t data);
+	uint8_t serial_rx_ready_r();
+	uint8_t serial_r();
+	void serial_speed_w(uint8_t data);
 	TIMER_CALLBACK_MEMBER(ie15_beepoff);
 
 	void ie15_io(address_map &map);
@@ -105,31 +105,33 @@ private:
 
 	std::unique_ptr<uint32_t[]> m_tmpbmp;
 
-	emu_timer *m_hblank_timer;
+	emu_timer *m_hblank_timer = nullptr;
+	emu_timer *m_beepoff_timer = nullptr;
 
-	uint8_t m_long_beep;
-	uint8_t m_kb_control;
-	uint8_t m_kb_data;
-	uint8_t m_kb_flag0;
-	uint8_t m_kb_flag;
-	uint8_t m_kb_ruslat;
-	uint8_t m_latch;
+	uint8_t m_long_beep = 0;
+	uint8_t m_kb_control = 0;
+	uint8_t m_kb_data = 0;
+	uint8_t m_kb_flag0 = 0;
+	uint8_t m_kb_flag = 0;
+	uint8_t m_kb_ruslat = 0;
+	uint8_t m_latch = 0;
 
 	struct
 	{
-		uint8_t cursor;
-		uint8_t enable;
-		uint8_t line25;
-		uint32_t ptr1;
-		uint32_t ptr2;
+		uint8_t cursor = 0;
+		uint8_t enable = 0;
+		uint8_t line25 = 0;
+		uint32_t ptr1 = 0;
+		uint32_t ptr2 = 0;
 	} m_video;
 
-	uint8_t m_serial_rx_ready;
-	uint8_t m_serial_rx_char;
-	uint8_t m_serial_tx_ready;
-	int m_hblank;
-	int m_vpos;
-	int m_marker_scanline;
+	uint8_t m_serial_rx_ready = 0;
+	uint8_t m_serial_rx_char = 0;
+	uint8_t m_serial_tx_ready = 0;
+	int m_hblank = 0;
+	int m_vpos = 0;
+	int m_marker_scanline = 0;
+	bool m_kbd_sdv = 0;
 
 	required_device<cpu_device> m_maincpu;
 	required_region_ptr<u8> m_p_videoram;

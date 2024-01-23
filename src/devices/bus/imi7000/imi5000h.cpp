@@ -108,18 +108,18 @@ static const z80_daisy_config z80_daisy_chain[] =
 //  Z80CTC
 //-------------------------------------------------
 
-WRITE_LINE_MEMBER( imi5000h_device::ctc_z0_w )
+void imi5000h_device::ctc_z0_w(int state)
 {
 	m_ctc->trg1(state);
 }
 
-WRITE_LINE_MEMBER( imi5000h_device::ctc_z1_w )
+void imi5000h_device::ctc_z1_w(int state)
 {
 	m_ctc->trg2(state);
 	m_ctc->trg3(state);
 }
 
-WRITE_LINE_MEMBER( imi5000h_device::ctc_z2_w )
+void imi5000h_device::ctc_z2_w(int state)
 {
 	//m_memory_enable = state;
 	m_maincpu->set_input_line(INPUT_LINE_NMI, state);
@@ -129,7 +129,7 @@ WRITE_LINE_MEMBER( imi5000h_device::ctc_z2_w )
 //  Z80PIO 1
 //-------------------------------------------------
 
-READ8_MEMBER( imi5000h_device::pio0_pa_r )
+uint8_t imi5000h_device::pio0_pa_r()
 {
 	/*
 
@@ -149,7 +149,7 @@ READ8_MEMBER( imi5000h_device::pio0_pa_r )
 	return 0;
 }
 
-WRITE8_MEMBER( imi5000h_device::pio0_pa_w )
+void imi5000h_device::pio0_pa_w(uint8_t data)
 {
 	/*
 
@@ -167,7 +167,7 @@ WRITE8_MEMBER( imi5000h_device::pio0_pa_w )
 	*/
 }
 
-READ8_MEMBER( imi5000h_device::pio0_pb_r )
+uint8_t imi5000h_device::pio0_pb_r()
 {
 	/*
 
@@ -187,7 +187,7 @@ READ8_MEMBER( imi5000h_device::pio0_pb_r )
 	return 0;
 }
 
-WRITE8_MEMBER( imi5000h_device::pio0_pb_w )
+void imi5000h_device::pio0_pb_w(uint8_t data)
 {
 	/*
 
@@ -209,7 +209,7 @@ WRITE8_MEMBER( imi5000h_device::pio0_pb_w )
 //  Z80PIO 2
 //-------------------------------------------------
 
-READ8_MEMBER( imi5000h_device::pio2_pa_r )
+uint8_t imi5000h_device::pio2_pa_r()
 {
 	/*
 
@@ -229,7 +229,7 @@ READ8_MEMBER( imi5000h_device::pio2_pa_r )
 	return 0;
 }
 
-WRITE8_MEMBER( imi5000h_device::pio2_pa_w )
+void imi5000h_device::pio2_pa_w(uint8_t data)
 {
 	/*
 
@@ -247,13 +247,13 @@ WRITE8_MEMBER( imi5000h_device::pio2_pa_w )
 	*/
 }
 
-READ8_MEMBER( imi5000h_device::pio2_pb_r )
+uint8_t imi5000h_device::pio2_pb_r()
 {
 	// command bus
 	return 0;
 }
 
-WRITE8_MEMBER( imi5000h_device::pio2_pb_w )
+void imi5000h_device::pio2_pb_w(uint8_t data)
 {
 	// command bus
 }
@@ -262,7 +262,7 @@ WRITE8_MEMBER( imi5000h_device::pio2_pb_w )
 //  Z80PIO 3
 //-------------------------------------------------
 
-READ8_MEMBER( imi5000h_device::pio3_pa_r )
+uint8_t imi5000h_device::pio3_pa_r()
 {
 	/*
 
@@ -282,7 +282,7 @@ READ8_MEMBER( imi5000h_device::pio3_pa_r )
 	return 0;
 }
 
-WRITE8_MEMBER( imi5000h_device::pio3_pa_w )
+void imi5000h_device::pio3_pa_w(uint8_t data)
 {
 	/*
 
@@ -300,7 +300,7 @@ WRITE8_MEMBER( imi5000h_device::pio3_pa_w )
 	*/
 }
 
-READ8_MEMBER( imi5000h_device::pio3_pb_r )
+uint8_t imi5000h_device::pio3_pb_r()
 {
 	/*
 
@@ -320,7 +320,7 @@ READ8_MEMBER( imi5000h_device::pio3_pb_r )
 	return 0;
 }
 
-WRITE8_MEMBER( imi5000h_device::pio3_pb_w )
+void imi5000h_device::pio3_pb_w(uint8_t data)
 {
 	/*
 

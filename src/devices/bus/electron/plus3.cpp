@@ -14,9 +14,10 @@
 
 **********************************************************************/
 
-
 #include "emu.h"
 #include "plus3.h"
+
+#include "formats/acorn_dsk.h"
 
 
 //**************************************************************************
@@ -30,11 +31,13 @@ DEFINE_DEVICE_TYPE(ELECTRON_PLUS3, electron_plus3_device, "electron_plus3", "Aco
 //  FLOPPY_FORMATS( plus3 )
 //-------------------------------------------------
 
-FLOPPY_FORMATS_MEMBER(electron_plus3_device::floppy_formats)
-	FLOPPY_ACORN_SSD_FORMAT,
-	FLOPPY_ACORN_DSD_FORMAT,
-	FLOPPY_ACORN_ADFS_OLD_FORMAT
-FLOPPY_FORMATS_END
+void electron_plus3_device::floppy_formats(format_registration &fr)
+{
+	fr.add_mfm_containers();
+	fr.add(FLOPPY_ACORN_SSD_FORMAT);
+	fr.add(FLOPPY_ACORN_DSD_FORMAT);
+	fr.add(FLOPPY_ACORN_ADFS_OLD_FORMAT);
+}
 
 void electron_floppies(device_slot_interface &device)
 {
@@ -162,7 +165,7 @@ void electron_plus3_device::expbus_w(offs_t offset, uint8_t data)
 	{
 		m_fdc->write(offset & 0x03, data);
 	}
-	else if (offset == 0xfe05)
+	else if ((offset == 0xfe05) && !(data & 0xf0))
 	{
 		m_romsel = data & 0x0f;
 	}

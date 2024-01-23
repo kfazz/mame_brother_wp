@@ -45,11 +45,11 @@ protected:
 	// interface-specific overrides
 	virtual u8 register_read(offs_t offset) override;
 	virtual void register_write(offs_t offset, u8 data) override;
-	virtual DECLARE_WRITE_LINE_MEMBER(f110_w) override;
-	virtual DECLARE_WRITE_LINE_MEMBER(f150_9600_w) override;
-	virtual DECLARE_WRITE_LINE_MEMBER(f300_w) override;
-	virtual DECLARE_WRITE_LINE_MEMBER(f600_4800_w) override;
-	virtual DECLARE_WRITE_LINE_MEMBER(f600_1200_w) override;
+	virtual void f110_w(int state) override;
+	virtual void f150_9600_w(int state) override;
+	virtual void f300_w(int state) override;
+	virtual void f600_4800_w(int state) override;
+	virtual void f600_1200_w(int state) override;
 
 private:
 	required_device<acia6850_device> m_acia_upper;
@@ -110,7 +110,6 @@ ioport_constructor ss50_mps2_device::device_input_ports() const
 static DEVICE_INPUT_DEFAULTS_START( terminal_upper )
 	DEVICE_INPUT_DEFAULTS("RS232_RXBAUD", 0xff, RS232_BAUD_9600)
 	DEVICE_INPUT_DEFAULTS("RS232_TXBAUD", 0xff, RS232_BAUD_9600)
-	DEVICE_INPUT_DEFAULTS("RS232_STARTBITS", 0xff, RS232_STARTBITS_1)
 	DEVICE_INPUT_DEFAULTS("RS232_DATABITS", 0xff, RS232_DATABITS_8)
 	DEVICE_INPUT_DEFAULTS("RS232_PARITY", 0xff, RS232_PARITY_NONE)
 	DEVICE_INPUT_DEFAULTS("RS232_STOPBITS", 0xff, RS232_STOPBITS_1)
@@ -119,7 +118,6 @@ DEVICE_INPUT_DEFAULTS_END
 static DEVICE_INPUT_DEFAULTS_START( terminal_lower )
 	DEVICE_INPUT_DEFAULTS("RS232_RXBAUD", 0xff, RS232_BAUD_9600)
 	DEVICE_INPUT_DEFAULTS("RS232_TXBAUD", 0xff, RS232_BAUD_9600)
-	DEVICE_INPUT_DEFAULTS("RS232_STARTBITS", 0xff, RS232_STARTBITS_1)
 	DEVICE_INPUT_DEFAULTS("RS232_DATABITS", 0xff, RS232_DATABITS_8)
 	DEVICE_INPUT_DEFAULTS("RS232_PARITY", 0xff, RS232_PARITY_NONE)
 	DEVICE_INPUT_DEFAULTS("RS232_STOPBITS", 0xff, RS232_STOPBITS_1)
@@ -197,7 +195,7 @@ void ss50_mps2_device::register_write(offs_t offset, u8 data)
 		m_acia_lower->write((offset - 4) & 1, data);
 }
 
-WRITE_LINE_MEMBER(ss50_mps2_device::f110_w)
+void ss50_mps2_device::f110_w(int state)
 {
 	if (!BIT(m_tx_rate_upper_jumper->read(), 0))
 		m_acia_upper->write_txc(state);
@@ -209,7 +207,7 @@ WRITE_LINE_MEMBER(ss50_mps2_device::f110_w)
 		m_acia_lower->write_rxc(state);
 }
 
-WRITE_LINE_MEMBER(ss50_mps2_device::f150_9600_w)
+void ss50_mps2_device::f150_9600_w(int state)
 {
 	if (!BIT(m_tx_rate_upper_jumper->read(), 1))
 		m_acia_upper->write_txc(state);
@@ -221,7 +219,7 @@ WRITE_LINE_MEMBER(ss50_mps2_device::f150_9600_w)
 		m_acia_lower->write_rxc(state);
 }
 
-WRITE_LINE_MEMBER(ss50_mps2_device::f300_w)
+void ss50_mps2_device::f300_w(int state)
 {
 	if (!BIT(m_tx_rate_upper_jumper->read(), 2))
 		m_acia_upper->write_txc(state);
@@ -233,7 +231,7 @@ WRITE_LINE_MEMBER(ss50_mps2_device::f300_w)
 		m_acia_lower->write_rxc(state);
 }
 
-WRITE_LINE_MEMBER(ss50_mps2_device::f600_4800_w)
+void ss50_mps2_device::f600_4800_w(int state)
 {
 	if (!BIT(m_tx_rate_upper_jumper->read(), 3))
 		m_acia_upper->write_txc(state);
@@ -245,7 +243,7 @@ WRITE_LINE_MEMBER(ss50_mps2_device::f600_4800_w)
 		m_acia_lower->write_rxc(state);
 }
 
-WRITE_LINE_MEMBER(ss50_mps2_device::f600_1200_w)
+void ss50_mps2_device::f600_1200_w(int state)
 {
 	if (!BIT(m_tx_rate_upper_jumper->read(), 4))
 		m_acia_upper->write_txc(state);

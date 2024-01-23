@@ -6,7 +6,7 @@
  * Barry Silverman mailto:barry@disus.com or mailto:bss@media.mit.edu
  * Vadim Gerasimov mailto:vadim@media.mit.edu
  *
- * MESS driver by Chris Salomon and Raphael Nabet.
+ * MAME driver by Chris Salomon and Raphael Nabet.
  *
  * Basically, it has been rewritten entirely in order to perform cycle-level simulation
  * (with only a few flip-flops being set one cycle too early or too late).  I don't know if
@@ -340,16 +340,16 @@
 
 
 #include "emu.h"
-#include "debugger.h"
 #include "pdp1.h"
 #include "pdp1dasm.h"
 
-#define LOG 0
-#define LOG_EXTRA 0
-#define LOG_IOT_EXTRA 0
+#define LOG_EXTRA     (1U << 1)
+#define LOG_IOT_EXTRA (1U << 2)
+#define VERBOSE (0)
+#include "logmacro.h"
 
-#define READ_PDP_18BIT(A) ((signed)m_program->read_dword((A)<<2))
-#define WRITE_PDP_18BIT(A,V) (m_program->write_dword((A)<<2,(V)))
+#define READ_PDP_18BIT(A) ((signed)m_program->read_dword(A))
+#define WRITE_PDP_18BIT(A,V) (m_program->write_dword((A),(V)))
 
 
 #define PC      m_pc
@@ -378,12 +378,16 @@
 #define PREVIOUS_PC     ((PC & ADDRESS_EXTENSION_MASK) | ((PC-1) & BASE_ADDRESS_MASK))
 
 
-DEFINE_DEVICE_TYPE(PDP1, pdp1_device, "pdp1_cpu", "DEC PDP1")
+DEFINE_DEVICE_TYPE(PDP1, pdp1_device, "pdp1_cpu", "DEC PDP-1 Central Processor")
 
 
 pdp1_device::pdp1_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: cpu_device(mconfig, PDP1, tag, owner, clock)
-	, m_program_config("program", ENDIANNESS_BIG, 32, 18, 0)
+	, m_program_config("program", ENDIANNESS_BIG, 32, 18, -2) // data is actually 18 bits wide
+	, m_extern_iot(*this)
+	, m_io_sc_callback(*this)
+	, m_program(nullptr)
+	, m_reset_param(nullptr)
 {
 	m_program_config.m_is_octal = true;
 }
@@ -405,16 +409,9 @@ void pdp1_device::device_config_complete()
 	// or initialize to defaults if none provided
 	else
 	{
-		memset(&read_binary_word, 0, sizeof(read_binary_word));
-		memset(&io_sc_callback, 0, sizeof(io_sc_callback));
 		extend_support = 0;
 		hw_mul_div = 0;
 		type_20_sbs = 0;
-
-		for (auto & elem : extern_iot)
-		{
-			memset(&elem, 0, sizeof(elem));
-		}
 	}
 }
 
@@ -495,34 +492,6 @@ void pdp1_device::execute_set_input(int irqline, int state)
 }
 
 
-static void null_iot(device_t *device, int op2, int nac, int mb, int *io, int ac)
-{
-	pdp1_device *pdp1 = dynamic_cast<pdp1_device*>(device);
-
-	pdp1->pdp1_null_iot(op2, nac, mb, io, ac);
-}
-
-static void lem_eem_iot(device_t *device, int op2, int nac, int mb, int *io, int ac)
-{
-	pdp1_device *pdp1 = dynamic_cast<pdp1_device*>(device);
-
-	pdp1->pdp1_lem_eem_iot(op2, nac, mb, io, ac);
-}
-
-static void sbs_iot(device_t *device, int op2, int nac, int mb, int *io, int ac)
-{
-	pdp1_device *pdp1 = dynamic_cast<pdp1_device*>(device);
-
-	pdp1->pdp1_sbs_iot(op2, nac, mb, io, ac);
-}
-
-static void type_20_sbs_iot(device_t *device, int op2, int nac, int mb, int *io, int ac)
-{
-	pdp1_device *pdp1 = dynamic_cast<pdp1_device*>(device);
-
-	pdp1->pdp1_type_20_sbs_iot(op2, nac, mb, io, ac);
-}
-
 void pdp1_device::device_start()
 {
 	int i;
@@ -569,12 +538,11 @@ void pdp1_device::device_start()
 	/* set up params and callbacks */
 	for (i=0; i<64; i++)
 	{
-		m_extern_iot[i] = (extern_iot[i])
-										? extern_iot[i]
-										: null_iot;
+		m_extern_iot[i].resolve();
+		if (m_extern_iot[i].isnull())
+			m_extern_iot[i] = iot_delegate(*this, FUNC(pdp1_device::null_iot));
 	}
-	m_read_binary_word = read_binary_word;
-	m_io_sc_callback = io_sc_callback;
+	m_io_sc_callback.resolve();
 	m_extend_support = extend_support;
 	m_hw_mul_div = hw_mul_div;
 	m_type_20_sbs = type_20_sbs;
@@ -583,6 +551,7 @@ void pdp1_device::device_start()
 	{
 	default:
 		m_extend_support = 0;
+		[[fallthrough]];
 	case 0:     /* no extension */
 		m_extended_address_mask = 07777;
 		m_address_extension_mask = 00000;
@@ -599,13 +568,13 @@ void pdp1_device::device_start()
 
 	if (m_extend_support)
 	{
-		m_extern_iot[074] = lem_eem_iot;
+		m_extern_iot[074] = iot_delegate(*this, FUNC(pdp1_device::lem_eem_iot));
 	}
-	m_extern_iot[054] = m_extern_iot[055] = m_extern_iot[056] = sbs_iot;
+	m_extern_iot[054] = m_extern_iot[055] = m_extern_iot[056] = iot_delegate(*this, FUNC(pdp1_device::sbs_iot));
 	if (m_type_20_sbs)
 	{
 		m_extern_iot[050] = m_extern_iot[051] = m_extern_iot[052] = m_extern_iot[053]
-				= type_20_sbs_iot;
+				= iot_delegate(*this, FUNC(pdp1_device::type_20_sbs_iot));
 	}
 
 	state_add( PDP1_PC,        "PC", m_pc).formatstr("%06O");
@@ -796,9 +765,6 @@ void pdp1_device::execute_run()
 {
 	do
 	{
-		debugger_instruction_hook(PC);
-
-
 		/* ioh should be cleared at the end of the instruction cycle, and ios at the
 		start of next instruction cycle, but who cares? */
 		if (m_ioh && m_ios)
@@ -808,15 +774,19 @@ void pdp1_device::execute_run()
 
 
 		if ((! m_run) && (! m_rim))
+		{
+			debugger_instruction_hook(PC);
 			m_icount = 0;   /* if processor is stopped, just burn cycles */
+		}
 		else if (m_rim)
 		{
 			switch (m_rim_step)
 			{
 			case 0:
 				/* read first word as instruction */
-				if (m_read_binary_word)
-					(*m_read_binary_word)(this);        /* data will be transferred to IO register */
+				MB = 0;
+				/* data will be transferred to IO register in response to RPB */
+				m_extern_iot[2](2, 1, MB, IO, AC);
 				m_rim_step = 1;
 				m_ios = 0;
 				break;
@@ -849,8 +819,7 @@ void pdp1_device::execute_run()
 					else
 					{
 						/* what the heck? */
-						if (LOG)
-							logerror("It seems this tape should not be operated in read-in mode\n");
+						LOG("It seems this tape should not be operated in read-in mode\n");
 
 						m_rim = 0;      /* exit read-in mode (right???) */
 						m_rim_step = 0;
@@ -860,8 +829,8 @@ void pdp1_device::execute_run()
 
 			case 2:
 				/* read second word as data */
-				if (m_read_binary_word)
-					(*m_read_binary_word)(this);        /* data will be transferred to IO register */
+				/* data will be transferred to IO register in response to RPB */
+				m_extern_iot[2](2, 1, MB, IO, AC);
 				m_rim_step = 3;
 				m_ios = 0;
 				break;
@@ -940,6 +909,7 @@ void pdp1_device::execute_run()
 
 				if (! m_cycle)
 				{   /* no instruction in progress: time to fetch a new instruction, I guess */
+					debugger_instruction_hook(PC);
 					MB = READ_PDP_18BIT(MA = PC);
 					INCREMENT_PC;
 					IR = MB >> 13;      /* basic opcode */
@@ -1504,8 +1474,7 @@ void pdp1_device::execute_instruction()
 				}
 				break;
 			default:
-				if (LOG)
-					logerror("Undefined shift: 0%06o at 0%06o\n", MB, PREVIOUS_PC);
+				LOG("Undefined shift: 0%06o at 0%06o\n", MB, PREVIOUS_PC);
 				break;
 			}
 			break;
@@ -1564,7 +1533,7 @@ void pdp1_device::execute_instruction()
 		{   /* IOT with IO wait */
 			if (m_ioc)
 			{   /* the iot command line is pulsed only if ioc is asserted */
-				(*m_extern_iot[MB & 0000077])(this, MB & 0000077, (MB & 0004000) == 0, MB, &IO, AC);
+				m_extern_iot[MB & 0000077](MB & 0000077, (MB & 0004000) == 0, MB, IO, AC);
 
 				m_ioh = 1;  /* enable io wait */
 
@@ -1587,7 +1556,7 @@ void pdp1_device::execute_instruction()
 		}
 		else
 		{   /* IOT with no IO wait */
-			(*m_extern_iot[MB & 0000077])(this, MB & 0000077, (MB & 0004000) != 0, MB, &IO, AC);
+			m_extern_iot[MB & 0000077](MB & 0000077, (MB & 0004000) != 0, MB, IO, AC);
 		}
 		break;
 	case OPR:       /* Operate Instruction Group */
@@ -1614,16 +1583,14 @@ void pdp1_device::execute_instruction()
 				AC ^= 0777777;
 			if (MB & 00400)     /* Halt */
 			{
-				if (LOG_EXTRA)
-					logerror("PDP1 Program executed HALT: at 0%06o\n", PREVIOUS_PC);
+				LOGMASKED(LOG_EXTRA, "PDP1 Program executed HALT: at 0%06o\n", PREVIOUS_PC);
 
 				m_run = 0;
 			}
 			break;
 		}
 	default:
-		if (LOG)
-			logerror("Illegal instruction: 0%06o at 0%06o\n", MB, PREVIOUS_PC);
+		LOG("Illegal instruction: 0%06o at 0%06o\n", MB, PREVIOUS_PC);
 
 		/* let us stop the CPU, like a real pdp-1 */
 		m_run = 0;
@@ -1639,20 +1606,14 @@ no_fetch:
 /*
     Handle unimplemented IOT
 */
-void pdp1_device::pdp1_null_iot(int op2, int nac, int mb, int *io, int ac)
+void pdp1_device::null_iot(int op2, int nac, int mb, int &io, int ac)
 {
 	/* Note that the dummy IOT 0 is used to wait for the completion pulse
 	generated by the a pending IOT (IOT with completion pulse but no IO wait) */
-	if (LOG_IOT_EXTRA)
-	{
-		if (op2 == 000)
-			logerror("IOT sync instruction: mb=0%06o, pc=0%06o\n", (unsigned) mb, (unsigned) m_pc);
-	}
-	if (LOG)
-	{
-		if (op2 != 000)
-			logerror("Not supported IOT command (no external IOT function given) 0%06o at 0%06o\n", mb, m_pc);
-	}
+	if (op2 == 000)
+		LOGMASKED(LOG_IOT_EXTRA, "IOT sync instruction: mb=0%06o, pc=0%06o\n", (unsigned) mb, (unsigned) m_pc);
+	if (op2 != 000)
+		LOG("Not supported IOT command (no external IOT function given) 0%06o at 0%06o\n", mb, m_pc);
 }
 
 
@@ -1661,18 +1622,14 @@ void pdp1_device::pdp1_null_iot(int op2, int nac, int mb, int *io, int ac)
 
     IOT 74: LEM/EEM
 */
-void pdp1_device::pdp1_lem_eem_iot(int op2, int nac, int mb, int *io, int ac)
+void pdp1_device::lem_eem_iot(int op2, int nac, int mb, int &io, int ac)
 {
 	if (! m_extend_support) /* extend mode supported? */
 	{
-		if (LOG)
-			logerror("Ignoring internal error in file " __FILE__ " line %d.\n", __LINE__);
+		LOG("Ignoring internal error in file " __FILE__ " line %d.\n", __LINE__);
 		return;
 	}
-	if (LOG_EXTRA)
-	{
-		logerror("EEM/LEM instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
-	}
+	LOGMASKED(LOG_EXTRA, "EEM/LEM instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
 	EXD = (mb & 0004000) ? 1 : 0;
 }
 
@@ -1684,36 +1641,28 @@ void pdp1_device::pdp1_lem_eem_iot(int op2, int nac, int mb, int *io, int ac)
     IOT 55: esm
     IOT 56: cbs
 */
-void pdp1_device::pdp1_sbs_iot(int op2, int nac, int mb, int *io, int ac)
+void pdp1_device::sbs_iot(int op2, int nac, int mb, int &io, int ac)
 {
 	switch (op2)
 	{
 	case 054:   /* LSM */
-		if (LOG_EXTRA)
-			logerror("LSM instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
-
+		LOGMASKED(LOG_EXTRA, "LSM instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
 		m_sbm = 0;
 		field_interrupt();
 		break;
 	case 055:   /* ESM */
-		if (LOG_EXTRA)
-			logerror("ESM instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
-
+		LOGMASKED(LOG_EXTRA, "ESM instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
 		m_sbm = 1;
 		field_interrupt();
 		break;
 	case 056:   /* CBS */
-		if (LOG_EXTRA)
-			logerror("CBS instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
-
+		LOGMASKED(LOG_EXTRA, "CBS instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
 		/*m_b3 = 0;*/
 		m_b4 = 0;
 		field_interrupt();
 		break;
 	default:
-		if (LOG)
-			logerror("Ignoring internal error in file " __FILE__ " line %d.\n", __LINE__);
-
+		LOG("Ignoring internal error in file " __FILE__ " line %d.\n", __LINE__);
 		break;
 	}
 }
@@ -1727,13 +1676,12 @@ void pdp1_device::pdp1_sbs_iot(int op2, int nac, int mb, int *io, int ac)
     IOT 52: isb
     IOT 53: cac
 */
-void pdp1_device::pdp1_type_20_sbs_iot(int op2, int nac, int mb, int *io, int ac)
+void pdp1_device::type_20_sbs_iot(int op2, int nac, int mb, int &io, int ac)
 {
 	int channel, mask;
 	if (! m_type_20_sbs)    /* type 20 sequence break system supported? */
 	{
-		if (LOG)
-			logerror("Ignoring internal error in file " __FILE__ " line %d.\n", __LINE__);
+		LOG("Ignoring internal error in file " __FILE__ " line %d.\n", __LINE__);
 		return;
 	}
 	channel = (mb >> 6) & 017;
@@ -1741,37 +1689,27 @@ void pdp1_device::pdp1_type_20_sbs_iot(int op2, int nac, int mb, int *io, int ac
 	switch (op2)
 	{
 	case 050:   /* DSC */
-		if (LOG_EXTRA)
-			logerror("DSC instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
-
+		LOGMASKED(LOG_EXTRA, "DSC instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
 		m_b1 &= ~mask;
 		field_interrupt();
 		break;
 	case 051:   /* ASC */
-		if (LOG_EXTRA)
-			logerror("ASC instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
-
+		LOGMASKED(LOG_EXTRA, "ASC instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
 		m_b1 |= mask;
 		field_interrupt();
 		break;
 	case 052:   /* ISB */
-		if (LOG_EXTRA)
-			logerror("ISB instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
-
+		LOGMASKED(LOG_EXTRA, "ISB instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
 		m_b2 |= mask;
 		field_interrupt();
 		break;
 	case 053:   /* CAC */
-		if (LOG_EXTRA)
-			logerror("CAC instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
-
+		LOGMASKED(LOG_EXTRA, "CAC instruction: mb=0%06o, pc=0%06o\n", mb, m_pc);
 		m_b1 = 0;
 		field_interrupt();
 		break;
 	default:
-		if (LOG)
-			logerror("Ignoring internal error in file " __FILE__ " line %d.\n", __LINE__);
-
+		LOG("Ignoring internal error in file " __FILE__ " line %d.\n", __LINE__);
 		break;
 	}
 
@@ -1820,6 +1758,6 @@ void pdp1_device::pulse_start_clear()
 	field_interrupt();
 
 	/* now, we kindly ask IO devices to reset, too */
-	if (m_io_sc_callback)
-		(*m_io_sc_callback)(this);
+	if (!m_io_sc_callback.isnull())
+		m_io_sc_callback();
 }

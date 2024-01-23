@@ -36,8 +36,7 @@ DEFINE_DEVICE_TYPE(ADAM_EXPANSION_SLOT, adam_expansion_slot_device, "adam_expans
 //-------------------------------------------------
 
 device_adam_expansion_slot_card_interface::device_adam_expansion_slot_card_interface(const machine_config &mconfig, device_t &device) :
-	device_interface(device, "adamexp"),
-	m_rom(*this, "rom")
+	device_interface(device, "adamexp")
 {
 	m_slot = dynamic_cast<adam_expansion_slot_device *>(device.owner());
 }
@@ -55,7 +54,7 @@ device_adam_expansion_slot_card_interface::device_adam_expansion_slot_card_inter
 adam_expansion_slot_device::adam_expansion_slot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, ADAM_EXPANSION_SLOT, tag, owner, clock),
 	device_single_card_slot_interface<device_adam_expansion_slot_card_interface>(mconfig, *this),
-	device_image_interface(mconfig, *this),
+	device_cartrom_image_interface(mconfig, *this),
 	m_write_irq(*this), m_card(nullptr)
 {
 }
@@ -68,9 +67,6 @@ adam_expansion_slot_device::adam_expansion_slot_device(const machine_config &mco
 void adam_expansion_slot_device::device_start()
 {
 	m_card = get_card_device();
-
-	// resolve callbacks
-	m_write_irq.resolve_safe();
 }
 
 
@@ -78,15 +74,13 @@ void adam_expansion_slot_device::device_start()
 //  call_load -
 //-------------------------------------------------
 
-image_init_result adam_expansion_slot_device::call_load()
+std::pair<std::error_condition, std::string> adam_expansion_slot_device::call_load()
 {
 	if (m_card)
 	{
-		size_t size;
-
 		if (!loaded_through_softlist())
 		{
-			size = length();
+			size_t const size = length();
 
 			fread(m_card->m_rom, size);
 		}
@@ -96,7 +90,7 @@ image_init_result adam_expansion_slot_device::call_load()
 		}
 	}
 
-	return image_init_result::PASS;
+	return std::make_pair(std::error_condition(), std::string());
 }
 
 

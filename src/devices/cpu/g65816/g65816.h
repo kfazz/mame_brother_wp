@@ -32,7 +32,7 @@ All rights reserved.
 /* Interrupt lines - used with g65816_set_irq_line() */
 enum
 {
-	G65816_LINE_NONE,
+	G65816_LINE_NONE, // FIXME: there is no such pin
 	G65816_LINE_IRQ,
 	G65816_LINE_NMI,
 	G65816_LINE_ABORT,
@@ -140,8 +140,8 @@ protected:
 	int bus_5A22_cycle_burst(unsigned addr);
 	unsigned g65816_get_pc();
 	void g65816_set_pc(unsigned val);
-	unsigned g65816_get_sp();
-	void g65816_set_sp(unsigned val);
+	[[maybe_unused]] unsigned g65816_get_sp();
+	[[maybe_unused]] void g65816_set_sp(unsigned val);
 public:
 	unsigned g65816_get_reg(int regnum);
 	void g65816_set_reg(int regnum, unsigned value);
@@ -209,33 +209,34 @@ protected:
 	static const set_line_func s_g65816_set_line[5];
 	static const execute_func s_g65816_execute[5];
 
-	unsigned m_a;             /* Accumulator */
-	unsigned m_b;             /* holds high byte of accumulator */
-	unsigned m_x;             /* Index Register X */
-	unsigned m_y;             /* Index Register Y */
-	unsigned m_s;             /* Stack Pointer */
-	unsigned m_pc;            /* Program Counter */
-	unsigned m_ppc;           /* Previous Program Counter */
-	unsigned m_pb;            /* Program Bank (shifted left 16) */
-	unsigned m_db;            /* Data Bank (shifted left 16) */
-	unsigned m_d;             /* Direct Register */
-	unsigned m_flag_e;        /* Emulation Mode Flag */
-	unsigned m_flag_m;        /* Memory/Accumulator Select Flag */
-	unsigned m_flag_x;        /* Index Select Flag */
-	unsigned m_flag_n;        /* Negative Flag */
-	unsigned m_flag_v;        /* Overflow Flag */
-	unsigned m_flag_d;        /* Decimal Mode Flag */
-	unsigned m_flag_i;        /* Interrupt Mask Flag */
-	unsigned m_flag_z;        /* Zero Flag (inverted) */
-	unsigned m_flag_c;        /* Carry Flag */
-	unsigned m_line_irq;      /* Status of the IRQ line */
-	unsigned m_line_nmi;      /* Status of the NMI line */
-	unsigned m_fastROM;       /* SNES specific */
-	unsigned m_ir;            /* Instruction Register */
-	unsigned m_irq_delay;     /* delay 1 instruction before checking irq */
-	address_space *m_data_space;
-	memory_access_cache<0, 0, ENDIANNESS_LITTLE> *m_program_cache;
-	memory_access_cache<0, 0, ENDIANNESS_LITTLE> *m_opcode_cache;
+	uint32_t m_a;             /* Accumulator */
+	uint32_t m_b;             /* holds high byte of accumulator */
+	uint32_t m_x;             /* Index Register X */
+	uint32_t m_y;             /* Index Register Y */
+	uint16_t m_s;             /* Stack Pointer */
+	uint16_t m_pc;            /* Program Counter */
+	uint16_t m_ppc;           /* Previous Program Counter */
+	uint32_t m_pb;            /* Program Bank (shifted left 16) */
+	uint32_t m_db;            /* Data Bank (shifted left 16) */
+	uint32_t m_d;             /* Direct Register */
+	uint32_t m_flag_e;        /* Emulation Mode Flag */
+	uint32_t m_flag_m;        /* Memory/Accumulator Select Flag */
+	uint32_t m_flag_x;        /* Index Select Flag */
+	uint32_t m_flag_n;        /* Negative Flag */
+	uint32_t m_flag_v;        /* Overflow Flag */
+	uint32_t m_flag_d;        /* Decimal Mode Flag */
+	uint32_t m_flag_i;        /* Interrupt Mask Flag */
+	uint32_t m_flag_z;        /* Zero Flag (inverted) */
+	uint32_t m_flag_c;        /* Carry Flag */
+	uint32_t m_line_irq;      /* Status of the IRQ line */
+	uint32_t m_line_nmi;      /* Status of the NMI line */
+	uint32_t m_fastROM;       /* SNES specific */
+	uint32_t m_ir;            /* Instruction Register */
+	uint32_t m_irq_delay;     /* delay 1 instruction before checking irq */
+	memory_access<24, 0, 0, ENDIANNESS_LITTLE>::cache m_program;
+	memory_access<24, 0, 0, ENDIANNESS_LITTLE>::cache m_opcode;
+	memory_access<24, 0, 0, ENDIANNESS_LITTLE>::specific m_data;
+
 	unsigned m_stopped;       /* Sets how the CPU is stopped */
 	const opcode_func* m_opcodes;
 	get_reg_func m_get_reg;
@@ -1539,6 +1540,13 @@ protected:
 };
 
 
+class g65802_device : public g65816_device
+{
+public:
+	g65802_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+};
+
+
 class _5a22_device : public g65816_device
 {
 public:
@@ -1570,6 +1578,7 @@ protected:
 
 
 DECLARE_DEVICE_TYPE(G65816, g65816_device)
+DECLARE_DEVICE_TYPE(G65802, g65802_device)
 DECLARE_DEVICE_TYPE(_5A22,  _5a22_device)
 
 

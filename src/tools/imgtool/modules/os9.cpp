@@ -8,12 +8,15 @@
 
 ****************************************************************************/
 
-#include <ctime>
-
 #include "imgtool.h"
-#include "formats/imageutl.h"
-#include "formats/coco_dsk.h"
 #include "iflopimg.h"
+
+#include "formats/coco_dsk.h"
+#include "multibyte.h"
+#include "opresolv.h"
+
+#include <cstdio>
+#include <ctime>
 
 enum creation_policy_t
 {
@@ -44,7 +47,7 @@ struct os9_diskinfo
 	unsigned int octal_track_density : 1;
 
 	char name[33];
-	uint8_t *allocation_bitmap;
+	uint8_t allocation_bitmap[65536];
 };
 
 
@@ -96,20 +99,13 @@ static void pick_string(const void *ptr, size_t offset, size_t length, char *des
 
 
 
-static void place_string(void *ptr, size_t offset, size_t length, const char *s)
+static void place_string(uint8_t *bptr, size_t length, const char *s)
 {
-	size_t i;
-	uint8_t b;
-	uint8_t *bptr;
-
-	bptr = (uint8_t *) ptr;
-	bptr += offset;
-
 	bptr[0] = 0x80;
 
-	for (i = 0; s[i] && (i < length); i++)
+	for (size_t i = 0; s[i] && (i < length); i++)
 	{
-		b = ((uint8_t) s[i]) & 0x7F;
+		uint8_t b = ((uint8_t) s[i]) & 0x7F;
 		if (s[i+1] == '\0')
 			b |= 0x80;
 		bptr[i] = b;
@@ -228,7 +224,7 @@ static int os9_interpret_dirent(void *entry, char **filename, uint32_t *lsn, int
 	entry_b[i] &= 0x7F;
 	entry_b[i+1] = '\0';
 
-	*lsn = pick_integer_be(entry, 29, 3);
+	*lsn = get_u24be((uint8_t *) &entry_b[29]);
 	if (strcmp(entry_b, ".") && strcmp(entry_b, ".."))
 		*filename = entry_b;
 	return *filename != NULL;
@@ -257,10 +253,10 @@ static imgtoolerr_t os9_decode_file_header(imgtool::image &image,
 		return err;
 
 	info->lsn               = lsn;
-	attributes              = pick_integer_be(header, 0, 1);
-	info->owner_id          = pick_integer_be(header, 1, 2);
-	info->link_count        = pick_integer_be(header, 8, 1);
-	info->file_size         = pick_integer_be(header, 9, 4);
+	attributes              = header[0];
+	info->owner_id          = get_u16be(&header[1]);
+	info->link_count        = header[8];
+	info->file_size         = get_u32be(&header[9]);
 	info->directory         = (attributes & 0x80) ? 1 : 0;
 	info->non_sharable      = (attributes & 0x40) ? 1 : 0;
 	info->public_execute    = (attributes & 0x20) ? 1 : 0;
@@ -275,11 +271,11 @@ static imgtoolerr_t os9_decode_file_header(imgtool::image &image,
 
 	/* read all sector map entries */
 	max_entries = (disk_info->sector_size - 16) / 5;
-	max_entries = (std::min<std::size_t>)(max_entries, ARRAY_LENGTH(info->sector_map) - 1);
+	max_entries = (std::min<std::size_t>)(max_entries, std::size(info->sector_map) - 1);
 	for (i = 0; i < max_entries; i++)
 	{
-		lsn = pick_integer_be(header, 16 + (i * 5) + 0, 3);
-		count = pick_integer_be(header, 16 + (i * 5) + 3, 2);
+		lsn = get_u24be(&header[16 + (i * 5) + 0]);
+		count = get_u16be(&header[16 + (i * 5) + 3]);
 		if (count <= 0)
 			break;
 
@@ -393,7 +389,7 @@ static imgtoolerr_t os9_set_file_size(imgtool::image &image,
 		/* first find out the size of our sector map */
 		sector_map_length = 0;
 		lsn = 0;
-		while((lsn < current_lsn_count) && (sector_map_length < ARRAY_LENGTH(file_info->sector_map)))
+		while((lsn < current_lsn_count) && (sector_map_length < std::size(file_info->sector_map)))
 		{
 			if (file_info->sector_map[sector_map_length].count == 0)
 				return os9_corrupt_file_error(file_info);
@@ -434,7 +430,7 @@ static imgtoolerr_t os9_set_file_size(imgtool::image &image,
 			{
 				file_info->sector_map[sector_map_length - 1].count++;
 			}
-			else if (sector_map_length >= ARRAY_LENGTH(file_info->sector_map))
+			else if (sector_map_length >= std::size(file_info->sector_map))
 			{
 				return IMGTOOLERR_NOSPACE;
 			}
@@ -456,15 +452,15 @@ static imgtoolerr_t os9_set_file_size(imgtool::image &image,
 		return err;
 
 	file_info->file_size = new_size;
-	place_integer_be(header, 9, 4, file_info->file_size);
+	put_u32be(&header[9], file_info->file_size);
 
 	/* do we have to write the sector map? */
 	if (sector_map_length >= 0)
 	{
-		for (i = 0; i < (std::min<std::size_t>)(sector_map_length + 1, ARRAY_LENGTH(file_info->sector_map)); i++)
+		for (i = 0; i < (std::min<std::size_t>)(sector_map_length + 1, std::size(file_info->sector_map)); i++)
 		{
-			place_integer_be(header, 16 + (i * 5) + 0, 3, file_info->sector_map[i].lsn);
-			place_integer_be(header, 16 + (i * 5) + 3, 2, file_info->sector_map[i].count);
+			put_u24be(&header[16 + (i * 5) + 0], file_info->sector_map[i].lsn);
+			put_u16be(&header[16 + (i * 5) + 3], file_info->sector_map[i].count);
 		}
 	}
 
@@ -567,7 +563,7 @@ static imgtoolerr_t os9_lookup_path(imgtool::image &img, const char *path,
 
 			/* write the file */
 			memset(block, 0, sizeof(block));
-			place_integer_be(block, 0, 1, 0x1B | ((create == CREATE_DIR) ? 0x80 : 0x00));
+			block[0] = 0x1B | ((create == CREATE_DIR) ? 0x80 : 0x00);
 			err = os9_write_lsn(img, allocated_lsn, 0, block, sizeof(block));
 			if (err)
 				goto done;
@@ -585,8 +581,8 @@ static imgtoolerr_t os9_lookup_path(imgtool::image &img, const char *path,
 
 			/* now prepare the directory entry */
 			memset(entry, 0, sizeof(entry));
-			place_string(entry, 0, 28, path);
-			place_integer_be(entry, 29, 3, allocated_lsn);
+			place_string(&entry[0], 28, path);
+			put_u24be(&entry[29], allocated_lsn);
 
 			/* now write the directory entry */
 			entry_index = dir_size;
@@ -638,20 +634,19 @@ static imgtoolerr_t os9_diskimage_open(imgtool::image &image, imgtool::stream::p
 	if (ferr)
 		return imgtool_floppy_error(ferr);
 
-	info->total_sectors             = pick_integer_be(header,   0, 3);
-	track_size_in_sectors           = pick_integer_be(header,   3, 1);
-	info->allocation_bitmap_bytes   = pick_integer_be(header,   4, 2);
-	info->cluster_size              = pick_integer_be(header,   6, 2);
-	info->root_dir_lsn              = pick_integer_be(header,   8, 3);
-	info->owner_id                  = pick_integer_be(header,  11, 2);
-//  attributes                      =
-	pick_integer_be(header,  13, 1);
-	info->disk_id                   = pick_integer_be(header,  14, 2);
-	info->format_flags              = pick_integer_be(header,  16, 1);
-	info->sectors_per_track         = pick_integer_be(header,  17, 2);
-	info->bootstrap_lsn             = pick_integer_be(header,  21, 3);
-	info->bootstrap_size            = pick_integer_be(header,  24, 2);
-	info->sector_size               = pick_integer_be(header, 104, 2);
+	info->total_sectors             = get_u24be(&header[  0]);
+	track_size_in_sectors           = header[  3];
+	info->allocation_bitmap_bytes   = get_u16be(&header[  4]);
+	info->cluster_size              = get_u16be(&header[  6]);
+	info->root_dir_lsn              = get_u24be(&header[  8]);
+	info->owner_id                  = get_u16be(&header[ 11]);
+//  attributes                      = header[ 13];
+	info->disk_id                   = get_u16be(&header[ 14]);
+	info->format_flags              = header[ 16];
+	info->sectors_per_track         = get_u16be(&header[ 17]);
+	info->bootstrap_lsn             = get_u24be(&header[ 21]);
+	info->bootstrap_size            = get_u16be(&header[ 24]);
+	info->sector_size               = get_u16be(&header[104]);
 
 	info->sides                 = (info->format_flags & 0x01) ? 2 : 1;
 	info->double_density        = (info->format_flags & 0x02) ? 1 : 0;
@@ -670,10 +665,7 @@ static imgtoolerr_t os9_diskimage_open(imgtool::image &image, imgtool::stream::p
 		return IMGTOOLERR_CORRUPTIMAGE;
 
 	/* is the allocation bitmap too big? */
-	info->allocation_bitmap = (uint8_t*)image.malloc(info->allocation_bitmap_bytes);
-	if (!info->allocation_bitmap)
-		return IMGTOOLERR_OUTOFMEMORY;
-	memset(info->allocation_bitmap, 0, info->allocation_bitmap_bytes);
+	memset(&info->allocation_bitmap[0], 0, info->allocation_bitmap_bytes);
 
 	/* sectors per track and track size don't jive? */
 	if (info->sectors_per_track != track_size_in_sectors)
@@ -747,30 +739,30 @@ static imgtoolerr_t os9_diskimage_create(imgtool::image &img, imgtool::stream::p
 	format_flags = ((heads > 1) ? 0x01 : 0x00) | ((tracks > 40) ? 0x02 : 0x00);
 
 	memset(&header[0], 0, sector_bytes);
-	place_integer_be(&header[0],   0,  3, heads * tracks * sectors);
-	place_integer_be(&header[0],   3,  1, sectors);
-	place_integer_be(&header[0],   4,  2, (allocation_bitmap_bits + 7) / 8);
-	place_integer_be(&header[0],   6,  2, cluster_size);
-	place_integer_be(&header[0],   8,  3, 1 + allocation_bitmap_lsns);
-	place_integer_be(&header[0],  11,  2, owner_id);
-	place_integer_be(&header[0],  13,  1, attributes);
-	place_integer_be(&header[0],  14,  2, disk_id);
-	place_integer_be(&header[0],  16,  1, format_flags);
-	place_integer_be(&header[0],  17,  2, sectors);
-	place_string(&header[0],   31, 32, title);
-	place_integer_be(&header[0], 103, 2, sector_bytes / 256);
+	put_u24be(&header[  0], heads * tracks * sectors);
+	header[  3] = sectors;
+	put_u16be(&header[  4], (allocation_bitmap_bits + 7) / 8);
+	put_u16be(&header[  6], cluster_size);
+	put_u24be(&header[  8], 1 + allocation_bitmap_lsns);
+	put_u16be(&header[ 11], owner_id);
+	header[ 13] = attributes;
+	put_u16be(&header[ 14], disk_id);
+	header[ 16] = format_flags;
+	put_u16be(&header[ 17], sectors);
+	place_string(&header[ 31], 32, title);
+	put_u16be(&header[103], sector_bytes / 256);
 
 	/* path descriptor options */
-	place_integer_be(&header[0], 0x3f+0x00, 1, 1); /* device class */
-	place_integer_be(&header[0], 0x3f+0x01, 1, 1); /* drive number */
-	place_integer_be(&header[0], 0x3f+0x03, 1, 0x20); /* device type */
-	place_integer_be(&header[0], 0x3f+0x04, 1, 1); /* density capability */
-	place_integer_be(&header[0], 0x3f+0x05, 2, tracks); /* number of tracks */
-	place_integer_be(&header[0], 0x3f+0x07, 1, heads); /* number of sides */
-	place_integer_be(&header[0], 0x3f+0x09, 2, sectors); /* sectors per track */
-	place_integer_be(&header[0], 0x3f+0x0b, 2, sectors); /* sectors on track zero */
-	place_integer_be(&header[0], 0x3f+0x0d, 1, 3); /* sector interleave factor */
-	place_integer_be(&header[0], 0x3f+0x0e, 1, 8); /* default sectors per allocation */
+	header[0x3f+0x00] = 1; /* device class */
+	header[0x3f+0x01] = 1; /* drive number */
+	header[0x3f+0x03] = 0x20; /* device type */
+	header[0x3f+0x04] = 1; /* density capability */
+	put_u16be(&header[0x3f+0x05], tracks); /* number of tracks */
+	header[0x3f+0x07] = heads; /* number of sides */
+	put_u16be(&header[0x3f+0x09], sectors); /* sectors per track */
+	put_u16be(&header[0x3f+0x0b], sectors); /* sectors on track zero */
+	header[0x3f+0x0d] = 3; /* sector interleave factor */
+	header[0x3f+0x0e] = 8; /* default sectors per allocation */
 
 	err = (imgtoolerr_t)floppy_write_sector(imgtool_floppy(img), 0, 0, first_sector_id, 0, &header[0], sector_bytes, 0);    /* TODO: pass ddam argument from imgtool */
 	if (err)
@@ -824,8 +816,8 @@ static imgtoolerr_t os9_diskimage_create(imgtool::image &img, imgtool::stream::p
 	header[0x0D] = (uint8_t) (ltime->tm_year % 100);
 	header[0x0E] = (uint8_t) ltime->tm_mon;
 	header[0x0F] = (uint8_t) ltime->tm_mday;
-	place_integer_be(&header[0], 0x10, 3, 1 + allocation_bitmap_lsns + 1);
-	place_integer_be(&header[0], 0x13, 2, 8);
+	put_u24be(&header[0x10], 1 + allocation_bitmap_lsns + 1);
+	put_u16be(&header[0x13], 8);
 
 	err = (imgtoolerr_t)floppy_write_sector(imgtool_floppy(img), 0, 0, first_sector_id + 1 + allocation_bitmap_lsns, 0, &header[0], sector_bytes, 0);   /* TODO: pass ddam argument from imgtool */
 	if (err)
@@ -929,7 +921,7 @@ static imgtoolerr_t os9_diskimage_nextenum(imgtool::directory &enumeration, imgt
 			}
 
 			/* if the filename is ".", the file should point to the current directory */
-			if (!strcmp(filename, ".") && (pick_integer_be(dir_entry, 29, 3) != os9enum->dir_info.lsn))
+			if (!strcmp(filename, ".") && (get_u24be(&dir_entry[29]) != os9enum->dir_info.lsn))
 			{
 				imgtool_warn("Directory \".\" does not point back to same directory");
 			}
@@ -946,14 +938,14 @@ static imgtoolerr_t os9_diskimage_nextenum(imgtool::directory &enumeration, imgt
 	while(!filename[0] || !strcmp(filename, ".") || !strcmp(filename, ".."));
 
 	/* read file attributes */
-	lsn = pick_integer_be(dir_entry, 29, 3);
+	lsn = get_u24be(&dir_entry[29]);
 	err = os9_decode_file_header(enumeration.image(), lsn, &file_info);
 	if (err)
 		return err;
 
 	/* fill out imgtool_dirent structure */
-	snprintf(ent.filename, ARRAY_LENGTH(ent.filename), "%s", filename);
-	snprintf(ent.attr, ARRAY_LENGTH(ent.attr), "%c%c%c%c%c%c%c%c",
+	snprintf(ent.filename, std::size(ent.filename), "%s", filename);
+	snprintf(ent.attr, std::size(ent.attr), "%c%c%c%c%c%c%c%c",
 		file_info.directory      ? 'd' : '-',
 		file_info.non_sharable   ? 's' : '-',
 		file_info.public_execute ? 'x' : '-',
@@ -1143,7 +1135,7 @@ static imgtoolerr_t os9_diskimage_delete(imgtool::partition &partition, const ch
 		if (err)
 			return err;
 
-		for (i = 0; (i < ARRAY_LENGTH(file_info.sector_map)) && file_info.sector_map[i].count; i++)
+		for (i = 0; (i < std::size(file_info.sector_map)) && file_info.sector_map[i].count; i++)
 		{
 			lsn = file_info.sector_map[i].lsn;
 			for (j = 0;  j < file_info.sector_map[i].count; j++)
@@ -1185,10 +1177,10 @@ static imgtoolerr_t os9_diskimage_createdir(imgtool::partition &partition, const
 
 	/* create intial directories */
 	memset(dir_data, 0, sizeof(dir_data));
-	place_string(dir_data,   0, 32, "..");
-	place_integer_be(dir_data, 29,  3, parent_lsn);
-	place_string(dir_data,  32, 32, ".");
-	place_integer_be(dir_data, 61,  3, file_info.lsn);
+	place_string(&dir_data[ 0], 32, "..");
+	put_u24be(&dir_data[29], parent_lsn);
+	place_string(&dir_data[32], 32, ".");
+	put_u24be(&dir_data[61], file_info.lsn);
 
 	err = os9_write_lsn(image, file_info.sector_map[0].lsn, 0, dir_data, sizeof(dir_data));
 	if (err)

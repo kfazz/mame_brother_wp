@@ -32,7 +32,7 @@
 #define m68307SIM_BR3 (0x4c)
 #define m68307SIM_OR3 (0x4e)
 
-READ16_MEMBER( m68307_cpu_device::m68307_internal_sim_r )
+uint16_t m68307_cpu_device::m68307_internal_sim_r(address_space &space, offs_t offset, uint16_t mem_mask)
 {
 	assert(m_m68307SIM);
 	m68307_sim &sim = *m_m68307SIM;
@@ -54,7 +54,7 @@ READ16_MEMBER( m68307_cpu_device::m68307_internal_sim_r )
 		case m68307SIM_OR3: return sim.m_or[3];
 
 		default:
-			logerror("%08x m68307_internal_sim_r %08x, (%04x)\n", m_ppc, offset*2, mem_mask);
+			logerror("%08x m68307_internal_sim_r %08x, (%04x)\n", m_ipc, offset*2, mem_mask);
 			return 0xff;
 	}
 
@@ -62,7 +62,7 @@ READ16_MEMBER( m68307_cpu_device::m68307_internal_sim_r )
 }
 
 
-WRITE16_MEMBER( m68307_cpu_device::m68307_internal_sim_w )
+void m68307_cpu_device::m68307_internal_sim_w(address_space &space, offs_t offset, uint16_t data, uint16_t mem_mask)
 {
 	assert(m_m68307SIM);
 	m68307_sim &sim = *m_m68307SIM;
@@ -70,12 +70,12 @@ WRITE16_MEMBER( m68307_cpu_device::m68307_internal_sim_w )
 	switch (offset<<1)
 	{
 		case m68307SIM_PACNT:
-			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Port A (8-bit) Control Register - PACNT)\n", m_ppc, offset*2,data,mem_mask);
+			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Port A (8-bit) Control Register - PACNT)\n", m_ipc, offset*2,data,mem_mask);
 			sim.write_pacnt(data,mem_mask);
 			break;
 
 		case m68307SIM_PADDR:
-			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Port A (8-bit) Direction Register - PADDR)\n", m_ppc, offset*2,data,mem_mask);
+			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Port A (8-bit) Direction Register - PADDR)\n", m_ipc, offset*2,data,mem_mask);
 			sim.write_paddr(data,mem_mask);
 			break;
 
@@ -84,12 +84,12 @@ WRITE16_MEMBER( m68307_cpu_device::m68307_internal_sim_w )
 			break;
 
 		case m68307SIM_PBCNT:
-			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Port B (16-bit) Control Register - PBCNT)\n", m_ppc, offset*2,data,mem_mask);
+			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Port B (16-bit) Control Register - PBCNT)\n", m_ipc, offset*2,data,mem_mask);
 			sim.write_pbcnt(data,mem_mask);
 			break;
 
 		case m68307SIM_PBDDR:
-			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Port B (16-bit) Direction Register - PBDDR)\n", m_ppc, offset*2,data,mem_mask);
+			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Port B (16-bit) Direction Register - PBDDR)\n", m_ipc, offset*2,data,mem_mask);
 			sim.write_pbddr(data,mem_mask);
 			break;
 
@@ -99,22 +99,22 @@ WRITE16_MEMBER( m68307_cpu_device::m68307_internal_sim_w )
 
 
 		case m68307SIM_LICR1:
-			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Latched Interrupt Control Register 1 - LICR1)\n", m_ppc, offset*2,data,mem_mask);
+			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Latched Interrupt Control Register 1 - LICR1)\n", m_ipc, offset*2,data,mem_mask);
 			sim.write_licr1(this,data,mem_mask);
 			break;
 
 		case m68307SIM_LICR2:
-			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Latched Interrupt Control Register 2 - LICR2)\n", m_ppc, offset*2,data,mem_mask);
+			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Latched Interrupt Control Register 2 - LICR2)\n", m_ipc, offset*2,data,mem_mask);
 			sim.write_licr2(this,data,mem_mask);
 			break;
 
 		case m68307SIM_PICR:
-			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Peripheral Interrupt Control Register - PICR)\n", m_ppc, offset*2,data,mem_mask);
+			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Peripheral Interrupt Control Register - PICR)\n", m_ipc, offset*2,data,mem_mask);
 			sim.write_picr(this,data,mem_mask);
 			break;
 
 		case m68307SIM_PIVR:
-			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Peripheral Interrupt Vector Register - PIVR)\n", m_ppc, offset*2,data,mem_mask);
+			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x) (Peripheral Interrupt Vector Register - PIVR)\n", m_ipc, offset*2,data,mem_mask);
 			sim.write_pivr(this,data,mem_mask);
 			break;
 
@@ -146,7 +146,7 @@ WRITE16_MEMBER( m68307_cpu_device::m68307_internal_sim_w )
 
 
 		default :
-			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x)\n", m_ppc, offset*2,data,mem_mask);
+			logerror("%08x m68307_internal_sim_w %08x, %04x (%04x)\n", m_ipc, offset*2,data,mem_mask);
 			break;
 	}
 }

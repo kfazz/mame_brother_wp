@@ -10,6 +10,7 @@
 #include "emu.h"
 #include "ds1205.h"
 
+#include <cstdarg>
 #include <cstdio>
 
 
@@ -93,24 +94,36 @@ void ds1205_device::nvram_default()
 	}
 }
 
-void ds1205_device::nvram_read( emu_file &file )
+bool ds1205_device::nvram_read( util::read_stream &file )
 {
 	for(int i = 0; i < 3; i++)
 	{
-		file.read( m_identification[i], sizeof( m_identification[i] ) );
-		file.read( m_security_match[i], sizeof( m_security_match[i] ) );
-		file.read( m_secure_memory[i], sizeof( m_secure_memory[i] ) );
+		size_t actual;
+		if( file.read( m_identification[i], sizeof( m_identification[i] ), actual ) || actual != sizeof( m_identification[i] ) )
+			return false;
+		if( file.read( m_security_match[i], sizeof( m_security_match[i] ), actual ) || actual != sizeof( m_security_match[i] ) )
+			return false;
+		if( file.read( m_secure_memory[i], sizeof( m_secure_memory[i] ), actual ) || actual != sizeof( m_secure_memory[i] ) )
+			return false;
 	}
+
+	return true;
 }
 
-void ds1205_device::nvram_write( emu_file &file )
+bool ds1205_device::nvram_write( util::write_stream &file )
 {
 	for(int i = 0; i < 3; i++)
 	{
-		file.write( m_identification[i], sizeof( m_identification[i] ) );
-		file.write( m_security_match[i], sizeof( m_security_match[i] ) );
-		file.write( m_secure_memory[i], sizeof( m_secure_memory[i] ) );
+		size_t actual;
+		if( file.write( m_identification[i], sizeof( m_identification[i] ), actual ) || actual != sizeof( m_identification[i] ) )
+			return false;
+		if( file.write( m_security_match[i], sizeof( m_security_match[i] ), actual ) || actual != sizeof( m_security_match[i] ) )
+			return false;
+		if( file.write( m_secure_memory[i], sizeof( m_secure_memory[i] ), actual ) || actual != sizeof( m_secure_memory[i] ) )
+			return false;
 	}
+
+	return true;
 }
 
 void ds1205_device::new_state( int state )
@@ -161,7 +174,7 @@ void ds1205_device::readbit( u8 *buffer )
 	}
 }
 
-WRITE_LINE_MEMBER( ds1205_device::write_rst )
+void ds1205_device::write_rst(int state)
 {
 	if( m_rst != state )
 	{
@@ -193,7 +206,7 @@ WRITE_LINE_MEMBER( ds1205_device::write_rst )
 	}
 }
 
-WRITE_LINE_MEMBER( ds1205_device::write_clk )
+void ds1205_device::write_clk(int state)
 {
 	if( m_clk != state )
 	{
@@ -370,7 +383,7 @@ WRITE_LINE_MEMBER( ds1205_device::write_clk )
 	}
 }
 
-WRITE_LINE_MEMBER( ds1205_device::write_dq )
+void ds1205_device::write_dq(int state)
 {
 	if( m_dqw != state )
 	{
@@ -380,7 +393,7 @@ WRITE_LINE_MEMBER( ds1205_device::write_dq )
 	}
 }
 
-READ_LINE_MEMBER( ds1205_device::read_dq )
+int ds1205_device::read_dq()
 {
 	if( m_dqr == DQ_HIGH_IMPEDANCE )
 	{

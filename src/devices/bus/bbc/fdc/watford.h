@@ -14,8 +14,6 @@
 #include "fdc.h"
 #include "imagedev/floppy.h"
 #include "machine/wd_fdc.h"
-#include "formats/acorn_dsk.h"
-#include "formats/fsd_dsk.h"
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -26,7 +24,7 @@ class bbc_watfordfdc_device :
 	public device_bbc_fdc_interface
 {
 public:
-	DECLARE_FLOPPY_FORMATS(floppy_formats);
+	static void floppy_formats(format_registration &fr);
 
 protected:
 	// construction/destruction
@@ -50,8 +48,7 @@ protected:
 
 private:
 	required_device<wd_fdc_device_base> m_fdc;
-	required_device<floppy_connector> m_floppy0;
-	optional_device<floppy_connector> m_floppy1;
+	required_device_array<floppy_connector, 2> m_floppy;
 
 	int m_drive_control;
 };
@@ -73,8 +70,7 @@ protected:
 
 private:
 	required_device<wd_fdc_device_base> m_fdc;
-	required_device<floppy_connector> m_floppy0;
-	optional_device<floppy_connector> m_floppy1;
+	required_device_array<floppy_connector, 2> m_floppy;
 
 	int m_drive_control;
 };

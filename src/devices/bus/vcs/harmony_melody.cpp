@@ -65,18 +65,15 @@ DEFINE_DEVICE_TYPE(A26_ROM_HARMONY, a26_rom_harmony_device, "a2600_harmony", "At
 
 
 a26_rom_harmony_device::a26_rom_harmony_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: a26_rom_f8_device(mconfig, A26_ROM_HARMONY, tag, owner, clock), m_cpu(*this, "arm")
+	: a26_rom_base_device(mconfig, A26_ROM_HARMONY, tag, owner, clock)
+	, m_cpu(*this, "arm")
+	, m_base_bank(0)
 {
 }
 
 //-------------------------------------------------
 //  mapper specific start/reset
 //-------------------------------------------------
-
-void a26_rom_harmony_device::device_start()
-{
-	save_item(NAME(m_base_bank));
-}
 
 void a26_rom_harmony_device::harmony_arm7_map(address_map &map)
 {
@@ -86,6 +83,12 @@ void a26_rom_harmony_device::device_add_mconfig(machine_config &config)
 {
 	LPC2103(config, m_cpu, 70000000);
 	m_cpu->set_addrmap(AS_PROGRAM, &a26_rom_harmony_device::harmony_arm7_map);
+}
+
+
+void a26_rom_harmony_device::device_start()
+{
+	save_item(NAME(m_base_bank));
 }
 
 // actually if the ARM code is doing this and providing every opcode to the main CPU based
@@ -104,7 +107,7 @@ void a26_rom_harmony_device::device_reset()
 	m_cpu->reset();
 }
 
-READ8_MEMBER(a26_rom_harmony_device::read8_r)
+uint8_t a26_rom_harmony_device::read8_r(offs_t offset)
 {
 	return m_rom[offset + (m_base_bank * 0x1000)];
 }
@@ -114,27 +117,32 @@ void a26_rom_harmony_device::check_bankswitch(offs_t offset)
 {
 	switch (offset)
 	{
-	case 0x0FF6: m_base_bank = 0; break;
-	case 0x0FF7: m_base_bank = 1; break;
-	case 0x0FF8: m_base_bank = 2; break;
-	case 0x0FF9: m_base_bank = 3; break;
-	case 0x0FFa: m_base_bank = 4; break;
-	case 0x0FFb: m_base_bank = 5; break;
+	case 0x0ff6: m_base_bank = 0; break;
+	case 0x0ff7: m_base_bank = 1; break;
+	case 0x0ff8: m_base_bank = 2; break;
+	case 0x0ff9: m_base_bank = 3; break;
+	case 0x0ffa: m_base_bank = 4; break;
+	case 0x0ffb: m_base_bank = 5; break;
 	default: break;
 	}
 }
 
-READ8_MEMBER(a26_rom_harmony_device::read_rom)
+void a26_rom_harmony_device::install_memory_handlers(address_space *space)
 {
-	uint8_t retvalue = read8_r(space, offset + 0xc00); // banks start at 0xc00
+	space->install_read_handler(0x1000, 0x1fff, read8sm_delegate(*this, FUNC(a26_rom_harmony_device::read)));
+	space->install_write_handler(0x1000, 0x1fff, write8sm_delegate(*this, FUNC(a26_rom_harmony_device::write)));
+}
+
+uint8_t a26_rom_harmony_device::read(offs_t offset)
+{
+	uint8_t retvalue = read8_r(offset + 0xc00); // banks start at 0xc00
 
 	check_bankswitch(offset);
 
 	return retvalue;
 }
 
-WRITE8_MEMBER(a26_rom_harmony_device::write_bank)
+void a26_rom_harmony_device::write(offs_t offset, uint8_t data)
 {
 	check_bankswitch(offset);
-//  a26_rom_f8_device::write_bank(space, offset, data);
 }

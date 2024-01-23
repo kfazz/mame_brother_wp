@@ -117,7 +117,7 @@ void tanbus_tanex_device::device_add_mconfig(machine_config &config)
 	m_rs232->cts_handler().set(m_acia, FUNC(mos6551_device::write_cts));
 
 	/* via */
-	VIA6522(config, m_via6522[0], DERIVED_CLOCK(1, 8));
+	MOS6522(config, m_via6522[0], DERIVED_CLOCK(1, 8));
 	m_via6522[0]->readpa_handler().set(FUNC(tanbus_tanex_device::via_0_in_a));
 	m_via6522[0]->writepa_handler().set(FUNC(tanbus_tanex_device::via_0_out_a));
 	m_via6522[0]->writepb_handler().set(FUNC(tanbus_tanex_device::via_0_out_b));
@@ -125,7 +125,7 @@ void tanbus_tanex_device::device_add_mconfig(machine_config &config)
 	m_via6522[0]->cb2_handler().set(FUNC(tanbus_tanex_device::via_0_out_cb2));
 	m_via6522[0]->irq_handler().set(m_irq_line, FUNC(input_merger_device::in_w<IRQ_VIA_0>));
 
-	VIA6522(config, m_via6522[1], DERIVED_CLOCK(1, 8));
+	MOS6522(config, m_via6522[1], DERIVED_CLOCK(1, 8));
 	m_via6522[1]->writepa_handler().set(FUNC(tanbus_tanex_device::via_1_out_a));
 	m_via6522[1]->writepb_handler().set(FUNC(tanbus_tanex_device::via_1_out_b));
 	m_via6522[1]->ca2_handler().set(FUNC(tanbus_tanex_device::via_1_out_ca2));
@@ -366,12 +366,12 @@ TIMER_DEVICE_CALLBACK_MEMBER(tanbus_tanex_device::read_cassette)
 		m_via6522[0]->write_cb2(1);
 }
 
-WRITE_LINE_MEMBER(tanbus_tanex_device::bus_so_w)
+void tanbus_tanex_device::bus_so_w(int state)
 {
 	m_tanbus->so_w(state);
 }
 
-WRITE_LINE_MEMBER(tanbus_tanex_device::bus_irq_w)
+void tanbus_tanex_device::bus_irq_w(int state)
 {
 	m_tanbus->irq_w(state);
 }
@@ -380,19 +380,19 @@ WRITE_LINE_MEMBER(tanbus_tanex_device::bus_irq_w)
 //  VIA callback functions for VIA #0
 //**************************************************************
 
-READ8_MEMBER(tanbus_tanex_device::via_0_in_a)
+uint8_t tanbus_tanex_device::via_0_in_a()
 {
 	int data = ioport("JOY")->read();
 	LOG("via_0_in_a %02X\n", data);
 	return data;
 }
 
-WRITE8_MEMBER(tanbus_tanex_device::via_0_out_a)
+void tanbus_tanex_device::via_0_out_a(uint8_t data)
 {
 	LOG("via_0_out_a %02X\n", data);
 }
 
-WRITE8_MEMBER(tanbus_tanex_device::via_0_out_b)
+void tanbus_tanex_device::via_0_out_b(uint8_t data)
 {
 	LOG("via_0_out_b %02X\n", data);
 	/* bit #5 is the replay cassette drive */
@@ -401,12 +401,12 @@ WRITE8_MEMBER(tanbus_tanex_device::via_0_out_b)
 	m_cassette->output(data & 0x80 ? +1.0 : -1.0);
 }
 
-WRITE_LINE_MEMBER(tanbus_tanex_device::via_0_out_ca2)
+void tanbus_tanex_device::via_0_out_ca2(int state)
 {
 	LOG("via_0_out_ca2 %d\n", state);
 }
 
-WRITE_LINE_MEMBER(tanbus_tanex_device::via_0_out_cb2)
+void tanbus_tanex_device::via_0_out_cb2(int state)
 {
 	LOG("via_0_out_cb2 %d\n", state);
 }
@@ -415,22 +415,22 @@ WRITE_LINE_MEMBER(tanbus_tanex_device::via_0_out_cb2)
 //  VIA callback functions for VIA #1
 //**************************************************************
 
-WRITE8_MEMBER(tanbus_tanex_device::via_1_out_a)
+void tanbus_tanex_device::via_1_out_a(uint8_t data)
 {
 	LOG("via_1_out_a %02X\n", data);
 }
 
-WRITE8_MEMBER(tanbus_tanex_device::via_1_out_b)
+void tanbus_tanex_device::via_1_out_b(uint8_t data)
 {
 	LOG("via_1_out_b %02X\n", data);
 }
 
-WRITE_LINE_MEMBER(tanbus_tanex_device::via_1_out_ca2)
+void tanbus_tanex_device::via_1_out_ca2(int state)
 {
 	LOG("via_1_out_ca2 %d\n", state);
 }
 
-WRITE_LINE_MEMBER(tanbus_tanex_device::via_1_out_cb2)
+void tanbus_tanex_device::via_1_out_cb2(int state)
 {
 	LOG("via_1_out_cb2 %d\n", state);
 }

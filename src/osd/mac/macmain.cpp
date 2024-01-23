@@ -17,8 +17,10 @@
 #include <unistd.h>
 
 // MAME headers
+#include "corestr.h"
 #include "osdepend.h"
 #include "emu.h"
+#include "main.h"
 #include "emuopts.h"
 #include "strconv.h"
 
@@ -41,12 +43,11 @@
 //============================================================
 
 const options_entry mac_options::s_option_entries[] =
-{
-	{ MACOPTION_INIPATH,                     INI_PATH,    OPTION_STRING,     "path to ini files" },
+	{
+		{MACOPTION_INIPATH, INI_PATH, core_options::option_type::STRING, "path to ini files"},
 
-	// End of list
-	{ nullptr }
-};
+		// End of list
+		{nullptr}};
 
 //============================================================
 //  mac_options
@@ -58,7 +59,7 @@ mac_options::mac_options()
 	std::string ini_path(INI_PATH);
 	add_entries(mac_options::s_option_entries);
 	strreplace(ini_path,"APP_NAME", emulator_info::get_appname_lower());
-	set_default_value(MACOPTION_INIPATH, ini_path.c_str());
+	set_default_value(MACOPTION_INIPATH, std::move(ini_path));
 }
 
 //============================================================
@@ -192,8 +193,6 @@ static void osd_mac_info(void)
 
 void mac_osd_interface::video_register()
 {
-	video_options_add("opengl", nullptr);
-	video_options_add("bgfx", nullptr);
 }
 
 //============================================================
@@ -231,6 +230,7 @@ void mac_osd_interface::init(running_machine &machine)
 	int bench = options().bench();
 	if (bench > 0)
 	{
+		options().set_value(OPTION_SLEEP, false, OPTION_PRIORITY_MAXIMUM);
 		options().set_value(OPTION_THROTTLE, false, OPTION_PRIORITY_MAXIMUM);
 		options().set_value(OSDOPTION_SOUND, "none", OPTION_PRIORITY_MAXIMUM);
 		options().set_value(OSDOPTION_VIDEO, "none", OPTION_PRIORITY_MAXIMUM);

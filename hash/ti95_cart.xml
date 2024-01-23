@@ -1,15 +1,18 @@
 <?xml version="1.0"?>
 <!DOCTYPE softwarelist SYSTEM "softwarelist.dtd">
 <!--
-license:CC0
+license:CC0-1.0
+-->
 
-    Library functions can be reached from [RUN], [F3]
+<!--
 
-    Not dumped yet:
-    - Chemical Engineering Library
+Library functions can be reached from [RUN], [F3]
 
-    Not included in list:
-    - 8KB RAM, battery backed
+Not dumped yet:
+- Chemical Engineering Library
+
+Not yet emulated:
+- 8KB RAM, battery backed
 
 -->
 

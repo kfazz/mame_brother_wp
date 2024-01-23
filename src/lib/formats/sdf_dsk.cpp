@@ -2,7 +2,7 @@
 // copyright-holders:Wilbert Pol, tim lindner
 /*********************************************************************
 
-    formats/sdf_dsk.h
+    formats/sdf_dsk.cpp
 
     SDF disk images. Format created by Darren Atkinson for use with
     his CoCoSDC floppy disk emulator.
@@ -12,43 +12,46 @@
 *********************************************************************/
 
 #include "sdf_dsk.h"
-#include <cassert>
+
+#include "ioprocs.h"
+#include "multibyte.h"
+
 
 sdf_format::sdf_format()
 {
 }
 
 
-const char *sdf_format::name() const
+const char *sdf_format::name() const noexcept
 {
 	return "sdf";
 }
 
 
-const char *sdf_format::description() const
+const char *sdf_format::description() const noexcept
 {
 	return "SDF disk image";
 }
 
 
-const char *sdf_format::extensions() const
+const char *sdf_format::extensions() const noexcept
 {
 	return "sdf";
 }
 
 
-int sdf_format::identify(io_generic *io, uint32_t form_factor)
+int sdf_format::identify(util::random_read &io, uint32_t form_factor, const std::vector<uint32_t> &variants) const
 {
 	uint8_t header[HEADER_SIZE];
 
-	uint64_t size = io_generic_size(io);
-
-	if (size < HEADER_SIZE)
+	uint64_t size;
+	if (io.length(size) || (size < HEADER_SIZE))
 	{
 		return 0;
 	}
 
-	io_generic_read(io, header, 0, HEADER_SIZE);
+	size_t actual;
+	io.read_at(0, header, HEADER_SIZE, actual);
 
 	int tracks = header[4];
 	int heads = header[5];
@@ -67,31 +70,32 @@ int sdf_format::identify(io_generic *io, uint32_t form_factor)
 
 	if (size == HEADER_SIZE + heads * tracks * TOTAL_TRACK_SIZE)
 	{
-		return 100;
+		return FIFID_SIGN|FIFID_SIZE|FIFID_STRUCT;
 	}
 
 	return 0;
 }
 
 
-bool sdf_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
+bool sdf_format::load(util::random_read &io, uint32_t form_factor, const std::vector<uint32_t> &variants, floppy_image &image) const
 {
+	size_t actual;
 	uint8_t header[HEADER_SIZE];
 	std::vector<uint8_t> track_data(TOTAL_TRACK_SIZE);
 	std::vector<uint32_t> raw_track_data;
 
-	io_generic_read(io, header, 0, HEADER_SIZE);
+	io.read_at(0, header, HEADER_SIZE, actual);
 
 	const int tracks = header[4];
 	const int heads = header[5];
 
 	if (heads == 2)
 	{
-		image->set_variant(floppy_image::DSDD);
+		image.set_variant(floppy_image::DSDD);
 	}
 	else
 	{
-		image->set_variant(floppy_image::SSDD);
+		image.set_variant(floppy_image::SSDD);
 	}
 
 	for (int track = 0; track < tracks; track++)
@@ -104,7 +108,7 @@ bool sdf_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
 			raw_track_data.clear();
 
 			// Read track
-			io_generic_read(io, &track_data[0], HEADER_SIZE + ( heads * track + head ) * TOTAL_TRACK_SIZE, TOTAL_TRACK_SIZE);
+			io.read_at(HEADER_SIZE + (heads * track + head) * TOTAL_TRACK_SIZE, &track_data[0], TOTAL_TRACK_SIZE, actual);
 
 			int sector_count = track_data[0];
 
@@ -115,8 +119,8 @@ bool sdf_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
 			{
 				if (i < sector_count )
 				{
-					idam_location[i] = ((track_data[ 8 * (i+1) + 1] << 8 | track_data[ 8 * (i+1)]) & 0x3FFF) - 4;
-					dam_location[i] = ((track_data[ 8 * (i+1) + 1 + 2] << 8 | track_data[ 8 * (i+1) + 2]) & 0x3FFF) - 4;
+					idam_location[i] = (get_u16le(&track_data[ 8 * (i+1)]) & 0x3FFF) - 4;
+					dam_location[i] = (get_u16le(&track_data[ 8 * (i+1) + 2]) & 0x3FFF) - 4;
 
 					if (idam_location[i] > TOTAL_TRACK_SIZE) return false;
 					if (dam_location[i] > TOTAL_TRACK_SIZE) return false;
@@ -181,16 +185,10 @@ bool sdf_format::load(io_generic *io, uint32_t form_factor, floppy_image *image)
 }
 
 
-bool sdf_format::save(io_generic *io, floppy_image *image)
+bool sdf_format::supports_save() const noexcept
 {
 	return false;
 }
 
 
-bool sdf_format::supports_save() const
-{
-	return false;
-}
-
-
-const floppy_format_type FLOPPY_SDF_FORMAT = &floppy_image_format_creator<sdf_format>;
+const sdf_format FLOPPY_SDF_FORMAT;

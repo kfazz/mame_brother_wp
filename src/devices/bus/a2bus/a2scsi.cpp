@@ -33,7 +33,9 @@
 
 #include "emu.h"
 #include "a2scsi.h"
+#include "bus/nscsi/cd.h"
 #include "bus/nscsi/devices.h"
+#include "speaker.h"
 
 /***************************************************************************
     PARAMETERS
@@ -64,16 +66,26 @@ ROM_END
 
 void a2bus_scsi_device::device_add_mconfig(machine_config &config)
 {
+	// These machines were strictly external CD-ROMs so sound didn't route back into them; the AppleCD SC had
+	// RCA jacks for connection to speakers/a stereo.
+	SPEAKER(config, "lspeaker").front_left();
+	SPEAKER(config, "rspeaker").front_right();
+
 	NSCSI_BUS(config, m_scsibus);
 	NSCSI_CONNECTOR(config, "scsibus:0", default_scsi_devices, nullptr, false);
-	NSCSI_CONNECTOR(config, "scsibus:1", default_scsi_devices, "cdrom", false);
+	NSCSI_CONNECTOR(config, "scsibus:1").option_set("cdrom", NSCSI_CDROM_APPLE).machine_config(
+		[](device_t *device)
+		{
+			device->subdevice<cdda_device>("cdda")->add_route(0, "^^lspeaker", 1.0);
+			device->subdevice<cdda_device>("cdda")->add_route(1, "^^rspeaker", 1.0);
+		});
 	NSCSI_CONNECTOR(config, "scsibus:2", default_scsi_devices, nullptr, false);
 	NSCSI_CONNECTOR(config, "scsibus:3", default_scsi_devices, nullptr, false);
 	NSCSI_CONNECTOR(config, "scsibus:4", default_scsi_devices, nullptr, false);
 	NSCSI_CONNECTOR(config, "scsibus:5", default_scsi_devices, nullptr, false);
 	NSCSI_CONNECTOR(config, "scsibus:6", default_scsi_devices, "harddisk", false);
-	NSCSI_CONNECTOR(config, "scsibus:7").option_set("ncr5380", NCR5380N).machine_config([this](device_t *device) {
-		downcast<ncr5380n_device &>(*device).drq_handler().set(*this, FUNC(a2bus_scsi_device::drq_w));
+	NSCSI_CONNECTOR(config, "scsibus:7").option_set("ncr5380", NCR5380).machine_config([this](device_t *device) {
+		downcast<ncr5380_device &>(*device).drq_handler().set(*this, FUNC(a2bus_scsi_device::drq_w));
 	});
 }
 
@@ -94,7 +106,7 @@ a2bus_scsi_device::a2bus_scsi_device(const machine_config &mconfig, device_type 
 	device_t(mconfig, type, tag, owner, clock),
 	device_a2bus_card_interface(mconfig, *this),
 	m_ncr5380(*this, SCSI_5380_TAG),
-	m_scsibus(*this, SCSI_BUS_TAG), m_rom(nullptr), m_rambank(0), m_rombank(0), m_drq(0), m_bank(0), m_816block(false)
+	m_scsibus(*this, SCSI_BUS_TAG), m_rom(*this, SCSI_ROM_REGION), m_rambank(0), m_rombank(0), m_drq(0), m_bank(0), m_816block(false)
 {
 }
 
@@ -109,8 +121,6 @@ a2bus_scsi_device::a2bus_scsi_device(const machine_config &mconfig, const char *
 
 void a2bus_scsi_device::device_start()
 {
-	m_rom = device().machine().root_device().memregion(this->subtag(SCSI_ROM_REGION).c_str())->base();
-
 	memset(m_ram, 0, 8192);
 
 	save_item(NAME(m_ram));
@@ -152,9 +162,6 @@ uint8_t a2bus_scsi_device::read_c0nx(uint8_t offset)
 
 		case 9:     // our SCSI ID (normally 0x80 = 7)
 			return (1<<7);
-
-		case 0xa:   // RAM/ROM bank
-			return m_bank;
 
 		case 0xe:   // DRQ status in bit 7
 			return m_drq;
@@ -295,7 +302,7 @@ void a2bus_scsi_device::write_c800(uint16_t offset, uint8_t data)
 	}
 }
 
-WRITE_LINE_MEMBER( a2bus_scsi_device::drq_w )
+void a2bus_scsi_device::drq_w(int state)
 {
 	m_drq = (state ? 0x80 : 0x00);
 }

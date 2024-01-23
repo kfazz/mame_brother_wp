@@ -12,32 +12,40 @@
 #include "cpu/sparc/sparc.h"
 
 #include "debug/debugcon.h"
-#include "debug/debugcmd.h"
 #include "debugger.h"
 
 DEFINE_DEVICE_TYPE(SUN4_MMU, sun4_mmu_device, "sun4_mmu", "Sun 4 MMU")
 DEFINE_DEVICE_TYPE(SUN4C_MMU, sun4c_mmu_device, "sun4c_mmu", "Sun 4c MMU")
 
-#define LOG_PAGE_MAP        (1U << 0)
-#define LOG_SEGMENT_MAP     (1U << 1)
-#define LOG_INVALID_PTE     (1U << 2)
-#define LOG_SYSTEM          (1U << 3)
-#define LOG_CONTEXT         (1U << 4)
-#define LOG_SYSTEM_ENABLE   (1U << 5)
-#define LOG_BUSERROR        (1U << 6)
-#define LOG_CACHE_TAGS      (1U << 7)
-#define LOG_CACHE_DATA      (1U << 8)
-#define LOG_UNKNOWN_SYSTEM  (1U << 9)
-#define LOG_UNKNOWN_SEGMENT (1U << 10)
-#define LOG_TYPE0_TIMEOUT   (1U << 11)
-#define LOG_TYPE1_TIMEOUT   (1U << 12)
-#define LOG_UNKNOWN_SPACE   (1U << 13)
-#define LOG_WRITE_PROTECT   (1U << 14)
-#define LOG_PARITY          (1U << 15)
-#define LOG_ALL_ASI         (1U << 16) // WARNING: Heavy!
+#define LOG_PAGE_MAP        (1U << 1)
+#define LOG_SEGMENT_MAP     (1U << 2)
+#define LOG_CONTEXT         (1U << 3)
+#define LOG_SYSTEM_ENABLE   (1U << 4)
+#define LOG_UART            (1U << 5)
+#define LOG_PARITY          (1U << 6)
+#define LOG_SEGMENT_FLUSH   (1U << 7)
+#define LOG_PAGE_FLUSH      (1U << 8)
+#define LOG_CONTEXT_FLUSH   (1U << 9)
+#define LOG_ALL_FLUSH       (1U << 10)
+#define LOG_CACHE_TAGS      (1U << 11)
+#define LOG_CACHE_DATA      (1U << 12)
+#define LOG_INVALID_PTE     (1U << 13)
+#define LOG_BUSERROR        (1U << 14)
+#define LOG_TYPE0_TIMEOUT   (1U << 15)
+#define LOG_TYPE1_TIMEOUT   (1U << 16)
+#define LOG_UNKNOWN_SPACE   (1U << 17)
+#define LOG_UNKNOWN_SEGMENT (1U << 18)
+#define LOG_WRITE_PROTECT   (1U << 19)
+#define LOG_MMU             (LOG_PAGE_MAP | LOG_SEGMENT_MAP | LOG_CONTEXT)
+#define LOG_MISC_HW         (LOG_SYSTEM_ENABLE | LOG_UART | LOG_PARITY)
+#define LOG_FLUSHES         (LOG_SEGMENT_FLUSH | LOG_PAGE_FLUSH | LOG_CONTEXT_FLUSH | LOG_ALL_FLUSH)
+#define LOG_CACHE           (LOG_CACHE_TAGS | LOG_CACHE_DATA | LOG_FLUSHES)
+#define LOG_ERRORS          (LOG_INVALID_PTE | LOG_BUSERROR | LOG_TYPE0_TIMEOUT | LOG_TIME1_TIMEOUT | LOG_UNKNOWN_SPACE | LOG_UNKNOWN_SEGMENT | LOG_WRITE_PROTECT)
 
-#define VERBOSE (0)
+//#define VERBOSE (LOG_MMU | LOG_MISC_HW | LOG_FLUSHES | LOG_CACHE | LOG_ERRORS)
 #include "logmacro.h"
+
+#define PRINT_UART_DATA (0)
 
 sun4_mmu_base_device::sun4_mmu_base_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
 	: device_t(mconfig, type, tag, owner, clock)
@@ -46,7 +54,7 @@ sun4_mmu_base_device::sun4_mmu_base_device(const machine_config &mconfig, device
 	, m_rom(*this, finder_base::DUMMY_TAG)
 	, m_scc(*this, finder_base::DUMMY_TAG)
 	, m_host(nullptr)
-	, m_type1_r(*this)
+	, m_type1_r(*this, 0xffffffff)
 	, m_type1_w(*this)
 	, m_rom_ptr(nullptr)
 	, m_ram_ptr(nullptr)
@@ -73,11 +81,8 @@ sun4c_mmu_device::sun4c_mmu_device(const machine_config &mconfig, const char *ta
 
 void sun4_mmu_base_device::device_start()
 {
-	m_type1_r.resolve_safe(0xffffffff);
-	m_type1_w.resolve_safe();
-
 	// allocate timer for system reset
-	m_reset_timer = timer_alloc(TIMER_RESET);
+	m_reset_timer = timer_alloc(FUNC(sun4_mmu_base_device::reset_off_tick), this);
 	m_reset_timer->adjust(attotime::never);
 
 	m_segmap = std::make_unique<std::unique_ptr<uint8_t[]>[]>(16);
@@ -128,20 +133,12 @@ void sun4_mmu_base_device::device_start()
 	if (machine().debug_flags & DEBUG_FLAG_ENABLED)
 	{
 		using namespace std::placeholders;
-		machine().debugger().console().register_command("l2p", CMDFLAG_NONE, 0, 1, 1, std::bind(&sun4_mmu_base_device::l2p_command, this, _1, _2));
+		machine().debugger().console().register_command("l2p", CMDFLAG_NONE, 1, 1, std::bind(&sun4_mmu_base_device::l2p_command, this, _1));
 	}
-
-	m_cache_tag_mask = m_cache_mask >> 3;
-	printf("m_page_mask %08x\n", m_page_mask);
-	printf("m_seg_entry_shift %08x\n", m_seg_entry_shift);
-	printf("m_seg_entry_mask %08x\n", m_seg_entry_mask);
-	printf("m_page_entry_mask %08x\n", m_page_entry_mask);
-	printf("m_cache_mask %08x\n", m_cache_mask);
 }
 
 void sun4_mmu_base_device::device_reset()
 {
-	m_log_mem = false;
 	m_rom_ptr = (uint32_t *)m_rom->base();
 	m_ram_ptr = (uint32_t *)m_ram->pointer();
 	m_ram_size = m_ram->size();
@@ -176,8 +173,12 @@ void sun4_mmu_base_device::device_reset()
 	m_curr_segmap_masked = &m_segmap_masked[0][0];
 	m_system_enable = 0;
 	m_fetch_bootrom = true;
+	m_type1_offset = 0;
+	m_parity_err_reg = 0;
+	m_memory_err_reg = 0;
+	m_parity_err = 0;
 
-	memset(m_buserr, 0, sizeof(uint32_t) * 16);
+	memset(m_buserr, 0, sizeof(uint32_t) * 4);
 	for (int i = 0; i < 16; i++)
 	{
 		memset(&m_segmap[i][0], 0, 4096);
@@ -187,13 +188,10 @@ void sun4_mmu_base_device::device_reset()
 	memset(&m_cachedata[0], 0, sizeof(uint32_t) * 16384);
 }
 
-void sun4_mmu_base_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+TIMER_CALLBACK_MEMBER(sun4_mmu_base_device::reset_off_tick)
 {
-	if (id == TIMER_RESET)
-	{
-		m_reset_timer->adjust(attotime::never);
-		m_cpu->set_input_line(SPARC_RESET, CLEAR_LINE);
-	}
+	m_reset_timer->adjust(attotime::never);
+	m_cpu->set_input_line(SPARC_RESET, CLEAR_LINE);
 }
 
 uint32_t sun4_mmu_base_device::fetch_insn(const bool supervisor, const uint32_t offset)
@@ -204,309 +202,240 @@ uint32_t sun4_mmu_base_device::fetch_insn(const bool supervisor, const uint32_t 
 		return insn_data_r<USER_INSN>(offset, 0xffffffff);
 }
 
-uint32_t sun4_mmu_base_device::read_asi(uint8_t asi, uint32_t offset, uint32_t mem_mask)
+void sun4_mmu_base_device::segment_flush_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
 {
-	LOGMASKED(LOG_ALL_ASI, "read_asi %d: %08x & %08x\n", asi, offset << 2, mem_mask);
-	switch (asi)
+	// Do nothing for now
+	LOGMASKED(LOG_SEGMENT_FLUSH, "%s: segment_flush_w %08x & %08x: %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
+}
+
+void sun4_mmu_base_device::page_flush_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
+{
+	// Do nothing for now
+	LOGMASKED(LOG_PAGE_FLUSH, "%s: page_flush_w %08x & %08x: %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
+}
+
+void sun4_mmu_base_device::context_flush_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
+{
+	// Do nothing for now
+	LOGMASKED(LOG_CONTEXT_FLUSH, "%s: context_flush_w %08x & %08x: %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
+}
+
+void sun4_mmu_base_device::hw_segment_flush_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
+{
+	// Do nothing for now
+	LOGMASKED(LOG_SEGMENT_FLUSH, "%s: segment_flush_w %08x & %08x: %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
+}
+
+void sun4_mmu_base_device::hw_page_flush_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
+{
+	// Do nothing for now
+	LOGMASKED(LOG_PAGE_FLUSH, "%s: page_flush_w %08x & %08x: %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
+}
+
+void sun4_mmu_base_device::hw_context_flush_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
+{
+	// Do nothing for now
+	LOGMASKED(LOG_CONTEXT_FLUSH, "%s: context_flush_w %08x & %08x: %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
+}
+
+void sun4_mmu_base_device::hw_flush_all_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
+{
+	// Do nothing for now
+	LOGMASKED(LOG_ALL_FLUSH, "%s: hw_flush_all_w %08x = %08x: %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
+}
+
+uint32_t sun4_mmu_base_device::context_reg_r(uint32_t offset, uint32_t mem_mask)
+{
+	const uint32_t data = m_context << (mem_mask == 0x00ff0000 ? 16 : 24);
+	LOGMASKED(LOG_CONTEXT, "%s: context_reg_r %08x & %08x: %08x\n", machine().describe_context(), offset << 2, mem_mask, data);
+	return data;
+}
+
+void sun4_mmu_base_device::context_reg_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
+{
+	LOGMASKED(LOG_CONTEXT, "%s: context_reg_w: %08x = %08x & %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
+	m_context = data >> 24;
+	m_context_masked = m_context & m_ctx_mask;
+	m_cache_context = m_context & m_ctx_mask;
+	m_curr_segmap = &m_segmap[m_context_masked][0];
+	m_curr_segmap_masked = &m_segmap_masked[m_context_masked][0];
+}
+
+uint32_t sun4_mmu_base_device::system_enable_r(uint32_t offset, uint32_t mem_mask)
+{
+	const uint32_t data = m_system_enable << 24;
+	LOGMASKED(LOG_SYSTEM_ENABLE, "%s: system_enable_r %08x & %08x: %08x\n", machine().describe_context(), offset << 2, mem_mask, data);
+	return data;
+}
+
+void sun4_mmu_base_device::system_enable_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
+{
+	LOGMASKED(LOG_SYSTEM_ENABLE, "%s: system_enable_w: %08x = %08x & %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
+	m_system_enable = data >> 24;
+	m_fetch_bootrom = !(m_system_enable & ENA_NOTBOOT);
+
+	if (m_system_enable & ENA_RESET)
 	{
-		case 2:
-			return system_r(offset, mem_mask);
-		case 3:
-			return segment_map_r(offset, mem_mask);
-		case 4:
-			return page_map_r(offset, mem_mask);
-		case 8:
-			return insn_data_r<USER_INSN>(offset, mem_mask);
-		case 9:
-			return insn_data_r<SUPER_INSN>(offset, mem_mask);
-		case 10:
-			return insn_data_r<USER_DATA>(offset, mem_mask);
-		case 11:
-			return insn_data_r<SUPER_DATA>(offset, mem_mask);
-		case 12:
-		case 13:
-		case 14:
-			return 0;
-		default:
-			return ~0;
+		m_reset_timer->adjust(attotime::from_usec(1));
+		m_cpu->set_input_line(SPARC_RESET, ASSERT_LINE);
+	}
+	if (m_system_enable & ENA_RESET)
+	{
+		m_system_enable = 0;
+		m_cpu->set_input_line(INPUT_LINE_RESET, ASSERT_LINE);
+		m_cpu->set_input_line(INPUT_LINE_RESET, CLEAR_LINE);
 	}
 }
 
-void sun4_mmu_base_device::write_asi(uint8_t asi, uint32_t offset, uint32_t data, uint32_t mem_mask)
+uint32_t sun4_mmu_base_device::bus_error_r(uint32_t offset, uint32_t mem_mask)
 {
-	LOGMASKED(LOG_ALL_ASI, "write_asi %d: %08x = %08x & %08x\n", asi, offset << 2, data, mem_mask);
-	switch (asi)
-	{
-		case 2:
-			system_w(offset, data, mem_mask);
-			return;
-		case 3:
-			segment_map_w(offset, data, mem_mask);
-			return;
-		case 4:
-			page_map_w(offset, data, mem_mask);
-			return;
-		case 8:
-			insn_data_w<USER_INSN>(offset, data, mem_mask);
-			return;
-		case 9:
-			insn_data_w<SUPER_INSN>(offset, data, mem_mask);
-			return;
-		case 10:
-			insn_data_w<USER_DATA>(offset, data, mem_mask);
-			return;
-		case 11:
-			insn_data_w<SUPER_DATA>(offset, data, mem_mask);
-			return;
-		case 12:
-			segment_flush_w(offset);
-			break;
-		case 13:
-			page_flush_w(offset);
-			break;
-		case 14:
-			context_flush_w(offset);
-			return;
-		default:
-			return;
-	}
+	const uint32_t data = m_buserr[offset & 0xf];
+	LOGMASKED(LOG_BUSERROR, "%s: bus_error_r %08x & %08x: %08x\n", machine().describe_context(), 0x60000000 | (offset << 2), mem_mask, data);
+	m_buserr[offset & 0xf] = 0; // clear on reading
+	return data;
 }
 
-uint32_t sun4_mmu_base_device::parity_r(uint32_t offset, uint32_t mem_mask)
+void sun4_mmu_base_device::bus_error_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
 {
-	if (offset == 0)
-	{
-		const uint32_t data = m_parity_err_reg;
-		logerror("%s: parity_err_reg read: %08x & %08x\n", machine().describe_context(), m_parity_err_reg, mem_mask);
-		m_parity_err_reg &= ~0xcf;
-		return data;
-	}
-	else if (offset == 1)
-	{
-		logerror("%s: memory_err_reg read: %08x & %08x\n", machine().describe_context(), m_memory_err_reg, mem_mask);
-		return m_memory_err_reg;
-	}
-	return 0;
+	const uint32_t masked_offset = offset & 0xf;
+	LOGMASKED(LOG_BUSERROR, "%s: bus_error_w: %08x = %08x & %08x\n", machine().describe_context(), 0x60000000 | (offset << 2), data, mem_mask);
+	if (masked_offset == 0)
+		m_buserr[0] = (data & 0x000000ff) | 0x00008000;
+	else if (masked_offset == 1)
+		m_buserr[1] = data;
+	else if (masked_offset == 2)
+		m_buserr[2] = data & 0x000000b0;
+	else if (masked_offset == 3)
+		m_buserr[3] = (data & 0x3fffffff) | ((data & 0x20000000) << 1) | ((data & 0x20000000) << 2);
 }
 
-void sun4_mmu_base_device::parity_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
+uint32_t sun4_mmu_base_device::cache_tag_r(uint32_t offset, uint32_t mem_mask)
 {
-	if (offset == 0)
-	{
-		logerror("%s: parity_err_reg write: %08x & %08x\n", machine().describe_context(), data, mem_mask);
-		COMBINE_DATA(&m_parity_err_reg);
-	}
-	else
-	{
-		logerror("%s: memory_err_reg write: %08x & %08x\n", machine().describe_context(), data, mem_mask);
-		COMBINE_DATA(&m_memory_err_reg);
-	}
+	const uint32_t data = m_cachetags[offset & m_cache_mask];
+	LOGMASKED(LOG_CACHE_TAGS, "%s: cache_tag_r %08x & %08x: %08x\n", machine().describe_context(), offset, mem_mask, data);
+	return data;
 }
 
-void sun4_mmu_base_device::segment_flush_w(const uint32_t vaddr)
+void sun4_mmu_base_device::cache_tag_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
 {
-	logerror("%s: segment_flush_w %08x\n", machine().describe_context(), vaddr);
+	LOGMASKED(LOG_CACHE_TAGS, "%s: cache_tag_w: %08x = %08x & %08x\n", machine().describe_context(), offset, data, mem_mask);
+	m_cachetags[offset & m_cache_mask] = data & 0x03f8fffc;
 }
 
-void sun4_mmu_base_device::context_flush_w(const uint32_t vaddr)
+uint32_t sun4_mmu_base_device::cache_data_r(uint32_t offset, uint32_t mem_mask)
 {
-	logerror("%s: context_flush_w %08x\n", machine().describe_context(), vaddr);
-	const uint32_t cache_addr = (vaddr >> 3) & m_cache_mask;
-	if ((m_cachetags[cache_addr] & (1 << 19)) != 0)
+	const uint32_t data = m_cachedata[offset & m_cache_mask];
+	LOGMASKED(LOG_CACHE_DATA, "%s: cache_data_r %08x & %08x: %08x\n", machine().describe_context(), offset, mem_mask, data);
+	return data;
+}
+
+void sun4_mmu_base_device::cache_data_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
+{
+	LOGMASKED(LOG_CACHE_DATA, "%s: cache_data_w: %08x = %08x & %08x\n", machine().describe_context(), offset, data, mem_mask);
+	m_cachedata[offset & m_cache_mask] = data | (1 << 19);
+}
+
+uint32_t sun4_mmu_base_device::uart_r(uint32_t offset, uint32_t mem_mask)
+{
+	uint32_t data = 0xffffffff;
+	switch (offset & 3)
 	{
-		if (((m_cachetags[cache_addr] >> 20) & m_ctx_mask) == m_context_masked)
-		{
-			const uint32_t paddr = ((cache_addr << 12) & 0x0fffc000) | ((vaddr << 2) & 0x3ff8);
-			const uint32_t caddr = (vaddr & ~7) & m_cache_mask;
-			if (paddr < m_populated_ram_words)
-			{
-				memcpy(m_ram_ptr, &m_cachedata[caddr], sizeof(uint32_t) * 8);
-			}
-			m_cachetags[cache_addr] &= ~(1 << 19);
-		}
-	}
-}
-
-void sun4_mmu_base_device::page_flush_w(const uint32_t vaddr)
-{
-	logerror("%s: page_flush_w %08x\n", machine().describe_context(), vaddr);
-}
-
-uint32_t sun4_mmu_base_device::system_r(const uint32_t offset, const uint32_t mem_mask)
-{
-	LOGMASKED(LOG_SYSTEM, "%s: system_r: %08x & %08x\n", machine().describe_context(), offset << 2, mem_mask);
-	switch (offset >> 26)
-	{
-		case 3: // context reg
-		{
-			if (mem_mask == 0x00ff0000)
-			{
-				LOGMASKED(LOG_CONTEXT, "sun4c_mmu: read context %08x & %08x = %08x\n", offset << 2, mem_mask, m_context<<16);
-				return m_context<<16;
-			}
-			LOGMASKED(LOG_CONTEXT, "sun4c_mmu: read context %08x & %08x = %08x\n", offset << 2, mem_mask, m_context<<24);
-			return m_context<<24;
-		}
-
-		case 4: // system enable reg
-			LOGMASKED(LOG_SYSTEM_ENABLE, "sun4c_mmu: read system enable %08x & %08x = %08x\n", offset << 2, mem_mask, m_system_enable<<24);
-			return m_system_enable<<24;
-
-		case 6: // bus error register
-		{
-			const uint32_t ret = m_buserr[offset & 0xf];
-			LOGMASKED(LOG_BUSERROR, "sun4c_mmu: read buserror %08x & %08x = %08x, PC=%x\n", 0x60000000 | (offset << 2), mem_mask, ret, m_cpu->pc());
-			m_buserr[offset & 0xf] = 0; // clear on reading
-			return ret;
-		}
-
-		case 8: // (d-)cache tags
-			LOGMASKED(LOG_CACHE_TAGS, "%s: sun4c_mmu: read dcache tags @ %x, PC = %x\n", machine().describe_context(), offset << 2, m_cpu->pc());
-			return m_cachetags[(offset >> 3) & m_cache_tag_mask];
-
-		case 9: // (d-)cache data
-			LOGMASKED(LOG_CACHE_DATA, "%s: sun4c_mmu: read dcache data @ %x, PC = %x\n", machine().describe_context(), offset << 2, m_cpu->pc());
-			return m_cachedata[offset & m_cache_mask];
-
-		case 0xf:   // UART bypass
-			switch (offset & 3)
-			{
-				case 0: if (mem_mask == 0xff000000) return m_scc->cb_r(0)<<24; else return m_scc->db_r(0)<<8; break;
-				case 1: if (mem_mask == 0xff000000) return m_scc->ca_r(0)<<24; else return m_scc->da_r(0)<<8; break;
-			}
-			return 0xffffffff;
-
-		case 0: // IDPROM - SPARCstation-1 does not have an ID prom and a timeout should occur.
-		default:
-			LOGMASKED(LOG_UNKNOWN_SYSTEM, "read unhandled ASI 2 space %08x & %08x\n", offset << 2, mem_mask);
-			return 0;
-	}
-}
-
-void sun4_mmu_base_device::system_w(const uint32_t offset, const uint32_t data, const uint32_t mem_mask)
-{
-	LOGMASKED(LOG_SYSTEM, "system_w: %08x = %08x & %08x\n", offset << 2, data, mem_mask);
-	switch (offset >> 26)
-	{
-		case 3: // context reg
-			LOGMASKED(LOG_CONTEXT, "write context = %08x & %08x\n", data, mem_mask);
-			m_context = data >> 24;
-			m_context_masked = m_context & m_ctx_mask;
-			m_cache_context = m_context & m_ctx_mask;
-			m_curr_segmap = &m_segmap[m_context_masked][0];
-			m_curr_segmap_masked = &m_segmap_masked[m_context_masked][0];
-			return;
-
-		case 4: // system enable reg
-		{
-			LOGMASKED(LOG_SYSTEM_ENABLE, "write system enable = %08x & %08x\n", data, mem_mask);
-			m_system_enable = data >> 24;
-			m_fetch_bootrom = !(m_system_enable & ENA_NOTBOOT);
-
-			if (m_system_enable & ENA_RESET)
-			{
-				m_reset_timer->adjust(attotime::from_usec(1));
-				m_cpu->set_input_line(SPARC_RESET, ASSERT_LINE);
-			}
-			if (m_system_enable & ENA_RESET)
-			{
-				m_system_enable = 0;
-				m_cpu->set_input_line(INPUT_LINE_RESET, ASSERT_LINE);
-				m_cpu->set_input_line(INPUT_LINE_RESET, CLEAR_LINE);
-			}
-			return;
-		}
-
-		case 6: // bus error
-		{
-			const uint32_t masked_offset = offset & 0xf;
-			LOGMASKED(LOG_BUSERROR, "write bus error %08x = %08x & %08x\n", offset << 2, data, mem_mask);
-			if (masked_offset == 0)
-				m_buserr[0] = (data & 0x000000ff) | 0x00008000;
+		case 0:
+			if (mem_mask == 0xff000000)
+				data = m_scc->cb_r(0) << 24;
 			else
-				m_buserr[masked_offset] = data;
-			return;
-		}
+				data = m_scc->db_r(0) << 8;
+			break;
+		case 1:
+			if (mem_mask == 0xff000000)
+				data = m_scc->ca_r(0) << 24;
+			else
+				data = m_scc->da_r(0) << 8;
+			break;
+	}
+	LOGMASKED(LOG_UART, "%s: uart_r %08x & %08x: %08x\n", machine().describe_context(), offset, mem_mask, data);
+	return data;
+}
 
-		case 8: // cache tags
-			LOGMASKED(LOG_CACHE_TAGS, "%s: write dcache tags %08x = %08x & %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
-			m_cachetags[(offset >> 3) & m_cache_tag_mask] = data & 0x03f8fffc;
-			/*if (m_cpu->pc() == 0xFFE8B4F8)
+void sun4_mmu_base_device::uart_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
+{
+	LOGMASKED(LOG_UART, "%s: uart_w: %08x = %08x & %08x\n", machine().describe_context(), offset, data, mem_mask);
+	switch (offset & 3)
+	{
+		case 0:
+			if (mem_mask == 0xff000000)
+				m_scc->cb_w(0, data >> 24);
+			else
+				m_scc->db_w(0, data >> 8);
+			return;
+		case 1:
+			if (mem_mask == 0xff000000)
+				m_scc->ca_w(0, data >> 24);
+			else
 			{
-			    m_log_mem = true;
-			}*/
-			return;
-
-		case 9: // cache data
-			LOGMASKED(LOG_CACHE_DATA, "write cache data %08x = %08x & %08x\n", offset << 2, data, mem_mask);
-			COMBINE_DATA((&m_cachedata[0] + (offset & m_cache_mask)));
-			m_cachetags[(offset >> 3) & m_cache_tag_mask] &= ~(1 << 19);
-			return;
-
-		case 0xf:   // UART bypass
-			switch (offset & 3)
-			{
-				case 0: if (mem_mask == 0xff000000) m_scc->cb_w(0, data>>24); else m_scc->db_w(0, data>>8); break;
-				case 1: if (mem_mask == 0xff000000) m_scc->ca_w(0, data>>24); else { m_scc->da_w(0, data>>8); logerror("%c\n", data>>8); printf("%c", data>>8); } break;
+				m_scc->da_w(0, data >> 8);
+				if (PRINT_UART_DATA)
+				{
+					printf("%c", data >> 8);
+				}
 			}
-			return;
-
-		case 0: // IDPROM
-		default:
-			LOGMASKED(LOG_UNKNOWN_SYSTEM, "write unhandled ASI 2 space %08x = %08x & %08x, PC=%08x\n", offset << 2, data, mem_mask, m_cpu->pc());
 			return;
 	}
 }
 
-uint32_t sun4_mmu_base_device::segment_map_r(const uint32_t offset, const uint32_t mem_mask)
+uint32_t sun4_mmu_base_device::segment_map_r(uint32_t offset, uint32_t mem_mask)
 {
-	uint32_t ret = 0;
+	uint32_t data = 0;
 	if (mem_mask == 0xffff0000)
-		ret = m_curr_segmap[(offset>>16) & 0xfff]<<16;
+		data = m_curr_segmap[(offset >> 16) & 0xfff] << 16;
 	else if (mem_mask == 0xff000000)
-		ret = m_curr_segmap[(offset>>16) & 0xfff]<<24;
+		data = m_curr_segmap[(offset >> 16) & 0xfff] << 24;
 	else if (mem_mask == 0xffffffff)
-		ret = m_curr_segmap[(offset>>16) & 0xfff];
+		data = m_curr_segmap[(offset >> 16) & 0xfff];
 	else
-		LOGMASKED(LOG_UNKNOWN_SEGMENT, "read segment map w/ unknown mask %08x & %08x\n", offset << 2, mem_mask);
-	LOGMASKED(LOG_SEGMENT_MAP, "read segment map %08x & %08x = %08x\n", offset << 2, mem_mask, ret);
-	return ret;
+		LOGMASKED(LOG_UNKNOWN_SEGMENT, "%s: segment_map_r: %08x & %08x (unknown mask)\n", machine().describe_context(), offset << 2, mem_mask);
+	LOGMASKED(LOG_SEGMENT_MAP, "%s: segment_map_r: %08x & %08x: %08x\n", machine().describe_context(), offset << 2, mem_mask, data);
+	return data;
 }
 
-void sun4_mmu_base_device::segment_map_w(const uint32_t offset, const uint32_t data, const uint32_t mem_mask)
+void sun4_mmu_base_device::segment_map_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
 {
-	LOGMASKED(LOG_SEGMENT_MAP, "write segment map %08x = %08x & %08x\n", offset << 2, data, mem_mask);
+	LOGMASKED(LOG_SEGMENT_MAP, "%s: segment_map_w: %08x = %08x & %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
 
 	uint8_t segdata = 0;
-	if (mem_mask == 0xffff0000) segdata = (data >> 16) & 0xff;
-	else if (mem_mask == 0xff000000) segdata = (data >> 24) & 0xff;
-	else if (mem_mask == 0xffffffff) segdata = data & 0xff;
-	else LOGMASKED(LOG_UNKNOWN_SEGMENT, "write segment map w/ unknown mask %08x = %08x & %08x, PC=%08x\n", offset << 2, data, mem_mask, m_cpu->pc());
+	if (mem_mask == 0xffff0000)
+		segdata = (data >> 16) & 0xff;
+	else if (mem_mask == 0xff000000)
+		segdata = (data >> 24) & 0xff;
+	else if (mem_mask == 0xffffffff)
+		segdata = data & 0xff;
+	else
+		LOGMASKED(LOG_UNKNOWN_SEGMENT, "%s: segment_map_w: %08x = %08x & %08x (unknown mask)\n", machine().describe_context(), offset << 2, data, mem_mask);
 
-	const uint32_t seg = (offset>>16) & 0xfff;
+	const uint32_t seg = (offset >> 16) & 0xfff;
 	m_curr_segmap[seg] = segdata;
 	m_curr_segmap_masked[seg] = (segdata & m_pmeg_mask) << 6;
 }
 
-uint32_t sun4_mmu_base_device::page_map_r(const uint32_t offset, const uint32_t mem_mask)
+uint32_t sun4_mmu_base_device::page_map_r(uint32_t offset, uint32_t mem_mask)
 {
 	const uint32_t page = m_curr_segmap_masked[(offset >> 16) & 0xfff] | ((offset >> m_seg_entry_shift) & m_seg_entry_mask);
-	const uint32_t ret = page_entry_to_uint(page);
-	LOGMASKED(LOG_PAGE_MAP, "read page map %08x & %08x (%x) = %08x\n", offset << 2, mem_mask, page, ret);
-	return ret;
+	const uint32_t data = page_entry_to_uint(page);
+	LOGMASKED(LOG_PAGE_MAP, "%s: page_map_r: %08x (%x) & %08x: %08x\n", machine().describe_context(), offset << 2, page, mem_mask, data);
+	return data;
 }
 
-void sun4_mmu_base_device::page_map_w(const uint32_t offset, const uint32_t data, const uint32_t mem_mask)
+void sun4_mmu_base_device::page_map_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
 {
-	uint32_t page = m_curr_segmap_masked[(offset >> 16) & 0xfff] | ((offset >> m_seg_entry_shift) & m_seg_entry_mask);
-	LOGMASKED(LOG_PAGE_MAP, "write page map %08x (%x) = %08x & %08x\n", offset << 2, page, data, mem_mask);
+	const uint32_t page = m_curr_segmap_masked[(offset >> 16) & 0xfff] | ((offset >> m_seg_entry_shift) & m_seg_entry_mask);
+	LOGMASKED(LOG_PAGE_MAP, "%s: page_map_w: %08x (%x) = %08x & %08x\n", machine().describe_context(), offset << 2, page, data, mem_mask);
 	merge_page_entry(page, data, mem_mask);
 	m_page_valid[page] = m_pagemap[page].valid;
 }
 
 void sun4_mmu_base_device::type0_timeout_r(const uint32_t offset)
 {
-	LOGMASKED(LOG_TYPE0_TIMEOUT, "type 0 read timeout %08x, PC=%08x\n", offset << 2, m_cpu->pc());
+	LOGMASKED(LOG_TYPE0_TIMEOUT, "%s: type0_timeout_r (%08x)\n", machine().describe_context(), offset << 2);
 	m_buserr[0] = 0x20; // read timeout
 	m_buserr[1] = 0x04000000 + (offset << 2);
 	m_host->set_mae();
@@ -514,7 +443,7 @@ void sun4_mmu_base_device::type0_timeout_r(const uint32_t offset)
 
 void sun4_mmu_base_device::type0_timeout_w(const uint32_t offset)
 {
-	LOGMASKED(LOG_TYPE0_TIMEOUT, "type 0 write timeout %08x, PC=%08x\n", offset << 2, m_cpu->pc());
+	LOGMASKED(LOG_TYPE0_TIMEOUT, "%s: type0_timeout_w (%08x)\n", machine().describe_context(), offset << 2);
 	m_buserr[0] = 0x8020; // write timeout
 	m_buserr[1] = 0x04000000 + (offset << 2);
 	m_host->set_mae();
@@ -522,7 +451,7 @@ void sun4_mmu_base_device::type0_timeout_w(const uint32_t offset)
 
 uint32_t sun4_mmu_base_device::type1_timeout_r(uint32_t offset)
 {
-	LOGMASKED(LOG_TYPE1_TIMEOUT, "type 1 read timeout %08x, PC=%08x\n", offset << 2, m_cpu->pc());
+	LOGMASKED(LOG_TYPE1_TIMEOUT, "%s: type1_timeout_r (%08x)\n", machine().describe_context(), offset << 2);
 	m_buserr[2] = 0x20; // read timeout
 	m_buserr[3] = m_type1_offset << 2;
 	return 0;
@@ -530,9 +459,40 @@ uint32_t sun4_mmu_base_device::type1_timeout_r(uint32_t offset)
 
 void sun4_mmu_base_device::type1_timeout_w(uint32_t offset, uint32_t data)
 {
-	LOGMASKED(LOG_TYPE1_TIMEOUT, "type 1 write timeout %08x = %08x, PC=%08x\n", offset << 2, data, m_cpu->pc());
+	LOGMASKED(LOG_TYPE1_TIMEOUT, "%s: type1_timeout_w (%08x)\n", machine().describe_context(), offset << 2);
 	m_buserr[2] = 0x120; // write timeout
 	m_buserr[3] = m_type1_offset << 2;
+}
+
+uint32_t sun4_mmu_base_device::parity_r(uint32_t offset, uint32_t mem_mask)
+{
+	uint32_t data = 0;
+	if (offset == 0)
+	{
+		data = m_parity_err_reg;
+		LOGMASKED(LOG_PARITY, "%s: parity_r (parity error register): %08x & %08x: %08x\n", machine().describe_context(), offset << 2, mem_mask, data);
+		m_parity_err_reg &= ~0xcf;
+	}
+	else if (offset == 1)
+	{
+		data = m_memory_err_reg;
+		LOGMASKED(LOG_PARITY, "%s: parity_r (memory error register): %08x & %08x: %08x\n", machine().describe_context(), offset << 2, mem_mask, data);
+	}
+	return data;
+}
+
+void sun4_mmu_base_device::parity_w(uint32_t offset, uint32_t data, uint32_t mem_mask)
+{
+	if (offset == 0)
+	{
+		LOGMASKED(LOG_PARITY, "%s: parity_w (parity error register): %08x = %08x & %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
+		COMBINE_DATA(&m_parity_err_reg);
+	}
+	else
+	{
+		LOGMASKED(LOG_PARITY, "%s: parity_w (memory error register): %08x = %08x & %08x\n", machine().describe_context(), offset << 2, data, mem_mask);
+		COMBINE_DATA(&m_memory_err_reg);
+	}
 }
 
 uint32_t sun4_mmu_base_device::page_entry_to_uint(uint32_t index)
@@ -549,56 +509,10 @@ void sun4_mmu_base_device::merge_page_entry(uint32_t index, uint32_t data, uint3
 	pe.writable = new_value & PM_WRITEMASK;
 	pe.supervisor = new_value & PM_SYSMASK;
 	pe.uncached = new_value & PM_CACHE;
-
-	if (pe.uncached)
-		logerror("page entry %05x is uncached\n", index);
-	else
-		logerror("page entry %05x is cached\n", index);
-
 	pe.type = (new_value & PM_TYPEMASK) >> 26;
 	pe.accessed = new_value & PM_ACCESSED;
 	pe.modified = new_value & PM_MODIFIED;
 	pe.page = (new_value & m_page_entry_mask) << m_seg_entry_shift;
-}
-
-bool sun4_mmu_base_device::cache_fetch(page_entry &entry, uint32_t vaddr, uint32_t paddr, uint32_t &cached_data)
-{
-	const uint32_t cache_entry = (vaddr >> 3) & m_cache_tag_mask;
-	if (!(m_cachetags[cache_entry] & (1 << 19)))
-	{
-		if (entry.valid)
-		{
-			m_cachetags[cache_entry] = (1 << 19);
-			m_cachetags[cache_entry] |= entry.supervisor ? (1 << 20) : (0 << 20);
-			m_cachetags[cache_entry] |= entry.writable ? (1 << 21) : (0 << 21);
-		}
-		else
-		{
-			return false;
-		}
-	}
-	else if ((m_cachetags[cache_entry] & 0xfffc) == ((vaddr >> 12) & 0xfffc))
-	{
-		logerror("Cache read: %08x = %08x\n", vaddr << 2, m_cachedata[vaddr & m_cache_mask]);
-		cached_data = m_cachedata[vaddr & m_cache_mask];
-		return true;
-	}
-	else if (!entry.valid)
-	{
-		return false;
-	}
-	m_cachetags[cache_entry] &= ~0xfffc;
-	m_cachetags[cache_entry] |= (vaddr >> 12) & 0xfffc;
-	m_cachetags[cache_entry] &= ~(m_ctx_mask << 20);
-	m_cachetags[cache_entry] |= (m_context_masked) << 20;
-	const uint32_t cache_line_start = (vaddr & ~7) & m_cache_mask;
-	const uint32_t mem_line_start = paddr & ~7;
-	for (uint32_t i = 0; i < 8; i++)
-	{
-		m_cachedata[cache_line_start + i] = m_ram_ptr[mem_line_start + i];
-	}
-	cached_data = m_cachedata[vaddr & m_cache_mask];
-	return true;
 }
 
 template uint32_t sun4_mmu_base_device::insn_data_r<sun4_mmu_base_device::USER_INSN>(const uint32_t, const uint32_t);
@@ -612,19 +526,16 @@ uint32_t sun4_mmu_base_device::insn_data_r(const uint32_t offset, const uint32_t
 	// supervisor program fetches in boot state are special
 	if (MODE == SUPER_INSN && m_fetch_bootrom)
 	{
-		if (!machine().side_effects_disabled())
-			m_cpu->eat_cycles(50); // !?
 		return m_rom_ptr[offset & 0x1ffff];
 	}
 
 	// it's translation time
-	const uint32_t pmeg = m_curr_segmap_masked[(offset >> 16) & 0xfff];// & m_pmeg_mask;
+	const uint32_t pmeg = m_curr_segmap_masked[(offset >> 16) & 0xfff];
 	const uint32_t entry_index = pmeg | ((offset >> m_seg_entry_shift) & m_seg_entry_mask);
-	page_entry &entry = m_pagemap[entry_index];
 
-	uint32_t cached_data = 0;
-	if (entry.valid)
+	if (m_page_valid[entry_index])
 	{
+		page_entry &entry = m_pagemap[entry_index];
 		entry.accessed = PM_ACCESSED;
 
 		const uint32_t tmp = entry.page | (offset & m_page_mask);
@@ -634,43 +545,9 @@ uint32_t sun4_mmu_base_device::insn_data_r(const uint32_t offset, const uint32_t
 		case 0: // type 0 space
 			if (tmp < m_populated_ram_words)
 			{
-				if (BIT(m_parity_err_reg, 4) && m_parity_err)
-				{
-					logerror("%s: ram read with parity %08x: %08x & %08x\n", machine().describe_context(), m_parity_err_reg, offset, mem_mask);
-					m_parity_err_reg |= m_parity_err;
-					if (BIT(m_parity_err_reg, 7))
-					{
-						m_parity_err_reg |= (1 << 6);
-					}
-					uint8_t boffs = 0;
-
-					if (ACCESSING_BITS_24_31)
-						boffs = 0;
-					else if (ACCESSING_BITS_16_23)
-						boffs = 1;
-					else if (ACCESSING_BITS_8_15)
-						boffs = 2;
-					else if (ACCESSING_BITS_0_7)
-						boffs = 3;
-
-					m_parity_err_reg |= (1 << 7);
-					m_parity_err = 0;
-					m_buserr[0] = 0x8; // Read cycle, memory error
-					m_buserr[1] = (offset << 2) | boffs;
-					m_host->set_mae();
-				}
 				const uint32_t set = (tmp >> 22) & 3;
 				const uint32_t addr_mask = m_ram_set_mask[set];
 				const uint32_t masked_addr = m_ram_set_base[set] + (tmp & addr_mask);
-				if (!entry.uncached)
-				{
-					if (cache_fetch(entry, offset, masked_addr, cached_data))
-					{
-						return cached_data;
-					}
-				}
-				//if (m_log_mem)
-					//logerror("RAM read: %08x = %08x (%08x, %08x)\n", offset << 2, m_ram_ptr[masked_addr], tmp << 2, masked_addr);
 				return m_ram_ptr[masked_addr];
 			}
 			else if (tmp >= 0x4000000 >> 2 && tmp < 0x10000000 >> 2)
@@ -695,10 +572,6 @@ uint32_t sun4_mmu_base_device::insn_data_r(const uint32_t offset, const uint32_t
 	{
 		if (!machine().side_effects_disabled())
 		{
-			if (cache_fetch(entry, offset, 0, cached_data))
-			{
-				return cached_data;
-			}
 			LOGMASKED(LOG_INVALID_PTE, "read invalid PTE %d (%08x), %08x & %08x, PC=%08x\n", entry_index, page_entry_to_uint(entry_index), offset << 2, mem_mask, m_cpu->pc());
 			m_host->set_mae();
 			m_buserr[0] |= 0x80;    // invalid PTE
@@ -758,41 +631,10 @@ void sun4_mmu_base_device::insn_data_w(const uint32_t offset, const uint32_t dat
 		case 0: // type 0
 			if (tmp < m_populated_ram_words)
 			{
-				if (BIT(m_parity_err_reg, 5))
-				{
-					logerror("%s: ram write with parity %08x: %08x = %08x & %08x\n", machine().describe_context(), m_parity_err_reg, offset, data, mem_mask);
-					if (ACCESSING_BITS_24_31)
-						m_parity_err |= (1 << 0);
-					if (ACCESSING_BITS_16_23)
-						m_parity_err |= (1 << 1);
-					if (ACCESSING_BITS_8_15)
-						m_parity_err |= (1 << 2);
-					if (ACCESSING_BITS_0_7)
-						m_parity_err |= (1 << 3);
-				}
 				const uint32_t set = (tmp >> 22) & 3;
 				const uint32_t addr_mask = m_ram_set_mask[set];
 				const uint32_t masked_addr = m_ram_set_base[set] + (tmp & addr_mask);
-				if (!entry.uncached)
-				{
-					const uint32_t cache_entry = (offset >> 3) & m_cache_tag_mask;
-					if ((m_cachetags[cache_entry] & (1 << 19)) != 0)
-					{
-						if ((m_cachetags[cache_entry] & 0xfffc) == ((offset >> 12) & 0xfffc))
-						{
-							logerror("Cache write: %08x (%08x) = %08x\n", (offset & m_cache_mask) << 2, offset, data);
-							COMBINE_DATA((&m_cachedata[0] + (offset & m_cache_mask)));
-						}
-						else
-						{
-							logerror("Cache invalidate\n");
-							m_cachetags[cache_entry] &= ~(1 << 19);
-						}
-					}
-				}
 				COMBINE_DATA((m_ram_ptr + masked_addr));
-				//if (m_log_mem)
-					//logerror("RAM write: %08x (%08x, %08x) = %08x (setting cache entry %08x)\n", offset << 2, tmp << 2, masked_addr, data, offset & m_cache_mask);
 			}
 			else if (tmp >= 0x4000000 >> 2 && tmp < 0x10000000 >> 2)
 			{
@@ -837,23 +679,18 @@ void sun4_mmu_base_device::insn_data_w(const uint32_t offset, const uint32_t dat
 	}
 }
 
-void sun4_mmu_base_device::l2p_command(int ref, const std::vector<std::string> &params)
+void sun4_mmu_base_device::l2p_command(const std::vector<std::string_view> &params)
 {
-	uint64_t addr, offset;
-
-	if (!machine().debugger().commands().validate_number_parameter(params[0], addr)) return;
+	uint64_t addr;
+	if (!machine().debugger().console().validate_number_parameter(params[0], addr)) return;
 
 	addr &= 0xffffffff;
-	offset = addr >> 2;
+	uint64_t offset = addr >> 2;
 
-	uint8_t pmeg = 0;
-	uint32_t entry_index = 0, tmp = 0;
-	uint32_t entry_value = 0;
-
-	pmeg = m_curr_segmap_masked[(offset >> 16) & 0xfff];
-	entry_index = pmeg | ((offset >> m_seg_entry_shift) & m_seg_entry_mask);
-	tmp = m_pagemap[entry_index].page | (offset & m_page_mask);
-	entry_value = page_entry_to_uint(entry_index);
+	const uint32_t pmeg = m_curr_segmap_masked[(offset >> 16) & 0xfff];
+	const uint32_t entry_index = pmeg | ((offset >> m_seg_entry_shift) & m_seg_entry_mask);
+	const uint32_t tmp = m_pagemap[entry_index].page | (offset & m_page_mask);
+	const uint32_t entry_value = page_entry_to_uint(entry_index);
 
 	if (m_page_valid[entry_index])
 	{
@@ -861,6 +698,7 @@ void sun4_mmu_base_device::l2p_command(int ref, const std::vector<std::string> &
 	}
 	else
 	{
-		machine().debugger().console().printf("logical %08x points to an invalid PTE! (pmeg %d, entry %d PTE %08x)\n", addr, tmp << 2, pmeg, entry_index, entry_value);
+		machine().debugger().console().printf("logical %08x points to an invalid PTE! (tmp %08x, pmeg %d, entry %d PTE %08x)\n", addr, tmp << 2, pmeg, entry_index, entry_value);
 	}
 }
+

@@ -6,12 +6,12 @@
  */
 
 #include "font_module.h"
-#include "modules/osdmodule.h"
 
 #ifdef SDLMAME_MACOSX
 
-#include "corealloc.h"
+#include "emucore.h"
 #include "fileio.h"
+#include "osdcore.h"
 
 #include <ApplicationServices/ApplicationServices.h>
 #include <CoreFoundation/CoreFoundation.h>
@@ -57,7 +57,7 @@ bool osd_font_osx::open(std::string const &font_path, std::string const &name, i
 	osd_printf_verbose("osd_font_osx::open: name=\"%s\"\n", name);
 
 	CFStringRef font_name;
-	if (!strcmp(name.c_str(), "default"))
+	if (name == "default")
 	{
 		// Arial Unicode MS comes with Mac OS X 10.5 and later and is the only Mac default font with
 		// the Unicode characters used by the vgmplay and aristmk5 layouts.
@@ -211,7 +211,7 @@ class font_osx : public osd_module, public font_module
 public:
 	font_osx() : osd_module(OSD_FONT_PROVIDER, "osx"), font_module() { }
 
-	virtual int init(const osd_options &options) override { return 0; }
+	virtual int init(osd_interface &osd, const osd_options &options) override { return 0; }
 	virtual osd_font::ptr font_alloc() override { return std::make_unique<osd_font_osx>(); }
 	virtual bool get_font_families(std::string const &font_path, std::vector<std::pair<std::string, std::string> > &result) override;
 
@@ -242,8 +242,8 @@ private:
 bool font_osx::get_font_families(std::string const &font_path, std::vector<std::pair<std::string, std::string> > &result)
 {
 	CFStringRef keys[] = { kCTFontCollectionRemoveDuplicatesOption };
-	std::uintptr_t values[ARRAY_LENGTH(keys)] = { 1 };
-	CFDictionaryRef const options = CFDictionaryCreate(kCFAllocatorDefault, (void const **)keys, (void const **)values, ARRAY_LENGTH(keys), &kCFTypeDictionaryKeyCallBacks, nullptr);
+	std::uintptr_t values[std::size(keys)] = { 1 };
+	CFDictionaryRef const options = CFDictionaryCreate(kCFAllocatorDefault, (void const **)keys, (void const **)values, std::size(keys), &kCFTypeDictionaryKeyCallBacks, nullptr);
 	CTFontCollectionRef const collection = CTFontCollectionCreateFromAvailableFonts(nullptr);
 	CFRelease(options);
 	if (!collection) return false;

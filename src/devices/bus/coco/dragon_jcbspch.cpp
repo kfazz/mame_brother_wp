@@ -41,7 +41,7 @@ DEFINE_DEVICE_TYPE(DRAGON_JCBSPCH, dragon_jcbspch_device, "dragon_jcbspch", "Dra
 //  dragon_jcbspch_device - constructor
 //-------------------------------------------------
 
-dragon_jcbspch_device::dragon_jcbspch_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+dragon_jcbspch_device::dragon_jcbspch_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
 	: device_t(mconfig, DRAGON_JCBSPCH, tag, owner, clock)
 	, device_cococart_interface(mconfig, *this )
 	, m_eprom(*this, "eprom")
@@ -63,7 +63,7 @@ void dragon_jcbspch_device::device_start()
 //  dragon_jcbspch_device::get_cart_base
 //-------------------------------------------------
 
-uint8_t* dragon_jcbspch_device::get_cart_base()
+u8 *dragon_jcbspch_device::get_cart_base()
 {
 	return m_eprom->base();
 }
@@ -72,7 +72,7 @@ uint8_t* dragon_jcbspch_device::get_cart_base()
 //  dragon_jcbspch_device::get_cart_memregion
 //-------------------------------------------------
 
-memory_region* dragon_jcbspch_device::get_cart_memregion()
+memory_region *dragon_jcbspch_device::get_cart_memregion()
 {
 	return m_eprom;
 }
@@ -83,7 +83,7 @@ memory_region* dragon_jcbspch_device::get_cart_memregion()
 
 void dragon_jcbspch_device::device_add_mconfig(machine_config &config)
 {
-	PIA6821(config, m_pia, 0);
+	PIA6821(config, m_pia);
 	m_pia->writepb_handler().set(m_nsp, FUNC(sp0256_device::ald_w)).mask(0x3f);
 	m_pia->cb2_handler().set(FUNC(dragon_jcbspch_device::pia_cb2_w));
 	m_pia->irqb_handler().set(FUNC(dragon_jcbspch_device::nmi_w));
@@ -107,7 +107,7 @@ const tiny_rom_entry *dragon_jcbspch_device::device_rom_region() const
 //  cts_read
 //-------------------------------------------------
 
-READ8_MEMBER(dragon_jcbspch_device::cts_read)
+u8 dragon_jcbspch_device::cts_read(offs_t offset)
 {
 	return m_eprom->base()[offset & 0x0fff];
 }
@@ -116,9 +116,9 @@ READ8_MEMBER(dragon_jcbspch_device::cts_read)
 //  scs_read
 //-------------------------------------------------
 
-READ8_MEMBER(dragon_jcbspch_device::scs_read)
+u8 dragon_jcbspch_device::scs_read(offs_t offset)
 {
-	uint8_t result = 0x00;
+	u8 result = 0x00;
 
 	switch (offset)
 	{
@@ -133,7 +133,7 @@ READ8_MEMBER(dragon_jcbspch_device::scs_read)
 //  scs_write
 //-------------------------------------------------
 
-WRITE8_MEMBER(dragon_jcbspch_device::scs_write)
+void dragon_jcbspch_device::scs_write(offs_t offset, u8 data)
 {
 	switch (offset)
 	{
@@ -143,12 +143,12 @@ WRITE8_MEMBER(dragon_jcbspch_device::scs_write)
 	}
 }
 
-WRITE_LINE_MEMBER(dragon_jcbspch_device::pia_cb2_w)
+void dragon_jcbspch_device::pia_cb2_w(int state)
 {
 	// TODO: what does this do?
 }
 
-WRITE_LINE_MEMBER(dragon_jcbspch_device::nmi_w)
+void dragon_jcbspch_device::nmi_w(int state)
 {
 	// set the NMI line
 	set_line_value(line::NMI, state);

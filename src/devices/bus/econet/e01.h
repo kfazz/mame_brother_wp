@@ -23,7 +23,6 @@
 #include "machine/mc6854.h"
 #include "machine/ram.h"
 #include "machine/wd_fdc.h"
-#include "formats/afs_dsk.h"
 
 class econet_e01_device : public device_t,
 	public device_econet_interface
@@ -44,7 +43,6 @@ protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 	// optional information overrides
 	virtual const tiny_rom_entry *device_rom_region() const override;
@@ -56,33 +54,32 @@ protected:
 	virtual void econet_clk(int state) override;
 
 private:
-	DECLARE_WRITE_LINE_MEMBER( rtc_irq_w );
-	DECLARE_WRITE_LINE_MEMBER( adlc_irq_w );
-	DECLARE_WRITE_LINE_MEMBER( econet_data_w );
-	DECLARE_WRITE_LINE_MEMBER( via_irq_w );
-	DECLARE_WRITE_LINE_MEMBER( clk_en_w );
-	DECLARE_WRITE_LINE_MEMBER( fdc_irq_w );
-	DECLARE_WRITE_LINE_MEMBER( fdc_drq_w );
-	DECLARE_WRITE_LINE_MEMBER( scsi_bsy_w );
-	DECLARE_WRITE_LINE_MEMBER( scsi_req_w );
-	DECLARE_READ8_MEMBER( read );
-	DECLARE_WRITE8_MEMBER( write );
-	DECLARE_READ8_MEMBER( ram_select_r );
-	DECLARE_WRITE8_MEMBER( floppy_w );
-	DECLARE_READ8_MEMBER( network_irq_disable_r );
-	DECLARE_WRITE8_MEMBER( network_irq_disable_w );
-	DECLARE_READ8_MEMBER( network_irq_enable_r );
-	DECLARE_WRITE8_MEMBER( network_irq_enable_w );
-	DECLARE_READ8_MEMBER( hdc_data_r );
-	DECLARE_WRITE8_MEMBER( hdc_data_w );
-	DECLARE_WRITE8_MEMBER( hdc_select_w );
-	DECLARE_WRITE8_MEMBER( hdc_irq_enable_w );
-	DECLARE_READ8_MEMBER( rtc_address_r );
-	DECLARE_WRITE8_MEMBER( rtc_address_w );
-	DECLARE_READ8_MEMBER( rtc_data_r );
-	DECLARE_WRITE8_MEMBER( rtc_data_w );
+	void rtc_irq_w(int state);
+	void adlc_irq_w(int state);
+	void econet_data_w(int state);
+	void via_irq_w(int state);
+	void clk_en_w(int state);
+	void fdc_irq_w(int state);
+	void fdc_drq_w(int state);
+	void scsi_bsy_w(int state);
+	void scsi_req_w(int state);
 
-	DECLARE_FLOPPY_FORMATS(floppy_formats_afs);
+	TIMER_CALLBACK_MEMBER(clk_tick);
+
+	uint8_t read(offs_t offset);
+	void write(offs_t offset, uint8_t data);
+	uint8_t ram_select_r();
+	void floppy_w(uint8_t data);
+	uint8_t network_irq_disable_r();
+	void network_irq_disable_w(uint8_t data);
+	uint8_t network_irq_enable_r();
+	void network_irq_enable_w(uint8_t data);
+	uint8_t hdc_data_r();
+	void hdc_data_w(uint8_t data);
+	void hdc_select_w(uint8_t data);
+	void hdc_irq_enable_w(uint8_t data);
+
+	static void floppy_formats_afs(format_registration &fr);
 
 	required_device<m65c02_device> m_maincpu;
 	required_device<wd2793_device> m_fdc;

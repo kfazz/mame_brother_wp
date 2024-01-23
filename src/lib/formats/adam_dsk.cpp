@@ -2,13 +2,11 @@
 // copyright-holders:Curt Coder
 /*********************************************************************
 
-    formats/adam_dsk.c
+    formats/adam_dsk.cpp
 
     Coleco Adam disk image format
 
 *********************************************************************/
-
-#include <cassert>
 
 #include "formats/adam_dsk.h"
 
@@ -16,17 +14,17 @@ adam_format::adam_format() : wd177x_format(formats)
 {
 }
 
-const char *adam_format::name() const
+const char *adam_format::name() const noexcept
 {
 	return "adam";
 }
 
-const char *adam_format::description() const
+const char *adam_format::description() const noexcept
 {
 	return "Coleco Adam disk image";
 }
 
-const char *adam_format::extensions() const
+const char *adam_format::extensions() const noexcept
 {
 	return "dsk";
 }
@@ -67,4 +65,4 @@ const adam_format::format adam_format::formats[] = {
 	{}
 };
 
-const floppy_format_type FLOPPY_ADAM_FORMAT = &floppy_image_format_creator<adam_format>;
+const adam_format FLOPPY_ADAM_FORMAT;

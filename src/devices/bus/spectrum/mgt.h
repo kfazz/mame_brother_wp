@@ -19,7 +19,6 @@
 #include "imagedev/floppy.h"
 #include "machine/wd_fdc.h"
 #include "bus/centronics/ctronics.h"
-#include "formats/coupedsk.h"
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -31,7 +30,7 @@ public:
 	// construction/destruction
 	spectrum_plusd_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_FLOPPY_FORMATS(floppy_formats);
+	static void floppy_formats(format_registration &fr);
 	DECLARE_INPUT_CHANGED_MEMBER(snapshot_button);
 
 protected:
@@ -51,9 +50,9 @@ protected:
 	virtual void mreq_w(offs_t offset, uint8_t data) override;
 	virtual uint8_t iorq_r(offs_t offset) override;
 	virtual void iorq_w(offs_t offset, uint8_t data) override;
-	virtual DECLARE_READ_LINE_MEMBER(romcs) override;
+	virtual int romcs() override;
 
-	DECLARE_WRITE_LINE_MEMBER(busy_w);
+	void busy_w(int state);
 
 	required_memory_region m_rom;
 	required_device<wd_fdc_device_base> m_fdc;
@@ -71,6 +70,8 @@ public:
 	// construction/destruction
 	spectrum_disciple_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
+	DECLARE_INPUT_CHANGED_MEMBER(inhibit_button) { if (!newval) m_romcs = 0; }
+
 protected:
 	// device-level overrides
 	virtual void device_start() override;
@@ -86,14 +87,20 @@ protected:
 	virtual void mreq_w(offs_t offset, uint8_t data) override;
 	virtual uint8_t iorq_r(offs_t offset) override;
 	virtual void iorq_w(offs_t offset, uint8_t data) override;
-	virtual DECLARE_READ_LINE_MEMBER(romcs) override;
+	virtual int romcs() override;
+
+	TIMER_CALLBACK_MEMBER(reset_tick);
 
 private:
 	required_device<spectrum_expansion_slot_device> m_exp;
 	required_ioport m_joy1;
 	required_ioport m_joy2;
+	required_ioport m_inhibit;
 
 	bool m_map;
+	u8 m_control;
+	bool m_reset_delay;
+	emu_timer *m_reset_timer;
 };
 
 

@@ -29,12 +29,13 @@ DEFINE_DEVICE_TYPE(TUBE, tube_device, "tube", "Acorn Tube ULA")
 //  bbc_tube_slot_device - constructor
 //-------------------------------------------------
 
-tube_device::tube_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
-	device_t(mconfig, TUBE, tag, owner, clock),
-	m_hirq_handler(*this),
-	m_pnmi_handler(*this),
-	m_pirq_handler(*this),
-	m_drq_handler(*this)
+tube_device::tube_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: device_t(mconfig, TUBE, tag, owner, clock)
+	, m_hirq_handler(*this)
+	, m_pnmi_handler(*this)
+	, m_pirq_handler(*this)
+	, m_prst_handler(*this)
+	, m_drq_handler(*this)
 {
 }
 
@@ -45,11 +46,21 @@ tube_device::tube_device(const machine_config &mconfig, const char *tag, device_
 
 void tube_device::device_start()
 {
-	// resolve callbacks
-	m_hirq_handler.resolve_safe();
-	m_pnmi_handler.resolve_safe();
-	m_pirq_handler.resolve_safe();
-	m_drq_handler.resolve_safe();
+	// register for state saving
+	save_item(NAME(m_ph1));
+	save_item(NAME(m_ph2));
+	save_item(NAME(m_ph3));
+	save_item(NAME(m_ph4));
+	save_item(NAME(m_hp1));
+	save_item(NAME(m_hp2));
+	save_item(NAME(m_hp3));
+	save_item(NAME(m_hp4));
+	save_item(NAME(m_hstat));
+	save_item(NAME(m_pstat));
+	save_item(NAME(m_r1stat));
+	save_item(NAME(m_ph1pos));
+	save_item(NAME(m_ph3pos));
+	save_item(NAME(m_hp3pos));
 }
 
 
@@ -59,9 +70,14 @@ void tube_device::device_start()
 
 void tube_device::device_reset()
 {
+	m_r1stat = 0;
+	soft_reset();
+}
+
+void tube_device::soft_reset()
+{
 	m_ph1pos = m_hp3pos = 0;
 	m_ph3pos = 1;
-	m_r1stat = 0;
 	m_hstat[0] = m_hstat[1] = m_hstat[3] = 0x40;
 	m_hstat[2] = 0xc0;
 	m_pstat[0] = m_pstat[1] = m_pstat[2] = m_pstat[3] = 0x40;
@@ -89,7 +105,7 @@ uint8_t tube_device::host_r(offs_t offset)
 		data = (m_hstat[0] & 0xc0) | m_r1stat;
 		break;
 
-	case 1: /* Register 1 */
+	case 1: /* Register 1 (24 byte FIFO read only) */
 		data = m_ph1[0];
 		if (!machine().side_effects_disabled())
 		{
@@ -104,7 +120,7 @@ uint8_t tube_device::host_r(offs_t offset)
 		data = m_hstat[1];
 		break;
 
-	case 3: /* Register 2 */
+	case 3: /* Register 2 (1 byte read only) */
 		data = m_ph2;
 		if (BIT(m_hstat[1], 7) && !machine().side_effects_disabled())
 		{
@@ -117,7 +133,7 @@ uint8_t tube_device::host_r(offs_t offset)
 		data = m_hstat[2];
 		break;
 
-	case 5: /* Register 3 */
+	case 5: /* Register 3 (2 byte FIFO only) */
 		data = m_ph3[0];
 		if ((m_ph3pos > 0) && !machine().side_effects_disabled())
 		{
@@ -132,7 +148,7 @@ uint8_t tube_device::host_r(offs_t offset)
 		data = m_hstat[3];
 		break;
 
-	case 7: /* Register 4 */
+	case 7: /* Register 4 (1 byte read only) */
 		data = m_ph4;
 		if (BIT(m_hstat[3], 7) && !machine().side_effects_disabled())
 		{
@@ -151,26 +167,38 @@ void tube_device::host_w(offs_t offset, uint8_t data)
 	switch (offset & 0x07)
 	{
 	case 0: /* Status flags */
-		if (BIT(data, 7))
-			m_r1stat |= (data & 0x3f);
-		else
-			m_r1stat &= ~(data & 0x3f);
 		m_hstat[0] = (m_hstat[0] & 0xc0) | (data & 0x3f);
+		if (BIT(data, 7))
+		{
+			m_r1stat |= (data & 0x3f);
+			if (BIT(data, 6))
+			{
+				soft_reset();
+			}
+		}
+		else
+		{
+			m_r1stat &= ~(data & 0x3f);
+		}
+		if (BIT(data, 5))
+		{
+			m_prst_handler(BIT(data, 7) ? ASSERT_LINE : CLEAR_LINE);
+		}
 		break;
 
-	case 1: /* Register 1 */
+	case 1: /* Register 1 (1 byte write only) */
 		m_hp1 = data;
 		m_pstat[0] |= 0x80;
 		m_hstat[0] &= ~0x40;
 		break;
 
-	case 3: /* Register 2 */
+	case 3: /* Register 2 (1 byte write only) */
 		m_hp2 = data;
 		m_pstat[1] |= 0x80;
 		m_hstat[1] &= ~0x40;
 		break;
 
-	case 5: /* Register 3 */
+	case 5: /* Register 3 (2 byte FIFO write only) */
 		if (BIT(m_r1stat, 4))
 		{
 			if (m_hp3pos < 2)
@@ -190,15 +218,15 @@ void tube_device::host_w(offs_t offset, uint8_t data)
 		}
 		break;
 
-	case 7: /* Register 4 */
+	case 7: /* Register 4 (1 byte write only) */
 		m_hp4 = data;
 		m_pstat[3] |= 0x80;
 		m_hstat[3] &= ~0x40;
 		break;
 	}
-
 	update_interrupts();
 }
+
 
 uint8_t tube_device::parasite_r(offs_t offset)
 {
@@ -206,11 +234,11 @@ uint8_t tube_device::parasite_r(offs_t offset)
 
 	switch (offset & 0x07)
 	{
-	case 0: /*Register 1 flags */
+	case 0: /* Status and Register 1 flags */
 		data = m_pstat[0] | m_r1stat;
 		break;
 
-	case 1: /* Register 1 */
+	case 1: /* Register 1 (1 byte read only) */
 		data = m_hp1;
 		if (BIT(m_pstat[0], 7) && !machine().side_effects_disabled())
 		{
@@ -223,7 +251,7 @@ uint8_t tube_device::parasite_r(offs_t offset)
 		data = m_pstat[1];
 		break;
 
-	case 3: /* Register 2 */
+	case 3: /* Register 2 (1 byte read only) */
 		data = m_hp2;
 		if (BIT(m_pstat[1], 7) && !machine().side_effects_disabled())
 		{
@@ -236,7 +264,7 @@ uint8_t tube_device::parasite_r(offs_t offset)
 		data = m_pstat[2];
 		break;
 
-	case 5: /* Register 3 */
+	case 5: /* Register 3 (2 byte FIFO read only) */
 		data = m_hp3[0];
 		if ((m_hp3pos > 0) && !machine().side_effects_disabled())
 		{
@@ -254,7 +282,7 @@ uint8_t tube_device::parasite_r(offs_t offset)
 		data = m_pstat[3];
 		break;
 
-	case 7: /* Register 4 */
+	case 7: /* Register 4 (1 byte read only) */
 		data = m_hp4;
 		if (BIT(m_pstat[3], 7) && !machine().side_effects_disabled())
 		{
@@ -272,7 +300,7 @@ void tube_device::parasite_w(offs_t offset, uint8_t data)
 {
 	switch (offset & 0x07)
 	{
-	case 1: /* Register 1 */
+	case 1: /* Register 1 (24 byte FIFO write only) */
 		if (m_ph1pos < 24)
 		{
 			m_ph1[m_ph1pos++] = data;
@@ -282,13 +310,13 @@ void tube_device::parasite_w(offs_t offset, uint8_t data)
 		}
 		break;
 
-	case 3: /* Register 2 */
+	case 3: /* Register 2 (1 byte write only) */
 		m_ph2 = data;
 		m_hstat[1] |= 0x80;
 		m_pstat[1] &= ~0x40;
 		break;
 
-	case 5: /* Register 3 */
+	case 5: /* Register 3 (2 byte FIFO write only) */
 		if (BIT(m_r1stat, 4))
 		{
 			if (m_ph3pos < 2)
@@ -308,7 +336,7 @@ void tube_device::parasite_w(offs_t offset, uint8_t data)
 		}
 		break;
 
-	case 7: /* Register 4 */
+	case 7: /* Register 4 (1 byte write only) */
 		m_ph4 = data;
 		m_hstat[3] |= 0x80;
 		m_pstat[3] &= ~0x40;

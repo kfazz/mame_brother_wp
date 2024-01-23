@@ -35,15 +35,14 @@ public:
 	void dack_w(int data);
 	void dack_ws(int data);
 
-	virtual void command();
-	void data_w(int data);
-	void reset_w(int data);
-	void select_w(int data);
-	void control_w(int data);
+	void data_w(uint8_t data);
+	void reset_w(uint8_t data);
+	void select_w(uint8_t data);
+	void control_w(uint8_t data);
 	uint8_t data_r();
 	uint8_t status_r();
 	void set_ready();
-	uint8_t get_command() { return buffer[0]; }
+	uint8_t get_command() { return m_buffer[0]; }
 	bool install_rom() { return (m_type != EC1841); }
 
 protected:
@@ -52,10 +51,10 @@ protected:
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
-	hard_disk_file *pc_hdc_file(int id);
-	void pc_hdc_result(int set_error_info);
-	int no_dma(void);
+
+	harddisk_image_device *pc_hdc_file(int id);
+	void pc_hdc_result(bool set_error_info);
+	bool no_dma();
 	int get_lbasector();
 	void execute_read();
 	void execute_readsbuff();
@@ -63,13 +62,15 @@ protected:
 	void execute_writesbuff();
 	void get_drive();
 	void get_chsn();
-	int test_ready();
+	bool test_ready();
 
-	std::vector<uint8_t> buffer;                  /* data buffer */
-	uint8_t *buffer_ptr;          /* data pointer */
-	int csb;                /* command status byte */
-	int status;         /* drive status */
-	int error;          /* error code */
+	TIMER_CALLBACK_MEMBER(process_command);
+
+	std::unique_ptr<uint8_t[]> m_buffer;  /* data buffer */
+	uint8_t *m_buffer_ptr;  /* data pointer */
+	int m_csb;              /* command status byte */
+	int m_status;           /* drive status */
+	int m_error;            /* error code */
 
 	enum {
 		STANDARD,
@@ -82,31 +83,31 @@ protected:
 	devcb_write_line m_drq_handler;
 
 private:
-	int drv;                            /* 0 master, 1 slave drive */
-	int cylinders[2];       /* number of cylinders */
-	int rwc[2];         /* reduced write current from cyl */
-	int wp[2];          /* write precompensation from cyl */
-	int heads[2];           /* heads */
-	int ecc[2];         /* ECC bytes */
+	int m_drv;              /* 0 master, 1 slave drive */
+	int m_cylinders[2];     /* number of cylinders */
+	int m_rwc[2];           /* reduced write current from cyl */
+	int m_wp[2];            /* write precompensation from cyl */
+	int m_heads[2];         /* heads */
+	int m_ecc[2];           /* ECC bytes */
 
 	/* indexes */
-	int cylinder[2];            /* current cylinder */
-	int head[2];                /* current head */
-	int sector[2];          /* current sector */
-	int sector_cnt[2];      /* sector count */
-	int control[2];         /* control */
+	int m_cylinder[2];      /* current cylinder */
+	int m_head[2];          /* current head */
+	int m_sector[2];        /* current sector */
+	int m_sector_cnt[2];    /* sector count */
+	int m_control[2];       /* control */
 
-	emu_timer *timer;
+	emu_timer *m_timer;
 
-	int data_cnt;                /* data count */
-	uint8_t hdc_control;
+	int m_data_cnt;         /* data count */
+	uint8_t m_hdc_control;
 
-	uint8_t hdcdma_data[512];
-	uint8_t *hdcdma_src;
-	uint8_t *hdcdma_dst;
-	int hdcdma_read;
-	int hdcdma_write;
-	int hdcdma_size;
+	uint8_t m_hdcdma_data[512];
+	uint8_t *m_hdcdma_src;
+	uint8_t *m_hdcdma_dst;
+	int m_hdcdma_read;
+	int m_hdcdma_write;
+	int m_hdcdma_size;
 };
 
 class ec1841_device : public xt_hdc_device
@@ -142,8 +143,8 @@ public:
 	// construction/destruction
 	isa8_hdc_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	DECLARE_READ8_MEMBER(pc_hdc_r);
-	DECLARE_WRITE8_MEMBER(pc_hdc_w);
+	uint8_t pc_hdc_r(offs_t offset);
+	void pc_hdc_w(offs_t offset, uint8_t data);
 	required_device<xt_hdc_device> m_hdc;
 
 protected:
@@ -158,15 +159,15 @@ protected:
 	virtual const tiny_rom_entry *device_rom_region() const override;
 	virtual ioport_constructor device_input_ports() const override;
 
-	DECLARE_WRITE_LINE_MEMBER(irq_w);
-	DECLARE_WRITE_LINE_MEMBER(drq_w);
+	void irq_w(int state);
+	void drq_w(int state);
 
 public:
 	virtual uint8_t dack_r(int line) override;
 	virtual void dack_w(int line,uint8_t data) override;
 	uint8_t pc_hdc_dipswitch_r();
 
-	int dip;                /* dip switches */
+	int m_dip;                /* dip switches */
 };
 
 

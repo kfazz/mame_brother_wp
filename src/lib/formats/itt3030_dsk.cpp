@@ -2,7 +2,7 @@
 // copyright-holders:Olivier Galibert
 /*********************************************************************
 
-    formats/itt3030_dsk.c
+    formats/itt3030_dsk.cpp
 
     ITT3030 560K disk image format
 
@@ -10,25 +10,23 @@
 
 *********************************************************************/
 
-#include <cassert>
-
 #include "formats/itt3030_dsk.h"
 
 itt3030_format::itt3030_format() : wd177x_format(formats)
 {
 }
 
-const char *itt3030_format::name() const
+const char *itt3030_format::name() const noexcept
 {
 	return "itt3030";
 }
 
-const char *itt3030_format::description() const
+const char *itt3030_format::description() const noexcept
 {
 	return "ITT3030 disk image";
 }
 
-const char *itt3030_format::extensions() const
+const char *itt3030_format::extensions() const noexcept
 {
 	return "dsk";
 }
@@ -50,9 +48,10 @@ const itt3030_format::format itt3030_format::formats[] = {
 		256, {},
 		1, {},
 		32, 22, 31
-	}
+	},
+	{}
 };
 
 
 
-const floppy_format_type FLOPPY_ITT3030_FORMAT = &floppy_image_format_creator<itt3030_format>;
+const itt3030_format FLOPPY_ITT3030_FORMAT;
