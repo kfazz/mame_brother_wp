@@ -3385,7 +3385,7 @@ uint8_t hd63266_device::sr2_r()
 	//0x40 seems to be an 'interrupt happened' flag
 	//it should also be triggered by z180 /DEND??
 	//0x01 seems to be motor 0 on
-	printf("fdc ph:%d irq:%x drq:%d int_drq:%d fifo_exp:%d\n", main_phase, cur_irq, drq, internal_drq, fifo_expected);
+	//printf("fdc ph:%d irq:%x drq:%d int_drq:%d fifo_exp:%d\n", main_phase, cur_irq, drq, internal_drq, fifo_expected);
 
 	return (cur_irq << 6) | motor_on;
 }
@@ -3395,7 +3395,7 @@ void hd63266_device::atr_w(uint8_t data)
 	LOGREGS("atr = %02x\n", data);
 
 	//firmware writes 0xFF(abort) and 0xD1/E1 (possibly MON SET/MON CLEAR?) here
-	printf("fdc_r0 abort %x\n", data);
+	//printf("fdc_r0 abort %x\n", data);
 	if (data == 0xff)
 		upd765_family_device::soft_reset();
 
@@ -3487,7 +3487,6 @@ int hd63266_device::check_command()
 	case 0x08:
 		return C_SENSE_INTERRUPT_STATUS;
 	case 0x03:
-		slow = true;
 		return command_pos == 3 ? C_SPECIFY            : C_INCOMPLETE;
 	case 0x0d:
 		return command_pos == 6 ? C_FORMAT_TRACK       : C_INCOMPLETE;
