@@ -1308,7 +1308,7 @@ int z180_device::z180_dma1()
 	cycles += m_extra_cycles; // use extra_cycles for I/O wait states
 
 	/* edge sensitive DREQ1 ? */
-	if (m_dcntl & Z180_DCNTL_DIM1)
+	if (m_dcntl & Z180_DCNTL_DMS1)
 		m_iol &= ~Z180_DREQ1;
 
 	m_dma_mar1.d = mar1;
