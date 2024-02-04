@@ -313,6 +313,7 @@ static const gdb_register_map gdb_register_map_z180 =
 	"z80",
 	"org.gnu.gdb.z80.cpu",
 	{
+		//CPU registers
 		{ "AF",  "af",  false, TYPE_INT },
 		{ "BC",  "bc",  false, TYPE_INT },
 		{ "DE",  "de",  false, TYPE_INT },
@@ -326,6 +327,10 @@ static const gdb_register_map gdb_register_map_z180 =
 		{ "DE2", "de'", false, TYPE_INT },
 		{ "HL2", "hl'", false, TYPE_INT },
 		{ "I",   "ir",  false, TYPE_INT },
+		//MMU registers
+		{ "CBR", "cbr", false, TYPE_INT },
+		{ "BBR", "bbr", false, TYPE_INT },
+		{ "CBAR","cbar",false, TYPE_INT },
 	}
 };
 
